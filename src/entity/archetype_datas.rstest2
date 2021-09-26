@@ -1,0 +1,163 @@
+use std::fmt::Debug;
+use crate::world::RemoveEntityError;
+use crate::component::Component;
+use crate::archetype::ArchetypeComponentType;
+use crate::entity::EntityId;
+use std::collections::HashMap;
+
+pub struct ArchetypeStorage<'s> {
+    entity_size: usize,
+    component_types: Vec<ArchetypeComponentType>,
+    entity_components: HashMap<EntityId, Vec<&'s dyn Component>>,
+    buffer: Vec<u8>,
+}
+
+impl<'s> ArchetypeStorage<'s> {
+    pub fn new<'a>(entity_size: usize, component_types: Vec<ArchetypeComponentType>,) -> ArchetypeStorage<'a> {
+        ArchetypeStorage {
+            entity_size,
+            component_types,
+            entity_components: HashMap::new(),
+            buffer: Vec::new(),
+        }
+    }
+
+    pub fn get(&self, entity_id: EntityId) -> Option<Vec<&dyn Component>> {
+        match self.entity_components.get(&entity_id) {
+            Some(components) => Some(*components),
+            None => None,
+        }
+    }
+
+    pub fn iter(&self) -> Iter<'_> {
+        Iter::new(&self)
+    }
+
+    pub fn execute_for_each(&self, callback: fn(components: &[&dyn Component])) {
+        self.buffer
+            .chunks(&self.entity_size)
+            .for_each(|chunk| {
+                let components: Vec<&dyn Component> = self.component_types
+                    .iter()
+                    .map(|component_type| (component_type.decoder)(chunk))
+                    .collect();
+
+                callback(&components[..]);
+            });
+    }
+
+    pub fn execute_mut_for_each(&mut self, callback: fn(components: &[&mut dyn Component])) {
+        let component_types = self.component_types.clone();
+
+        self.buffer
+            .chunks_mut(&self.entity_size)
+            .for_each(|chunk| {
+                let components: Vec<&mut dyn Component> = component_types
+                    .iter()
+                    .map(|component_type| {
+                        (component_type.decoder_mut)(chunk)
+                    })
+                    .collect();
+
+                callback(&components[..]);
+            });
+    }
+
+    pub fn add(&mut self, entity_id: EntityId, components: &[&mut dyn Component]) {
+        let components: Vec<&'s dyn Component> = components
+            .iter()
+            .map(|component| {
+                unsafe {
+                    let encoded_component = component.encode();
+    
+                    let start_index = self.buffer.len() - 1;
+                    let end_index = start_index + self.entity_size;
+                    self.buffer.append(&mut encoded_component);
+                    
+                    let (_, slice) = self.buffer.split_at(start_index);
+    
+                    (component.decoder())(slice)
+                }
+            })
+            .collect();
+
+        self.entity_components.insert(entity_id, components);
+    }
+
+    pub fn remove(&mut self, entity_id: EntityId) -> Result<(), RemoveEntityError> {
+        // Remove old stored id
+        match self.entity_components.remove(&entity_id) {
+            Some(index) => {
+                // Remove associated binary datas
+                let data_index = index * self.entity_size;
+                let data_end = data_index + self.entity_size;
+                self.buffer.drain(data_index .. data_end);
+
+                // Gap all existing indexes
+                self.entity_components = self.entity_components
+                    .iter()
+                    .map(|elem| {
+                        if *elem.1 > index {
+                            (*elem.0, *elem.1 - 1)
+                        } else {
+                            (*elem.0, *elem.1)
+                        }
+                    })
+                    .collect();
+                
+                    Ok(())
+            },
+            None => {
+                Err(RemoveEntityError::NotFound)
+            },
+        }
+    }
+}
+
+pub struct Iter<'s> {
+    component_types: &'s Vec<ArchetypeComponentType>,
+    chunks: std::slice::Chunks<'s, u8>,
+}
+
+impl<'s> Iter<'s> {
+    pub fn new(datas: &'s ArchetypeStorage) -> Iter<'s> {
+        Iter {
+            component_types: &datas.component_types,
+            chunks: datas.buffer.chunks(datas.entity_size),
+        }
+    }
+}
+
+impl<'s> Iterator for Iter<'s> {
+    type Item = Vec<&'s dyn Component>;
+
+    fn next(&mut self) -> Option<Vec<&'s dyn Component>> {
+        match self.chunks.next() {
+            Some(chunk) => {
+                let components: Vec<&'s dyn Component> = self.component_types
+                    .iter()
+                    .map(|component_type| (component_type.decoder)(chunk))
+                    .collect();
+
+                Some(components)
+            },
+            None => None
+        }
+    }
+}
+
+impl<'s> Debug for ArchetypeStorage<'s> {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        let fmt_error = self.iter().find_map(|elem| {
+            match elem.fmt(formatter) {
+                Ok(()) => None,
+                Err(err) => Some(err),
+            }
+        });
+
+        match fmt_error {
+            Some(err) => Err(err),
+            None => Ok(()),
+        }
+    }
+}
