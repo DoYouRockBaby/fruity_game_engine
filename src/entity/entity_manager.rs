@@ -1,9 +1,9 @@
-use std::sync::RwLock;
 use std::collections::HashMap;
 use crate::entity::archetype::Archetype;
 use crate::entity::archetype::ArchetypeIdentifier;
 use crate::entity::archetype_storage::Iter;
 use crate::component::component::Component;
+use crate::component::component_rwlock::ComponentRwLock;
 use crate::entity::entity::EntityId;
 
 pub enum RemoveEntityError {
@@ -24,7 +24,7 @@ impl<'s> EntityManager {
         }
     }
 
-    pub fn get(&self, entity_id: EntityId) -> Option<Vec<&RwLock<dyn Component>>> {
+    pub fn get(&self, entity_id: EntityId) -> Option<Vec<ComponentRwLock>> {
         self.archetypes
             .values()
             .find_map(|archetype| archetype.get(entity_id))
@@ -40,17 +40,6 @@ impl<'s> EntityManager {
             },
         }
     }
-
-    /*pub fn iter_mut_entities(&mut self, archetype_identifier: ArchetypeIdentifier) -> Option<IterMut> {
-        match self.archetypes.get_mut(&archetype_identifier) {
-            Some(archetype) => {
-                Some(archetype.iter_mut())
-            },
-            None => {
-                None
-            },
-        }
-    }*/
 
     pub fn create(&mut self, components: &[&dyn Component]) -> EntityId {
         let archetype_identifier = Archetype::get_identifier(components);
@@ -83,8 +72,8 @@ impl<'s> EntityManager {
         }
     }
 
-    pub fn for_each<F: Fn(&[&RwLock<dyn Component>]) + Send + Sync>(&mut self, archetype_identifier: ArchetypeIdentifier, callback: F) {
-        match self.archetypes.get_mut(&archetype_identifier) {
+    pub fn for_each<F: Fn(Vec<ComponentRwLock>) + Send + Sync>(&self, archetype_identifier: ArchetypeIdentifier, callback: F) {
+        match self.archetypes.get(&archetype_identifier) {
             Some(archetype) => archetype.for_each(callback),
             None => (),
         }

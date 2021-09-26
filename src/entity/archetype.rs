@@ -1,4 +1,3 @@
-use std::sync::RwLock;
 use std::fmt::Debug;
 use core::hash::Hash;
 use crate::entity::entity_manager::RemoveEntityError;
@@ -6,6 +5,7 @@ use crate::entity::archetype_storage::Iter;
 use crate::entity::entity::EntityId;
 use crate::entity::archetype_storage::ArchetypeStorage;
 use crate::component::component::Component;
+use crate::component::component_rwlock::ComponentRwLock;
 
 #[derive(Debug)]
 pub struct ArchetypeIdentifier(pub Vec<String>);
@@ -33,7 +33,7 @@ impl Hash for ArchetypeIdentifier {
 pub struct ArchetypeComponentType {
     pub identifier: String,
     pub size: usize,
-    pub decoder: fn(datas: &[u8]) -> &RwLock<dyn Component>,
+    pub decoder: fn(datas: &[u8]) -> ComponentRwLock,
 }
 
 impl Debug for ArchetypeComponentType {
@@ -80,7 +80,7 @@ impl Archetype {
         )
     }
 
-    pub fn get(&self, entity_id: EntityId) -> Option<Vec<&RwLock<dyn Component>>> {
+    pub fn get(&self, entity_id: EntityId) -> Option<Vec<ComponentRwLock>> {
         self.storage.get(entity_id)
     }
 
@@ -96,7 +96,7 @@ impl Archetype {
         self.storage.remove(entity_id)
     }
 
-    pub fn for_each<F: Fn(&[&RwLock<dyn Component>]) + Send + Sync>(&mut self, callback: F) {
+    pub fn for_each<F: Fn(Vec<ComponentRwLock>) + Send + Sync>(&self, callback: F) {
         self.storage.for_each(callback)
     }
 }

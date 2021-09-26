@@ -1,11 +1,10 @@
-use crate::component::component::Component;
-use std::sync::RwLock;
 use std::sync::RwLockWriteGuard;
 use crate::service::service_manager::ServiceManager;
 use crate::entity::entity_manager::EntityManager;
 use crate::service1::Service1;
 use crate::entity::archetype::ArchetypeIdentifier;
 use crate::Component1;
+use crate::component::component_rwlock::ComponentRwLock;
 
 macro_rules! archetype {
     ($e:expr) => {{
@@ -24,7 +23,7 @@ pub fn system1(component1: &mut Component1, mut service1: RwLockWriteGuard<Servi
     println!("System1 speak: {:#?} {}", component1, service1.value());
 }
 
-pub fn system1_untyped(entity_manager: &mut EntityManager, service_manager: &ServiceManager) {
+pub fn system1_untyped(entity_manager: &EntityManager, service_manager: &ServiceManager) {
     let service1 = match service_manager.get::<Service1>() {
         Some(service) => service,
         None => {
@@ -33,21 +32,22 @@ pub fn system1_untyped(entity_manager: &mut EntityManager, service_manager: &Ser
         },
     };
 
-    entity_manager.for_each(archetype!["test.component1"], |components: &[&RwLock<dyn Component>]| {
-        let mut component1 = match components.get(0) {
-            Some(component) => component.write().unwrap(),
-            None => {
-                log::error!("Tried to launch a system with a component that was not provided, no component with the index {} in the component list {:?}.", 0, components);
-                return;
-            }
+    entity_manager.for_each(archetype!["test.component1"], |mut components: Vec<ComponentRwLock> | {
+        let component1 = if 0 < components.len() {
+            components.remove(0)
+        } else {
+            log::error!("Tried to launch a system with a component that was not provided, no component with the index {} in the component list {:?}.", 0, components);
+            return;
         };
+
+        let mut component1 = component1.write();
 
         let component1 = match component1.downcast_mut::<Component1>() {
             Some(component) => {
                 component
             },
             None => {
-                //log::error!("Tried to launch system system1 with component {:?}, expected type test.component1", component1);
+                log::error!("Tried to launch system system1 with component {:?}, expected type test.component1", component1);
                 return;
             },
         };

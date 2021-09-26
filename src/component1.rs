@@ -3,6 +3,7 @@ use std::slice::from_raw_parts;
 use std::mem::size_of;
 use std::any::Any;
 use crate::component::component::Component;
+use crate::component::component_rwlock::ComponentRwLock;
 
 #[derive(Debug, Clone)]
 pub struct Component1 {
@@ -50,18 +51,16 @@ impl Component for Component1 {
     }
 
     fn encode(&self) -> Vec<u8> {
-        let value: RwLock<Self> = RwLock::new(self.clone());
-
         unsafe {
-            from_raw_parts((&value as *const RwLock<Self>) as *const u8, self.get_component_size())
+            from_raw_parts((self as *const RwLock<Self>) as *const u8, self.get_component_size())
                 .to_vec()
         }
     }
 
-    fn decoder(&self) -> fn(datas: &[u8]) -> &RwLock<dyn Component> {
+    fn decoder(&self) -> fn(datas: &[u8]) -> ComponentRwLock {
         | data | {
             let (_head, body, _tail) = unsafe { data.align_to::<RwLock<Self>>() };
-            &body[0]
+            ComponentRwLock::new(&body[0])
         }
     }
 }

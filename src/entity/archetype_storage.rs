@@ -1,6 +1,3 @@
-use std::sync::RwLock;
-use std::sync::Mutex;
-use std::sync::Arc;
 use std::fmt::Debug;
 use hashbrown::HashMap;
 use hashbrown::hash_map::Iter as HashMapIter;
@@ -9,6 +6,7 @@ use crate::entity::entity_manager::RemoveEntityError;
 use crate::component::component::Component;
 use crate::entity::entity::EntityId;
 use crate::entity::archetype::ArchetypeComponentType;
+use crate::component::component_rwlock::ComponentRwLock;
 
 #[derive(Clone)]
 struct ArchetypeStorageDatas {
@@ -31,7 +29,7 @@ impl ArchetypeStorage  {
         }
     }
 
-    pub fn get(&self, entity_id: EntityId) -> Option<Vec<&RwLock<dyn Component>>> {
+    pub fn get(&self, entity_id: EntityId) -> Option<Vec<ComponentRwLock>> {
         match self.entity_indexes.get(&entity_id) {
             Some(index) => self.datas.get_by_index(*index),
             None => None,
@@ -74,15 +72,21 @@ impl ArchetypeStorage  {
         }
     }
 
-    pub fn for_each<F: Fn(&[&RwLock<dyn Component>]) + Send + Sync>(&mut self, callback: F) {
-        for (_, index) in self.entity_indexes.iter() {
+    pub fn for_each<F: Fn(Vec<ComponentRwLock>) + Send + Sync>(&self, callback: F) {
+        /*for (_, index) in self.entity_indexes.iter() {
             match self.datas.get_by_index(*index) {
-                Some(mut components) => {
-                    callback(&components[..]);
+                Some(components) => {
+                    callback(components);
                 },
                 None => (),
             }
-        }
+        }*/
+
+        self.entity_indexes
+            .iter()
+            .par_bridge()
+            .filter_map(|(_, index)| self.datas.get_by_index(*index))
+            .for_each(|components| callback(components));
     }
 
     fn encode_entity(components: &[&dyn Component]) -> Vec<u8> {
@@ -103,8 +107,8 @@ impl ArchetypeStorageDatas {
         }
     }
 
-    pub fn get_by_index(&self, index: usize) -> Option<Vec<&RwLock<dyn Component>>> {
-        let mut components: Vec<&RwLock<dyn Component>> = Vec::new();
+    pub fn get_by_index(&self, index: usize) -> Option<Vec<ComponentRwLock>> {
+        let mut components = Vec::new();
         let entity_slices = self.buffer.chunks(self.entity_size);
         
         match entity_slices.skip(index).next() {
@@ -156,9 +160,9 @@ pub struct Iter<'s> {
 }
 
 impl<'s> Iterator for Iter<'s> {
-    type Item = (EntityId, Vec<&'s RwLock<dyn Component>>);
+    type Item = (EntityId, Vec<ComponentRwLock<'s>>);
 
-    fn next(&mut self) -> Option<(EntityId, Vec<&'s RwLock<dyn Component>>)> {
+    fn next(&mut self) -> Option<(EntityId, Vec<ComponentRwLock<'s>>)> {
         match self.entity_indexes_iterator.next() {
             Some((entity_id, _)) => match self.storage.get(*entity_id) {
                 Some(components) => Some((*entity_id, components)),
