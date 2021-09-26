@@ -1,3 +1,5 @@
+use crate::component::component::Component;
+use std::sync::RwLock;
 use std::sync::RwLockWriteGuard;
 use crate::service::service_manager::ServiceManager;
 use crate::entity::entity_manager::EntityManager;
@@ -31,21 +33,23 @@ pub fn system1_untyped(entity_manager: &mut EntityManager, service_manager: &Ser
         },
     };
 
-    entity_manager.for_each(archetype!["test.component1"], move |components| {
-        let component1 = match components.get_mut(0) {
-            Some(component) => match component.downcast_mut::<Component1>() {
-                Some(component) => {
-                    component
-                },
-                None => {
-                    log::error!("Tried to launch system system1 with component {:?}, expected type test.component1", component);
-                    return;
-                },
-            },
+    entity_manager.for_each(archetype!["test.component1"], |components: &[&RwLock<dyn Component>]| {
+        let mut component1 = match components.get(0) {
+            Some(component) => component.write().unwrap(),
             None => {
                 log::error!("Tried to launch a system with a component that was not provided, no component with the index {} in the component list {:?}.", 0, components);
                 return;
             }
+        };
+
+        let component1 = match component1.downcast_mut::<Component1>() {
+            Some(component) => {
+                component
+            },
+            None => {
+                //log::error!("Tried to launch system system1 with component {:?}, expected type test.component1", component1);
+                return;
+            },
         };
 
         let service1 = service1

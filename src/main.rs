@@ -61,17 +61,17 @@ fn main() {
     world.entity_manager.remove(entity_id_3);
     world.entity_manager.remove(EntityId(0));
 
-    match world.entity_manager.get_mut(entity_id_2) {
+    match world.entity_manager.get(entity_id_2) {
         Some(mut components) => match components.get_mut(0) {
-            Some(component) => component.set_untyped_field("int1", &(12345 as i64)),
+            Some(component) => component.write().unwrap().set_untyped_field("int1", &(12345 as i64)),
             None => (),
         },
         None => (),
     }
 
-    match world.entity_manager.get_mut(entity_id_1) {
+    match world.entity_manager.get(entity_id_1) {
         Some(mut components) => match components.get_mut(1) {
-            Some(component) => component.set_untyped_field("float1", &(5432.1 as f64)),
+            Some(component) => component.write().unwrap().set_untyped_field("float1", &(5432.1 as f64)),
             //Some(component) => component.set_field("float1", 5432.1 as f64),
             None => (),
         },

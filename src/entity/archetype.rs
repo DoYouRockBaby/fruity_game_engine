@@ -1,3 +1,4 @@
+use std::sync::RwLock;
 use std::fmt::Debug;
 use core::hash::Hash;
 use crate::entity::entity_manager::RemoveEntityError;
@@ -32,8 +33,7 @@ impl Hash for ArchetypeIdentifier {
 pub struct ArchetypeComponentType {
     pub identifier: String,
     pub size: usize,
-    pub decoder: fn(datas: &[u8]) -> &dyn Component,
-    pub decoder_mut: fn(datas: &mut [u8]) -> &mut dyn Component,
+    pub decoder: fn(datas: &[u8]) -> &RwLock<dyn Component>,
 }
 
 impl Debug for ArchetypeComponentType {
@@ -48,7 +48,7 @@ pub struct Archetype {
 }
 
 impl Archetype {
-    pub fn new(entity_id: EntityId, components: &[&mut dyn Component]) -> Archetype {
+    pub fn new(entity_id: EntityId, components: &[&dyn Component]) -> Archetype {
         let entity_size = components
             .iter()
             .map(|component| component.get_component_size())
@@ -60,7 +60,6 @@ impl Archetype {
                 identifier: component.get_component_type().to_string(),
                 size: component.get_component_size(),
                 decoder: component.decoder(),
-                decoder_mut: component.decoder_mut(),
             })
             .collect();
 
@@ -72,7 +71,7 @@ impl Archetype {
         archetype
     }
 
-    pub fn get_identifier(components: &[&mut dyn Component]) -> ArchetypeIdentifier {
+    pub fn get_identifier(components: &[&dyn Component]) -> ArchetypeIdentifier {
         ArchetypeIdentifier (
             components
                 .iter()
@@ -81,23 +80,15 @@ impl Archetype {
         )
     }
 
-    pub fn get(&self, entity_id: EntityId) -> Option<Vec<&dyn Component>> {
+    pub fn get(&self, entity_id: EntityId) -> Option<Vec<&RwLock<dyn Component>>> {
         self.storage.get(entity_id)
-    }
-
-    pub fn get_mut(&mut self, entity_id: EntityId) -> Option<Vec<&mut dyn Component>> {
-        self.storage.get_mut(entity_id)
     }
 
     pub fn iter(&self) -> Iter<'_> {
         self.storage.iter()
     }
 
-    /*pub fn iter_mut(&self) -> IterMut<'_> {
-        self.storage.iter_mut()
-    }*/
-
-    pub fn add(&mut self, entity_id: EntityId, components: &[&mut dyn Component]) {
+    pub fn add(&mut self, entity_id: EntityId, components: &[&dyn Component]) {
         self.storage.add(entity_id, components)
     }
 
@@ -105,7 +96,7 @@ impl Archetype {
         self.storage.remove(entity_id)
     }
 
-    pub fn for_each<F: Fn(&mut [&mut dyn Component]) + Send + Sync>(&mut self, callback: F) {
+    pub fn for_each<F: Fn(&[&RwLock<dyn Component>]) + Send + Sync>(&mut self, callback: F) {
         self.storage.for_each(callback)
     }
 }

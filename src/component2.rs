@@ -1,3 +1,4 @@
+use std::sync::RwLock;
 use std::slice::from_raw_parts;
 use std::mem::size_of;
 use std::any::Any;
@@ -39,23 +40,18 @@ impl Component for Component2 {
     }
 
     fn encode(&self) -> Vec<u8> {
+        let value: RwLock<Self> = RwLock::new(self.clone());
+
         unsafe {
-            from_raw_parts((self as *const Self) as *const u8, self.get_component_size())
+            from_raw_parts((&value as *const RwLock<Self>) as *const u8, self.get_component_size())
                 .to_vec()
         }
     }
 
-    fn decoder(&self) -> fn(data: &[u8]) -> &dyn Component {
+    fn decoder(&self) -> fn(datas: &[u8]) -> &RwLock<dyn Component> {
         | data | {
-            let (_head, body, _tail) = unsafe { data.align_to::<Self>() };
+            let (_head, body, _tail) = unsafe { data.align_to::<RwLock<Self>>() };
             &body[0]
-        }
-    }
-
-    fn decoder_mut(&self) -> fn(data: &mut [u8]) -> &mut dyn Component {
-        | data | {
-            let (_head, body, _tail) = unsafe { data.align_to_mut::<Self>() };
-            &mut body[0]
         }
     }
 }

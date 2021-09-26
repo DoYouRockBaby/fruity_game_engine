@@ -1,3 +1,4 @@
+use std::sync::RwLock;
 use std::any::TypeId;
 use std::any::type_name;
 use std::any::Any;
@@ -9,8 +10,7 @@ pub trait Component: Debug + Any {
     fn get_untyped_field(&self, property: &str) -> Option<&dyn Any>;
     fn set_untyped_field(&mut self, property: &str, value: &dyn Any);
     fn encode(&self) -> Vec<u8>;
-    fn decoder(&self) -> fn(datas: &[u8]) -> &dyn Component;
-    fn decoder_mut(&self) -> fn(datas: &mut [u8]) -> &mut dyn Component;
+    fn decoder(&self) -> fn(datas: &[u8]) -> &RwLock<dyn Component>;
 }
 
 impl dyn Component {

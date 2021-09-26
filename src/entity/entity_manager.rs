@@ -1,3 +1,4 @@
+use std::sync::RwLock;
 use std::collections::HashMap;
 use crate::entity::archetype::Archetype;
 use crate::entity::archetype::ArchetypeIdentifier;
@@ -23,16 +24,10 @@ impl<'s> EntityManager {
         }
     }
 
-    pub fn get(&self, entity_id: EntityId) -> Option<Vec<&dyn Component>> {
+    pub fn get(&self, entity_id: EntityId) -> Option<Vec<&RwLock<dyn Component>>> {
         self.archetypes
             .values()
             .find_map(|archetype| archetype.get(entity_id))
-    }
-
-    pub fn get_mut(&mut self, entity_id: EntityId) -> Option<Vec<&mut dyn Component>> {
-        self.archetypes
-            .values_mut()
-            .find_map(|archetype| archetype.get_mut(entity_id))
     }
 
     pub fn iter(&self, archetype_identifier: ArchetypeIdentifier) -> Option<Iter> {
@@ -57,7 +52,7 @@ impl<'s> EntityManager {
         }
     }*/
 
-    pub fn create(&mut self, components: &[&mut dyn Component]) -> EntityId {
+    pub fn create(&mut self, components: &[&dyn Component]) -> EntityId {
         let archetype_identifier = Archetype::get_identifier(components);
         self.id_incrementer += 1;
         let entity_id = EntityId ( self.id_incrementer );
@@ -88,7 +83,7 @@ impl<'s> EntityManager {
         }
     }
 
-    pub fn for_each<F: Fn(&mut [&mut dyn Component]) + Send + Sync>(&mut self, archetype_identifier: ArchetypeIdentifier, callback: F) {
+    pub fn for_each<F: Fn(&[&RwLock<dyn Component>]) + Send + Sync>(&mut self, archetype_identifier: ArchetypeIdentifier, callback: F) {
         match self.archetypes.get_mut(&archetype_identifier) {
             Some(archetype) => archetype.for_each(callback),
             None => (),

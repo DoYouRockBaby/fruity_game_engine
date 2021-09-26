@@ -8,6 +8,7 @@
             "type": "lldb",
             "request": "launch",
             "name": "Debug",
+            "preLaunchTask": "build",
             "program": "${workspaceRoot}/target/debug/fruity_game_engine",
             "args": [],
             "cwd": "${workspaceFolder}"
