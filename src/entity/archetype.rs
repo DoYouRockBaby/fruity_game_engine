@@ -1,11 +1,11 @@
+use crate::entity::entity_rwlock::EntityRwLock;
+use crate::entity::entity::Entity;
 use std::fmt::Debug;
 use core::hash::Hash;
 use crate::entity::entity_manager::RemoveEntityError;
 use crate::entity::archetype_storage::Iter;
 use crate::entity::entity::EntityId;
 use crate::entity::archetype_storage::ArchetypeStorage;
-use crate::component::component::Component;
-use crate::component::component_rwlock::ComponentRwLock;
 
 #[derive(Debug)]
 pub struct ArchetypeIdentifier(pub Vec<String>);
@@ -32,8 +32,6 @@ impl Hash for ArchetypeIdentifier {
 #[derive(Clone)]
 pub struct ArchetypeComponentType {
     pub identifier: String,
-    pub size: usize,
-    pub decoder: fn(datas: &[u8]) -> ComponentRwLock,
 }
 
 impl Debug for ArchetypeComponentType {
@@ -48,39 +46,25 @@ pub struct Archetype {
 }
 
 impl Archetype {
-    pub fn new(entity_id: EntityId, components: &[&dyn Component]) -> Archetype {
-        let entity_size = components
-            .iter()
-            .map(|component| component.get_component_size())
-            .sum();
-
-        let component_types: Vec<ArchetypeComponentType> = components
-            .iter()
-            .map(|component| ArchetypeComponentType {
-                identifier: component.get_component_type().to_string(),
-                size: component.get_component_size(),
-                decoder: component.decoder(),
-            })
-            .collect();
-
+    pub fn new<T: Entity>(entity_id: EntityId, entity: T) -> Archetype {
         let mut archetype = Archetype {
-            storage: ArchetypeStorage::new(entity_size, component_types),
+            storage: ArchetypeStorage::new::<T>(),
         };
 
-        archetype.add(entity_id, components);
+        archetype.add(entity_id, entity);
         archetype
     }
 
-    pub fn get_identifier(components: &[&dyn Component]) -> ArchetypeIdentifier {
+    pub fn get_identifier(entity: &dyn Entity) -> ArchetypeIdentifier {
         ArchetypeIdentifier (
-            components
-                .iter()
+            entity
+                .untyped_iter()
                 .map(|component| component.get_component_type().to_string())
                 .collect()
         )
     }
 
-    pub fn get(&self, entity_id: EntityId) -> Option<Vec<ComponentRwLock>> {
+    pub fn get(&self, entity_id: EntityId) -> Option<EntityRwLock> {
         self.storage.get(entity_id)
     }
 
@@ -88,15 +72,15 @@ impl Archetype {
         self.storage.iter()
     }
 
-    pub fn add(&mut self, entity_id: EntityId, components: &[&dyn Component]) {
-        self.storage.add(entity_id, components)
+    pub fn add<T: Entity>(&mut self, entity_id: EntityId, entity: T) {
+        self.storage.add(entity_id, entity)
     }
 
     pub fn remove(&mut self, entity_id: EntityId) -> Result<(), RemoveEntityError> {
         self.storage.remove(entity_id)
     }
 
-    pub fn for_each<F: Fn(Vec<ComponentRwLock>) + Send + Sync>(&self, callback: F) {
+    /*pub fn for_each<F: Fn(Vec<ComponentRwLock>) + Send + Sync>(&self, callback: F) {
         self.storage.for_each(callback)
-    }
+    }*/
 }

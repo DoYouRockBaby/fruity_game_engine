@@ -1,10 +1,13 @@
+use crate::Component;
+use crate::entity::entity_rwlock::EntityRwLock;
+use crate::entity::entity::Entity;
 use std::collections::HashMap;
 use crate::entity::archetype::Archetype;
 use crate::entity::archetype::ArchetypeIdentifier;
-use crate::entity::archetype_storage::Iter;
-use crate::component::component::Component;
-use crate::component::component_rwlock::ComponentRwLock;
+use crate::entity::archetype_storage::Iter as ArchetypeIter;
+use crate::entity::entity::Iter as EntityIter;
 use crate::entity::entity::EntityId;
+use rayon::prelude::*;
 
 pub enum RemoveEntityError {
     NotFound
@@ -16,7 +19,7 @@ pub struct EntityManager {
     archetypes: HashMap<ArchetypeIdentifier, Archetype>,
 }
 
-impl<'s> EntityManager {
+impl EntityManager {
     pub fn new() -> EntityManager {
         EntityManager {
             id_incrementer: 0,
@@ -24,35 +27,83 @@ impl<'s> EntityManager {
         }
     }
 
-    pub fn get(&self, entity_id: EntityId) -> Option<Vec<ComponentRwLock>> {
+    pub fn get(&self, entity_id: EntityId) -> Option<EntityRwLock> {
         self.archetypes
             .values()
             .find_map(|archetype| archetype.get(entity_id))
     }
 
-    pub fn iter(&self, archetype_identifier: ArchetypeIdentifier) -> Option<Iter> {
+    pub fn for_each<T: Fn(&[&dyn Component]) + Send + Sync>(&self, archetype_identifier: ArchetypeIdentifier, callback: T) {
         match self.archetypes.get(&archetype_identifier) {
             Some(archetype) => {
-                Some(archetype.iter())
+                archetype
+                    .iter()
+                    .par_bridge()
+                    .for_each(|entity| {
+                        let components = entity
+                            .read()
+                            .untyped_iter()
+                            .collect::<Vec<_>>();
+                        
+                        callback(&components[..]);
+                    });
             },
-            None => {
-                None
-            },
+            None => (),
         }
     }
 
-    pub fn create(&mut self, components: &[&dyn Component]) -> EntityId {
-        let archetype_identifier = Archetype::get_identifier(components);
+    pub fn for_each_mut<T: Fn(&[&mut dyn Component]) + Send + Sync>(&self, archetype_identifier: ArchetypeIdentifier, callback: T) {
+        match self.archetypes.get(&archetype_identifier) {
+            Some(archetype) => {
+                archetype
+                    .iter()
+                    .par_bridge()
+                    .for_each(|entity| {
+                        let components = entity
+                            .read()
+                            .untyped_iter_mut()
+                            .collect::<Vec<_>>();
+                        
+                        callback(&components[..]);
+                    });
+            },
+            None => (),
+        }
+    }
+
+    /*pub fn iter(&self, archetype_identifier: ArchetypeIdentifier) -> impl Iterator<Item = Vec<&dyn Component>> {
+        match self.archetypes.get(&archetype_identifier) {
+            Some(archetype) => {
+                let test = archetype
+                    .iter()
+                    .map(|entity| {
+                        entity
+                            .read()
+                            .untyped_iter()
+                            .collect::<Vec<_>>()
+                    });
+                
+                test
+            },
+            None => {
+                //Iter::Empty
+                panic!("Need to be removed");
+            },
+        }
+    }*/
+
+    pub fn create<T: Entity>(&mut self, entity: T) -> EntityId {
+        let archetype_identifier = Archetype::get_identifier(&entity);
         self.id_incrementer += 1;
         let entity_id = EntityId ( self.id_incrementer );
 
         match self.archetypes.get_mut(&archetype_identifier) {
             Some(archetype) => {
-                archetype.add(entity_id, components);
+                archetype.add(entity_id, entity);
                 entity_id
             },
             None => {
-                let archetype = Archetype::new(entity_id, components);
+                let archetype = Archetype::new(entity_id, entity);
                 self.archetypes.insert(archetype_identifier, archetype);
                 entity_id
             },
@@ -72,10 +123,10 @@ impl<'s> EntityManager {
         }
     }
 
-    pub fn for_each<F: Fn(Vec<ComponentRwLock>) + Send + Sync>(&self, archetype_identifier: ArchetypeIdentifier, callback: F) {
+    /*pub fn for_each<F: Fn(Vec<ComponentRwLock>) + Send + Sync>(&self, archetype_identifier: ArchetypeIdentifier, callback: F) {
         match self.archetypes.get(&archetype_identifier) {
             Some(archetype) => archetype.for_each(callback),
             None => (),
         }
-    }
+    }*/
 }

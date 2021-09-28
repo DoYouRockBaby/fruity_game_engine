@@ -28,7 +28,7 @@ impl<'s> SystemManager {
 
     pub fn run(&self, entity_manager: &EntityManager, service_manager: &ServiceManager) {
         self.systems
-            .par_iter()
+            .iter()
             .for_each(|system| system(entity_manager, service_manager));
     }
 }
