@@ -47,8 +47,7 @@ impl<'s, T: Entity> InnerEntityRwLock for InnerRawEntityRwLock<'s, T> {
     }
 
     fn write(&self) -> EntityWriteGuard {
-        let rwlock = self.rwlock;
-        EntityWriteGuard::new(rwlock.write().unwrap())
+        EntityWriteGuard::new(self.rwlock.write().unwrap())
     }
 }
 

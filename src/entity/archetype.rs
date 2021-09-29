@@ -1,33 +1,11 @@
+use crate::entity::entity::EntityIdentifier;
 use crate::entity::entity_rwlock::EntityRwLock;
 use crate::entity::entity::Entity;
 use std::fmt::Debug;
-use core::hash::Hash;
 use crate::entity::entity_manager::RemoveEntityError;
 use crate::entity::archetype_storage::Iter;
 use crate::entity::entity::EntityId;
 use crate::entity::archetype_storage::ArchetypeStorage;
-
-#[derive(Debug)]
-pub struct ArchetypeIdentifier(pub Vec<String>);
-
-impl PartialEq for ArchetypeIdentifier {
-    fn eq(&self, other: &ArchetypeIdentifier) -> bool {
-        let matching = self.0
-            .iter()
-            .zip(other.0.iter())
-            .filter(|&(a, b)| a == b).count();
-        
-        matching == self.0.len() && matching == other.0.len()
-    }
-}
-
-impl Eq for ArchetypeIdentifier { }
-
-impl Hash for ArchetypeIdentifier {
-    fn hash<H>(&self, state: &mut H) where H: std::hash::Hasher {
-        self.0.hash(state)
-    }
-}
 
 #[derive(Clone)]
 pub struct ArchetypeComponentType {
@@ -55,8 +33,8 @@ impl Archetype {
         archetype
     }
 
-    pub fn get_identifier(entity: &dyn Entity) -> ArchetypeIdentifier {
-        ArchetypeIdentifier (
+    pub fn get_identifier(entity: &dyn Entity) -> EntityIdentifier {
+        EntityIdentifier (
             entity
                 .untyped_iter()
                 .map(|component| component.get_component_type().to_string())
@@ -79,8 +57,4 @@ impl Archetype {
     pub fn remove(&mut self, entity_id: EntityId) -> Result<(), RemoveEntityError> {
         self.storage.remove(entity_id)
     }
-
-    /*pub fn for_each<F: Fn(Vec<ComponentRwLock>) + Send + Sync>(&self, callback: F) {
-        self.storage.for_each(callback)
-    }*/
 }

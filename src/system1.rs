@@ -3,13 +3,13 @@ use rayon::prelude::*;
 use crate::service::service_manager::ServiceManager;
 use crate::entity::entity_manager::EntityManager;
 use crate::service1::Service1;
-use crate::entity::archetype::ArchetypeIdentifier;
+use crate::entity::entity::EntityIdentifier;
 use crate::Component1;
 
 macro_rules! archetype {
     ($e:expr) => {{
         let component_names: Vec<&str> = vec![$e];
-        ArchetypeIdentifier(component_names
+        EntityIdentifier(component_names
             .iter()
             .map(|e| e.to_string())
             .collect())
@@ -33,30 +33,37 @@ pub fn system1_untyped(entity_manager: &EntityManager, service_manager: &Service
     };
 
     entity_manager
-        .iter_mut(archetype!["test.component1"])
+        .iter(archetype!["test.component1"])
         .par_bridge()
-        .for_each(|components| {
-            let component1 = if 0 < components.len() {
-                components.remove(0)
-            } else {
-                log::error!("Tried to launch a system with a component that was not provided, no component with the index {} in the component list {:?}.", 0, components);
-                return;
-            };
-
-            let component1 = match component1.downcast_mut::<Component1>() {
-                Some(component) => {
-                    component
-                },
-                None => {
-                    log::error!("Tried to launch system system1 with component {:?}, expected type test.component1", component1);
-                    return;
-                },
-            };
-
-            let service1 = service1
+        .for_each(|entity| {
+            entity
                 .write()
-                .unwrap();
-            
-            system1(component1, service1);
-        });
+                .untyped_iter_mut_over_types(archetype!["test.component1"])
+                .par_bridge()
+                .for_each(|mut components| {
+                    let component1 = match components.next() {
+                        Some(component) => component,
+                        None => {
+                            log::error!("Tried to launch a system with a component that was not provided");
+                            return;
+                        }
+                    };
+        
+                    let component1 = match component1.downcast_mut::<Component1>() {
+                        Some(component) => {
+                            component
+                        },
+                        None => {
+                            log::error!("Tried to launch system system1 with component {:?}, expected type test.component1", component1);
+                            return;
+                        },
+                    };
+        
+                    let service1 = service1
+                        .write()
+                        .unwrap();
+                    
+                    system1(component1, service1);
+                });
+            });
 }

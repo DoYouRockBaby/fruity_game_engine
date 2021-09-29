@@ -9,12 +9,11 @@ use crate::entity::entity_rwlock::EntityRwLock;
 use crate::EntityId;
 use std::fmt::Debug;
 
-pub trait InternalArchetypeStorage: Debug + Send {
+pub trait InternalArchetypeStorage: Debug + Send + Sync {
     fn get(&self, entity_id: EntityId) -> Option<EntityRwLock>;
     fn iter(&self) -> Iter<'_>;
     fn add(&mut self, entity_id: EntityId, entity: Box<dyn Any>);
     fn remove(&mut self, entity_id: EntityId) -> Result<(), RemoveEntityError>;
-    //fn for_each<F: Fn(Vec<ComponentRwLock>) + Send + Sync>(&self, callback: F);
 }
 
 #[derive(Debug)]
@@ -87,12 +86,4 @@ impl<T: Entity> InternalArchetypeStorage for InternalRawArchetypeStorage<T> {
             },
         }
     }
-
-    /*fn for_each<F: Fn(Vec<ComponentRwLock>) + Send + Sync>(&self, callback: F) {
-        self.entity_indexes
-            .iter()
-            .par_bridge()
-            .filter_map(|(_, index)| self.datas.get_by_index(*index))
-            .for_each(|components| callback(components));
-    }*/
 }

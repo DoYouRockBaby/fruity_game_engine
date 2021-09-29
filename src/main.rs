@@ -38,6 +38,10 @@ impl Entity for Entity1 {
             _ => None,
         }
     }
+
+    fn len(&self) -> usize {
+        2
+    }
 }
 
 #[derive(Debug)]
@@ -56,6 +60,10 @@ impl Entity for Entity2 {
             0 => Some(&mut self.0),
             _ => None,
         }
+    }
+
+    fn len(&self) -> usize {
+        1
     }
 }
 
@@ -105,7 +113,7 @@ fn main() {
 
     match world.entity_manager.get(entity_id_2) {
         Some(entity) => match entity.write().get_mut(0) {
-            Some(component) => component.set_untyped_field("int1", &(12345 as i64)),
+            Some(component) => component.set_field("int1", 12345 as i64),
             None => (),
         },
         None => (),
@@ -113,8 +121,7 @@ fn main() {
 
     match world.entity_manager.get(entity_id_1) {
         Some(entity) => match entity.write().get_mut(1) {
-            Some(component) => component.set_untyped_field("float1", &(5432.1 as f64)),
-            //Some(component) => component.set_field("float1", 5432.1 as f64),
+            Some(component) => component.set_field("float1", 5432.1 as f64),
             None => (),
         },
         None => (),
@@ -123,8 +130,8 @@ fn main() {
     world.service_manager.register::<Service1>(Service1::new());
     world.system_manager.add_system(system1_untyped);
 
-    println!("{:#?}", world);
-    println!("{:#?}", world.entity_manager.get(entity_id_4));
+    /*println!("{:#?}", world);
+    println!("{:#?}", world.entity_manager.get(entity_id_4));*/
 
     world.run();
     world.run();
