@@ -3,11 +3,9 @@ name = "fruity_game_engine"
 version = "0.1.0"
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-log = "0.4.14"
+fruity_ecs = { path = "fruity_ecs" }
+fruity_ecs_macro = { path = "fruity_ecs_macro" }
 pretty_env_logger = "0.4.0"
+log = "0.4.14"
 rayon = "1.5"
-itertools = "0.10.1"
-hashbrown = { version = "0.11.2", features = ["rayon"] }

@@ -1,5 +1,5 @@
+use crate::entity::entity::Entity;
 use crate::entity::entity_rwlock::EntityRwLock;
-use crate::Entity;
 use std::sync::RwLock;
 
 pub struct RawInternalIter<'s, T: Entity> {

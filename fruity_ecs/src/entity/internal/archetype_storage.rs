@@ -1,12 +1,12 @@
+use crate::entity::entity::EntityId;
+use crate::entity::entity::Entity;
 use crate::entity::internal::archetype_storage_iter::RawInternalIter;
-use crate::entity::archetype_storage::Iter;
+use crate::entity::archetype::Iter;
 use std::sync::RwLock;
 use std::collections::HashMap;
-use crate::Entity;
 use crate::entity::entity_manager::RemoveEntityError;
 use std::any::Any;
 use crate::entity::entity_rwlock::EntityRwLock;
-use crate::EntityId;
 use std::fmt::Debug;
 
 pub trait InternalArchetypeStorage: Debug + Send + Sync {

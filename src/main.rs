@@ -1,69 +1,54 @@
-mod component;
-mod entity;
-mod service;
-mod system;
-mod world;
-mod service1;
-mod system1;
-mod component1;
-mod component2;
-
 extern crate pretty_env_logger;
 
-use crate::component::component::Component;
-use crate::entity::entity::Entity;
-use crate::service1::Service1;
+mod system1;
+
 use crate::system1::system1_untyped;
-use crate::entity::entity::EntityId;
-use crate::world::world::World;
-use crate::component2::Component2;
-use crate::component1::Component1;
+use fruity_ecs_macro::*;
+use fruity_ecs::component::component::Component;
+use fruity_ecs::entity::entity::EntityId;
+use fruity_ecs::world::world::World;
 
-#[derive(Debug)]
-struct Entity1 (Component1, Component2);
-
-impl Entity for Entity1 {
-    fn get(&self, index: usize) -> Option<&dyn Component> {
-        match index {
-            0 => Some(&self.0),
-            1 => Some(&self.1),
-            _ => None,
-        }
-    }
-
-    fn get_mut(&mut self, index: usize) -> Option<&mut dyn Component> {
-        match index {
-            0 => Some(&mut self.0),
-            1 => Some(&mut self.1),
-            _ => None,
-        }
-    }
-
-    fn len(&self) -> usize {
-        2
-    }
+#[derive(Debug, Clone, Component)]
+pub struct Component1 {
+    pub str1: String,
+    pub int1: i64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Component)]
+pub struct Component2 {
+    pub float1: f64,
+}
+
+#[derive(Debug, Entity)]
+struct Entity1 (Component1, Component2);
+
+#[derive(Debug, Entity)]
 struct Entity2 (Component1);
 
-impl Entity for Entity2 {
-    fn get(&self, index: usize) -> Option<&dyn Component> {
-        match index {
-            0 => Some(&self.0),
-            _ => None,
+#[derive(Debug, Entity)]
+struct Entity3 {
+    component1: Component1,
+    component1bis: Component1,
+    component2: Component2
+}
+
+pub struct Service1 {
+    incrementer: u32,
+}
+
+impl Service1 {
+    pub fn new() -> Service1 {
+        Service1 {
+            incrementer: 0,
         }
     }
 
-    fn get_mut(&mut self, index: usize) -> Option<&mut dyn Component> {
-        match index {
-            0 => Some(&mut self.0),
-            _ => None,
-        }
+    pub fn increment(&mut self) {
+        self.incrementer += 1;
     }
-
-    fn len(&self) -> usize {
-        1
+    
+    pub fn value(&self) -> u32 {
+        self.incrementer
     }
 }
 
@@ -130,8 +115,8 @@ fn main() {
     world.service_manager.register::<Service1>(Service1::new());
     world.system_manager.add_system(system1_untyped);
 
-    /*println!("{:#?}", world);
-    println!("{:#?}", world.entity_manager.get(entity_id_4));*/
+    // println!("{:#?}", world);
+    println!("{:#?}", world.entity_manager.get(entity_id_4));
 
     world.run();
     world.run();

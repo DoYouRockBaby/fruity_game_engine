@@ -1,20 +1,10 @@
+use crate::Service1;
+use crate::Component1;
 use std::sync::RwLockWriteGuard;
 use rayon::prelude::*;
-use crate::service::service_manager::ServiceManager;
-use crate::entity::entity_manager::EntityManager;
-use crate::service1::Service1;
-use crate::entity::entity::EntityIdentifier;
-use crate::Component1;
-
-macro_rules! archetype {
-    ($e:expr) => {{
-        let component_names: Vec<&str> = vec![$e];
-        EntityIdentifier(component_names
-            .iter()
-            .map(|e| e.to_string())
-            .collect())
-    }};
-}
+use fruity_ecs::service::service_manager::ServiceManager;
+use fruity_ecs::entity::entity_manager::EntityManager;
+use fruity_ecs::entity_type;
 
 pub fn system1(component1: &mut Component1, mut service1: RwLockWriteGuard<Service1>) {
     component1.int1 += 1;
@@ -33,12 +23,12 @@ pub fn system1_untyped(entity_manager: &EntityManager, service_manager: &Service
     };
 
     entity_manager
-        .iter(archetype!["test.component1"])
+        .iter(entity_type!["Component1"])
         .par_bridge()
         .for_each(|entity| {
             entity
                 .write()
-                .untyped_iter_mut_over_types(archetype!["test.component1"])
+                .untyped_iter_mut_over_types(entity_type!["test.component1"])
                 .par_bridge()
                 .for_each(|mut components| {
                     let component1 = match components.next() {

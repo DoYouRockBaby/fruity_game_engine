@@ -109,33 +109,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "fruity_ecs"
+name = "fruity_game_engine"
 version = "0.1.0"
 dependencies = [
  "hashbrown",
  "itertools",
  "log",
- "rayon",
-]
-
-[[package]]
-name = "fruity_ecs_macro"
-version = "0.1.0"
-dependencies = [
+ "pretty_env_logger",
  "proc-macro2",
  "quote",
- "syn",
-]
-
-[[package]]
-name = "fruity_game_engine"
-version = "0.1.0"
-dependencies = [
- "fruity_ecs",
- "fruity_ecs_macro",
- "log",
- "pretty_env_logger",
  "rayon",
+ "syn",
 ]
 
 [[package]]
