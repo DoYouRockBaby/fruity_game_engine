@@ -1,3 +1,3 @@
 export function print(value) {
-    internprint(value.toString() + "\n");
+    log(value.toString() + "\n");
 }

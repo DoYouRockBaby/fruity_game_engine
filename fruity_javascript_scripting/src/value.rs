@@ -18,6 +18,7 @@ pub trait ValueSerializer {
     ) -> v8::Local<'a, v8::Value>;
 }
 
+#[derive(Debug)]
 pub struct JsResult<'a> {
     scope: v8::HandleScope<'a>,
     v8_value: Option<v8::Local<'a, v8::Value>>,
@@ -25,7 +26,7 @@ pub struct JsResult<'a> {
 
 impl<'a> JsResult<'a> {
     pub fn new<'b>(
-        scope: rusty_v8::HandleScope<'b>,
+        scope: v8::HandleScope<'b>,
         v8_value: Option<v8::Local<'b, v8::Value>>,
     ) -> JsResult<'b> {
         JsResult::<'b> { scope, v8_value }

@@ -1,26 +1,15 @@
+use crate::bindings;
 use crate::error::JsError;
-use crate::modules::module_resolve_callback;
-use crate::modules::ModuleMap;
-use crate::modules::ModuleSpecifier;
+use crate::exception::exception_to_err_result;
+use crate::module_map::ModuleInfos;
+use crate::module_map::ModuleMap;
+use crate::normalize_path::normalize_path;
 use crate::value::JsResult;
 use rusty_v8 as v8;
 use std::cell::RefCell;
-use std::collections::HashMap;
-use std::mem::forget;
+use std::path::Path;
+use std::path::PathBuf;
 use std::rc::Rc;
-use std::sync::Arc;
-use std::sync::Mutex;
-
-pub type ModuleId = i32;
-
-#[derive(Default, Clone)]
-pub struct SharedArrayBufferStore(Arc<Mutex<SharedArrayBufferStoreInner>>);
-
-#[derive(Default)]
-pub struct SharedArrayBufferStoreInner {
-  buffers: HashMap<u32, v8::SharedRef<v8::BackingStore>>,
-  last_id: u32,
-}
 
 pub struct JsRuntime {
   v8_isolate: Option<v8::OwnedIsolate>,
@@ -30,6 +19,19 @@ pub struct JsRuntime {
 /// embedder slots.
 pub(crate) struct JsRuntimeState {
   pub global_context: Option<v8::Global<v8::Context>>,
+}
+
+impl Drop for JsRuntime {
+  fn drop(&mut self) {
+    let v8_isolate = self.v8_isolate.take().unwrap();
+    std::mem::forget(v8_isolate);
+    std::mem::drop(self);
+
+    unsafe {
+      v8::V8::dispose();
+    }
+    v8::V8::shutdown_platform();
+  }
 }
 
 impl JsRuntime {
@@ -55,8 +57,7 @@ impl JsRuntime {
       global_context: Some(global_context),
     })));
 
-    let module_map = ModuleMap::new();
-    isolate.set_slot(Rc::new(RefCell::new(module_map)));
+    isolate.set_slot(Rc::new(RefCell::new(ModuleMap::new())));
 
     JsRuntime {
       v8_isolate: Some(isolate),
@@ -84,132 +85,244 @@ impl JsRuntime {
   }
 
   fn setup_isolate(mut isolate: v8::OwnedIsolate) -> v8::OwnedIsolate {
-    /*isolate.set_capture_stack_trace_for_uncaught_exceptions(true, 10);
+    isolate.set_capture_stack_trace_for_uncaught_exceptions(true, 10);
     isolate.set_promise_reject_callback(bindings::promise_reject_callback);
     isolate.set_host_initialize_import_meta_object_callback(
       bindings::host_initialize_import_meta_object_callback,
     );
     isolate.set_host_import_module_dynamically_callback(
       bindings::host_import_module_dynamically_callback,
-    );*/
+    );
     isolate
   }
 
   pub fn run_script(&mut self, source: &str) -> Result<JsResult, JsError> {
     // Enter the context for compiling and running the script
     let mut scope = self.handle_scope();
+    let result = {
+      let mut try_catch = v8::TryCatch::new(&mut scope);
 
-    // Prepare the sources
-    let source = v8::String::new(&mut scope, &source).unwrap();
+      // Prepare the sources
+      let source = v8::String::new(&mut try_catch, &source).unwrap();
 
-    // Compile and run the script
-    let script = if let Some(script) = v8::Script::compile(&mut scope, source, None) {
-      script
-    } else {
-      return Err(JsError::CompileError);
+      // Compile and run the script
+      let script = if let Some(script) = v8::Script::compile(&mut try_catch, source, None) {
+        script
+      } else {
+        return Err(JsError::CompileError);
+      };
+
+      let result = script.run(&mut try_catch);
+
+      if result.is_none() {
+        let exception = try_catch.exception().unwrap();
+        return exception_to_err_result(&mut try_catch, exception);
+      }
+
+      result
     };
 
-    let result = script.run(&mut scope);
     Ok(JsResult::new(scope, result))
+  }
+
+  pub fn run_module(&mut self, filepath: &str) -> Result<JsResult, JsError> {
+    // Enter the context for compiling and running the script
+    let mut scope = self.handle_scope();
+
+    // Create the module
+    let module = compile_module(&mut scope, filepath)?;
+
+    // Instantiate the module
+    module
+      .instantiate_module(&mut scope, module_resolve_callback)
+      .unwrap();
+
+    // Run the module
+    let result = module.evaluate(&mut scope);
+
+    //////////////////////////////////////////////////////////////////////
+    // Update status after evaluating.
+    let status = module.get_status();
+
+    if status == v8::ModuleStatus::Errored {
+      let exception = module.get_exception();
+      return exception_to_err_result(&mut scope, exception);
+    }
+    //////////////////////////////////////////////////////////////////////
+
+    Ok(JsResult::new(scope, result))
+  }
+
+  #[inline(always)]
+  pub fn set_func(&mut self, name: &str, callback: impl v8::MapFnTo<v8::FunctionCallback>) {
+    let mut scope = self.handle_scope();
+    let scope = &mut v8::EscapableHandleScope::new(&mut scope);
+    let context = v8::Context::new(scope);
+
+    {
+      let global = context.global(scope);
+
+      let scope = &mut v8::ContextScope::new(scope, context);
+
+      let key = v8::String::new(scope, name).unwrap();
+      let tmpl = v8::FunctionTemplate::new(scope, callback);
+      let val = tmpl.get_function(scope).unwrap();
+      global.set(scope, key.into(), val.into());
+    }
+
+    scope.escape(context);
+    /*let mut scope = self.handle_scope();
+    let global = v8::ObjectTemplate::new(&mut scope);
+    global.set(
+      v8::String::new(&mut scope, name).unwrap().into(),
+      v8::FunctionTemplate::new(&mut scope, callback).into(),
+    );
+
+    let context = v8::Context::new_from_template(&mut scope, global);
+    let mut context_scope = v8::ContextScope::new(&mut scope, context);
+
+    let request_template = v8::ObjectTemplate::new(&mut context_scope);
+    request_template.set_internal_field_count(1);
+
+    // make it global
+    v8::Global::new(&mut context_scope, request_template);*/
   }
 
   pub fn module_map(isolate: &v8::Isolate) -> Rc<RefCell<ModuleMap>> {
     let module_map = isolate.get_slot::<Rc<RefCell<ModuleMap>>>().unwrap();
     module_map.clone()
   }
-
-  /// Load specified module and all of its dependencies.
-  ///
-  /// The module will be marked as "main", and because of that
-  /// "import.meta.main" will return true when checked inside that module.
-  ///
-  /// User must call `JsRuntime::mod_evaluate` with returned `ModuleId`
-  /// manually after load is finished.
-  pub fn load_main_module(&mut self, specifier: &ModuleSpecifier) -> Result<ModuleId, JsError> {
-    let module_map_rc = Self::module_map(self.v8_isolate());
-    let mut load = ModuleMap::load_main(module_map_rc.clone(), specifier.as_str())?;
-
-    if let Ok(info) = load.module_source() {
-      let scope = &mut self.handle_scope();
-      load.register_and_recurse(scope, &info)?;
-    }
-
-    let root_id = load.root_module_id.expect("Root module should be loaded");
-    self.instantiate_module(root_id)?;
-    Ok(root_id)
-  }
-
-  pub fn instantiate_module(&mut self, id: ModuleId) -> Result<(), JsError> {
-    let module_map_rc = Self::module_map(self.v8_isolate());
-    let scope = &mut self.handle_scope();
-    let tc_scope = &mut v8::TryCatch::new(scope);
-
-    let module = module_map_rc
-      .borrow()
-      .get_handle(id)
-      .map(|handle| v8::Local::new(tc_scope, handle))
-      .expect("ModuleInfo not found");
-
-    // IMPORTANT: No borrows to `ModuleMap` can be held at this point because
-    // `module_resolve_callback` will be calling into `ModuleMap` from within
-    // the isolate.
-    let instantiate_result = module.instantiate_module(tc_scope, module_resolve_callback);
-
-    if instantiate_result.is_none() {
-      let exception = module.get_exception();
-      let err = JsError::from_v8_exception(tc_scope, exception);
-      return Err(err);
-    }
-
-    Ok(())
-  }
-
-  /// Evaluates an already instantiated ES module.
-  ///
-  /// This function panics if module has not been instantiated.
-  pub fn mod_evaluate(&mut self, id: ModuleId) -> Result<JsResult, JsError> {
-    let module_map_rc = Self::module_map(self.v8_isolate());
-    let mut scope = self.handle_scope();
-
-    let module = {
-      module_map_rc
-        .borrow()
-        .get_handle(id)
-        .map(|handle| v8::Local::new(&mut scope, handle))
-        .expect("ModuleInfo not found")
-    };
-
-    let result = module.evaluate(&mut scope);
-    Ok(JsResult::new(scope, result))
-  }
-
-  #[inline(always)]
-  pub fn set_func(&mut self, name: &'static str, callback: impl v8::MapFnTo<v8::FunctionCallback>) {
-    let mut scope = self.handle_scope();
-    let context = v8::Context::new(&mut scope);
-    let global = context.global(&mut scope);
-
-    let key = v8::String::new(&mut scope, name).unwrap();
-    let tmpl = v8::FunctionTemplate::new(&mut scope, callback);
-    let val = tmpl.get_function(&mut scope).unwrap();
-
-    global.set(&mut scope, key.into(), val.into());
-  }
 }
 
-impl Drop for JsRuntime {
-  fn drop(&mut self) {
-    // TODO(ry): in rusty_v8, `SnapShotCreator::get_owned_isolate()` returns
-    // a `struct OwnedIsolate` which is not actually owned, hence the need
-    // here to leak the `OwnedIsolate` in order to avoid a double free and
-    // the segfault that it causes.
-    let v8_isolate = self.v8_isolate.take().unwrap();
-    forget(v8_isolate);
+/// Called by V8 during `JsRuntime::instantiate_module`.
+///
+/// This function borrows `ModuleMap` from the isolate slot,
+/// so it is crucial to ensure there are no existing borrows
+/// of `ModuleMap` when `JsRuntime::instantiate_module` is called.
+pub fn module_resolve_callback<'s>(
+  context: v8::Local<'s, v8::Context>,
+  specifier: v8::Local<'s, v8::String>,
+  _import_assertions: v8::Local<'s, v8::FixedArray>,
+  referrer: v8::Local<'s, v8::Module>,
+) -> Option<v8::Local<'s, v8::Module>> {
+  let scope = &mut unsafe { v8::CallbackScope::new(context) };
 
-    // Dispose V8
-    unsafe {
-      v8::V8::dispose();
+  // Get included module path
+  let referrer_directory = get_referrer_directory(scope, referrer);
+  let included_module_path = get_specifier_filename(scope, specifier, &referrer_directory);
+
+  // Create the module
+  let module = match included_module_path {
+    Ok(filepath) => match compile_module(scope, &filepath) {
+      Ok(module) => Some(module),
+      Err(_err) => None,
+    },
+    Err(_err) => None,
+  };
+
+  // Instantiate the module
+  /*match module {
+    Some(module) => {
+      module
+        .instantiate_module(scope, module_resolve_callback)
+        .unwrap();
     }
-    v8::V8::shutdown_platform();
+    None => (),
+  }*/
+
+  // Return the newly created module
+  module
+}
+
+pub fn compile_module<'a>(
+  scope: &mut v8::HandleScope<'a>,
+  filepath: &str,
+) -> Result<v8::Local<'a, v8::Module>, JsError> {
+  // Prepare sources
+  let source_str = match std::fs::read_to_string(filepath) {
+    Ok(code) => Ok(code),
+    Err(_) => Err(JsError::FileNotFound(filepath.to_string())),
+  }?;
+
+  let source = v8::String::new(scope, &source_str).unwrap();
+
+  let origin = module_origin(scope, source);
+  let source = v8::script_compiler::Source::new(source, Some(&origin));
+
+  // Create the module
+  let module = match v8::script_compiler::compile_module(scope, source) {
+    Some(module) => Ok(module),
+    None => Err(JsError::CompileError),
+  }?;
+
+  // Store in referrer hashmap
+  let module_map_rc = JsRuntime::module_map(scope);
+  let mut module_map = module_map_rc.borrow_mut();
+  let referrer_global = v8::Global::new(scope, module);
+  module_map.insert(
+    referrer_global,
+    ModuleInfos {
+      filepath: filepath.to_string(),
+    },
+  );
+
+  Ok(module)
+}
+
+pub fn module_origin<'a>(
+  scope: &mut v8::HandleScope<'a>,
+  resource_name: v8::Local<'a, v8::String>,
+) -> v8::ScriptOrigin<'a> {
+  let source_map_url = v8::String::new(scope, "").unwrap();
+  v8::ScriptOrigin::new(
+    scope,
+    resource_name.into(),
+    0,
+    0,
+    false,
+    123,
+    source_map_url.into(),
+    true,
+    false,
+    true,
+  )
+}
+
+pub fn get_referrer_directory<'a>(
+  scope: &mut v8::HandleScope<'a>,
+  referrer: v8::Local<'a, v8::Module>,
+) -> String {
+  let module_map_rc = JsRuntime::module_map(scope);
+  let module_map = module_map_rc.borrow();
+  let referrer_global = v8::Global::new(scope, referrer);
+  let module_info = module_map.get(&referrer_global).unwrap();
+  let referrer_path = PathBuf::from(&module_info.filepath);
+  let referrer_directory = referrer_path
+    .parent()
+    .unwrap()
+    .to_str()
+    .unwrap()
+    .to_string();
+
+  referrer_directory
+}
+
+pub fn get_specifier_filename<'a>(
+  scope: &mut v8::HandleScope<'a>,
+  specifier: v8::Local<'a, v8::String>,
+  base: &str,
+) -> Result<String, JsError> {
+  let specifier = specifier.to_rust_string_lossy(scope);
+
+  if specifier.starts_with("./") || specifier.starts_with("../") {
+    let filepath = Path::new(base)
+      .join(specifier)
+      .to_str()
+      .unwrap()
+      .to_string();
+
+    Ok(normalize_path(filepath).to_str().unwrap().to_string())
+  } else {
+    Err(JsError::ImportModuleWithoutPrefix(specifier.to_string()))
   }
 }

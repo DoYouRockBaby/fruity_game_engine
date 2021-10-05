@@ -1,6 +1,7 @@
-import { print } from "./log.js";
+//import { print } from "./log.js";
 
-print("He, i'm in typescript");
-print2("He, i'm in typescript");
+log("He, i'm in typescript 1");
+//print("He, i'm in typescript 2");
+//print2("He, i'm in typescript 3");
 
-return 3 + 4 + 5;
+//console.log("test");
