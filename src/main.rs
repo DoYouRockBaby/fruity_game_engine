@@ -3,10 +3,12 @@ extern crate pretty_env_logger;
 mod system1;
 
 use crate::system1::system1_untyped;
-use fruity_ecs_macro::*;
 use fruity_ecs::component::component::Component;
 use fruity_ecs::entity::entity::EntityId;
 use fruity_ecs::world::world::World;
+use fruity_ecs_macro::*;
+use fruity_javascript_scripting::execute_script;
+use std::error::Error;
 
 #[derive(Debug, Clone, Component)]
 pub struct Component1 {
@@ -20,16 +22,16 @@ pub struct Component2 {
 }
 
 #[derive(Debug, Entity)]
-struct Entity1 (Component1, Component2);
+struct Entity1(Component1, Component2);
 
 #[derive(Debug, Entity)]
-struct Entity2 (Component1);
+struct Entity2(Component1);
 
 #[derive(Debug, Entity)]
 struct Entity3 {
     component1: Component1,
     component1bis: Component1,
-    component2: Component2
+    component2: Component2,
 }
 
 pub struct Service1 {
@@ -38,55 +40,43 @@ pub struct Service1 {
 
 impl Service1 {
     pub fn new() -> Service1 {
-        Service1 {
-            incrementer: 0,
-        }
+        Service1 { incrementer: 0 }
     }
 
     pub fn increment(&mut self) {
         self.incrementer += 1;
     }
-    
     pub fn value(&self) -> u32 {
         self.incrementer
     }
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     pretty_env_logger::init();
     let mut world = World::new();
-    
     let component1 = Component1 {
         str1: "je suis une string 1".to_string(),
         int1: 12,
     };
 
-    let component2 = Component2 {
-        float1: 3.14,
-    };
+    let component2 = Component2 { float1: 3.14 };
 
     let component3 = Component1 {
         str1: "je suis une string 2".to_string(),
         int1: 34,
     };
-    
     let component4 = Component1 {
         str1: "je suis une string 3".to_string(),
         int1: 53,
     };
 
-    let component5 = Component2 {
-        float1: 2.14,
-    };
-    
+    let component5 = Component2 { float1: 2.14 };
     let component6 = Component1 {
         str1: "je suis une string 4".to_string(),
         int1: 43,
     };
 
-    let component7 = Component2 {
-        float1: 5.14,
-    };
+    let component7 = Component2 { float1: 5.14 };
 
     let entity_id_1 = world.entity_manager.create(Entity1(component1, component2));
     let entity_id_2 = world.entity_manager.create(Entity2(component3));
@@ -115,10 +105,15 @@ fn main() {
     world.service_manager.register::<Service1>(Service1::new());
     world.system_manager.add_system(system1_untyped);
 
+    let script_path = "src/javascript/index.js";
+    execute_script(&mut world, script_path);
+
     // println!("{:#?}", world);
     println!("{:#?}", world.entity_manager.get(entity_id_4));
 
     world.run();
     world.run();
     world.run();
+
+    Ok(())
 }

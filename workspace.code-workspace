@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../.cargo/registry/src/github.com-1ecc6299db9ec823/rusty_v8-0.30.0"
+		},
+		{
+			"path": "../../.cargo/registry/src/github.com-1ecc6299db9ec823/deno_core-0.101.0"
+		}
+	],
+	"settings": {
+		"editor.formatOnSave": true
+	}
+}
