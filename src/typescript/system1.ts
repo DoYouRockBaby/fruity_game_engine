@@ -1,5 +1,5 @@
 interface Component1 {
-  int1: i64;
+  int1: number;
   str1: string;
 }
 
@@ -9,7 +9,7 @@ interface Service1 {
 }
 
 export function system1(): void {
-  console.log("System1 speak from typescript");
+  print("System1 speak from typescript");
 }
 
 /*export function system1(component1: Component1, service1: Service1): void {

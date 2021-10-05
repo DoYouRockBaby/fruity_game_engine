@@ -1,4 +1,3 @@
-use crate::bindings;
 use crate::error::JsError;
 use crate::exception::exception_to_err_result;
 use crate::module_map::ModuleInfos;
@@ -13,12 +12,7 @@ use std::rc::Rc;
 
 pub struct JsRuntime {
   v8_isolate: Option<v8::OwnedIsolate>,
-}
-
-/// Internal state for JsRuntime which is stored in one of v8::Isolate's
-/// embedder slots.
-pub(crate) struct JsRuntimeState {
-  pub global_context: Option<v8::Global<v8::Context>>,
+  global_context: v8::Global<v8::Context>,
 }
 
 impl Drop for JsRuntime {
@@ -53,14 +47,11 @@ impl JsRuntime {
       v8::Global::new(scope, context)
     };
 
-    isolate.set_slot(Rc::new(RefCell::new(JsRuntimeState {
-      global_context: Some(global_context),
-    })));
-
     isolate.set_slot(Rc::new(RefCell::new(ModuleMap::new())));
 
     JsRuntime {
       v8_isolate: Some(isolate),
+      global_context,
     }
   }
 
@@ -69,30 +60,15 @@ impl JsRuntime {
     v8::HandleScope::with_context(self.v8_isolate(), context)
   }
 
-  pub fn global_context(&mut self) -> v8::Global<v8::Context> {
-    let state = Self::state(self.v8_isolate());
-    let state = state.borrow();
-    state.global_context.clone().unwrap()
+  pub fn global_context(&self) -> v8::Global<v8::Context> {
+    self.global_context.clone()
   }
 
   pub fn v8_isolate(&mut self) -> &mut v8::OwnedIsolate {
     self.v8_isolate.as_mut().unwrap()
   }
 
-  pub(crate) fn state(isolate: &v8::Isolate) -> Rc<RefCell<JsRuntimeState>> {
-    let s = isolate.get_slot::<Rc<RefCell<JsRuntimeState>>>().unwrap();
-    s.clone()
-  }
-
-  fn setup_isolate(mut isolate: v8::OwnedIsolate) -> v8::OwnedIsolate {
-    isolate.set_capture_stack_trace_for_uncaught_exceptions(true, 10);
-    isolate.set_promise_reject_callback(bindings::promise_reject_callback);
-    isolate.set_host_initialize_import_meta_object_callback(
-      bindings::host_initialize_import_meta_object_callback,
-    );
-    isolate.set_host_import_module_dynamically_callback(
-      bindings::host_import_module_dynamically_callback,
-    );
+  fn setup_isolate(isolate: v8::OwnedIsolate) -> v8::OwnedIsolate {
     isolate
   }
 
@@ -155,37 +131,17 @@ impl JsRuntime {
 
   #[inline(always)]
   pub fn set_func(&mut self, name: &str, callback: impl v8::MapFnTo<v8::FunctionCallback>) {
-    let mut scope = self.handle_scope();
-    let scope = &mut v8::EscapableHandleScope::new(&mut scope);
-    let context = v8::Context::new(scope);
+    let global_context = self.global_context();
+    let scope = &mut v8::HandleScope::with_context(self.v8_isolate(), global_context.clone());
 
     {
-      let global = context.global(scope);
-
-      let scope = &mut v8::ContextScope::new(scope, context);
+      let global = global_context.get(scope).global(scope);
 
       let key = v8::String::new(scope, name).unwrap();
       let tmpl = v8::FunctionTemplate::new(scope, callback);
       let val = tmpl.get_function(scope).unwrap();
       global.set(scope, key.into(), val.into());
     }
-
-    scope.escape(context);
-    /*let mut scope = self.handle_scope();
-    let global = v8::ObjectTemplate::new(&mut scope);
-    global.set(
-      v8::String::new(&mut scope, name).unwrap().into(),
-      v8::FunctionTemplate::new(&mut scope, callback).into(),
-    );
-
-    let context = v8::Context::new_from_template(&mut scope, global);
-    let mut context_scope = v8::ContextScope::new(&mut scope, context);
-
-    let request_template = v8::ObjectTemplate::new(&mut context_scope);
-    request_template.set_internal_field_count(1);
-
-    // make it global
-    v8::Global::new(&mut context_scope, request_template);*/
   }
 
   pub fn module_map(isolate: &v8::Isolate) -> Rc<RefCell<ModuleMap>> {

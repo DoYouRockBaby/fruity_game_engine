@@ -3,7 +3,6 @@ use rusty_v8 as v8;
 use crate::runtime::JsRuntime;
 use fruity_ecs::world::world::World;
 
-mod bindings;
 mod error;
 mod exception;
 mod module_map;
@@ -25,7 +24,7 @@ pub fn execute_script(_world: &mut World, path: &str) {
     println!("Result: {:#?}", result1);
 
     // Try module script running
-    let result2 = runtime.run_module(path);
+    let result2 = runtime.run_module(path).unwrap().deserialize::<i32>();
     println!("Result: {:#?}", result2);
 }
 
