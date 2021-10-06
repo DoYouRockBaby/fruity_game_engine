@@ -26,4 +26,11 @@ impl ModuleMap {
     pub fn get(&self, global: &v8::Global<v8::Module>) -> Option<&ModuleInfos> {
         self.infos.get(global)
     }
+
+    pub fn find_by_filepath(
+        &self,
+        filepath: &str,
+    ) -> Option<(&v8::Global<v8::Module>, &ModuleInfos)> {
+        self.infos.iter().find(|pair| pair.1.filepath == filepath)
+    }
 }

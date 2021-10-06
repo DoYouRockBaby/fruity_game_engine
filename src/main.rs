@@ -1,7 +1,9 @@
 extern crate pretty_env_logger;
 
+mod service1;
 mod system1;
 
+use crate::service1::Service1;
 use crate::system1::system1_untyped;
 use fruity_ecs::component::component::Component;
 use fruity_ecs::entity::entity::EntityId;
@@ -32,23 +34,6 @@ struct Entity3 {
     component1: Component1,
     component1bis: Component1,
     component2: Component2,
-}
-
-pub struct Service1 {
-    incrementer: u32,
-}
-
-impl Service1 {
-    pub fn new() -> Service1 {
-        Service1 { incrementer: 0 }
-    }
-
-    pub fn increment(&mut self) {
-        self.incrementer += 1;
-    }
-    pub fn value(&self) -> u32 {
-        self.incrementer
-    }
 }
 
 fn main() -> Result<(), Box<dyn Error>> {

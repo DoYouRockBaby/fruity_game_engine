@@ -1,9 +1,9 @@
-use std::sync::RwLock;
-use std::sync::Arc;
-use std::fmt::Debug;
 use std::any::Any;
 use std::any::TypeId;
 use std::collections::HashMap;
+use std::fmt::Debug;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 /// A services collection
 pub struct ServiceManager {
@@ -30,7 +30,8 @@ impl<'s> ServiceManager {
     /// * `T` - The service type
     ///
     pub fn register<T: Any + Send + Sync>(&mut self, service: T) {
-        self.services.insert(TypeId::of::<T>(), Arc::new(RwLock::new(service)));
+        self.services
+            .insert(TypeId::of::<T>(), Arc::new(RwLock::new(service)));
     }
 
     /// Get an existing service

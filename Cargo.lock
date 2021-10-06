@@ -231,6 +231,7 @@ dependencies = [
  "fruity_ecs",
  "fruity_ecs_macro",
  "fruity_javascript_scripting",
+ "fruity_trait_vec",
  "log",
  "mini-redis",
  "pretty_env_logger",
@@ -247,6 +248,10 @@ dependencies = [
  "rusty_v8",
  "url",
 ]
+
+[[package]]
+name = "fruity_trait_vec"
+version = "0.1.0"
 
 [[package]]
 name = "fslock"

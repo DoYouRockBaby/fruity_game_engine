@@ -104,27 +104,32 @@ impl JsRuntime {
   pub fn run_module(&mut self, filepath: &str) -> Result<JsResult, JsError> {
     // Enter the context for compiling and running the script
     let mut scope = self.handle_scope();
+    let result = {
+      let mut try_catch = v8::TryCatch::new(&mut scope);
 
-    // Create the module
-    let module = compile_module(&mut scope, filepath)?;
+      // Create the module
+      let module = compile_module(&mut try_catch, filepath)?;
 
-    // Instantiate the module
-    module
-      .instantiate_module(&mut scope, module_resolve_callback)
-      .unwrap();
+      // Instantiate the module
+      let result = module.instantiate_module(&mut try_catch, module_resolve_callback);
+      if result.is_none() {
+        let exception = try_catch.exception().unwrap();
+        return exception_to_err_result(&mut try_catch, exception);
+      }
 
-    // Run the module
-    let result = module.evaluate(&mut scope);
+      // Run the module
+      let result = module.evaluate(&mut try_catch);
 
-    //////////////////////////////////////////////////////////////////////
-    // Update status after evaluating.
-    let status = module.get_status();
+      // Update status after evaluating.
+      let status = module.get_status();
 
-    if status == v8::ModuleStatus::Errored {
-      let exception = module.get_exception();
-      return exception_to_err_result(&mut scope, exception);
-    }
-    //////////////////////////////////////////////////////////////////////
+      if status == v8::ModuleStatus::Errored {
+        let exception = module.get_exception();
+        return exception_to_err_result(&mut try_catch, exception);
+      }
+
+      result
+    };
 
     Ok(JsResult::new(scope, result))
   }
@@ -176,16 +181,6 @@ pub fn module_resolve_callback<'s>(
     Err(_err) => None,
   };
 
-  // Instantiate the module
-  /*match module {
-    Some(module) => {
-      module
-        .instantiate_module(scope, module_resolve_callback)
-        .unwrap();
-    }
-    None => (),
-  }*/
-
   // Return the newly created module
   module
 }
@@ -194,6 +189,14 @@ pub fn compile_module<'a>(
   scope: &mut v8::HandleScope<'a>,
   filepath: &str,
 ) -> Result<v8::Local<'a, v8::Module>, JsError> {
+  let module_map_rc = JsRuntime::module_map(scope);
+  let mut module_map = module_map_rc.borrow_mut();
+
+  // Check if the filepath is already registered, if yes return the associated module
+  if let Some((referrer_global, _)) = module_map.find_by_filepath(filepath) {
+    return Ok(v8::Local::new(scope, referrer_global));
+  }
+
   // Prepare sources
   let source_str = match std::fs::read_to_string(filepath) {
     Ok(code) => Ok(code),
@@ -202,7 +205,8 @@ pub fn compile_module<'a>(
 
   let source = v8::String::new(scope, &source_str).unwrap();
 
-  let origin = module_origin(scope, source);
+  let filepath_v8 = v8::String::new(scope, filepath).unwrap();
+  let origin = module_origin(scope, filepath_v8);
   let source = v8::script_compiler::Source::new(source, Some(&origin));
 
   // Create the module
@@ -212,8 +216,6 @@ pub fn compile_module<'a>(
   }?;
 
   // Store in referrer hashmap
-  let module_map_rc = JsRuntime::module_map(scope);
-  let mut module_map = module_map_rc.borrow_mut();
   let referrer_global = v8::Global::new(scope, module);
   module_map.insert(
     referrer_global,
