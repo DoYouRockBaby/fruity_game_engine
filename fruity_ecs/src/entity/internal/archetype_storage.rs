@@ -1,13 +1,12 @@
-use crate::entity::entity::EntityId;
-use crate::entity::entity::Entity;
-use crate::entity::internal::archetype_storage_iter::RawInternalIter;
 use crate::entity::archetype::Iter;
-use std::sync::RwLock;
-use std::collections::HashMap;
+use crate::entity::entity::EntityId;
 use crate::entity::entity_manager::RemoveEntityError;
-use std::any::Any;
 use crate::entity::entity_rwlock::EntityRwLock;
+use crate::entity::internal::archetype_storage_iter::RawInternalIter;
+use std::any::Any;
+use std::collections::HashMap;
 use std::fmt::Debug;
+use std::sync::RwLock;
 
 pub trait InternalArchetypeStorage: Debug + Send + Sync {
     fn get(&self, entity_id: EntityId) -> Option<EntityRwLock>;
@@ -46,7 +45,7 @@ impl<T: Entity> InternalArchetypeStorage for InternalRawArchetypeStorage<T> {
         Iter::Normal {
             internal_iter: Box::new(RawInternalIter::<T> {
                 entities_iterator: self.entities.iter(),
-            })
+            }),
         }
     }
 
@@ -54,9 +53,12 @@ impl<T: Entity> InternalArchetypeStorage for InternalRawArchetypeStorage<T> {
         let entity = match entity.downcast::<T>() {
             Ok(entity) => *entity,
             Err(_) => {
-                log::error!("Failed to insert an entity into its archetype wich is {:#?}", self);
+                log::error!(
+                    "Failed to insert an entity into its archetype wich is {:#?}",
+                    self
+                );
                 return;
-            },
+            }
         };
 
         self.entity_indexes.insert(entity_id, self.entities.len());
@@ -71,19 +73,14 @@ impl<T: Entity> InternalArchetypeStorage for InternalRawArchetypeStorage<T> {
                 self.entities.remove(index);
 
                 // Gap all existing indexes
-                self.entity_indexes
-                    .iter_mut()
-                    .for_each(|(_, index_2)| {
-                        if *index_2 > index {
-                            *index_2 -= 1;
-                        }
-                    });
-                
+                self.entity_indexes.iter_mut().for_each(|(_, index_2)| {
+                    if *index_2 > index {
+                        *index_2 -= 1;
+                    }
+                });
                 Ok(())
-            },
-            None => {
-                Err(RemoveEntityError::NotFound)
-            },
+            }
+            None => Err(RemoveEntityError::NotFound),
         }
     }
 }

@@ -8,9 +8,7 @@ pub mod entity_guard;
 pub mod entity_manager;
 
 /// Provides a threadsafe lock for entities
-pub mod entity_rwlock;
+pub mod component_rwlock;
 
 /// Provides a collections to store entities
 pub mod archetype;
-
-mod internal;

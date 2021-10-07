@@ -1,4 +1,3 @@
-use crate::entity::entity::Entity;
 use crate::entity::entity_rwlock::EntityRwLock;
 use std::sync::RwLock;
 
@@ -12,7 +11,7 @@ impl<'s, T: Entity> Iterator for RawInternalIter<'s, T> {
     fn next(&mut self) -> Option<EntityRwLock<'s>> {
         match self.entities_iterator.next() {
             Some(entity) => Some(EntityRwLock::new(entity)),
-            None => None
+            None => None,
         }
     }
 }

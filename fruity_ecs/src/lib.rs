@@ -3,7 +3,7 @@
 //! ECS
 //!
 //! Provide an ECS, this ECS has hierarchy between all the entities and is intended to be easely extended by a scripting engine
-//! 
+//!
 //! The ECS is organized with the following structure
 //! - The world contain entities, services and systems
 //! - Systems are function that do the logic part of the application, they can compute components and use services
@@ -25,3 +25,12 @@ pub mod system;
 
 /// Provides collection for world
 pub mod world;
+
+/// Represent an entity composed by many components
+#[macro_export]
+macro_rules! entity {
+    // `()` indicates that the macro takes no argument.
+    ($($component:expr),*) => {
+        vec![$ ($component),*] as Vec<&dyn fruity_ecs::component::component::Component>
+    };
+}

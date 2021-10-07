@@ -1,15 +1,15 @@
-use crate::entity::internal::archetype_storage::InternalRawArchetypeStorage;
-use crate::entity::internal::archetype_storage::InternalArchetypeStorage;
-use crate::entity::entity_rwlock::EntityRwLock;
+use crate::component::component::Component;
 use crate::entity::entity::Entity;
-use std::fmt::Debug;
-use crate::entity::entity_manager::RemoveEntityError;
 use crate::entity::entity::EntityId;
+use crate::entity::entity_manager::RemoveEntityError;
+use crate::entity::entity_rwlock::EntityRwLock;
+use fruity_collections::TraitVec;
+use fruity_collections::TraitVecObject;
+use std::fmt::Debug;
 
 /// A collection of entities that share the same component structure
-#[derive(Debug)]
 pub struct Archetype {
-    internal_storage: Box<dyn InternalArchetypeStorage>,
+    entities: TraitVec<dyn Component>,
 }
 
 impl Archetype {
@@ -22,9 +22,9 @@ impl Archetype {
     /// # Generic Arguments
     /// * `T` - The type of the entities stored into the archetype
     ///
-    pub fn new<T: Entity>(entity_id: EntityId, entity: T) -> Archetype {
+    pub fn new(entity_id: EntityId, entity: Vec<Box<dyn Component>>) -> Archetype {
         let mut archetype = Archetype {
-            internal_storage: Box::new(InternalRawArchetypeStorage::<T>::new()),
+            entities: TraitVec::new(),
         };
 
         archetype.add(entity_id, entity);
@@ -54,8 +54,11 @@ impl Archetype {
     /// # Generic Arguments
     /// * `T` - The type of the new entity
     ///
-    pub fn add<T: Entity>(&mut self, entity_id: EntityId, entity: T) {
-        self.internal_storage.add(entity_id, Box::new(entity))
+    pub fn add(&mut self, entity_id: EntityId, components: Vec<Box<dyn Component>>) {
+        for component in components {
+            self.entities
+                .push(component.as_ref() as &dyn TraitVecObject);
+        }
     }
 
     /// Remove an entity based on its id
@@ -64,6 +67,7 @@ impl Archetype {
     /// * `entity_id` - The entity id
     ///
     pub fn remove(&mut self, entity_id: EntityId) -> Result<(), RemoveEntityError> {
+        let entity = Entity {};
         self.internal_storage.remove(entity_id)
     }
 }
@@ -85,7 +89,24 @@ impl<'s> Iterator for Iter<'s> {
     fn next(&mut self) -> Option<EntityRwLock<'s>> {
         match self {
             Iter::Normal { internal_iter } => internal_iter.next(),
-            Iter::Empty => None
+            Iter::Empty => None,
+        }
+    }
+}
+
+impl Debug for Archetype {
+    fn fmt(
+        &self,
+        formatter: &mut std::fmt::Formatter<'_>,
+    ) -> std::result::Result<(), std::fmt::Error> {
+        let fmt_error = self.iter().find_map(|elem| match elem.fmt(formatter) {
+            Ok(()) => None,
+            Err(err) => Some(err),
+        });
+
+        match fmt_error {
+            Some(err) => Err(err),
+            None => Ok(()),
         }
     }
 }

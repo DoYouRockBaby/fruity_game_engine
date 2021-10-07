@@ -1,8 +1,8 @@
+use crate::component::component::Component;
+use crate::component::component_guard::ComponentReadGuard;
+use crate::component::component_guard::ComponentWriteGuard;
 use std::fmt::Debug;
 use std::sync::RwLock;
-use crate::entity::entity::Entity;
-use crate::entity::entity_guard::EntityReadGuard;
-use crate::entity::entity_guard::EntityWriteGuard;
 
 /// A reader-writer lock
 ///
@@ -30,22 +30,18 @@ use crate::entity::entity_guard::EntityWriteGuard;
 /// exclusively (write mode). If a panic occurs in any reader, then the lock
 /// will not be poisoned.
 ///
-pub struct EntityRwLock<'s> {
-    inner_lock: Box<dyn InnerEntityRwLock + 's>,
+pub struct ComponentRwLock<'s> {
+    rwlock: &'s RwLock<Component<'s>>,
 }
 
-impl<'s> EntityRwLock<'s> {
-    /// Returns an EntityRwLock which is unlocked.
+impl<'s> ComponentRwLock<'s> {
+    /// Returns an ComponentRwLock which is unlocked.
     ///
     /// # Arguments
     /// * `rwlock` - The typed [`RwLock`]
     ///
-    pub fn new<T: Entity>(rwlock: &'s RwLock<T>) -> EntityRwLock<'s> {
-        EntityRwLock {
-            inner_lock: Box::new(InnerRawEntityRwLock::<T> {
-                rwlock,
-            }),
-        }
+    pub fn new(rwlock: &'s RwLock<Component>) -> ComponentRwLock<'s> {
+        ComponentRwLock { rwlock }
     }
 
     /// Locks this rwlock with shared read access, blocking the current thread
@@ -61,8 +57,8 @@ impl<'s> EntityRwLock<'s> {
     ///
     /// This function might panic when called if the lock is already held by the current thread.
     ///
-    pub fn read(&self) -> EntityReadGuard<'_> {
-        self.inner_lock.read()
+    pub fn read(&self) -> ComponentReadGuard<'_> {
+        ComponentReadGuard::new(self.rwlock.read().unwrap())
     }
 
     /// Locks this rwlock with exclusive write access, blocking the current
@@ -78,38 +74,16 @@ impl<'s> EntityRwLock<'s> {
     ///
     /// This function might panic when called if the lock is already held by the current thread.
     ///
-    pub fn write(&self) -> EntityWriteGuard<'_> {
-        self.inner_lock.write()
+    pub fn write(&self) -> ComponentWriteGuard<'_> {
+        ComponentWriteGuard::new(self.rwlock.write().unwrap())
     }
 }
 
-impl<'s> Debug for EntityRwLock<'s> {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        self.inner_lock.fmt(formatter)
-    }
-}
-
-trait InnerEntityRwLock: Debug + Send + Sync {
-    fn read(&self) -> EntityReadGuard;
-    fn write(&self) -> EntityWriteGuard;
-}
-
-struct InnerRawEntityRwLock<'s, T: Entity> {
-    rwlock: &'s RwLock<T>,
-}
-
-impl<'s, T: Entity> InnerEntityRwLock for InnerRawEntityRwLock<'s, T> {
-    fn read(&self) -> EntityReadGuard {
-        EntityReadGuard::new(self.rwlock.read().unwrap())
-    }
-
-    fn write(&self) -> EntityWriteGuard {
-        EntityWriteGuard::new(self.rwlock.write().unwrap())
-    }
-}
-
-impl<'s, T: Entity> Debug for InnerRawEntityRwLock<'s, T> {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+impl<'s> Debug for ComponentRwLock<'s> {
+    fn fmt(
+        &self,
+        formatter: &mut std::fmt::Formatter<'_>,
+    ) -> std::result::Result<(), std::fmt::Error> {
         self.rwlock.fmt(formatter)
     }
 }

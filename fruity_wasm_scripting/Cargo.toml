@@ -1,9 +1,0 @@
-[package]
-name = "fruity_wasm_scripting"
-version = "0.1.0"
-edition = "2018"
-
-[dependencies]
-wasmer = "2.0.0"
-wasmer-wasi = "2.0.0"
-fruity_ecs = { path = "../fruity_ecs" }

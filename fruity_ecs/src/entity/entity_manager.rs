@@ -1,15 +1,16 @@
-use crate::entity::entity_rwlock::EntityRwLock;
-use crate::entity::entity::Entity;
-use std::collections::HashMap;
+use crate::component::component::Component;
 use crate::entity::archetype::Archetype;
-use crate::entity::entity::EntityTypeIdentifier;
 use crate::entity::archetype::Iter as ArchetypeIter;
+use crate::entity::entity::get_type_identifier;
 use crate::entity::entity::EntityId;
+use crate::entity::entity::EntityTypeIdentifier;
+use crate::entity::entity_rwlock::EntityRwLock;
+use std::collections::HashMap;
 
 /// An error over entity deletion
 pub enum RemoveEntityError {
     /// The entity don't exists in any archetype storage
-    NotFound
+    NotFound,
 }
 
 /// A storage for every entities, use [’Archetypes’] to store entities of different types
@@ -47,12 +48,8 @@ impl EntityManager {
     ///
     pub fn iter(&self, entity_identifier: EntityTypeIdentifier) -> ArchetypeIter {
         match self.archetypes.get(&entity_identifier) {
-            Some(archetype) => {
-                archetype.iter()
-            },
-            None => {
-                ArchetypeIter::Empty
-            },
+            Some(archetype) => archetype.iter(),
+            None => ArchetypeIter::Empty,
         }
     }
 
@@ -63,40 +60,49 @@ impl EntityManager {
     /// # Arguments
     /// * `entity` - The entity that will be added
     ///
-    pub fn create<T: Entity>(&mut self, entity: T) -> EntityId {
-        let entity_ref = &entity as &dyn Entity;
-        let entity_identifier = entity_ref.get_type_identifier();
+    pub fn create(&mut self, entity: Vec<Box<dyn Component>>) -> EntityId {
         self.id_incrementer += 1;
-        let entity_id = EntityId ( self.id_incrementer );
+        let entity_id = EntityId(self.id_incrementer);
+        entity.sort_by(|a, b| {
+            a.get_component_type()
+                .partial_cmp(&b.get_component_type())
+                .unwrap()
+        });
+
+        let entity_identifier = get_type_identifier(entity);
 
         match self.archetypes.get_mut(&entity_identifier) {
             Some(archetype) => {
                 archetype.add(entity_id, entity);
                 entity_id
-            },
+            }
             None => {
                 let archetype = Archetype::new(entity_id, entity);
                 self.archetypes.insert(entity_identifier, archetype);
                 entity_id
-            },
+            }
         }
     }
-    
     /// Remove an entity based on its id
     ///
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
     pub fn remove(&mut self, entity_id: EntityId) {
-        if !self.archetypes.values_mut().any(|archetype| {
-            match archetype.remove(entity_id) {
+        if !self
+            .archetypes
+            .values_mut()
+            .any(|archetype| match archetype.remove(entity_id) {
                 Ok(()) => true,
                 Err(err) => match err {
                     RemoveEntityError::NotFound => false,
                 },
-            }
-        }) {
-            log::error!("Trying to delete an unregistered entity with entity id {:?}", entity_id);
+            })
+        {
+            log::error!(
+                "Trying to delete an unregistered entity with entity id {:?}",
+                entity_id
+            );
         }
     }
 }

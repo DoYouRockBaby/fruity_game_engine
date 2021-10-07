@@ -1,10 +1,11 @@
+use fruity_collections::TraitVecObject;
+use std::any::type_name;
 use std::any::Any;
 use std::any::TypeId;
-use std::any::type_name;
 use std::fmt::Debug;
 
 /// An abstraction over a component, should be implemented for every component
-pub trait Component: Debug + Any + Send + Sync {
+pub trait Component: Debug + Any + Send + Sync + TraitVecObject {
     /// Return the component type identifier
     fn get_component_type(&self) -> String;
 
@@ -14,7 +15,6 @@ pub trait Component: Debug + Any + Send + Sync {
     /// * `property` - The field name
     ///
     fn get_untyped_field(&self, property: &str) -> Option<&dyn Any>;
-
 
     /// Set one of the component field
     ///
@@ -37,11 +37,14 @@ impl dyn Component {
     pub fn get_field<T: Any>(&self, property: &str) -> Option<&T> {
         match self.get_untyped_field(property) {
             Some(value) => match value.downcast_ref::<T>() {
-                Some(value) => {
-                    Some(value)
-                }
+                Some(value) => Some(value),
                 None => {
-                    log::error!("Try to get a {:?} from property {:?}, got {:?}", type_name::<T>(), property, value);
+                    log::error!(
+                        "Try to get a {:?} from property {:?}, got {:?}",
+                        type_name::<T>(),
+                        property,
+                        value
+                    );
                     None
                 }
             },
@@ -61,7 +64,7 @@ impl dyn Component {
     pub fn set_field<T: Any>(&mut self, property: &str, value: T) {
         self.set_untyped_field(property, &value);
     }
-    
+
     /// Returns `true` if the boxed type is the same as `T`.
     ///
     /// # Examples
@@ -91,7 +94,6 @@ impl dyn Component {
         // Compare both `TypeId`s on equality.
         t == concrete
     }
-
 
     /// Returns some reference to the boxed value if it is of type `T`, or
     /// `None` if it isn't.

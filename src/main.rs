@@ -5,35 +5,23 @@ mod system1;
 
 use crate::service1::Service1;
 use crate::system1::system1_untyped;
-use fruity_ecs::component::component::Component;
+use fruity_collections_derive::*;
 use fruity_ecs::entity::entity::EntityId;
 use fruity_ecs::world::world::World;
-use fruity_ecs_macro::*;
+use fruity_ecs::*;
+use fruity_ecs_derive::*;
 use fruity_javascript_scripting::execute_script;
 use std::error::Error;
 
-#[derive(Debug, Clone, Component)]
+#[derive(Debug, Clone, Component, TraitVecObject)]
 pub struct Component1 {
     pub str1: String,
     pub int1: i64,
 }
 
-#[derive(Debug, Clone, Component)]
+#[derive(Debug, Clone, Component, TraitVecObject)]
 pub struct Component2 {
     pub float1: f64,
-}
-
-#[derive(Debug, Entity)]
-struct Entity1(Component1, Component2);
-
-#[derive(Debug, Entity)]
-struct Entity2(Component1);
-
-#[derive(Debug, Entity)]
-struct Entity3 {
-    component1: Component1,
-    component1bis: Component1,
-    component2: Component2,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -63,10 +51,17 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let component7 = Component2 { float1: 5.14 };
 
-    let entity_id_1 = world.entity_manager.create(Entity1(component1, component2));
-    let entity_id_2 = world.entity_manager.create(Entity2(component3));
-    let entity_id_3 = world.entity_manager.create(Entity1(component4, component5));
-    let entity_id_4 = world.entity_manager.create(Entity1(component6, component7));
+    let entity_id_1 = world
+        .entity_manager
+        .create(entity!(&component1, &component2));
+
+    let entity_id_2 = world.entity_manager.create(entity!(&component3));
+    let entity_id_3 = world
+        .entity_manager
+        .create(entity!(&component4, &component5));
+    let entity_id_4 = world
+        .entity_manager
+        .create(entity!(&component6, &component7));
 
     world.entity_manager.remove(entity_id_3);
     world.entity_manager.remove(EntityId(0));
