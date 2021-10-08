@@ -2,13 +2,13 @@ use std::any::TypeId;
 use std::fmt::Debug;
 
 /// A function to decode an object from byte array to an any reference
-pub type Decoder = fn(buffer: &[u8]) -> Box<dyn Encodable>;
+pub type Decoder = fn(buffer: &[u8]) -> &dyn Encodable;
 
 /// A function to decode an object from byte array to an any mutable reference
-pub type DecoderMut = fn(buffer: &mut [u8]) -> Box<dyn Encodable>;
+pub type DecoderMut = fn(buffer: &mut [u8]) -> &mut dyn Encodable;
 
 /// An interface that any object stored in the trait vec should implement
-pub trait Encodable: Debug {
+pub trait Encodable: Debug + 'static {
     /// Get type id
     fn type_id(&self) -> TypeId;
 
@@ -73,7 +73,7 @@ impl dyn Encodable {
     /// print_if_string(&"cookie monster".to_string());
     /// ```
     ///
-    pub fn downcast_ref<T: Encodable + 'static>(&self) -> Option<&T> {
+    pub fn downcast_ref<T: Encodable>(&self) -> Option<&T> {
         if self.is::<T>() {
             // SAFETY: just checked whether we are pointing to the correct type, and we can rely on
             // that check for memory safety because we have implemented Encodable for all types; no other
@@ -108,7 +108,7 @@ impl dyn Encodable {
     /// assert_eq!(&s, "starlord");
     /// ```
     ///
-    pub fn downcast_mut<T: Encodable + 'static>(&mut self) -> Option<&mut T> {
+    pub fn downcast_mut<T: Encodable>(&mut self) -> Option<&mut T> {
         if self.is::<T>() {
             // SAFETY: just checked whether we are pointing to the correct type, and we can rely on
             // that check for memory safety because we have implemented Encodable for all types; no other

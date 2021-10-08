@@ -7,8 +7,6 @@ edition = "2018"
 fruity_ecs = { path = "fruity_ecs" }
 fruity_ecs_derive = { path = "fruity_ecs_derive" }
 fruity_javascript_scripting = { path = "fruity_javascript_scripting" }
-fruity_collections = { path = "fruity_collections" }
-fruity_collections_derive = { path = "fruity_collections_derive" }
 pretty_env_logger = "0.4.0"
 log = "0.4.14"
 rayon = "1.5"

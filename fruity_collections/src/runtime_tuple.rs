@@ -1,11 +1,12 @@
 use crate::encodable::Decoder;
-use crate::encodable::DecoderMut;
-use crate::encodable::Encodable;
+use crate::encodable::Component;
+use crate::runtime_tuple_reader::RuntimeTupleReader;
+use crate::runtime_tuple_writer::RuntimeTupleWriter;
 use std::any::TypeId;
 use std::fmt::Debug;
 use std::mem::size_of;
 
-struct TupleEntryInfo {
+pub(crate) struct TupleEntryInfo {
     buffer_index: usize,
     size: usize,
     decoder: Decoder,
@@ -18,7 +19,7 @@ pub struct RuntimeTuple {
 
 impl RuntimeTuple {
     /// Returns a RuntimeTuple
-    pub fn new(fields: &[&dyn Encodable]) -> RuntimeTuple {
+    pub fn new(fields: &[&dyn Component]) -> RuntimeTuple {
         let mut entry_infos = Vec::new();
         let mut buffer = Vec::new();
 
@@ -45,7 +46,7 @@ impl RuntimeTuple {
     /// # Arguments
     /// * `index` - The entry index
     ///
-    pub fn get(&self, index: usize) -> Option<Box<dyn Encodable>> {
+    pub fn get(&self, index: usize) -> Option<RuntimeTupleReader> {
         let entry_info = match self.entry_infos.get(index) {
             Some(entry_info) => entry_info,
             None => return None,
@@ -55,12 +56,12 @@ impl RuntimeTuple {
         Some((entry_info.decoder)(entry_buffer))
     }
 
-    /// Get a mutable entry from the collection
+    /// Get an entry from the collection with mutability
     ///
     /// # Arguments
     /// * `index` - The entry index
     ///
-    pub fn get_mut(&mut self, index: usize) -> Option<Box<dyn Encodable>> {
+    pub fn get_mut(&mut self, index: usize) -> Option<RuntimeTupleWriter> {
         let entry_info = match self.entry_infos.get(index) {
             Some(entry_info) => entry_info,
             None => return None,
@@ -71,16 +72,8 @@ impl RuntimeTuple {
     }
 
     /// Iterate over the entries of the collection
-    pub fn iter(&self) -> Iter<'_> {
+    pub fn iter(&mut self) -> Iter<'_> {
         Iter {
-            tuple: self,
-            current_index: 0,
-        }
-    }
-
-    /// Iterate over the entries of the collection with mutability
-    pub fn iter_mut(&mut self) -> IterMut<'_> {
-        IterMut {
             tuple: self,
             current_index: 0,
         }
@@ -94,15 +87,16 @@ impl RuntimeTuple {
 
 /// Iterator over entries of a RuntimeTuple
 pub struct Iter<'s> {
-    tuple: &'s RuntimeTuple,
+    tuple: &'s mut RuntimeTuple,
     current_index: usize,
 }
 
 impl<'s> Iterator for Iter<'s> {
-    type Item = Box<dyn Encodable>;
+    type Item = RuntimeTupleReader<'s>;
 
-    fn next(&mut self) -> Option<Box<dyn Encodable>> {
-        let result = self.tuple.get(self.current_index);
+    fn next(&mut self) -> Option<RuntimeTupleReader<'s>> {
+        let tuple = unsafe { &mut *(self.tuple as *mut _) } as &mut RuntimeTuple;
+        let result = tuple.get(self.current_index);
         self.current_index += 1;
 
         result
@@ -116,9 +110,9 @@ pub struct IterMut<'s> {
 }
 
 impl<'s> Iterator for IterMut<'s> {
-    type Item = Box<dyn Encodable>;
+    type Item = RuntimeTupleWriter<'s>;
 
-    fn next(&mut self) -> Option<Box<dyn Encodable>> {
+    fn next(&mut self) -> Option<RuntimeTupleWriter<'s>> {
         let tuple = unsafe { &mut *(self.tuple as *mut _) } as &mut RuntimeTuple;
         let result = tuple.get_mut(self.current_index);
         self.current_index += 1;
@@ -144,11 +138,7 @@ impl Debug for RuntimeTuple {
     }
 }
 
-struct EncodedRuntimeTuple {
-    entry_infos_len: usize,
-}
-
-impl<'a> Encodable for RuntimeTuple {
+impl<'a> Component for RuntimeTuple {
     fn type_id(&self) -> std::any::TypeId {
         TypeId::of::<RuntimeTuple>()
     }
@@ -193,36 +183,17 @@ impl<'a> Encodable for RuntimeTuple {
             let encoded_runtime_tuple = &body[0];*/
 
             // Deserialize each tuple entry info
-            let (_head, body, tail) = unsafe { data.align_to_mut::<TupleEntryInfo>() };
+            let (_head, body, tail) = unsafe { data.align_to::<TupleEntryInfo>() };
 
             let entry_info_size = body.len() / size_of::<TupleEntryInfo>();
-            let entry_infos =
-                unsafe { Vec::from_raw_parts(body.as_mut_ptr(), entry_info_size, entry_info_size) };
+            let entry_infos = unsafe { std::slice::from_raw_parts(body.as_ptr(), entry_info_size) };
 
+            // Deserialize tuple buffer
             let buffer_size = tail.len();
-            let buffer =
-                unsafe { Vec::from_raw_parts(tail.as_mut_ptr(), buffer_size, buffer_size) };
+            let buffer = unsafe { std::slice::from_raw_parts(tail.as_ptr(), buffer_size) };
 
-            Box::new(RuntimeTuple {
-                entry_infos,
-                buffer,
-            })
-        }
-    }
-
-    fn get_decoder_mut(&self) -> DecoderMut {
-        |data| {
-            let (_head, body, tail) = unsafe { data.align_to_mut::<TupleEntryInfo>() };
-
-            let entry_info_size = body.len() / size_of::<TupleEntryInfo>();
-            let entry_infos =
-                unsafe { Vec::from_raw_parts(body.as_mut_ptr(), entry_info_size, entry_info_size) };
-
-            let buffer_size = tail.len();
-            let buffer =
-                unsafe { Vec::from_raw_parts(tail.as_mut_ptr(), buffer_size, buffer_size) };
-
-            Box::new(RuntimeTuple {
+            // Create a tuple that target the datas in the buffer
+            Box::new(RuntimeTupleReader {
                 entry_infos,
                 buffer,
             })

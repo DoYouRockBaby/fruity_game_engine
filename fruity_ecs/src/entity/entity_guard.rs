@@ -12,24 +12,7 @@ use std::sync::RwLockWriteGuard;
 /// [`read`]: EntityRwLock::read
 ///
 pub struct EntityReadGuard<'s> {
-    pub inner_guard: RwLockReadGuard<'s, Entity<'s>>,
-}
-
-impl<'s> Deref for EntityReadGuard<'s> {
-    type Target = Entity<'s>;
-
-    fn deref(&self) -> &<Self as Deref>::Target {
-        self.inner_guard.deref()
-    }
-}
-
-impl<'s> Debug for EntityReadGuard<'s> {
-    fn fmt(
-        &self,
-        formatter: &mut std::fmt::Formatter<'_>,
-    ) -> std::result::Result<(), std::fmt::Error> {
-        self.inner_guard.fmt(formatter)
-    }
+    guard: RwLockReadGuard<'s, Entity>,
 }
 
 impl<'s> EntityReadGuard<'s> {
@@ -38,8 +21,25 @@ impl<'s> EntityReadGuard<'s> {
     /// # Arguments
     /// * `inner_guard` - The typed [`RwLockReadGuard`]
     ///
-    pub fn new(inner_guard: RwLockReadGuard<'s, Entity>) -> EntityReadGuard {
-        EntityReadGuard { inner_guard }
+    pub(crate) fn new(guard: RwLockReadGuard<'s, Entity>) -> EntityReadGuard<'s> {
+        EntityReadGuard { guard }
+    }
+}
+
+impl<'s> Deref for EntityReadGuard<'s> {
+    type Target = Entity;
+
+    fn deref(&self) -> &<Self as Deref>::Target {
+        self.guard.deref()
+    }
+}
+
+impl<'s> Debug for EntityReadGuard<'s> {
+    fn fmt(
+        &self,
+        formatter: &mut std::fmt::Formatter<'_>,
+    ) -> std::result::Result<(), std::fmt::Error> {
+        self.guard.fmt(formatter)
     }
 }
 
@@ -50,30 +50,7 @@ impl<'s> EntityReadGuard<'s> {
 /// [`write`]: EntityRwLock::write
 ///
 pub struct EntityWriteGuard<'s> {
-    pub inner_guard: RwLockWriteGuard<'s, Entity<'s>>,
-}
-
-impl<'s> Deref for EntityWriteGuard<'s> {
-    type Target = Entity<'s>;
-
-    fn deref(&self) -> &<Self as Deref>::Target {
-        self.inner_guard.deref()
-    }
-}
-
-impl<'s> DerefMut for EntityWriteGuard<'s> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.inner_guard.deref_mut()
-    }
-}
-
-impl<'s> Debug for EntityWriteGuard<'s> {
-    fn fmt(
-        &self,
-        formatter: &mut std::fmt::Formatter<'_>,
-    ) -> std::result::Result<(), std::fmt::Error> {
-        self.inner_guard.fmt(formatter)
-    }
+    guard: RwLockWriteGuard<'s, Entity>,
 }
 
 impl<'s> EntityWriteGuard<'s> {
@@ -82,7 +59,30 @@ impl<'s> EntityWriteGuard<'s> {
     /// # Arguments
     /// * `inner_guard` - The typed [`RwLockWriteGuard`]
     ///
-    pub fn new(inner_guard: RwLockWriteGuard<'s, Entity>) -> EntityWriteGuard {
-        EntityWriteGuard { inner_guard }
+    pub(crate) fn new(guard: RwLockWriteGuard<'s, Entity>) -> EntityWriteGuard<'s> {
+        EntityWriteGuard { guard }
+    }
+}
+
+impl<'s> Deref for EntityWriteGuard<'s> {
+    type Target = Entity;
+
+    fn deref(&self) -> &<Self as Deref>::Target {
+        self.guard.deref()
+    }
+}
+
+impl<'s> DerefMut for EntityWriteGuard<'s> {
+    fn deref_mut(&mut self) -> &mut <Self as std::ops::Deref>::Target {
+        self.guard.deref_mut()
+    }
+}
+
+impl<'s> Debug for EntityWriteGuard<'s> {
+    fn fmt(
+        &self,
+        formatter: &mut std::fmt::Formatter<'_>,
+    ) -> std::result::Result<(), std::fmt::Error> {
+        self.guard.fmt(formatter)
     }
 }

@@ -1,7 +1,6 @@
-use crate::component::component::Component;
 use crate::entity::archetype::Archetype;
 use crate::entity::archetype::Iter as ArchetypeIter;
-use crate::entity::entity::get_type_identifier;
+use crate::entity::entity::Entity;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
 use crate::entity::entity_rwlock::EntityRwLock;
@@ -34,7 +33,7 @@ impl EntityManager {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn get(&self, entity_id: EntityId) -> Option<EntityRwLock> {
+    pub fn get(&self, entity_id: EntityId) -> Option<&EntityRwLock> {
         self.archetypes
             .values()
             .find_map(|archetype| archetype.get(entity_id))
@@ -60,16 +59,10 @@ impl EntityManager {
     /// # Arguments
     /// * `entity` - The entity that will be added
     ///
-    pub fn create(&mut self, entity: Vec<Box<dyn Component>>) -> EntityId {
+    pub fn create(&mut self, entity: Entity) -> EntityId {
         self.id_incrementer += 1;
         let entity_id = EntityId(self.id_incrementer);
-        entity.sort_by(|a, b| {
-            a.get_component_type()
-                .partial_cmp(&b.get_component_type())
-                .unwrap()
-        });
-
-        let entity_identifier = get_type_identifier(entity);
+        let entity_identifier = entity.get_type_identifier();
 
         match self.archetypes.get_mut(&entity_identifier) {
             Some(archetype) => {

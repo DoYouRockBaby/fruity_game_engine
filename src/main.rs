@@ -13,13 +13,13 @@ use fruity_ecs_derive::*;
 use fruity_javascript_scripting::execute_script;
 use std::error::Error;
 
-#[derive(Debug, Clone, Component, TraitVecObject)]
+#[derive(Debug, Clone, Component, Component)]
 pub struct Component1 {
     pub str1: String,
     pub int1: i64,
 }
 
-#[derive(Debug, Clone, Component, TraitVecObject)]
+#[derive(Debug, Clone, Component, Component)]
 pub struct Component2 {
     pub float1: f64,
 }
