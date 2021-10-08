@@ -1,6 +1,8 @@
 use crate::component::component::Component;
 use crate::component::component::ComponentDecoder;
 use crate::component::component::ComponentDecoderMut;
+use itertools::Itertools;
+use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -65,10 +67,13 @@ impl Hash for EntityId {
 
 pub(crate) struct EntityComponentInfo {
     buffer_index: usize,
+    size: usize,
     decoder: ComponentDecoder,
     decoder_mut: ComponentDecoderMut,
 }
 
+/// An entity that contains component, component are stored in a vector of u8
+/// to compact datas and improve iteration
 pub struct Entity {
     pub(crate) entry_infos: Vec<EntityComponentInfo>,
     pub(crate) buffer: Vec<u8>,
@@ -76,26 +81,38 @@ pub struct Entity {
 
 impl Entity {
     /// Returns a Entity
-    pub fn new(components: &[&dyn Component]) -> Entity {
-        let mut entry_infos = Vec::new();
-        let mut buffer = Vec::new();
+    pub fn new(components: Vec<&dyn Component>) -> Entity {
+        let mut entity = Entity {
+            entry_infos: Vec::new(),
+            buffer: Vec::new(),
+        };
 
         for component in components {
-            let mut encoded = component.encode();
-
-            entry_infos.push(EntityComponentInfo {
-                buffer_index: buffer.len(),
-                decoder: component.get_decoder(),
-                decoder_mut: component.get_decoder_mut(),
-            });
-
-            buffer.append(&mut encoded);
+            entity.push(component);
         }
 
-        Entity {
-            entry_infos: entry_infos,
-            buffer: buffer,
-        }
+        entity
+    }
+
+    fn push(&mut self, component: &dyn Component) {
+        // Store informations about where the object is stored
+        let encode_size = component.encode_size();
+
+        self.entry_infos.push(EntityComponentInfo {
+            buffer_index: self.buffer.len(),
+            size: encode_size,
+            decoder: component.get_decoder(),
+            decoder_mut: component.get_decoder_mut(),
+        });
+
+        // Encode the object to the buffer
+        let object_buffer_start = self.buffer.len();
+        let object_buffer_end = self.buffer.len() + encode_size;
+
+        self.buffer.resize(self.buffer.len() + encode_size, 0);
+        let object_buffer = &mut self.buffer[object_buffer_start..object_buffer_end];
+
+        component.encode(object_buffer);
     }
 
     /// Returns the entity type identifier of the entity
@@ -118,7 +135,8 @@ impl Entity {
             None => return None,
         };
 
-        let entry_buffer = &self.buffer[entry_info.buffer_index..];
+        let entry_buffer =
+            &self.buffer[entry_info.buffer_index..(entry_info.buffer_index + entry_info.size)];
         Some((entry_info.decoder)(entry_buffer))
     }
 
@@ -133,23 +151,118 @@ impl Entity {
             None => return None,
         };
 
-        let entry_buffer = &mut self.buffer[entry_info.buffer_index..];
+        let entry_buffer =
+            &mut self.buffer[entry_info.buffer_index..(entry_info.buffer_index + entry_info.size)];
         Some((entry_info.decoder_mut)(entry_buffer))
     }
 
     /// Iterate over the components of the entity
     pub fn iter(&self) -> Iter<'_> {
+        let indexes = (0..self.len()).map(usize::from).collect();
+
         Iter {
             entity: self,
-            current_index: 0,
+            indexes,
         }
     }
 
     /// Iterate over the components of the entity with mutability
     pub fn iter_mut(&mut self) -> IterMut<'_> {
+        let indexes = (0..self.len()).map(usize::from).collect();
+
         IterMut {
             entity: self,
-            current_index: 0,
+            indexes,
+        }
+    }
+
+    /// Iterate over all the component that share the same type
+    pub fn iter_typed<T: Component>(&self) -> impl Iterator<Item = &T> {
+        self.iter()
+            .filter_map(|component| component.downcast_ref::<T>())
+    }
+
+    /// Iterate over all the component that share the same type with mutability
+    pub fn iter_typed_mut<T: Component>(&mut self) -> impl Iterator<Item = &mut T> {
+        self.iter_mut()
+            .filter_map(|component| component.downcast_mut::<T>())
+    }
+
+    /// Iterate over specified components of the entity
+    ///
+    /// Cause an entity can contain multiple component of the same type, can returns multiple component list
+    ///
+    /// Return abstractions of the components as [’Component’]
+    ///
+    /// # Arguments
+    /// * `type_identifiers` - The identifier list of the components, components will be returned with the same order
+    ///
+    pub fn untyped_iter_over_types(&self, target_identifier: Vec<String>) -> OverTypesIter {
+        let intern_identifier = self.get_type_identifier();
+        let types_list = target_identifier
+            .into_iter()
+            .map(|type_identifier| {
+                intern_identifier
+                    .0
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, component_type)| {
+                        if *component_type == type_identifier {
+                            Some(index)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<VecDeque<_>>()
+            })
+            .multi_cartesian_product()
+            .map(|vec| VecDeque::from(vec))
+            .collect::<VecDeque<_>>();
+
+        OverTypesIter {
+            entity: self,
+            types_list,
+        }
+    }
+
+    /// Iterate over specified components of the entity with mutability
+    ///
+    /// Cause an entity can contain multiple component of the same type, can returns multiple component list
+    ///
+    /// Return abstractions of the components as [’Component’]
+    ///
+    /// # Arguments
+    /// * `type_identifiers` - The identifier list of the components, components will be returned with the same order
+    ///
+    pub fn untyped_iter_mut_over_types(
+        &mut self,
+        target_identifier: EntityTypeIdentifier,
+    ) -> OverTypesIterMut {
+        let intern_identifier = self.get_type_identifier();
+        let types_list = target_identifier
+            .0
+            .into_iter()
+            .map(|type_identifier| {
+                intern_identifier
+                    .0
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, component_type)| {
+                        if *component_type == type_identifier {
+                            Some(index)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<VecDeque<_>>()
+            })
+            .multi_cartesian_product()
+            .map(|vec| VecDeque::from(vec))
+            .collect::<VecDeque<_>>();
+
+        OverTypesIterMut {
+            entity: self,
+            types_list,
         }
     }
 
@@ -162,24 +275,24 @@ impl Entity {
 /// Iterator over components of an Entity
 pub struct Iter<'s> {
     entity: &'s Entity,
-    current_index: usize,
+    indexes: VecDeque<usize>,
 }
 
 impl<'s> Iterator for Iter<'s> {
     type Item = &'s dyn Component;
 
     fn next(&mut self) -> Option<&'s dyn Component> {
-        let result = self.entity.get(self.current_index);
-        self.current_index += 1;
-
-        result
+        match self.indexes.pop_front() {
+            Some(index) => self.entity.get(index),
+            None => None,
+        }
     }
 }
 
 /// Iterator over components of an Entity with mutability
 pub struct IterMut<'s> {
     entity: &'s mut Entity,
-    current_index: usize,
+    indexes: VecDeque<usize>,
 }
 
 impl<'s> Iterator for IterMut<'s> {
@@ -187,10 +300,61 @@ impl<'s> Iterator for IterMut<'s> {
 
     fn next(&mut self) -> Option<&'s mut dyn Component> {
         let entity = unsafe { &mut *(self.entity as *mut _) } as &mut Entity;
-        let result = entity.get_mut(self.current_index);
-        self.current_index += 1;
+        match self.indexes.pop_front() {
+            Some(index) => entity.get_mut(index),
+            None => None,
+        }
+    }
+}
 
-        result
+/// An iterator over all the component of an entity
+pub struct OverTypesIter<'s> {
+    entity: &'s Entity,
+    types_list: VecDeque<VecDeque<usize>>,
+}
+
+/// An iterator over specified components of the entity
+///
+/// Cause an entity can contain multiple component of the same type, can returns multiple component list
+///
+/// Return abstractions of the components as [’Component’]
+///
+impl<'s> Iterator for OverTypesIter<'s> {
+    type Item = Iter<'s>;
+
+    fn next(&mut self) -> Option<Iter<'s>> {
+        match self.types_list.pop_front() {
+            Some(type_indexes) => Some(Iter {
+                entity: self.entity,
+                indexes: type_indexes,
+            }),
+            None => None,
+        }
+    }
+}
+
+/// An iterator over specified components of the entity with mutability
+///
+/// Cause an entity can contain multiple component of the same type, can returns multiple component list
+///
+/// Return abstractions of the components as [’Component’]
+///
+pub struct OverTypesIterMut<'s> {
+    entity: &'s mut Entity,
+    types_list: VecDeque<VecDeque<usize>>,
+}
+
+impl<'s> Iterator for OverTypesIterMut<'s> {
+    type Item = IterMut<'s>;
+
+    fn next(&mut self) -> Option<IterMut<'s>> {
+        match self.types_list.pop_front() {
+            Some(type_indexes) => Some(IterMut {
+                entity: unsafe { &mut *(self.entity as *mut _) },
+                indexes: type_indexes,
+            }),
+            None => None,
+        }
     }
 }
 

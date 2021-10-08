@@ -6,6 +6,8 @@ edition = "2018"
 [dependencies]
 fruity_ecs = { path = "fruity_ecs" }
 fruity_ecs_derive = { path = "fruity_ecs_derive" }
+fruity_collections = { path = "fruity_collections" }
+fruity_collections_derive = { path = "fruity_collections_derive" }
 fruity_javascript_scripting = { path = "fruity_javascript_scripting" }
 pretty_env_logger = "0.4.0"
 log = "0.4.14"

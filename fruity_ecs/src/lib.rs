@@ -31,6 +31,6 @@ pub mod world;
 macro_rules! entity {
     // `()` indicates that the macro takes no argument.
     ($($component:expr),*) => {
-        vec![$ ($component),*] as Vec<&dyn fruity_ecs::component::component::Component>
+        fruity_ecs::entity::entity::Entity::new(vec![$ ($component),*])
     };
 }

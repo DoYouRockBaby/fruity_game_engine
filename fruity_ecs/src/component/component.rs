@@ -1,3 +1,4 @@
+use std::any::type_name;
 use std::any::Any;
 use std::any::TypeId;
 use std::fmt::Debug;
@@ -28,8 +29,15 @@ pub trait Component: Debug + Send + Sync + Any {
     ///
     fn set_untyped_field(&mut self, property: &str, value: &dyn Any);
 
+    /// Return the size that is required to encode the object
+    fn encode_size(&self) -> usize;
+
     /// Encode the object to a byte array
-    fn encode(&self) -> Vec<u8>;
+    ///
+    /// # Arguments
+    /// * `buffer` - The buffer where the encoder will write, should match the result of encode_size function
+    ///
+    fn encode(&self, buffer: &mut [u8]);
 
     /// Return a function to decode an object from byte array to an any reference
     fn get_decoder(&self) -> ComponentDecoder;
@@ -39,12 +47,51 @@ pub trait Component: Debug + Send + Sync + Any {
 }
 
 impl dyn Component {
+    /// Get one of the component field value
+    ///
+    /// # Arguments
+    /// * `property` - The field name
+    ///
+    /// # Generic Arguments
+    /// * `T` - The field type
+    ///
+    pub fn get_field<T: Any>(&self, property: &str) -> Option<&T> {
+        match self.get_untyped_field(property) {
+            Some(value) => match value.downcast_ref::<T>() {
+                Some(value) => Some(value),
+                None => {
+                    log::error!(
+                        "Try to get a {:?} from property {:?}, got {:?}",
+                        type_name::<T>(),
+                        property,
+                        value
+                    );
+                    None
+                }
+            },
+            None => None,
+        }
+    }
+
+    /// Set one of the component field
+    ///
+    /// # Arguments
+    /// * `property` - The field name
+    /// * `value` - The new field value
+    ///
+    /// # Generic Arguments
+    /// * `T` - The field type
+    ///
+    pub fn set_field<T: Any>(&mut self, property: &str, value: T) {
+        self.set_untyped_field(property, &value);
+    }
+
     /// Returns `true` if the boxed type is the same as `T`.
     ///
     /// # Examples
     ///
     /// ```
-    /// use fruity_collection::encodable::Component;
+    /// use std::any::Component;
     ///
     /// fn is_string(s: &dyn Component) {
     ///     if s.is::<String>() {
@@ -58,7 +105,7 @@ impl dyn Component {
     /// is_string(&"cookie monster".to_string());
     /// ```
     ///
-    pub fn is<T: Component + 'static>(&self) -> bool {
+    pub fn is<T: Component>(&self) -> bool {
         // Get `TypeId` of the type this function is instantiated with.
         let t = TypeId::of::<T>();
 
@@ -75,7 +122,7 @@ impl dyn Component {
     /// # Examples
     ///
     /// ```
-    /// use fruity_collection::encodable::Component;
+    /// use fruity_ecs::component::component::Component;
     ///
     /// fn print_if_string(s: &dyn Component) {
     ///     if let Some(string) = s.downcast_ref::<String>() {
@@ -89,7 +136,7 @@ impl dyn Component {
     /// print_if_string(&"cookie monster".to_string());
     /// ```
     ///
-    pub fn downcast_ref<T: Component + 'static>(&self) -> Option<&T> {
+    pub fn downcast_ref<T: Component>(&self) -> Option<&T> {
         if self.is::<T>() {
             // SAFETY: just checked whether we are pointing to the correct type, and we can rely on
             // that check for memory safety because we have implemented Component for all types; no other
@@ -106,9 +153,9 @@ impl dyn Component {
     /// # Examples
     ///
     /// ```
-    /// use fruity_collection::encodable::Component;
+    /// use fruity_ecs::component::component::Component;
     ///
-    /// fn modify_if_u32(s: &mut dyn use Component) {
+    /// fn modify_if_u32(s: &mut dyn use fruity_ecs::component::component::Component) {
     ///     if let Some(num) = s.downcast_mut::<u32>() {
     ///         *num = 42;
     ///     }
@@ -124,7 +171,7 @@ impl dyn Component {
     /// assert_eq!(&s, "starlord");
     /// ```
     ///
-    pub fn downcast_mut<T: Component + 'static>(&mut self) -> Option<&mut T> {
+    pub fn downcast_mut<T: Component>(&mut self) -> Option<&mut T> {
         if self.is::<T>() {
             // SAFETY: just checked whether we are pointing to the correct type, and we can rely on
             // that check for memory safety because we have implemented Component for all types; no other

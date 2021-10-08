@@ -28,6 +28,7 @@ pub fn system1_untyped(entity_manager: &EntityManager, service_manager: &Service
         .for_each(|entity| {
             entity
                 .write()
+                .unwrap()
                 .untyped_iter_mut_over_types(entity_type!["test.component1"])
                 .par_bridge()
                 .for_each(|mut components| {

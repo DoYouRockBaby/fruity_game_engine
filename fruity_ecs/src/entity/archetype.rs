@@ -2,14 +2,14 @@ use crate::entity::entity::Entity;
 use crate::entity::entity::EntityId;
 use crate::entity::entity_manager::RemoveEntityError;
 use crate::entity::entity_rwlock::EntityRwLock;
-use crate::entity::entity_vec::EntityVec;
+use fruity_collections::encodable_vec::EncodableVec;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
 /// A collection of entities that share the same component structure
 pub struct Archetype {
     index_map: HashMap<EntityId, usize>,
-    entities: EntityVec,
+    entities: EncodableVec,
 }
 
 impl Archetype {
@@ -25,7 +25,7 @@ impl Archetype {
     pub fn new(entity_id: EntityId, entity: Entity) -> Archetype {
         let mut archetype = Archetype {
             index_map: HashMap::new(),
-            entities: EntityVec::new(),
+            entities: EncodableVec::new(),
         };
 
         archetype.add(entity_id, entity);
@@ -38,9 +38,12 @@ impl Archetype {
     /// * `entity_id` - The entity id
     ///
     pub fn get(&self, entity_id: EntityId) -> Option<&EntityRwLock> {
-        self.index_map
-            .get(&entity_id)
-            .map(|index| self.get_by_index(*index).unwrap())
+        let index = match self.index_map.get(&entity_id) {
+            Some(index) => index,
+            None => return None,
+        };
+
+        self.get_by_index(*index)
     }
 
     /// Get a locked entity by first component index
@@ -49,7 +52,16 @@ impl Archetype {
     /// * `entity_id` - The entity id
     ///
     pub fn get_by_index(&self, index: usize) -> Option<&EntityRwLock> {
-        self.entities.get(index)
+        let entities = unsafe { &*(&self.entities as *const _) } as &EncodableVec;
+        let entity = match entities.get(index) {
+            Some(entity) => entity,
+            None => return None,
+        };
+
+        match entity.downcast_ref::<EntityRwLock>() {
+            Some(entity) => Some(entity),
+            None => None,
+        }
     }
 
     /// Iterate over all entities of the archetype

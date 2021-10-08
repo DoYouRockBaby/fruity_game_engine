@@ -89,24 +89,29 @@ pub fn derive_component(input: TokenStream) -> TokenStream {
         impl fruity_ecs::component::component::Component for #ident {
             #body
 
-            fn encode(&self) -> Vec<u8> {
-                unsafe {
+            fn encode_size(&self) -> usize {
+                std::mem::size_of::<Self>()
+            }
+
+            fn encode(&self, buffer: &mut [u8]) {
+                let encoded = unsafe {
                     std::slice::from_raw_parts(
                         (self as *const Self) as *const u8,
                         std::mem::size_of::<Self>(),
                     )
-                    .to_vec()
-                }
+                };
+
+                fruity_collections::slice::copy(buffer, encoded);
             }
 
-            fn get_decoder(&self) -> fruity_collections::encodable::ComponentDecoder {
+            fn get_decoder(&self) -> fruity_ecs::component::component::ComponentDecoder {
                 |data| {
                     let (_head, body, _tail) = unsafe { data.align_to::<Self>() };
                     &body[0]
                 }
             }
 
-            fn get_decoder_mut(&self) -> fruity_collections::encodable::ComponentDecoderMut {
+            fn get_decoder_mut(&self) -> fruity_ecs::component::component::ComponentDecoderMut {
                 |data| {
                     let (_head, body, _tail) = unsafe { data.align_to_mut::<Self>() };
                     &mut body[0]

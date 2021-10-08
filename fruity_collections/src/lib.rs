@@ -6,6 +6,11 @@
 //! This object should implement a specific interface to encode/decode it to the desired trait.
 //!
 
-// mod array;
+/// Trait for an encodable object that can be stored as an array of u8
 pub mod encodable;
+
+/// A vector of encodable object, the memory is compacted to improve iteration performance
+pub mod encodable_vec;
+
+/// Functions to compute slices
 pub mod slice;

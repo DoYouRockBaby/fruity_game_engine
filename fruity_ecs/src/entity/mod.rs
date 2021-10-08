@@ -12,5 +12,3 @@ pub mod archetype;
 
 /// Provides a threadsafe lock for entities
 pub mod entity_rwlock;
-
-mod entity_vec;

@@ -1,22 +1,27 @@
-use crate::entity::entity_rwlock::EntityRwLock;
+use crate::encodable::Decoder;
+use crate::encodable::DecoderMut;
+use crate::encodable::Encodable;
 use std::fmt::Debug;
 use std::ops::Range;
 
-struct EntityVecEntryInfo {
+struct EncodableVecEntryInfo {
     buffer_index: usize,
     size: usize,
+    decoder: Decoder,
+    decoder_mut: DecoderMut,
 }
 
-/// A collection that can store multiple object of the same type but without knowing the type
-pub struct EntityVec {
-    entry_infos: Vec<EntityVecEntryInfo>,
+/// A collection that can store multiple object that implements the encodable trait
+/// The stored information is organized to be compacted in memory to improve the iteration performances
+pub struct EncodableVec {
+    entry_infos: Vec<EncodableVecEntryInfo>,
     buffer: Vec<u8>,
 }
 
-impl EntityVec {
-    /// Returns a EntityVec
-    pub fn new() -> EntityVec {
-        EntityVec {
+impl EncodableVec {
+    /// Returns an EncodableVec
+    pub fn new() -> EncodableVec {
+        EncodableVec {
             entry_infos: Vec::new(),
             buffer: Vec::new(),
         }
@@ -27,15 +32,31 @@ impl EntityVec {
     /// # Arguments
     /// * `index` - The entry index
     ///
-    pub fn get(&self, index: usize) -> Option<&EntityRwLock> {
+    pub fn get(&self, index: usize) -> Option<&dyn Encodable> {
         let object_info = match self.entry_infos.get(index) {
             Some(object_info) => object_info,
             None => return None,
         };
 
-        let object_buffer = &self.buffer[object_info.buffer_index..];
+        let object_buffer =
+            &self.buffer[object_info.buffer_index..(object_info.buffer_index + object_info.size)];
+        Some((object_info.decoder)(object_buffer))
+    }
 
-        Some(EntityRwLock::decode(object_buffer))
+    /// Get a mutable entry from the collection
+    ///
+    /// # Arguments
+    /// * `index` - The entry index
+    ///
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut dyn Encodable> {
+        let object_info = match self.entry_infos.get(index) {
+            Some(object_info) => object_info,
+            None => return None,
+        };
+
+        let object_buffer = &mut self.buffer
+            [object_info.buffer_index..(object_info.buffer_index + object_info.size)];
+        Some((object_info.decoder_mut)(object_buffer))
     }
 
     /// Iterate over the entries of the collection
@@ -46,32 +67,42 @@ impl EntityVec {
         }
     }
 
+    /// Iterate over the entries of the collection
+    pub fn iter_mut(&mut self) -> IterMut<'_> {
+        IterMut {
+            vec: self,
+            current_index: 0,
+        }
+    }
+
     /// Return the entry count stored in the collection
     pub fn len(&self) -> usize {
         self.entry_infos.len()
     }
 
-    /// Add an entity into the collection
+    /// Add an entry into the collection
     ///
     /// # Arguments
     /// * `new_object` - The object that will be stored
     ///
-    pub fn push(&mut self, new_object: EntityRwLock) {
-        // Encode the object to the buffer
+    pub fn push(&mut self, new_object: impl Encodable) {
+        // Store informations about where the object is stored
         let encode_size = new_object.encode_size();
+        self.entry_infos.push(EncodableVecEntryInfo {
+            buffer_index: self.buffer.len(),
+            size: encode_size,
+            decoder: new_object.get_decoder(),
+            decoder_mut: new_object.get_decoder_mut(),
+        });
+
+        // Encode the object to the buffer
         let object_buffer_start = self.buffer.len();
         let object_buffer_end = self.buffer.len() + encode_size;
 
-        self.buffer.resize(self.buffer.len() + encode_size, 0);
+        self.buffer.resize(object_buffer_end, 0);
         let object_buffer = &mut self.buffer[object_buffer_start..object_buffer_end];
 
         new_object.encode(object_buffer);
-
-        // Store informations about where the object is stored
-        self.entry_infos.push(EntityVecEntryInfo {
-            buffer_index: self.buffer.len(),
-            size: encode_size,
-        });
     }
 
     /// Remove an entry of the collection
@@ -109,16 +140,16 @@ impl EntityVec {
     }
 }
 
-/// Iterator over entries of a EntityVec
+/// Iterator over entries of an EncodableVec
 pub struct Iter<'s> {
-    vec: &'s EntityVec,
+    vec: &'s EncodableVec,
     current_index: usize,
 }
 
 impl<'s> Iterator for Iter<'s> {
-    type Item = &'s EntityRwLock;
+    type Item = &'s dyn Encodable;
 
-    fn next(&mut self) -> Option<&'s EntityRwLock> {
+    fn next(&mut self) -> Option<&'s dyn Encodable> {
         let result = self.vec.get(self.current_index);
         self.current_index += 1;
 
@@ -126,7 +157,25 @@ impl<'s> Iterator for Iter<'s> {
     }
 }
 
-impl Debug for EntityVec {
+/// Iterator over entries of an EncodableVec
+pub struct IterMut<'s> {
+    vec: &'s mut EncodableVec,
+    current_index: usize,
+}
+
+impl<'s> Iterator for IterMut<'s> {
+    type Item = &'s mut dyn Encodable;
+
+    fn next(&mut self) -> Option<&'s mut dyn Encodable> {
+        let vec = unsafe { &mut *(self.vec as *mut _) } as &mut EncodableVec;
+        let result = vec.get_mut(self.current_index);
+        self.current_index += 1;
+
+        result
+    }
+}
+
+impl Debug for EncodableVec {
     fn fmt(
         &self,
         formatter: &mut std::fmt::Formatter<'_>,
