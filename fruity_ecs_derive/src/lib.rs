@@ -93,10 +93,10 @@ pub fn derive_component(input: TokenStream) -> TokenStream {
                 std::mem::size_of::<Self>()
             }
 
-            fn encode(&self, buffer: &mut [u8]) {
+            fn encode(self: Box<Self>, buffer: &mut [u8]) {
                 let encoded = unsafe {
                     std::slice::from_raw_parts(
-                        (self as *const Self) as *const u8,
+                        (&*self as *const Self) as *const u8,
                         std::mem::size_of::<Self>(),
                     )
                 };

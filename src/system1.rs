@@ -29,7 +29,7 @@ pub fn system1_untyped(entity_manager: &EntityManager, service_manager: &Service
             entity
                 .write()
                 .unwrap()
-                .untyped_iter_mut_over_types(entity_type!["test.component1"])
+                .untyped_iter_mut_over_types(entity_type!["Component1"])
                 .par_bridge()
                 .for_each(|mut components| {
                     let component1 = match components.next() {
@@ -45,7 +45,7 @@ pub fn system1_untyped(entity_manager: &EntityManager, service_manager: &Service
                             component
                         },
                         None => {
-                            log::error!("Tried to launch system system1 with component {:?}, expected type test.component1", component1);
+                            log::error!("Tried to launch system system1 with component {:?}, expected type Component1", component1);
                             return;
                         },
                     };

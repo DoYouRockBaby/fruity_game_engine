@@ -83,7 +83,7 @@ impl Archetype {
     ///
     pub fn add(&mut self, entity_id: EntityId, entity: Entity) {
         self.index_map.insert(entity_id, self.entities.len());
-        self.entities.push(EntityRwLock::new(entity));
+        self.entities.push(Box::new(EntityRwLock::new(entity)));
     }
 
     /// Remove an entity based on its id
@@ -92,12 +92,22 @@ impl Archetype {
     /// * `entity_id` - The entity id
     ///
     pub fn remove(&mut self, entity_id: EntityId) -> Result<(), RemoveEntityError> {
+        // Find the entity index in the entity array
         let index = match self.index_map.remove(&entity_id) {
             Some(index) => Ok(index),
             None => Err(RemoveEntityError::NotFound),
         }?;
 
+        // Remove old stored entity
         self.entities.remove(index);
+
+        // Gap all existing indexes
+        self.index_map.iter_mut().for_each(|index_2| {
+            if *index_2.1 > index {
+                *index_2.1 -= 1;
+            }
+        });
+
         Ok(())
     }
 }

@@ -66,8 +66,8 @@ impl Hash for EntityId {
 }
 
 pub(crate) struct EntityComponentInfo {
-    buffer_index: usize,
-    size: usize,
+    buffer_start: usize,
+    buffer_end: usize,
     decoder: ComponentDecoder,
     decoder_mut: ComponentDecoderMut,
 }
@@ -81,7 +81,7 @@ pub struct Entity {
 
 impl Entity {
     /// Returns a Entity
-    pub fn new(components: Vec<&dyn Component>) -> Entity {
+    pub fn new(components: Vec<Box<dyn Component>>) -> Entity {
         let mut entity = Entity {
             entry_infos: Vec::new(),
             buffer: Vec::new(),
@@ -94,13 +94,15 @@ impl Entity {
         entity
     }
 
-    fn push(&mut self, component: &dyn Component) {
+    fn push(&mut self, component: Box<dyn Component>) {
         // Store informations about where the object is stored
         let encode_size = component.encode_size();
+        let object_buffer_start = self.buffer.len();
+        let object_buffer_end = self.buffer.len() + encode_size;
 
         self.entry_infos.push(EntityComponentInfo {
-            buffer_index: self.buffer.len(),
-            size: encode_size,
+            buffer_start: object_buffer_start,
+            buffer_end: object_buffer_end,
             decoder: component.get_decoder(),
             decoder_mut: component.get_decoder_mut(),
         });
@@ -135,8 +137,7 @@ impl Entity {
             None => return None,
         };
 
-        let entry_buffer =
-            &self.buffer[entry_info.buffer_index..(entry_info.buffer_index + entry_info.size)];
+        let entry_buffer = &self.buffer[entry_info.buffer_start..entry_info.buffer_end];
         Some((entry_info.decoder)(entry_buffer))
     }
 
@@ -151,8 +152,7 @@ impl Entity {
             None => return None,
         };
 
-        let entry_buffer =
-            &mut self.buffer[entry_info.buffer_index..(entry_info.buffer_index + entry_info.size)];
+        let entry_buffer = &mut self.buffer[entry_info.buffer_start..entry_info.buffer_end];
         Some((entry_info.decoder_mut)(entry_buffer))
     }
 

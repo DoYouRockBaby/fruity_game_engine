@@ -81,74 +81,131 @@ impl Encodable for EntityRwLock {
             + reader.buffer.len()
     }
 
-    fn encode(&self, buffer: &mut [u8]) {
-        let reader = self.read().unwrap();
+    fn encode(self: Box<Self>, buffer: &mut [u8]) {
+        {
+            let reader = self.read().unwrap();
 
-        // Encode each tuple entry info
-        for (index, entry_infos) in reader.entry_infos.iter().enumerate() {
-            let encoded_entry_info = unsafe {
+            // Encode each tuple entry info
+            for (index, entry_infos) in reader.entry_infos.iter().enumerate() {
+                let encoded_entry_info = unsafe {
+                    std::slice::from_raw_parts(
+                        (entry_infos as *const EntityComponentInfo) as *const u8,
+                        std::mem::size_of::<EntityComponentInfo>(),
+                    )
+                };
+
+                let entry_info_index = std::mem::size_of::<EntityRwLock>()
+                    + index * std::mem::size_of::<EntityComponentInfo>();
+
+                copy(&mut buffer[entry_info_index..], encoded_entry_info);
+            }
+
+            // Encode entries buffer
+            let buffer_index = std::mem::size_of::<EntityRwLock>()
+                + reader.entry_infos.len() * std::mem::size_of::<EntityComponentInfo>();
+            copy(&mut buffer[buffer_index..], &reader.buffer);
+
+            // Encode the entity object
+            let encoded_entity_object = unsafe {
                 std::slice::from_raw_parts(
-                    (entry_infos as *const EntityComponentInfo) as *const u8,
-                    std::mem::size_of::<EntityComponentInfo>(),
+                    (&*self as *const Self) as *const u8,
+                    std::mem::size_of::<Self>(),
                 )
             };
 
-            let entry_info_index = std::mem::size_of::<EntityRwLock>()
-                + index * std::mem::size_of::<EntityComponentInfo>();
-
-            copy(&mut buffer[entry_info_index..], encoded_entry_info);
+            copy(buffer, encoded_entity_object);
         }
 
-        // Encode entries buffer
-        let buffer_index = std::mem::size_of::<EntityRwLock>()
-            + reader.entry_infos.len() * std::mem::size_of::<EntityComponentInfo>();
-        copy(&mut buffer[buffer_index..], &reader.buffer);
-
-        // Encode the entity object
-        let entry_info_ptr =
-            buffer[std::mem::size_of::<EntityRwLock>()..].as_mut_ptr() as *mut EntityComponentInfo;
-        let entry_infos = unsafe {
-            Vec::from_raw_parts(
-                entry_info_ptr,
-                reader.entry_infos.len(),
-                reader.entry_infos.len(),
-            )
-        };
-
-        let buffer_ptr = buffer[buffer_index..].as_mut_ptr();
-        let entity_buffer =
-            unsafe { Vec::from_raw_parts(buffer_ptr, reader.buffer.len(), reader.buffer.len()) };
-
-        let entity = EntityRwLock::new(Entity {
-            entry_infos,
-            buffer: entity_buffer,
-        });
-
-        let encoded_entity_object = unsafe {
-            std::slice::from_raw_parts(
-                (&entity as *const Self) as *const u8,
-                std::mem::size_of::<Self>(),
-            )
-        };
-
-        copy(buffer, encoded_entity_object);
-
-        std::mem::forget(entity);
+        std::mem::forget(self);
     }
 
     fn get_decoder(&self) -> Decoder {
         |buffer| {
             // Decode the base object
+            let buffer_ptr = buffer.as_ptr();
+            let buffer = unsafe {
+                std::slice::from_raw_parts(buffer_ptr, std::mem::size_of::<EntityRwLock>())
+            };
+
             let (_head, body, _tail) = unsafe { buffer.align_to::<EntityRwLock>() };
-            &body[0]
+            let entity_rwlock = &body[0];
+
+            // Update the vector pointers if the targeted buffer was moved
+            let mut writer = entity_rwlock.write().unwrap();
+
+            let entry_info_ptr = ((buffer_ptr as usize) + std::mem::size_of::<EntityRwLock>())
+                as *mut EntityComponentInfo;
+
+            if writer.entry_infos.as_ptr() != entry_info_ptr {
+                writer.entry_infos = unsafe {
+                    Vec::from_raw_parts(
+                        entry_info_ptr,
+                        writer.entry_infos.len(),
+                        writer.entry_infos.len(),
+                    )
+                };
+            }
+
+            let entity_buffer_ptr = ((buffer_ptr as usize)
+                + std::mem::size_of::<EntityRwLock>()
+                + writer.entry_infos.len() * std::mem::size_of::<EntityComponentInfo>())
+                as *mut u8;
+
+            if writer.buffer.as_ptr() != entity_buffer_ptr {
+                writer.buffer = unsafe {
+                    Vec::from_raw_parts(entity_buffer_ptr, writer.buffer.len(), writer.buffer.len())
+                }
+            }
+
+            entity_rwlock
         }
     }
 
     fn get_decoder_mut(&self) -> DecoderMut {
         |buffer| {
             // Decode the base object
+            let buffer_ptr = buffer.as_mut_ptr();
+            let buffer = unsafe {
+                std::slice::from_raw_parts_mut(buffer_ptr, std::mem::size_of::<EntityRwLock>())
+            };
+
             let (_head, body, _tail) = unsafe { buffer.align_to_mut::<EntityRwLock>() };
-            &mut body[0]
+            let entity_rwlock = &mut body[0];
+
+            // Update the vector pointers if the targeted buffer was moved
+            {
+                let mut writer = entity_rwlock.write().unwrap();
+
+                let entry_info_ptr = ((buffer_ptr as usize) + std::mem::size_of::<EntityRwLock>())
+                    as *mut EntityComponentInfo;
+
+                if writer.entry_infos.as_ptr() != entry_info_ptr {
+                    writer.entry_infos = unsafe {
+                        Vec::from_raw_parts(
+                            entry_info_ptr,
+                            writer.entry_infos.len(),
+                            writer.entry_infos.len(),
+                        )
+                    };
+                }
+
+                let entity_buffer_ptr = ((buffer_ptr as usize)
+                    + std::mem::size_of::<EntityRwLock>()
+                    + writer.entry_infos.len() * std::mem::size_of::<EntityComponentInfo>())
+                    as *mut u8;
+
+                if writer.buffer.as_ptr() != entity_buffer_ptr {
+                    writer.buffer = unsafe {
+                        Vec::from_raw_parts(
+                            entity_buffer_ptr,
+                            writer.buffer.len(),
+                            writer.buffer.len(),
+                        )
+                    }
+                }
+            }
+
+            entity_rwlock
         }
     }
 }

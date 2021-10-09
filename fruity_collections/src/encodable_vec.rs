@@ -5,8 +5,8 @@ use std::fmt::Debug;
 use std::ops::Range;
 
 struct EncodableVecEntryInfo {
-    buffer_index: usize,
-    size: usize,
+    buffer_start: usize,
+    buffer_end: usize,
     decoder: Decoder,
     decoder_mut: DecoderMut,
 }
@@ -38,8 +38,7 @@ impl EncodableVec {
             None => return None,
         };
 
-        let object_buffer =
-            &self.buffer[object_info.buffer_index..(object_info.buffer_index + object_info.size)];
+        let object_buffer = &self.buffer[object_info.buffer_start..object_info.buffer_end];
         Some((object_info.decoder)(object_buffer))
     }
 
@@ -54,8 +53,7 @@ impl EncodableVec {
             None => return None,
         };
 
-        let object_buffer = &mut self.buffer
-            [object_info.buffer_index..(object_info.buffer_index + object_info.size)];
+        let object_buffer = &mut self.buffer[object_info.buffer_start..object_info.buffer_end];
         Some((object_info.decoder_mut)(object_buffer))
     }
 
@@ -85,20 +83,20 @@ impl EncodableVec {
     /// # Arguments
     /// * `new_object` - The object that will be stored
     ///
-    pub fn push(&mut self, new_object: impl Encodable) {
+    pub fn push(&mut self, new_object: Box<dyn Encodable>) {
         // Store informations about where the object is stored
         let encode_size = new_object.encode_size();
+        let object_buffer_start = self.buffer.len();
+        let object_buffer_end = self.buffer.len() + encode_size;
+
         self.entry_infos.push(EncodableVecEntryInfo {
-            buffer_index: self.buffer.len(),
-            size: encode_size,
+            buffer_start: object_buffer_start,
+            buffer_end: object_buffer_end,
             decoder: new_object.get_decoder(),
             decoder_mut: new_object.get_decoder_mut(),
         });
 
         // Encode the object to the buffer
-        let object_buffer_start = self.buffer.len();
-        let object_buffer_end = self.buffer.len() + encode_size;
-
         self.buffer.resize(object_buffer_end, 0);
         let object_buffer = &mut self.buffer[object_buffer_start..object_buffer_end];
 
@@ -115,14 +113,16 @@ impl EncodableVec {
         let object_info = self.entry_infos.remove(index);
 
         // Remove associated binary datas
-        let start_index = object_info.buffer_index;
-        let end_index = object_info.buffer_index + object_info.size;
+        let start_index = object_info.buffer_start;
+        let end_index = object_info.buffer_end;
+        let size = end_index - start_index;
         self.buffer.drain(start_index..end_index);
 
         // Gap all existing indexes
-        self.entry_infos.iter_mut().for_each(|object_info| {
-            if object_info.buffer_index > start_index {
-                object_info.buffer_index -= object_info.size;
+        self.entry_infos.iter_mut().for_each(|object_info_2| {
+            if object_info_2.buffer_start > start_index {
+                object_info_2.buffer_start -= size;
+                object_info_2.buffer_end -= size;
             }
         });
     }
