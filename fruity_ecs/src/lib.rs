@@ -26,11 +26,18 @@ pub mod system;
 /// Provides collection for world
 pub mod world;
 
-/// Represent an entity composed by many components
+/// Create an entity, use it like entity![Box::new(component1), Box::new(component2)])
 #[macro_export]
 macro_rules! entity {
-    // `()` indicates that the macro takes no argument.
     ($($component:expr),*) => {
         fruity_ecs::entity::entity::Entity::new(vec![$ ($component),*])
+    };
+}
+
+/// Create an entity type, use it like entity_type!["Component1", "Component2"])
+#[macro_export]
+macro_rules! entity_type {
+    ($($component:expr),*) => {
+        fruity_ecs::entity::entity::EntityTypeIdentifier(vec![$ ($component.to_string()),*])
     };
 }

@@ -1,10 +1,13 @@
 use crate::entity::archetype::Archetype;
-use crate::entity::archetype::Iter as ArchetypeIter;
 use crate::entity::entity::Entity;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
+use crate::entity::entity::Iter as EntityIter;
+use crate::entity::entity::IterMut as EntityIterMut;
 use crate::entity::entity_rwlock::EntityRwLock;
-use std::collections::HashMap;
+use rayon::prelude::*;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 /// An error over entity deletion
 pub enum RemoveEntityError {
@@ -16,7 +19,7 @@ pub enum RemoveEntityError {
 #[derive(Debug)]
 pub struct EntityManager {
     id_incrementer: u64,
-    archetypes: HashMap<EntityTypeIdentifier, Archetype>,
+    archetypes: Vec<Archetype>,
 }
 
 impl EntityManager {
@@ -24,7 +27,7 @@ impl EntityManager {
     pub fn new() -> EntityManager {
         EntityManager {
             id_incrementer: 0,
-            archetypes: HashMap::new(),
+            archetypes: Vec::new(),
         }
     }
 
@@ -35,7 +38,7 @@ impl EntityManager {
     ///
     pub fn get(&self, entity_id: EntityId) -> Option<&EntityRwLock> {
         self.archetypes
-            .values()
+            .iter()
             .find_map(|archetype| archetype.get(entity_id))
     }
 
@@ -45,11 +48,64 @@ impl EntityManager {
     /// # Arguments
     /// * `entity_identifier` - The entity type identifier
     ///
-    pub fn iter(&self, entity_identifier: EntityTypeIdentifier) -> ArchetypeIter {
-        match self.archetypes.get(&entity_identifier) {
-            Some(archetype) => archetype.iter(),
-            None => ArchetypeIter::Empty,
-        }
+    pub fn for_each<F: Fn(EntityIter) + Sync + Send>(
+        &self,
+        entity_identifier: EntityTypeIdentifier,
+        callback: F,
+    ) {
+        let entity_identifier_1 = Arc::new(Mutex::new(entity_identifier.clone()));
+        let entity_identifier_2 = Arc::new(Mutex::new(entity_identifier.clone()));
+
+        self.archetypes
+            .iter()
+            .filter(move |archetype| {
+                archetype
+                    .get_type_identifier()
+                    .contains(&entity_identifier_1.lock().unwrap())
+            })
+            .map(|archetype| archetype.iter())
+            .flatten()
+            .par_bridge()
+            .for_each(move |entity| {
+                entity
+                    .read()
+                    .unwrap()
+                    .iter_component_tuple(&entity_identifier_2.lock().unwrap())
+                    .for_each(|components| callback(components));
+            });
+    }
+
+    /// Iterate over all entities with a specific archetype type with mutability
+    /// Use every entity that contains the provided entity type
+    ///
+    /// # Arguments
+    /// * `entity_identifier` - The entity type identifier
+    ///
+    pub fn for_each_mut<F: Fn(EntityIterMut) + Sync + Send>(
+        &self,
+        entity_identifier: EntityTypeIdentifier,
+        callback: F,
+    ) {
+        let entity_identifier_1 = Arc::new(Mutex::new(entity_identifier.clone()));
+        let entity_identifier_2 = Arc::new(Mutex::new(entity_identifier.clone()));
+
+        self.archetypes
+            .iter()
+            .filter(move |archetype| {
+                archetype
+                    .get_type_identifier()
+                    .contains(&entity_identifier_1.lock().unwrap())
+            })
+            .map(|archetype| archetype.iter())
+            .flatten()
+            .par_bridge()
+            .for_each(move |entity| {
+                entity
+                    .write()
+                    .unwrap()
+                    .iter_mut_component_tuple(&entity_identifier_2.lock().unwrap())
+                    .for_each(|components| callback(components));
+            });
     }
 
     /// Add a new entity in the storage
@@ -64,14 +120,14 @@ impl EntityManager {
         let entity_id = EntityId(self.id_incrementer);
         let entity_identifier = entity.get_type_identifier();
 
-        match self.archetypes.get_mut(&entity_identifier) {
+        match self.archetype_mut_by_identifier(entity_identifier) {
             Some(archetype) => {
                 archetype.add(entity_id, entity);
                 entity_id
             }
             None => {
                 let archetype = Archetype::new(entity_id, entity);
-                self.archetypes.insert(entity_identifier, archetype);
+                self.archetypes.push(archetype);
                 entity_id
             }
         }
@@ -84,7 +140,7 @@ impl EntityManager {
     pub fn remove(&mut self, entity_id: EntityId) {
         if !self
             .archetypes
-            .values_mut()
+            .iter_mut()
             .any(|archetype| match archetype.remove(entity_id) {
                 Ok(()) => true,
                 Err(err) => match err {
@@ -97,5 +153,23 @@ impl EntityManager {
                 entity_id
             );
         }
+    }
+
+    fn archetype_by_identifier(
+        &self,
+        entity_identifier: EntityTypeIdentifier,
+    ) -> Option<&Archetype> {
+        self.archetypes
+            .iter()
+            .find(|archetype| *archetype.get_type_identifier() == entity_identifier)
+    }
+
+    fn archetype_mut_by_identifier(
+        &mut self,
+        entity_identifier: EntityTypeIdentifier,
+    ) -> Option<&mut Archetype> {
+        self.archetypes
+            .iter_mut()
+            .find(|archetype| *archetype.get_type_identifier() == entity_identifier)
     }
 }

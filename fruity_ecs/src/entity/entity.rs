@@ -7,7 +7,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 
 /// An identifier to an entity type, is composed be the identifier of the contained components
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EntityTypeIdentifier(pub Vec<String>);
 
 impl PartialEq for EntityTypeIdentifier {
@@ -33,15 +33,18 @@ impl Hash for EntityTypeIdentifier {
     }
 }
 
-/// Create an entity type, use it like entity_type!["Component1", "Component2"])
-#[macro_export]
-macro_rules! entity_type {
-    ($e:expr) => {{
-        let component_names: Vec<&str> = vec![$e];
-        fruity_ecs::entity::entity::EntityTypeIdentifier(
-            component_names.iter().map(|e| e.to_string()).collect(),
-        )
-    }};
+impl EntityTypeIdentifier {
+    /// Check if an entity identifier contains an other one
+    /// For example ["c1", "c2", "c3"] contains ["c3", "c2"]
+    pub fn contains(&self, other: &EntityTypeIdentifier) -> bool {
+        let matching = other
+            .0
+            .iter()
+            .filter(|component_identifier| self.0.contains(component_identifier))
+            .count();
+
+        matching == other.0.len()
+    }
 }
 
 /// An identifier for an entity
@@ -225,6 +228,45 @@ impl Entity {
         }
     }
 
+    /// Iterate over specified components of the entity
+    ///
+    /// Cause an entity can contain multiple component of the same type, can returns multiple component list
+    ///
+    /// Return abstractions of the components as [’Component’]
+    ///
+    /// # Arguments
+    /// * `type_identifiers` - The identifier list of the components, components will be returned with the same order
+    ///
+    pub fn iter_component_tuple(&self, target_identifier: &EntityTypeIdentifier) -> OverTypesIter {
+        let intern_identifier = self.get_type_identifier();
+        let types_list = target_identifier
+            .clone()
+            .0
+            .into_iter()
+            .map(|type_identifier| {
+                intern_identifier
+                    .0
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, component_type)| {
+                        if *component_type == type_identifier {
+                            Some(index)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<VecDeque<_>>()
+            })
+            .multi_cartesian_product()
+            .map(|vec| VecDeque::from(vec))
+            .collect::<VecDeque<_>>();
+
+        OverTypesIter {
+            entity: self,
+            types_list,
+        }
+    }
+
     /// Iterate over specified components of the entity with mutability
     ///
     /// Cause an entity can contain multiple component of the same type, can returns multiple component list
@@ -234,13 +276,14 @@ impl Entity {
     /// # Arguments
     /// * `type_identifiers` - The identifier list of the components, components will be returned with the same order
     ///
-    pub fn untyped_iter_mut_over_types(
+    pub fn iter_mut_component_tuple(
         &mut self,
-        target_identifier: EntityTypeIdentifier,
+        target_identifier: &EntityTypeIdentifier,
     ) -> OverTypesIterMut {
         let intern_identifier = self.get_type_identifier();
         let types_list = target_identifier
             .0
+            .clone()
             .into_iter()
             .map(|type_identifier| {
                 intern_identifier

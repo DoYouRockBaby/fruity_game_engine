@@ -1,5 +1,6 @@
 use crate::entity::entity::Entity;
 use crate::entity::entity::EntityId;
+use crate::entity::entity::EntityTypeIdentifier;
 use crate::entity::entity_manager::RemoveEntityError;
 use crate::entity::entity_rwlock::EntityRwLock;
 use fruity_collections::encodable_vec::EncodableVec;
@@ -8,6 +9,7 @@ use std::fmt::Debug;
 
 /// A collection of entities that share the same component structure
 pub struct Archetype {
+    identifiers: EntityTypeIdentifier,
     index_map: HashMap<EntityId, usize>,
     entities: EncodableVec,
 }
@@ -26,10 +28,16 @@ impl Archetype {
         let mut archetype = Archetype {
             index_map: HashMap::new(),
             entities: EncodableVec::new(),
+            identifiers: entity.get_type_identifier(),
         };
 
         archetype.add(entity_id, entity);
         archetype
+    }
+
+    /// Returns the entity type identifier of the archetype
+    pub fn get_type_identifier(&self) -> &EntityTypeIdentifier {
+        &self.identifiers
     }
 
     /// Get a locked entity
@@ -66,7 +74,7 @@ impl Archetype {
 
     /// Iterate over all entities of the archetype
     pub fn iter(&self) -> Iter<'_> {
-        Iter::Normal {
+        Iter {
             archetype: self,
             current_index: 0,
         }
@@ -113,34 +121,22 @@ impl Archetype {
 }
 
 /// Iterator over entities of an archetype
-pub enum Iter<'s> {
-    /// Classic iterator that iterate over all entities in the archetype
-    Normal {
-        /// The targeted archetype
-        archetype: &'s Archetype,
+pub struct Iter<'s> {
+    /// The targeted archetype
+    archetype: &'s Archetype,
 
-        /// A counter to know the iterator current index
-        current_index: usize,
-    },
-    /// Empty iterator
-    Empty,
+    /// A counter to know the iterator current index
+    current_index: usize,
 }
 
 impl<'s> Iterator for Iter<'s> {
     type Item = &'s EntityRwLock;
 
     fn next(&mut self) -> Option<&'s EntityRwLock> {
-        match self {
-            Iter::Normal {
-                archetype,
-                current_index,
-            } => {
-                let result = archetype.get_by_index(*current_index);
-                *current_index += 1;
-                result
-            }
-            Iter::Empty => None,
-        }
+        let result = self.archetype.get_by_index(self.current_index);
+        self.current_index += 1;
+
+        result
     }
 }
 
