@@ -1,5 +1,7 @@
+use crate::bridge::console::configure_console;
 use crate::error::JsError;
 use crate::exception::exception_to_err_result;
+use crate::js_value::object::JsObject;
 use crate::module_map::ModuleInfos;
 use crate::module_map::ModuleMap;
 use crate::normalize_path::normalize_path;
@@ -13,12 +15,12 @@ use std::rc::Rc;
 pub struct JsRuntime {
   v8_isolate: Option<v8::OwnedIsolate>,
   global_context: v8::Global<v8::Context>,
+  global_object: JsObject,
 }
 
 impl Drop for JsRuntime {
   fn drop(&mut self) {
-    let v8_isolate = self.v8_isolate.take().unwrap();
-    std::mem::forget(v8_isolate);
+    std::mem::forget(self.v8_isolate.take());
     std::mem::drop(self);
 
     unsafe {
@@ -49,10 +51,15 @@ impl JsRuntime {
 
     isolate.set_slot(Rc::new(RefCell::new(ModuleMap::new())));
 
-    JsRuntime {
+    let mut runtime = JsRuntime {
       v8_isolate: Some(isolate),
       global_context,
-    }
+      global_object: JsObject::new(),
+    };
+
+    configure_console(&mut runtime);
+
+    runtime
   }
 
   pub fn handle_scope(&mut self) -> v8::HandleScope {
@@ -134,18 +141,19 @@ impl JsRuntime {
     Ok(JsResult::new(scope, result))
   }
 
-  #[inline(always)]
-  pub fn set_func(&mut self, name: &str, callback: impl v8::MapFnTo<v8::FunctionCallback>) {
+  pub fn global_object(&mut self) -> &mut JsObject {
+    &mut self.global_object
+  }
+
+  pub fn update_global_bindings(&mut self) {
     let global_context = self.global_context();
-    let scope = &mut v8::HandleScope::with_context(self.v8_isolate(), global_context.clone());
+    let mut scope =
+      v8::HandleScope::with_context(self.v8_isolate.as_mut().unwrap(), global_context.clone());
 
-    {
-      let global = global_context.get(scope).global(scope);
+    let global = { global_context.get(&mut scope).global(&mut scope) };
 
-      let key = v8::String::new(scope, name).unwrap();
-      let tmpl = v8::FunctionTemplate::new(scope, callback);
-      let val = tmpl.get_function(scope).unwrap();
-      global.set(scope, key.into(), val.into());
+    for (name, field) in self.global_object.fields.iter_mut() {
+      field.register(&mut scope, &name, global);
     }
   }
 

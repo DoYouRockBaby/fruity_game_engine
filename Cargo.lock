@@ -224,6 +224,7 @@ version = "0.1.0"
 dependencies = [
  "fruity_collections",
  "fruity_ecs_derive",
+ "fruity_introspect",
  "hashbrown",
  "itertools",
  "log",
@@ -247,11 +248,29 @@ dependencies = [
  "fruity_collections_derive",
  "fruity_ecs",
  "fruity_ecs_derive",
+ "fruity_introspect",
+ "fruity_introspect_derive",
  "fruity_javascript_scripting",
  "log",
  "mini-redis",
  "pretty_env_logger",
  "rayon",
+]
+
+[[package]]
+name = "fruity_introspect"
+version = "0.1.0"
+dependencies = [
+ "log",
+]
+
+[[package]]
+name = "fruity_introspect_derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -261,6 +280,7 @@ dependencies = [
  "fruity_ecs",
  "lazy_static",
  "log",
+ "pretty_env_logger",
  "rusty_v8",
  "url",
 ]

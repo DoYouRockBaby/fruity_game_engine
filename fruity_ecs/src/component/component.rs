@@ -1,3 +1,4 @@
+use fruity_introspect::Introspect;
 use std::any::type_name;
 use std::any::Any;
 use std::any::TypeId;
@@ -10,24 +11,9 @@ pub type ComponentDecoder = fn(buffer: &[u8]) -> &dyn Component;
 pub type ComponentDecoderMut = fn(buffer: &mut [u8]) -> &mut dyn Component;
 
 /// An abstraction over a component, should be implemented for every component
-pub trait Component: Debug + Send + Sync + Any {
+pub trait Component: Introspect + Debug + Send + Sync + Any {
     /// Return the component type identifier
     fn get_component_type(&self) -> String;
-
-    /// Get one of the component field value as Any
-    ///
-    /// # Arguments
-    /// * `property` - The field name
-    ///
-    fn get_untyped_field(&self, property: &str) -> Option<&dyn Any>;
-
-    /// Set one of the component field
-    ///
-    /// # Arguments
-    /// * `property` - The field name
-    /// * `value` - The new field value as Any
-    ///
-    fn set_untyped_field(&mut self, property: &str, value: &dyn Any);
 
     /// Return the size that is required to encode the object
     fn encode_size(&self) -> usize;
@@ -56,7 +42,7 @@ impl dyn Component {
     /// * `T` - The field type
     ///
     pub fn get_field<T: Any>(&self, property: &str) -> Option<&T> {
-        match self.get_untyped_field(property) {
+        match self.get_any_field(property) {
             Some(value) => match value.downcast_ref::<T>() {
                 Some(value) => Some(value),
                 None => {
@@ -83,7 +69,7 @@ impl dyn Component {
     /// * `T` - The field type
     ///
     pub fn set_field<T: Any>(&mut self, property: &str, value: T) {
-        self.set_untyped_field(property, &value);
+        self.set_any_field(property, &value);
     }
 
     /// Returns `true` if the boxed type is the same as `T`.

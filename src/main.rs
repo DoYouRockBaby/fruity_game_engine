@@ -10,22 +10,28 @@ use fruity_ecs::entity::entity::EntityId;
 use fruity_ecs::world::world::World;
 use fruity_ecs::*;
 use fruity_ecs_derive::*;
+use fruity_introspect_derive::*;
+use fruity_javascript_scripting::execute_script;
+use pretty_env_logger::formatted_builder;
 use std::error::Error;
 
-#[derive(Debug, Clone, Component, Encodable)]
+#[derive(Debug, Clone, Component, Introspect, Encodable)]
 pub struct Component1 {
     pub float1: f64,
     // pub str1: String,
     pub int1: i64,
 }
 
-#[derive(Debug, Clone, Component, Encodable)]
+#[derive(Debug, Clone, Component, Introspect, Encodable)]
 pub struct Component2 {
     pub float1: f64,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    pretty_env_logger::init();
+    let mut builder = formatted_builder();
+    builder.parse_filters("trace");
+    builder.try_init().unwrap();
+
     let mut world = World::new();
     let component1 = Component1 {
         float1: 3.14,
@@ -77,26 +83,28 @@ fn main() -> Result<(), Box<dyn Error>> {
         None => (),
     }
 
-    match world.entity_manager.get(entity_id_2) {
+    /*match world.entity_manager.get(entity_id_2) {
         Some(entity) => match entity.write().unwrap().get_mut(0) {
-            Some(component) => component.set_field("int1", 12345 as i64),
+            Some(component) => component
+                .as_mut_introspect()
+                .set_field("int1", 12345 as i64),
             None => (),
         },
         None => (),
-    }
+    }*/
 
     world.service_manager.register::<Service1>(Service1::new());
     world.system_manager.add_system(system1_untyped);
 
-    // let script_path = "src/javascript/index.js";
-    // execute_script(&mut world, script_path);
+    let script_path = "src/javascript/index.js";
+    execute_script(&mut world, script_path);
 
     // println!("{:#?}", world);
-    println!("{:#?}", world.entity_manager.get(entity_id_4));
+    /*println!("{:#?}", world.entity_manager.get(entity_id_4));
 
     world.run();
     world.run();
-    world.run();
+    world.run();*/
 
     Ok(())
 }

@@ -6,6 +6,8 @@ edition = "2018"
 [dependencies]
 fruity_ecs = { path = "fruity_ecs" }
 fruity_ecs_derive = { path = "fruity_ecs_derive" }
+fruity_introspect = { path = "fruity_introspect" }
+fruity_introspect_derive = { path = "fruity_introspect_derive" }
 fruity_collections = { path = "fruity_collections" }
 fruity_collections_derive = { path = "fruity_collections_derive" }
 fruity_javascript_scripting = { path = "fruity_javascript_scripting" }

@@ -7,10 +7,7 @@ pub enum JsError {
     CompileError,
     ImportModuleWithoutPrefix(String),
     FileNotFound(String),
-    RuntimeError {
-        message: String,
-        stack: Option<String>,
-    },
+    RuntimeError { message: String, stack: String },
 }
 
 impl JsError {
@@ -24,7 +21,10 @@ impl JsError {
 
         let stack = get_property(scope, exception, "stack");
         let stack: Option<v8::Local<v8::String>> = stack.and_then(|s| s.try_into().ok());
-        let stack = stack.map(|s| s.to_rust_string_lossy(scope));
+        let stack = match stack {
+            Some(s) => s.to_rust_string_lossy(scope),
+            None => "".to_string(),
+        };
 
         JsError::RuntimeError { message, stack }
     }
@@ -38,4 +38,18 @@ fn get_property<'a>(
     let key = v8::String::new(scope, key).unwrap();
     let test = object.get(scope, key.into());
     test
+}
+
+pub fn log_js_error(err: &JsError) {
+    match err {
+        JsError::CompileError => log::error!("Failed to compile the module"),
+        JsError::ImportModuleWithoutPrefix(module) => log::error!(
+            "Wrong module format \"{}\", you should use a prefix like ../, ./ or /",
+            module
+        ),
+        JsError::FileNotFound(file) => log::error!("File not found \"{}\"", file),
+        JsError::RuntimeError { message, stack } => {
+            log::error!("Javascript Exception: {}\n{:#?}", message, stack)
+        }
+    }
 }
