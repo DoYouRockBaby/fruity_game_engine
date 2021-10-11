@@ -1,3 +1,4 @@
+use fruity_ecs::service::service::Service;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::Introspect;
 use fruity_introspect::IntrospectError;
@@ -31,11 +32,11 @@ impl Introspect for Service1 {
         vec![]
     }
 
-    fn get_any_field(&self, property: &str) -> Option<&dyn Any> {
+    fn get_any_field(&self, _property: &str) -> Option<&dyn Any> {
         None
     }
 
-    fn set_any_field(&mut self, property: &str, value: &dyn Any) {}
+    fn set_any_field(&mut self, _property: &str, _value: &dyn Any) {}
 
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![
@@ -130,3 +131,5 @@ impl Introspect for Service1 {
         }
     }
 }
+
+impl Service for Service1 {}

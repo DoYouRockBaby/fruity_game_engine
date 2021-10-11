@@ -1,7 +1,7 @@
-use rayon::prelude::*;
-use std::fmt::Debug;
 use crate::entity::entity_manager::EntityManager;
 use crate::service::service_manager::ServiceManager;
+use rayon::prelude::*;
+use std::fmt::Debug;
 
 type System = dyn Fn(&EntityManager, &ServiceManager) + Sync + Send + 'static;
 
@@ -29,7 +29,10 @@ impl<'s> SystemManager {
     /// # Arguments
     /// * `system` - A function that will compute the world
     ///
-    pub fn add_system<T: Fn(&EntityManager, &ServiceManager) + Sync + Send + 'static>(&mut self, system: T) {
+    pub fn add_system<T: Fn(&EntityManager, &ServiceManager) + Sync + Send + 'static>(
+        &mut self,
+        system: T,
+    ) {
         self.systems.push(Box::new(system))
     }
 

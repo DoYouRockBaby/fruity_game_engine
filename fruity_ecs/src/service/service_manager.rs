@@ -1,4 +1,5 @@
 use crate::service::service::Service;
+use std::any::Any;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -7,7 +8,7 @@ use std::sync::RwLock;
 
 /// A services collection
 pub struct ServiceManager {
-    services: HashMap<TypeId, Arc<RwLock<dyn Service>>>,
+    services: HashMap<TypeId, Arc<dyn Any + Sync + Send>>,
 }
 
 impl Debug for ServiceManager {
@@ -39,7 +40,7 @@ impl<'s> ServiceManager {
     /// # Generic Arguments
     /// * `T` - The service type
     ///
-    pub fn get<T: Service>(&self) -> Option<Arc<RwLock<T>>> {
+    pub fn get<T: Any + Sync + Send>(&self) -> Option<Arc<RwLock<T>>> {
         match self.services.get(&TypeId::of::<T>()) {
             Some(service) => match service.clone().downcast::<RwLock<T>>() {
                 Ok(service) => Some(service),

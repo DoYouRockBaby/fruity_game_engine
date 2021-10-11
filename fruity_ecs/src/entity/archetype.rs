@@ -66,7 +66,7 @@ impl Archetype {
             None => return None,
         };
 
-        match entity.downcast_ref::<EntityRwLock>() {
+        match entity.as_any_ref().downcast_ref::<EntityRwLock>() {
             Some(entity) => Some(entity),
             None => None,
         }

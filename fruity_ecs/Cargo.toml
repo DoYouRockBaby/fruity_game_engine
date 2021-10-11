@@ -8,6 +8,8 @@ log = "0.4.14"
 rayon = "1.5"
 itertools = "0.10.1"
 hashbrown = { version = "0.11.2", features = ["rayon"] }
+fruity_any = { path = "../fruity_any" }
+fruity_any_derive = { path = "../fruity_any_derive" }
 fruity_ecs_derive = { path = "../fruity_ecs_derive" }
 fruity_collections = { path = "../fruity_collections" }
 fruity_introspect = { path = "../fruity_introspect" }

@@ -206,8 +206,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "fruity_any"
+version = "0.1.0"
+
+[[package]]
+name = "fruity_any_derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "fruity_collections"
 version = "0.1.0"
+dependencies = [
+ "fruity_any",
+ "fruity_any_derive",
+]
 
 [[package]]
 name = "fruity_collections_derive"
@@ -222,6 +239,8 @@ dependencies = [
 name = "fruity_ecs"
 version = "0.1.0"
 dependencies = [
+ "fruity_any",
+ "fruity_any_derive",
  "fruity_collections",
  "fruity_ecs_derive",
  "fruity_introspect",
@@ -244,6 +263,8 @@ dependencies = [
 name = "fruity_game_engine"
 version = "0.1.0"
 dependencies = [
+ "fruity_any",
+ "fruity_any_derive",
  "fruity_collections",
  "fruity_collections_derive",
  "fruity_ecs",

@@ -5,6 +5,7 @@ mod system1;
 
 use crate::service1::Service1;
 use crate::system1::system1_untyped;
+use fruity_any_derive::*;
 use fruity_collections_derive::*;
 use fruity_ecs::entity::entity::EntityId;
 use fruity_ecs::world::world::World;
@@ -15,14 +16,14 @@ use fruity_javascript_scripting::execute_script;
 use pretty_env_logger::formatted_builder;
 use std::error::Error;
 
-#[derive(Debug, Clone, Component, Introspect, Encodable)]
+#[derive(Debug, Clone, Component, Introspect, Encodable, FruityAny)]
 pub struct Component1 {
     pub float1: f64,
     // pub str1: String,
     pub int1: i64,
 }
 
-#[derive(Debug, Clone, Component, Introspect, Encodable)]
+#[derive(Debug, Clone, Component, Introspect, Encodable, FruityAny)]
 pub struct Component2 {
     pub float1: f64,
 }
@@ -83,15 +84,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         None => (),
     }
 
-    /*match world.entity_manager.get(entity_id_2) {
+    match world.entity_manager.get(entity_id_2) {
         Some(entity) => match entity.write().unwrap().get_mut(0) {
-            Some(component) => component
-                .as_mut_introspect()
-                .set_field("int1", 12345 as i64),
+            Some(component) => component.set_field("int1", 12345 as i64),
             None => (),
         },
         None => (),
-    }*/
+    }
 
     world.service_manager.register::<Service1>(Service1::new());
     world.system_manager.add_system(system1_untyped);

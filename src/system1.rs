@@ -32,7 +32,7 @@ pub fn system1_untyped(entity_manager: &EntityManager, service_manager: &Service
                 }
             };
 
-            let component1 = match component1.downcast_mut::<Component1>() {
+            let component1 = match component1.as_any_mut().downcast_mut::<Component1>() {
                 Some(component) => component,
                 None => {
                     log::error!(

@@ -2,6 +2,7 @@ use crate::entity::entity::Entity;
 use crate::entity::entity::EntityComponentInfo;
 use crate::entity::entity_guard::EntityReadGuard;
 use crate::entity::entity_guard::EntityWriteGuard;
+use fruity_any_derive::*;
 use fruity_collections::encodable::Decoder;
 use fruity_collections::encodable::DecoderMut;
 use fruity_collections::encodable::Encodable;
@@ -13,7 +14,7 @@ use std::sync::RwLockReadGuard;
 use std::sync::RwLockWriteGuard;
 
 /// A read write locker for an entity instance
-#[derive(Debug)]
+#[derive(Debug, FruityAny)]
 pub struct EntityRwLock {
     entity: RwLock<Entity>,
 }

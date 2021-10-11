@@ -182,13 +182,13 @@ impl Entity {
     /// Iterate over all the component that share the same type
     pub fn iter_typed<T: Component>(&self) -> impl Iterator<Item = &T> {
         self.iter()
-            .filter_map(|component| component.downcast_ref::<T>())
+            .filter_map(|component| component.as_any_ref().downcast_ref::<T>())
     }
 
     /// Iterate over all the component that share the same type with mutability
     pub fn iter_typed_mut<T: Component>(&mut self) -> impl Iterator<Item = &mut T> {
         self.iter_mut()
-            .filter_map(|component| component.downcast_mut::<T>())
+            .filter_map(|component| component.as_any_mut().downcast_mut::<T>())
     }
 
     /// Iterate over specified components of the entity

@@ -5,7 +5,6 @@
 //! Implements traits and macros to make a structure abe to list it's field and to get/set it with any
 //!
 
-use std::any::type_name;
 use std::any::Any;
 
 #[derive(Debug, Clone)]
@@ -83,45 +82,4 @@ pub trait Introspect {
         name: &str,
         args: Vec<Box<dyn std::any::Any>>,
     ) -> Result<Box<dyn std::any::Any>, IntrospectError>;
-}
-
-impl dyn Introspect {
-    /// Get one of the component field value
-    ///
-    /// # Arguments
-    /// * `property` - The field name
-    ///
-    /// # Generic Arguments
-    /// * `T` - The field type
-    ///
-    pub fn get_field<T: Any>(&self, property: &str) -> Option<&T> {
-        match self.get_any_field(property) {
-            Some(value) => match value.downcast_ref::<T>() {
-                Some(value) => Some(value),
-                None => {
-                    log::error!(
-                        "Try to get a {:?} from property {:?}, got {:?}",
-                        type_name::<T>(),
-                        property,
-                        value
-                    );
-                    None
-                }
-            },
-            None => None,
-        }
-    }
-
-    /// Set one of the component field
-    ///
-    /// # Arguments
-    /// * `property` - The field name
-    /// * `value` - The new field value
-    ///
-    /// # Generic Arguments
-    /// * `T` - The field type
-    ///
-    pub fn set_field<T: Any>(&mut self, property: &str, value: T) {
-        self.set_any_field(property, &value);
-    }
 }
