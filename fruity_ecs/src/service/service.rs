@@ -1,4 +1,6 @@
+use fruity_any::FruityAny;
 use fruity_introspect::Introspect;
-use std::any::Any;
+use std::fmt::Debug;
 
-pub trait Service: Introspect + Any + Send + Sync {}
+/// A trait that should be implemented by every service
+pub trait Service: Introspect + FruityAny + Send + Sync + Debug {}

@@ -1,3 +1,4 @@
+use fruity_any_derive::*;
 use fruity_ecs::service::service::Service;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::Introspect;
@@ -5,6 +6,7 @@ use fruity_introspect::IntrospectError;
 use fruity_introspect::MethodInfo;
 use std::any::Any;
 
+#[derive(Debug, Clone, FruityAny)]
 pub struct Service1 {
     incrementer: u32,
 }

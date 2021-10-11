@@ -8,15 +8,15 @@ pub fn derive_encodable_any(input: TokenStream) -> TokenStream {
 
     let output = quote! {
         impl fruity_any::FruityAny for #ident {
-            fn as_any_ref(&self) -> &fruity_any::FruityAny {
+            fn as_any_ref(&self) -> &std::any::Any {
                 self
             }
 
-            fn as_any_mut(&mut self) -> &mut dyn fruity_any::FruityAny {
+            fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
                 self
             }
 
-            fn as_any_box(self: Box<Self>) -> Box<dyn fruity_any::FruityAny> {
+            fn as_any_box(self: Box<Self>) -> Box<dyn std::any::Any> {
                 self
             }
         }

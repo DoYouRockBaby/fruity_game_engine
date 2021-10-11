@@ -2,10 +2,10 @@ use crate::Component1;
 use crate::Service1;
 use fruity_ecs::entity::entity_manager::EntityManager;
 use fruity_ecs::entity_type;
+use fruity_ecs::service::service_guard::ServiceWriteGuard;
 use fruity_ecs::service::service_manager::ServiceManager;
-use std::sync::RwLockWriteGuard;
 
-pub fn system1(component1: &mut Component1, mut service1: RwLockWriteGuard<Service1>) {
+pub fn system1(component1: &mut Component1, mut service1: ServiceWriteGuard<Service1>) {
     component1.int1 += 1;
 
     service1.increment();
