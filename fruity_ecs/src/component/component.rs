@@ -1,5 +1,5 @@
 use fruity_any::FruityAny;
-use fruity_introspect::Introspect;
+use fruity_introspect::IntrospectFields;
 use std::any::type_name;
 use std::any::Any;
 use std::fmt::Debug;
@@ -11,7 +11,7 @@ pub type ComponentDecoder = fn(buffer: &[u8]) -> &dyn Component;
 pub type ComponentDecoderMut = fn(buffer: &mut [u8]) -> &mut dyn Component;
 
 /// An abstraction over a component, should be implemented for every component
-pub trait Component: Introspect + Debug + Send + Sync + FruityAny {
+pub trait Component: IntrospectFields + Debug + Send + Sync + FruityAny {
     /// Return the component type identifier
     fn get_component_type(&self) -> String;
 
@@ -42,15 +42,16 @@ impl dyn Component {
     /// * `T` - The field type
     ///
     pub fn get_field<T: Any>(&self, property: &str) -> Option<&T> {
-        match self.get_any_field(property) {
-            Some(value) => match value.downcast_ref::<T>() {
-                Some(value) => Some(value),
+        let fields = self.get_field_infos();
+        match fields.iter().find(|field| field.name == property) {
+            Some(field) => match (field.getter)(self.as_any_ref()).downcast_ref::<T>() {
+                Some(field) => Some(field),
                 None => {
                     log::error!(
                         "Try to get a {:?} from property {:?}, got {:?}",
                         type_name::<T>(),
                         property,
-                        value
+                        field.name
                     );
                     None
                 }
@@ -69,6 +70,16 @@ impl dyn Component {
     /// * `T` - The field type
     ///
     pub fn set_field<T: Any>(&mut self, property: &str, value: T) {
-        self.set_any_field(property, &value);
+        let fields = self.get_field_infos();
+        match fields.iter().find(|field| field.name == property) {
+            Some(field) => (field.setter)(self.as_any_mut(), &value),
+            None => {
+                log::error!(
+                    "Try to set a {:?} on property {:?}, property not exists",
+                    type_name::<T>(),
+                    property,
+                );
+            }
+        };
     }
 }

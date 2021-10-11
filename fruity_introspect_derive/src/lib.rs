@@ -2,8 +2,8 @@ use proc_macro::{self, TokenStream};
 use quote::quote;
 use syn::{parse_macro_input, Data, DeriveInput, Fields, Index};
 
-#[proc_macro_derive(Introspect)]
-pub fn derive_introspect(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(IntrospectFields)]
+pub fn derive_introspect_fields(input: TokenStream) -> TokenStream {
     let DeriveInput { ident, data, .. } = parse_macro_input!(input);
 
     let body = match data {
@@ -46,52 +46,30 @@ pub fn derive_introspect(input: TokenStream) -> TokenStream {
                     fruity_introspect::FieldInfo {
                         name: #name_as_string.to_string(),
                         ty: #type_as_string.to_string(),
+                        getter: |this| &this.downcast_ref::<#ident>().unwrap().#name,
+                        setter: |this, value| match value.downcast_ref::<#ty>() {
+                            Some(value) => {
+                                let this = this.downcast_mut::<#ident>().unwrap();
+                                this.#name = value.clone();
+                            }
+                            None => {
+                                log::error!(
+                                    "Expected a {} for property {:?}, got {:#?}",
+                                    #type_as_string,
+                                    #name_as_string,
+                                    value
+                                );
+                            }
+                        },
                     },
                 }
             });
 
-            let recurse_get = fields.iter().map(|(name, _)| {
-                let name_as_string = name.to_string();
-                quote! {
-                    #name_as_string => Some(&self.#name),
-                }
-            });
-
-            let recurse_set = fields
-                .iter()
-                .map(|(name, ty)| {
-                    let name_as_string = name.to_string();
-                    let ty_as_string = ty.to_string();
-                    quote! {
-                        #name_as_string => match value.downcast_ref::<#ty>() {
-                            Some(value) => {
-                                self.#name = value.clone();
-                            }
-                            None => {
-                                log::error!("Expected a {} for property {:?}, got {:#?}", #ty_as_string, property, value);
-                            }
-                        },
-                    }
-                });
             quote! {
                 fn get_field_infos(&self) -> Vec<fruity_introspect::FieldInfo> {
                     vec![
                         #(#recurse_infos)*
                     ]
-                }
-
-                fn get_any_field(&self, property: &str) -> Option<&dyn std::any::Any> {
-                    match property {
-                        #(#recurse_get)*
-                        _ => None,
-                    }
-                }
-
-                fn set_any_field(&mut self, property: &str, value: &dyn std::any::Any) {
-                    match property {
-                        #(#recurse_set)*
-                        _ => log::error!("Trying to access an inexistant property named {} in the component {:#?}", property, self)
-                    }
                 }
             }
         }
@@ -100,28 +78,8 @@ pub fn derive_introspect(input: TokenStream) -> TokenStream {
     };
 
     let output = quote! {
-        impl fruity_introspect::Introspect for #ident {
+        impl fruity_introspect::IntrospectFields for #ident {
             #body
-
-            fn get_method_infos(&self) -> Vec<fruity_introspect::MethodInfo> {
-                vec![]
-            }
-
-            fn call_method(
-                &self,
-                name: &str,
-                args: Vec<Box<dyn std::any::Any>>,
-            ) -> Result<Box<dyn std::any::Any>, fruity_introspect::IntrospectError> {
-                Err(fruity_introspect::IntrospectError::UnknownMethod(name.to_string()))
-            }
-
-            fn call_method_mut(
-                &mut self,
-                name: &str,
-                args: Vec<Box<dyn std::any::Any>>,
-            ) -> Result<Box<dyn std::any::Any>, fruity_introspect::IntrospectError> {
-                Err(fruity_introspect::IntrospectError::UnknownMethod(name.to_string()))
-            }
         }
     };
 
