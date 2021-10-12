@@ -1,29 +1,28 @@
-use rusty_v8 as v8;
-
 use crate::value::ValueDeserializer;
 use crate::value::ValueSerializer;
+use rusty_v8 as v8;
 
-impl ValueDeserializer for i32 {
-    type Value = i32;
+impl ValueDeserializer for String {
+    type Value = String;
 
     fn deserialize(
         scope: &mut v8::HandleScope,
         v8_value: v8::Local<v8::Value>,
     ) -> Option<Self::Value> {
-        match v8_value.to_uint32(scope) {
-            Some(v8_value) => Some(v8_value.value() as i32),
+        match v8_value.to_string(scope) {
+            Some(v8_value) => Some(v8_value.to_rust_string_lossy(scope)),
             None => None,
         }
     }
 }
 
-impl ValueSerializer for i32 {
-    type Value = i32;
+impl ValueSerializer for String {
+    type Value = String;
 
     fn serialize<'a>(
         scope: &mut v8::HandleScope<'a>,
-        value: Self::Value,
+        value: &Self::Value,
     ) -> v8::Local<'a, v8::Value> {
-        v8::Local::<'a, v8::Value>::from(v8::Integer::new(scope, value))
+        v8::String::new(scope, &value).unwrap().into()
     }
 }

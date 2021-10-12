@@ -50,8 +50,6 @@ pub fn configure_console(runtime: &mut JsRuntime) {
             print_args(scope, args, |message| log::error!("{}", message));
         },
     );
-
-    runtime.update_global_bindings();
 }
 
 fn print_args<F: Fn(&str)>(

@@ -14,7 +14,7 @@ pub trait ValueSerializer {
 
     fn serialize<'a>(
         scope: &mut v8::HandleScope<'a>,
-        value: Self::Value,
+        value: &Self::Value,
     ) -> v8::Local<'a, v8::Value>;
 }
 

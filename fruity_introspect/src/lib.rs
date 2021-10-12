@@ -5,6 +5,7 @@
 //! Implements traits and macros to make a structure abe to list it's field and to get/set it with any
 //!
 
+use fruity_any::FruityAny;
 use std::any::Any;
 
 #[derive(Debug, Clone)]
@@ -58,10 +59,20 @@ pub trait IntrospectFields {
 #[derive(Clone)]
 pub enum MethodCaller {
     /// Without mutability
-    Const(fn(this: &dyn Any, args: Vec<Box<dyn Any>>) -> Result<Box<dyn Any>, IntrospectError>),
+    Const(
+        fn(
+            this: &dyn IntrospectMethods,
+            args: Vec<Box<dyn Any>>,
+        ) -> Result<Option<Box<dyn Any>>, IntrospectError>,
+    ),
 
     /// With mutability
-    Mut(fn(this: &mut dyn Any, args: Vec<Box<dyn Any>>) -> Result<Box<dyn Any>, IntrospectError>),
+    Mut(
+        fn(
+            this: &mut dyn IntrospectMethods,
+            args: Vec<Box<dyn Any>>,
+        ) -> Result<Option<Box<dyn Any>>, IntrospectError>,
+    ),
 }
 
 /// Informations about a field of an introspect object
@@ -81,7 +92,7 @@ pub struct MethodInfo {
 }
 
 /// Trait to implement static introspection to an object
-pub trait IntrospectMethods {
+pub trait IntrospectMethods: FruityAny {
     /// Get a list of fields with many informations
     fn get_method_infos(&self) -> Vec<MethodInfo>;
 }

@@ -5,3 +5,5 @@ edition = "2018"
 
 [dependencies]
 log = "0.4.14"
+serde = "1.0.130"
+fruity_any = { path = "../fruity_any" }

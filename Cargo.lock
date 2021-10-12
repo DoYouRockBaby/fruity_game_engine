@@ -282,7 +282,9 @@ dependencies = [
 name = "fruity_introspect"
 version = "0.1.0"
 dependencies = [
+ "fruity_any",
  "log",
+ "serde",
 ]
 
 [[package]]
@@ -298,7 +300,10 @@ dependencies = [
 name = "fruity_javascript_scripting"
 version = "0.1.0"
 dependencies = [
+ "fruity_any",
+ "fruity_any_derive",
  "fruity_ecs",
+ "fruity_introspect",
  "lazy_static",
  "log",
  "pretty_env_logger",
@@ -725,9 +730,9 @@ checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 
 [[package]]
 name = "rusty_v8"
-version = "0.30.0"
+version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cbceb7583f5db95a57e4cbf43847f5cc95dedc60671d7f6b6ca7578caa058ea9"
+checksum = "d2b311db3661f6b7631f94ad431133ff0f299c423e6bcc35b748ad0d57d6e604"
 dependencies = [
  "bitflags",
  "fslock",
