@@ -1,7 +1,7 @@
 use crate::bridge::service::configure_services;
 use crate::error::log_js_error;
 use crate::runtime::JsRuntime;
-use fruity_ecs::world::world::World;
+use fruity_core::service_manager::ServiceManager;
 
 mod bridge;
 mod error;
@@ -14,10 +14,10 @@ mod serialize;
 mod service1;
 mod value;
 
-pub fn execute_script(world: &mut World, path: &str) {
+pub fn execute_script(service_manager: &mut ServiceManager, path: &str) {
     // Initialize runtime
     let mut runtime = JsRuntime::new();
-    configure_services(&mut runtime, &world.service_manager);
+    configure_services(&mut runtime, service_manager);
     runtime.update_global_bindings();
 
     // Try module script running

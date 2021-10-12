@@ -1,5 +1,5 @@
-use crate::service::service::Service;
-use crate::service::service_rwlock::ServiceRwLock;
+use crate::service::Service;
+use crate::service_rwlock::ServiceRwLock;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::Arc;

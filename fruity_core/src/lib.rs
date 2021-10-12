@@ -1,3 +1,10 @@
+#![warn(missing_docs)]
+
+//! Fruity core
+//!
+//! The base of the fruity game engine, it's simply a storage for services, the magic will opere in this services
+//! espescialy the services from the ECS crate
+
 /// Provides collection for services
 pub mod service_manager;
 

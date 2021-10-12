@@ -5,6 +5,10 @@ use crate::entity::entity::EntityTypeIdentifier;
 use crate::entity::entity::Iter as EntityIter;
 use crate::entity::entity::IterMut as EntityIterMut;
 use crate::entity::entity_rwlock::EntityRwLock;
+use fruity_any_derive::*;
+use fruity_core::service::Service;
+use fruity_introspect::IntrospectMethods;
+use fruity_introspect::MethodInfo;
 use rayon::prelude::*;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -16,7 +20,7 @@ pub enum RemoveEntityError {
 }
 
 /// A storage for every entities, use [’Archetypes’] to store entities of different types
-#[derive(Debug)]
+#[derive(Debug, FruityAny)]
 pub struct EntityManager {
     id_incrementer: u64,
     archetypes: Vec<Archetype>,
@@ -173,3 +177,11 @@ impl EntityManager {
             .find(|archetype| *archetype.get_type_identifier() == entity_identifier)
     }
 }
+
+impl IntrospectMethods for EntityManager {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![]
+    }
+}
+
+impl Service for EntityManager {}

@@ -236,12 +236,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "fruity_core"
+version = "0.1.0"
+dependencies = [
+ "fruity_any",
+ "fruity_introspect",
+]
+
+[[package]]
 name = "fruity_ecs"
 version = "0.1.0"
 dependencies = [
  "fruity_any",
  "fruity_any_derive",
  "fruity_collections",
+ "fruity_core",
  "fruity_ecs_derive",
  "fruity_introspect",
  "hashbrown",
@@ -267,6 +276,7 @@ dependencies = [
  "fruity_any_derive",
  "fruity_collections",
  "fruity_collections_derive",
+ "fruity_core",
  "fruity_ecs",
  "fruity_ecs_derive",
  "fruity_introspect",
@@ -302,6 +312,7 @@ version = "0.1.0"
 dependencies = [
  "fruity_any",
  "fruity_any_derive",
+ "fruity_core",
  "fruity_ecs",
  "fruity_introspect",
  "lazy_static",

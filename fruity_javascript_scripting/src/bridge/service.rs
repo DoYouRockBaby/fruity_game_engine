@@ -1,6 +1,6 @@
 use crate::service1::Service1;
 use crate::JsRuntime;
-use fruity_ecs::service::service_manager::ServiceManager;
+use fruity_core::service_manager::ServiceManager;
 use fruity_introspect::IntrospectMethods;
 use std::sync::Arc;
 use std::sync::RwLock;

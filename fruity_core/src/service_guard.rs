@@ -1,4 +1,4 @@
-use crate::service::service::Service;
+use crate::service::Service;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::Deref;

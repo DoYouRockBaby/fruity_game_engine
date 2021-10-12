@@ -1,9 +1,9 @@
 use crate::Component1;
 use crate::Service1;
+use fruity_core::service_guard::ServiceWriteGuard;
+use fruity_core::service_manager::ServiceManager;
 use fruity_ecs::entity::entity_manager::EntityManager;
 use fruity_ecs::entity_type;
-use fruity_ecs::service::service_guard::ServiceWriteGuard;
-use fruity_ecs::service::service_manager::ServiceManager;
 
 pub fn system1(component1: &mut Component1, mut service1: ServiceWriteGuard<Service1>) {
     component1.int1 += 1;

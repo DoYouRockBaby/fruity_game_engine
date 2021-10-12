@@ -9,7 +9,8 @@ rusty_v8 = "0.32.0"
 url = "2.2.2"
 lazy_static = "1.4.0"
 pretty_env_logger = "0.4.0"
-fruity_ecs = { path = "../fruity_ecs" }
-fruity_introspect = { path = "../fruity_introspect" }
 fruity_any = { path = "../fruity_any" }
 fruity_any_derive = { path = "../fruity_any_derive" }
+fruity_core = { path = "../fruity_core" }
+fruity_ecs = { path = "../fruity_ecs" }
+fruity_introspect = { path = "../fruity_introspect" }

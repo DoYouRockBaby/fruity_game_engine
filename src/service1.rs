@@ -1,5 +1,5 @@
 use fruity_any_derive::*;
-use fruity_ecs::service::service::Service;
+use fruity_core::service::Service;
 use fruity_introspect::IntrospectError;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodCaller;

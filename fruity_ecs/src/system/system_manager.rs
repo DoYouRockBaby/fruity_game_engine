@@ -1,11 +1,16 @@
 use crate::entity::entity_manager::EntityManager;
-use crate::service::service_manager::ServiceManager;
+use fruity_any_derive::*;
+use fruity_core::service::Service;
+use fruity_core::service_manager::ServiceManager;
+use fruity_introspect::IntrospectMethods;
+use fruity_introspect::MethodInfo;
 use rayon::prelude::*;
 use std::fmt::Debug;
 
 type System = dyn Fn(&EntityManager, &ServiceManager) + Sync + Send + 'static;
 
 /// A systems collection
+#[derive(FruityAny)]
 pub struct SystemManager {
     systems: Vec<Box<System>>,
 }
@@ -49,3 +54,11 @@ impl<'s> SystemManager {
             .for_each(|system| system(entity_manager, service_manager));
     }
 }
+
+impl IntrospectMethods for SystemManager {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![]
+    }
+}
+
+impl Service for SystemManager {}
