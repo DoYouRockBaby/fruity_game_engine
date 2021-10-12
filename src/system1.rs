@@ -12,7 +12,10 @@ pub fn system1(component1: &mut Component1, mut service1: ServiceWriteGuard<Serv
     println!("System1 speak: {:#?} {}", component1, service1.value());
 }
 
-pub fn system1_untyped(entity_manager: &EntityManager, service_manager: &ServiceManager) {
+pub fn system1_untyped(service_manager: &ServiceManager) {
+    let entity_manager = service_manager.get::<EntityManager>().unwrap();
+    let entity_manager_reader = entity_manager.read().unwrap();
+
     let service1 = match service_manager.get::<Service1>() {
         Some(service) => service,
         None => {
@@ -21,7 +24,7 @@ pub fn system1_untyped(entity_manager: &EntityManager, service_manager: &Service
         }
     };
 
-    entity_manager.for_each_mut(
+    entity_manager_reader.for_each_mut(
         entity_type!["Component1", "Component2"],
         |mut components| {
             let component1 = match components.next() {

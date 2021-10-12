@@ -3,7 +3,7 @@ use crate::js_value::value::JsValue;
 use crate::serialize::deserialize::deserialize;
 use crate::serialize::serialize::serialize;
 use core::ffi::c_void;
-use fruity_introspect::IntrospectMethods;
+use fruity_core::service::Service;
 use fruity_introspect::MethodCaller;
 use rusty_v8 as v8;
 use std::any::Any;
@@ -15,7 +15,7 @@ use std::sync::RwLock;
 
 pub struct JsObject {
     pub(crate) fields: HashMap<String, Box<dyn JsValue>>,
-    pub(crate) internal_object: Option<Arc<RwLock<Box<dyn IntrospectMethods + Send + Sync>>>>,
+    pub(crate) internal_object: Option<Arc<RwLock<Box<dyn Service>>>>,
 }
 
 impl JsObject {
@@ -26,22 +26,22 @@ impl JsObject {
         }
     }
 
-    pub fn add_object_from_introspect(
+    pub fn add_service(
         &mut self,
         name: &str,
-        introspect: Arc<RwLock<Box<dyn IntrospectMethods + Send + Sync>>>,
+        service: Arc<RwLock<Box<dyn Service>>>,
     ) -> &mut JsObject {
         let mut fields: HashMap<String, Box<dyn JsValue>> = HashMap::new();
 
         let method_infos = {
-            let reader = introspect.read().unwrap();
+            let reader = service.read().unwrap();
             reader.get_method_infos()
         };
 
         for method_info in method_infos {
             fields.insert(
                 method_info.name,
-                Box::new(JsFunction::new(introspect_callback)),
+                Box::new(JsFunction::new(service_callback)),
             );
         }
 
@@ -49,7 +49,7 @@ impl JsObject {
             name.to_string(),
             Box::new(JsObject {
                 fields,
-                internal_object: Some(introspect),
+                internal_object: Some(service),
             }),
         );
 
@@ -106,8 +106,7 @@ impl JsValue for JsObject {
         if let Some(internal_object) = &mut self.internal_object {
             let ref_value = v8::External::new(
                 scope,
-                internal_object as *mut Arc<RwLock<Box<dyn IntrospectMethods + Send + Sync>>>
-                    as *mut c_void,
+                internal_object as *mut Arc<RwLock<Box<dyn Service>>> as *mut c_void,
             );
 
             object.set_internal_field(0, ref_value.into());
@@ -134,15 +133,15 @@ impl JsValue for JsObject {
     }
 }
 
-fn introspect_callback(
+fn service_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut return_value: v8::ReturnValue,
 ) {
-    // Get this as introspect methods
+    // Get this as service methods
     let this = args.this().get_internal_field(scope, 0).unwrap();
     let this = unsafe { v8::Local::<v8::External>::cast(this) };
-    let this = this.value() as *const Arc<RwLock<Box<dyn IntrospectMethods + Send + Sync>>>;
+    let this = this.value() as *const Arc<RwLock<Box<dyn Service>>>;
     let this = unsafe { this.as_ref().unwrap().clone() };
 
     // Extract the current method info
@@ -175,12 +174,12 @@ fn introspect_callback(
         MethodCaller::Const(call) => {
             let reader = this.read().unwrap();
             let this = &**reader.deref();
-            call(this, deserialized_args).unwrap()
+            call(this.as_any_ref(), deserialized_args).unwrap()
         }
         MethodCaller::Mut(call) => {
             let mut writer = this.write().unwrap();
             let this = &mut **writer.deref_mut();
-            call(this, deserialized_args).unwrap()
+            call(this.as_any_mut(), deserialized_args).unwrap()
         }
     };
 

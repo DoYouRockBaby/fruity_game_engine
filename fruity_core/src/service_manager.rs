@@ -1,6 +1,7 @@
 use crate::service::Service;
 use crate::service_rwlock::ServiceRwLock;
 use std::any::TypeId;
+use std::collections::hash_map::Iter as HashMapIter;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -48,5 +49,26 @@ impl<'s> ServiceManager {
     ///
     pub fn get_by_type_id(&self, type_id: &TypeId) -> Option<Arc<RwLock<Box<dyn Service>>>> {
         self.services.get(type_id).map(|service| service.clone())
+    }
+
+    /// Iter over all services
+    pub fn iter(&self) -> Iter<'_> {
+        Iter {
+            itern_iter: self.services.iter(),
+        }
+    }
+}
+
+/// Iterator over entities of an archetype
+pub struct Iter<'s> {
+    /// The targeted archetype
+    itern_iter: HashMapIter<'s, TypeId, Arc<RwLock<Box<dyn Service>>>>,
+}
+
+impl<'s> Iterator for Iter<'s> {
+    type Item = Arc<RwLock<Box<dyn Service>>>;
+
+    fn next(&mut self) -> Option<Arc<RwLock<Box<dyn Service>>>> {
+        self.itern_iter.next().map(|(_, service)| service.clone())
     }
 }

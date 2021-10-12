@@ -7,7 +7,7 @@ use fruity_introspect::MethodInfo;
 
 #[derive(Debug, Clone, FruityAny)]
 pub struct Service1 {
-    incrementer: u32,
+    incrementer: i32,
 }
 
 impl Service1 {
@@ -19,11 +19,11 @@ impl Service1 {
         self.incrementer += 1;
     }
 
-    pub fn increment_by(&mut self, more: u32) {
+    pub fn increment_by(&mut self, more: i32) {
         self.incrementer += more;
     }
 
-    pub fn value(&self) -> u32 {
+    pub fn value(&self) -> i32 {
         self.incrementer
     }
 }
@@ -36,7 +36,7 @@ impl IntrospectMethods for Service1 {
                 args: vec![],
                 return_type: None,
                 call: MethodCaller::Mut(|this, args| {
-                    let this = this.as_any_mut().downcast_mut::<Service1>().unwrap();
+                    let this = this.downcast_mut::<Service1>().unwrap();
 
                     if args.len() != 0 {
                         return Err(IntrospectError::WrongNumberArguments {
@@ -54,7 +54,7 @@ impl IntrospectMethods for Service1 {
                 args: vec!["u32".to_string()],
                 return_type: None,
                 call: MethodCaller::Mut(|this, args| {
-                    let this = this.as_any_mut().downcast_mut::<Service1>().unwrap();
+                    let this = this.downcast_mut::<Service1>().unwrap();
 
                     if args.len() != 1 {
                         return Err(IntrospectError::WrongNumberArguments {
@@ -63,7 +63,7 @@ impl IntrospectMethods for Service1 {
                         });
                     }
 
-                    let arg1 = match args.get(0).unwrap().downcast_ref::<u32>() {
+                    let arg1 = match args.get(0).unwrap().downcast_ref::<i32>() {
                         Some(arg) => Ok(arg),
                         None => Err(IntrospectError::IncorrectArgument),
                     }?;
@@ -77,7 +77,7 @@ impl IntrospectMethods for Service1 {
                 args: vec![],
                 return_type: Some("u32".to_string()),
                 call: MethodCaller::Const(|this, args| {
-                    let this = this.as_any_ref().downcast_ref::<Service1>().unwrap();
+                    let this = this.downcast_ref::<Service1>().unwrap();
 
                     if args.len() != 0 {
                         return Err(IntrospectError::WrongNumberArguments {

@@ -61,7 +61,7 @@ pub enum MethodCaller {
     /// Without mutability
     Const(
         fn(
-            this: &dyn IntrospectMethods,
+            this: &dyn Any,
             args: Vec<Box<dyn Any>>,
         ) -> Result<Option<Box<dyn Any>>, IntrospectError>,
     ),
@@ -69,7 +69,7 @@ pub enum MethodCaller {
     /// With mutability
     Mut(
         fn(
-            this: &mut dyn IntrospectMethods,
+            this: &mut dyn Any,
             args: Vec<Box<dyn Any>>,
         ) -> Result<Option<Box<dyn Any>>, IntrospectError>,
     ),

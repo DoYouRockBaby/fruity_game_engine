@@ -11,7 +11,6 @@ mod module_map;
 mod normalize_path;
 mod runtime;
 mod serialize;
-mod service1;
 mod value;
 
 pub fn execute_script(service_manager: &mut ServiceManager, path: &str) {

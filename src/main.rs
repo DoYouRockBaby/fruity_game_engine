@@ -41,74 +41,80 @@ fn main() {
     let entity_manager = service_manager.get::<EntityManager>().unwrap();
     let system_manager = service_manager.get::<SystemManager>().unwrap();
 
-    let mut entity_manager_writer = entity_manager.write().unwrap();
-    let mut system_manager_writer = system_manager.write().unwrap();
+    {
+        let mut entity_manager_writer = entity_manager.write().unwrap();
+        let mut system_manager_writer = system_manager.write().unwrap();
 
-    let component1 = Component1 {
-        float1: 3.14,
-        // str1: "je suis une string 1".to_string(),
-        int1: 12,
-    };
+        let component1 = Component1 {
+            float1: 3.14,
+            // str1: "je suis une string 1".to_string(),
+            int1: 12,
+        };
 
-    let component2 = Component2 { float1: 3.14 };
+        let component2 = Component2 { float1: 3.14 };
 
-    let component3 = Component1 {
-        float1: 3.14,
-        // str1: "je suis une string 2".to_string(),
-        int1: 34,
-    };
-    let component4 = Component1 {
-        float1: 3.14,
-        // str1: "je suis une string 3".to_string(),
-        int1: 53,
-    };
+        let component3 = Component1 {
+            float1: 3.14,
+            // str1: "je suis une string 2".to_string(),
+            int1: 34,
+        };
+        let component4 = Component1 {
+            float1: 3.14,
+            // str1: "je suis une string 3".to_string(),
+            int1: 53,
+        };
 
-    let component5 = Component2 { float1: 2.14 };
-    let component6 = Component1 {
-        float1: 3.14,
-        // str1: "je suis une string 4".to_string(),
-        int1: 43,
-    };
+        let component5 = Component2 { float1: 2.14 };
+        let component6 = Component1 {
+            float1: 3.14,
+            // str1: "je suis une string 4".to_string(),
+            int1: 43,
+        };
 
-    let component7 = Component2 { float1: 5.14 };
+        let component7 = Component2 { float1: 5.14 };
 
-    let entity_id_1 =
-        entity_manager_writer.create(entity!(Box::new(component1), Box::new(component2)));
-    let entity_id_2 = entity_manager_writer.create(entity!(Box::new(component3)));
-    let entity_id_3 =
-        entity_manager_writer.create(entity!(Box::new(component4), Box::new(component5)));
-    let entity_id_4 =
-        entity_manager_writer.create(entity!(Box::new(component6), Box::new(component7)));
+        let entity_id_1 =
+            entity_manager_writer.create(entity!(Box::new(component1), Box::new(component2)));
+        let entity_id_2 = entity_manager_writer.create(entity!(Box::new(component3)));
+        let entity_id_3 =
+            entity_manager_writer.create(entity!(Box::new(component4), Box::new(component5)));
+        let entity_id_4 =
+            entity_manager_writer.create(entity!(Box::new(component6), Box::new(component7)));
 
-    entity_manager_writer.remove(entity_id_3);
-    entity_manager_writer.remove(EntityId(0));
+        entity_manager_writer.remove(entity_id_3);
+        entity_manager_writer.remove(EntityId(0));
 
-    match entity_manager_writer.get(entity_id_1) {
-        Some(entity) => match entity.write().unwrap().get_mut(1) {
-            Some(component) => component.set_field("float1", 5432.1 as f64),
+        match entity_manager_writer.get(entity_id_1) {
+            Some(entity) => match entity.write().unwrap().get_mut(1) {
+                Some(component) => component.set_field("float1", 5432.1 as f64),
+                None => (),
+            },
             None => (),
-        },
-        None => (),
-    }
+        }
 
-    match entity_manager_writer.get(entity_id_2) {
-        Some(entity) => match entity.write().unwrap().get_mut(0) {
-            Some(component) => component.set_field("int1", 12345 as i64),
+        match entity_manager_writer.get(entity_id_2) {
+            Some(entity) => match entity.write().unwrap().get_mut(0) {
+                Some(component) => component.set_field("int1", 12345 as i64),
+                None => (),
+            },
             None => (),
-        },
-        None => (),
+        }
+
+        service_manager.register::<Service1>(Service1::new());
+        // system_manager_writer.add_system(system1_untyped);
+
+        // println!("{:#?}", world);
+        println!("{:#?}", entity_manager_writer.get(entity_id_4));
     }
-
-    service_manager.register::<Service1>(Service1::new());
-    system_manager_writer.add_system(system1_untyped);
-
-    // println!("{:#?}", world);
-    println!("{:#?}", entity_manager_writer.get(entity_id_4));
 
     let script_path = "src/javascript/index.js";
     execute_script(&mut service_manager, script_path);
 
-    /*world.run();
-    world.run();
-    world.run();*/
+    {
+        let system_manager_reader = system_manager.read().unwrap();
+
+        system_manager_reader.run(&mut service_manager);
+        system_manager_reader.run(&mut service_manager);
+        system_manager_reader.run(&mut service_manager);
+    }
 }
