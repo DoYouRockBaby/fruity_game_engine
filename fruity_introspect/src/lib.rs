@@ -6,6 +6,7 @@
 //!
 
 use fruity_any::FruityAny;
+use fruity_serialize::serialized::Serialized;
 use std::any::Any;
 
 #[derive(Debug, Clone)]
@@ -38,7 +39,7 @@ pub struct FieldInfo {
     /// # Arguments
     /// * `property` - The field name
     ///
-    pub getter: fn(this: &dyn Any) -> &dyn Any,
+    pub getter: fn(this: &dyn Any) -> Serialized,
 
     /// Function to set one of the entry field
     ///
@@ -46,7 +47,7 @@ pub struct FieldInfo {
     /// * `property` - The field name
     /// * `value` - The new field value as Any
     ///
-    pub setter: fn(this: &mut dyn Any, value: &dyn Any),
+    pub setter: fn(this: &mut dyn Any, value: Serialized),
 }
 
 /// Trait to implement static introspection to an object
@@ -59,19 +60,14 @@ pub trait IntrospectFields {
 #[derive(Clone)]
 pub enum MethodCaller {
     /// Without mutability
-    Const(
-        fn(
-            this: &dyn Any,
-            args: Vec<Box<dyn Any>>,
-        ) -> Result<Option<Box<dyn Any>>, IntrospectError>,
-    ),
+    Const(fn(this: &dyn Any, args: Vec<Serialized>) -> Result<Option<Serialized>, IntrospectError>),
 
     /// With mutability
     Mut(
         fn(
             this: &mut dyn Any,
-            args: Vec<Box<dyn Any>>,
-        ) -> Result<Option<Box<dyn Any>>, IntrospectError>,
+            args: Vec<Serialized>,
+        ) -> Result<Option<Serialized>, IntrospectError>,
     ),
 }
 

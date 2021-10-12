@@ -1,10 +1,11 @@
 extern crate pretty_env_logger;
+use crate::js_value::object::JsObject;
 use crate::JsRuntime;
 use rusty_v8 as v8;
 
 pub fn configure_console(runtime: &mut JsRuntime) {
     let global_object = runtime.global_object();
-    let console_object = global_object.add_object("console");
+    let mut console_object = JsObject::new();
 
     console_object.set_func(
         "log",
@@ -50,6 +51,8 @@ pub fn configure_console(runtime: &mut JsRuntime) {
             print_args(scope, args, |message| log::error!("{}", message));
         },
     );
+
+    global_object.add_field("console", console_object);
 }
 
 fn print_args<F: Fn(&str)>(

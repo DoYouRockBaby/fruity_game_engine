@@ -1,4 +1,5 @@
 use proc_macro::{self, TokenStream};
+use quote::format_ident;
 use quote::quote;
 use syn::{parse_macro_input, Data, DeriveInput, Fields, Index};
 
@@ -42,23 +43,28 @@ pub fn derive_introspect_fields(input: TokenStream) -> TokenStream {
             let recurse_infos = fields.iter().map(|(name, ty)| {
                 let name_as_string = name.to_string();
                 let type_as_string = ty.to_string();
+                let type_converter_as_string = format_ident!("as_{}", &type_as_string);
+
                 quote! {
                     fruity_introspect::FieldInfo {
                         name: #name_as_string.to_string(),
                         ty: #type_as_string.to_string(),
-                        getter: |this| &this.downcast_ref::<#ident>().unwrap().#name,
-                        setter: |this, value| match value.downcast_ref::<#ty>() {
-                            Some(value) => {
-                                let this = this.downcast_mut::<#ident>().unwrap();
-                                this.#name = value.clone();
-                            }
-                            None => {
-                                log::error!(
-                                    "Expected a {} for property {:?}, got {:#?}",
-                                    #type_as_string,
-                                    #name_as_string,
-                                    value
-                                );
+                        getter: |this| fruity_serialize::serialize::serialize_any(&this.downcast_ref::<#ident>().unwrap().#name).unwrap(),
+                        setter: |this, value| {
+                            let this = this.downcast_mut::<#ident>().unwrap();
+
+                            match value.#type_converter_as_string () {
+                                Some(value) => {
+                                    this.#name = value.clone();
+                                }
+                                None => {
+                                    log::error!(
+                                        "Expected a {} for property {:?}, got {:#?}",
+                                        #type_as_string,
+                                        #name_as_string,
+                                        value
+                                    );
+                                }
                             }
                         },
                     },

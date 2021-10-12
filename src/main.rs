@@ -22,7 +22,7 @@ use pretty_env_logger::formatted_builder;
 pub struct Component1 {
     pub float1: f64,
     // pub str1: String,
-    pub int1: i64,
+    pub int1: i32,
 }
 
 #[derive(Debug, Clone, Component, Encodable, IntrospectFields, FruityAny)]
@@ -73,9 +73,9 @@ fn main() {
 
         let component7 = Component2 { float1: 5.14 };
 
-        let entity_id_1 =
+        let _entity_id_1 =
             entity_manager_writer.create(entity!(Box::new(component1), Box::new(component2)));
-        let entity_id_2 = entity_manager_writer.create(entity!(Box::new(component3)));
+        let _entity_id_2 = entity_manager_writer.create(entity!(Box::new(component3)));
         let entity_id_3 =
             entity_manager_writer.create(entity!(Box::new(component4), Box::new(component5)));
         let entity_id_4 =
@@ -84,31 +84,21 @@ fn main() {
         entity_manager_writer.remove(entity_id_3);
         entity_manager_writer.remove(EntityId(0));
 
-        match entity_manager_writer.get(entity_id_1) {
-            Some(entity) => match entity.write().unwrap().get_mut(1) {
-                Some(component) => component.set_field("float1", 5432.1 as f64),
-                None => (),
-            },
-            None => (),
-        }
-
-        match entity_manager_writer.get(entity_id_2) {
-            Some(entity) => match entity.write().unwrap().get_mut(0) {
-                Some(component) => component.set_field("int1", 12345 as i64),
-                None => (),
-            },
-            None => (),
-        }
-
         service_manager.register::<Service1>(Service1::new());
-        // system_manager_writer.add_system(system1_untyped);
+        system_manager_writer.add_system(system1_untyped);
 
         // println!("{:#?}", world);
         println!("{:#?}", entity_manager_writer.get(entity_id_4));
     }
 
+    let mut component1 = Component1 {
+        float1: 3.14,
+        // str1: "je suis une string 1".to_string(),
+        int1: 12,
+    };
+
     let script_path = "src/javascript/index.js";
-    execute_script(&mut service_manager, script_path);
+    execute_script(&mut service_manager, &mut component1, script_path);
 
     {
         let system_manager_reader = system_manager.read().unwrap();

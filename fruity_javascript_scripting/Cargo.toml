@@ -14,3 +14,4 @@ fruity_any_derive = { path = "../fruity_any_derive" }
 fruity_core = { path = "../fruity_core" }
 fruity_ecs = { path = "../fruity_ecs" }
 fruity_introspect = { path = "../fruity_introspect" }
+fruity_serialize = { path = "../fruity_serialize" }

@@ -1,9 +1,11 @@
 use crate::js_value::function::JsFunction;
+use crate::js_value::property::JsProperty;
 use crate::js_value::value::JsValue;
-use crate::serialize::deserialize::deserialize;
-use crate::serialize::serialize::serialize;
+use crate::serialize::deserialize::deserialize_v8;
+use crate::serialize::serialize::serialize_v8;
 use core::ffi::c_void;
 use fruity_core::service::Service;
+use fruity_ecs::component::component::Component;
 use fruity_introspect::MethodCaller;
 use rusty_v8 as v8;
 use std::any::Any;
@@ -13,24 +15,31 @@ use std::ops::DerefMut;
 use std::sync::Arc;
 use std::sync::RwLock;
 
+pub struct ComponentRef(pub(crate) &'static dyn Component);
+
+pub struct ComponentMut(pub(crate) &'static mut dyn Component);
+
+enum JsObjectInternalObject {
+    Service(Arc<RwLock<Box<dyn Service>>>),
+    Component(ComponentRef),
+    ComponentMut(ComponentMut),
+    None,
+}
+
 pub struct JsObject {
     pub(crate) fields: HashMap<String, Box<dyn JsValue>>,
-    pub(crate) internal_object: Option<Arc<RwLock<Box<dyn Service>>>>,
+    internal_object: JsObjectInternalObject,
 }
 
 impl JsObject {
     pub fn new() -> JsObject {
         JsObject {
             fields: HashMap::new(),
-            internal_object: None,
+            internal_object: JsObjectInternalObject::None,
         }
     }
 
-    pub fn add_service(
-        &mut self,
-        name: &str,
-        service: Arc<RwLock<Box<dyn Service>>>,
-    ) -> &mut JsObject {
+    pub fn from_service(service: Arc<RwLock<Box<dyn Service>>>) -> JsObject {
         let mut fields: HashMap<String, Box<dyn JsValue>> = HashMap::new();
 
         let method_infos = {
@@ -45,32 +54,46 @@ impl JsObject {
             );
         }
 
-        self.fields.insert(
-            name.to_string(),
-            Box::new(JsObject {
-                fields,
-                internal_object: Some(service),
-            }),
-        );
-
-        self.fields
-            .get_mut(&name.to_string())
-            .unwrap()
-            .as_mut_any()
-            .downcast_mut::<JsObject>()
-            .unwrap()
+        JsObject {
+            fields,
+            internal_object: JsObjectInternalObject::Service(service),
+        }
     }
 
-    pub fn add_object(&mut self, name: &str) -> &mut JsObject {
-        self.fields
-            .insert(name.to_string(), Box::new(JsObject::new()));
+    pub fn from_component(component: &dyn Component) -> JsObject {
+        let component = unsafe { &*(component as *const _) } as &dyn Component;
+        let mut fields: HashMap<String, Box<dyn JsValue>> = HashMap::new();
 
-        self.fields
-            .get_mut(&name.to_string())
-            .unwrap()
-            .as_mut_any()
-            .downcast_mut::<JsObject>()
-            .unwrap()
+        let field_infos = component.get_field_infos();
+
+        for field_info in field_infos {
+            fields.insert(field_info.name, Box::new(JsProperty::new(false)));
+        }
+
+        JsObject {
+            fields,
+            internal_object: JsObjectInternalObject::Component(ComponentRef(component)),
+        }
+    }
+
+    pub fn from_component_mut(component: &mut dyn Component) -> JsObject {
+        let component = unsafe { &mut *(component as *mut _) } as &mut dyn Component;
+        let mut fields: HashMap<String, Box<dyn JsValue>> = HashMap::new();
+
+        let field_infos = component.get_field_infos();
+
+        for field_info in field_infos {
+            fields.insert(field_info.name, Box::new(JsProperty::new(true)));
+        }
+
+        JsObject {
+            fields,
+            internal_object: JsObjectInternalObject::ComponentMut(ComponentMut(component)),
+        }
+    }
+
+    pub fn add_field<T: JsValue>(&mut self, name: &str, value: T) {
+        self.fields.insert(name.to_string(), Box::new(value));
     }
 
     pub fn set_func(
@@ -94,7 +117,11 @@ impl JsValue for JsObject {
     fn register(&mut self, scope: &mut v8::HandleScope, name: &str, parent: v8::Local<v8::Object>) {
         // Create the object
         let object_template = v8::ObjectTemplate::new(scope);
-        if let Some(_) = self.internal_object.clone() {
+        if let JsObjectInternalObject::Service(_) = self.internal_object {
+            object_template.set_internal_field_count(1);
+        } else if let JsObjectInternalObject::Component(_) = self.internal_object {
+            object_template.set_internal_field_count(1);
+        } else if let JsObjectInternalObject::ComponentMut(_) = self.internal_object {
             object_template.set_internal_field_count(1);
         }
 
@@ -103,11 +130,22 @@ impl JsValue for JsObject {
 
         // If we reference a rust object, add the intern object reference to the js object
         // This will be used to access this on methods
-        if let Some(internal_object) = &mut self.internal_object {
+        if let JsObjectInternalObject::Service(internal_object) = &mut self.internal_object {
             let ref_value = v8::External::new(
                 scope,
                 internal_object as *mut Arc<RwLock<Box<dyn Service>>> as *mut c_void,
             );
+
+            object.set_internal_field(0, ref_value.into());
+        } else if let JsObjectInternalObject::Component(internal_object) = &self.internal_object {
+            let ref_value =
+                v8::External::new(scope, internal_object as *const ComponentRef as *mut c_void);
+
+            object.set_internal_field(0, ref_value.into());
+        } else if let JsObjectInternalObject::ComponentMut(internal_object) = &self.internal_object
+        {
+            let ref_value =
+                v8::External::new(scope, internal_object as *const ComponentMut as *mut c_void);
 
             object.set_internal_field(0, ref_value.into());
         }
@@ -138,7 +176,7 @@ fn service_callback(
     args: v8::FunctionCallbackArguments,
     mut return_value: v8::ReturnValue,
 ) {
-    // Get this as service methods
+    // Get this as service
     let this = args.this().get_internal_field(scope, 0).unwrap();
     let this = unsafe { v8::Local::<v8::External>::cast(this) };
     let this = this.value() as *const Arc<RwLock<Box<dyn Service>>>;
@@ -166,7 +204,7 @@ fn service_callback(
 
     // Build the arguments
     let deserialized_args = (0..args.length())
-        .filter_map(|index| deserialize(scope, args.get(index)))
+        .filter_map(|index| deserialize_v8(scope, args.get(index)))
         .collect::<Vec<_>>();
 
     // Call the function
@@ -185,7 +223,7 @@ fn service_callback(
 
     // Return the result
     if let Some(result) = result {
-        let serialized = serialize(scope, result.as_ref());
+        let serialized = serialize_v8(scope, result);
 
         if let Some(serialized) = serialized {
             return_value.set(serialized.into());

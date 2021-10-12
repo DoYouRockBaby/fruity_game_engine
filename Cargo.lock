@@ -241,6 +241,7 @@ version = "0.1.0"
 dependencies = [
  "fruity_any",
  "fruity_introspect",
+ "fruity_serialize",
 ]
 
 [[package]]
@@ -282,6 +283,7 @@ dependencies = [
  "fruity_introspect",
  "fruity_introspect_derive",
  "fruity_javascript_scripting",
+ "fruity_serialize",
  "log",
  "mini-redis",
  "pretty_env_logger",
@@ -293,6 +295,7 @@ name = "fruity_introspect"
 version = "0.1.0"
 dependencies = [
  "fruity_any",
+ "fruity_serialize",
  "log",
  "serde",
 ]
@@ -315,12 +318,17 @@ dependencies = [
  "fruity_core",
  "fruity_ecs",
  "fruity_introspect",
+ "fruity_serialize",
  "lazy_static",
  "log",
  "pretty_env_logger",
  "rusty_v8",
  "url",
 ]
+
+[[package]]
+name = "fruity_serialize"
+version = "0.1.0"
 
 [[package]]
 name = "fslock"

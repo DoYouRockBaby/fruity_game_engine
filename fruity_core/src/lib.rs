@@ -16,3 +16,6 @@ pub mod service_rwlock;
 
 /// Provides guard for services
 pub mod service_guard;
+
+/// Functions to simplify the implementation of services, espescialy for introspection
+pub mod utils;

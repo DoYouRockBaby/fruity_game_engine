@@ -1,22 +1,7 @@
+use crate::serialize::deserialize::deserialize_v8;
+use fruity_serialize::deserialize::deserialize_any;
+use fruity_serialize::deserialize::Deserialize;
 use rusty_v8 as v8;
-
-pub trait ValueDeserializer {
-    type Value;
-
-    fn deserialize(
-        scope: &mut v8::HandleScope,
-        v8_value: v8::Local<v8::Value>,
-    ) -> Option<Self::Value>;
-}
-
-pub trait ValueSerializer {
-    type Value;
-
-    fn serialize<'a>(
-        scope: &mut v8::HandleScope<'a>,
-        value: &Self::Value,
-    ) -> v8::Local<'a, v8::Value>;
-}
 
 #[derive(Debug)]
 pub struct JsResult<'a> {
@@ -32,10 +17,25 @@ impl<'a> JsResult<'a> {
         JsResult::<'b> { scope, v8_value }
     }
 
-    pub fn deserialize<T: ValueDeserializer<Value = T>>(mut self) -> Option<T> {
-        match self.v8_value {
-            Some(v8_value) => T::deserialize(&mut self.scope, v8_value),
-            None => None,
+    pub fn deserialize<T: Deserialize<Value = T> + 'static>(mut self) -> Option<T> {
+        let v8_value = match self.v8_value {
+            Some(v8_value) => v8_value,
+            None => return None,
+        };
+
+        let value = match deserialize_v8(&mut self.scope, v8_value) {
+            Some(value) => value,
+            None => return None,
+        };
+
+        let value = match deserialize_any(value) {
+            Some(value) => value,
+            None => return None,
+        };
+
+        match value.downcast::<T>() {
+            Ok(value) => Some(*value),
+            Err(_) => None,
         }
     }
 }

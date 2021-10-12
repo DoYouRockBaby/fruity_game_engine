@@ -1,9 +1,13 @@
 use fruity_any_derive::*;
 use fruity_core::service::Service;
-use fruity_introspect::IntrospectError;
+use fruity_core::utils::assert_argument_count;
+use fruity_core::utils::cast_argument;
+use fruity_core::utils::cast_service;
+use fruity_core::utils::cast_service_mut;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
+use fruity_serialize::serialize::serialize_any;
 
 #[derive(Debug, Clone, FruityAny)]
 pub struct Service1 {
@@ -36,14 +40,8 @@ impl IntrospectMethods for Service1 {
                 args: vec![],
                 return_type: None,
                 call: MethodCaller::Mut(|this, args| {
-                    let this = this.downcast_mut::<Service1>().unwrap();
-
-                    if args.len() != 0 {
-                        return Err(IntrospectError::WrongNumberArguments {
-                            have: args.len(),
-                            expected: 0,
-                        });
-                    }
+                    let this = cast_service_mut::<Service1>(this);
+                    assert_argument_count(0, &args)?;
 
                     this.increment();
                     Ok(None)
@@ -51,43 +49,28 @@ impl IntrospectMethods for Service1 {
             },
             MethodInfo {
                 name: "increment_by".to_string(),
-                args: vec!["u32".to_string()],
+                args: vec!["i32".to_string()],
                 return_type: None,
                 call: MethodCaller::Mut(|this, args| {
-                    let this = this.downcast_mut::<Service1>().unwrap();
+                    let this = cast_service_mut::<Service1>(this);
+                    assert_argument_count(1, &args)?;
 
-                    if args.len() != 1 {
-                        return Err(IntrospectError::WrongNumberArguments {
-                            have: args.len(),
-                            expected: 0,
-                        });
-                    }
+                    let arg1 = cast_argument(0, &args, |arg| arg.as_i32())?;
 
-                    let arg1 = match args.get(0).unwrap().downcast_ref::<i32>() {
-                        Some(arg) => Ok(arg),
-                        None => Err(IntrospectError::IncorrectArgument),
-                    }?;
-
-                    this.increment_by(*arg1);
+                    this.increment_by(arg1);
                     Ok(None)
                 }),
             },
             MethodInfo {
                 name: "value".to_string(),
                 args: vec![],
-                return_type: Some("u32".to_string()),
+                return_type: Some("i32".to_string()),
                 call: MethodCaller::Const(|this, args| {
-                    let this = this.downcast_ref::<Service1>().unwrap();
-
-                    if args.len() != 0 {
-                        return Err(IntrospectError::WrongNumberArguments {
-                            have: args.len(),
-                            expected: 0,
-                        });
-                    }
+                    let this = cast_service::<Service1>(this);
+                    assert_argument_count(0, &args)?;
 
                     let result = this.value();
-                    Ok(Some(Box::new(result)))
+                    Ok(serialize_any(&result))
                 }),
             },
         ]

@@ -1,7 +1,5 @@
 use fruity_any::FruityAny;
 use fruity_introspect::IntrospectFields;
-use std::any::type_name;
-use std::any::Any;
 use std::fmt::Debug;
 
 /// A function to decode an object from byte array to an any reference
@@ -30,56 +28,4 @@ pub trait Component: IntrospectFields + Debug + Send + Sync + FruityAny {
 
     /// Return a function to decode an object from byte array to an any mutable reference
     fn get_decoder_mut(&self) -> ComponentDecoderMut;
-}
-
-impl dyn Component {
-    /// Get one of the component field value
-    ///
-    /// # Arguments
-    /// * `property` - The field name
-    ///
-    /// # Generic Arguments
-    /// * `T` - The field type
-    ///
-    pub fn get_field<T: Any>(&self, property: &str) -> Option<&T> {
-        let fields = self.get_field_infos();
-        match fields.iter().find(|field| field.name == property) {
-            Some(field) => match (field.getter)(self.as_any_ref()).downcast_ref::<T>() {
-                Some(field) => Some(field),
-                None => {
-                    log::error!(
-                        "Try to get a {:?} from property {:?}, got {:?}",
-                        type_name::<T>(),
-                        property,
-                        field.name
-                    );
-                    None
-                }
-            },
-            None => None,
-        }
-    }
-
-    /// Set one of the component field
-    ///
-    /// # Arguments
-    /// * `property` - The field name
-    /// * `value` - The new field value
-    ///
-    /// # Generic Arguments
-    /// * `T` - The field type
-    ///
-    pub fn set_field<T: Any>(&mut self, property: &str, value: T) {
-        let fields = self.get_field_infos();
-        match fields.iter().find(|field| field.name == property) {
-            Some(field) => (field.setter)(self.as_any_mut(), &value),
-            None => {
-                log::error!(
-                    "Try to set a {:?} on property {:?}, property not exists",
-                    type_name::<T>(),
-                    property,
-                );
-            }
-        };
-    }
 }
