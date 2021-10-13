@@ -53,7 +53,10 @@ pub enum Serialized {
     /// Service reference value
     Callback(
         Arc<
-            dyn Fn(&ServiceManager, Vec<Serialized>) -> Result<Option<Serialized>, IntrospectError>,
+            dyn Fn(&ServiceManager, Vec<Serialized>) -> Result<Option<Serialized>, IntrospectError>
+                + Sync
+                + Send
+                + 'static,
         >,
     ),
 
@@ -242,11 +245,29 @@ impl Serialized {
         }
     }
 
-    /// Convert as bool
+    /// Convert as a thread shared service
     #[allow(dead_code)]
     pub fn as_service(&self) -> Option<Arc<RwLock<Box<dyn Service>>>> {
         match self {
             Serialized::Service(value) => Some(value.clone()),
+            _ => None,
+        }
+    }
+
+    /// Convert as a callback function
+    #[allow(dead_code)]
+    pub fn as_callback(
+        &self,
+    ) -> Option<
+        Arc<
+            dyn Fn(&ServiceManager, Vec<Serialized>) -> Result<Option<Serialized>, IntrospectError>
+                + Sync
+                + Send
+                + 'static,
+        >,
+    > {
+        match self {
+            Serialized::Callback(value) => Some(value.clone()),
             _ => None,
         }
     }

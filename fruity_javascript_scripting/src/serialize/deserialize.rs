@@ -36,8 +36,7 @@ pub fn deserialize_v8<'a>(
     }
 
     if v8_value.is_function() {
-        let js_function = v8::Local::<v8::Function>::try_from(v8_value).unwrap();
-        let js_function = v8::Global::new(scope, js_function);
+        let js_function = JsFunctionWrapper::from_value(scope, v8_value);
 
         let callback = move |service_manager: &ServiceManager,
                              args: Vec<Serialized>|
@@ -59,7 +58,6 @@ pub fn deserialize_v8<'a>(
             let recv: v8::Local<v8::Value> = global.into();
 
             // Call function
-            let js_function = v8::Local::<v8::Function>::new(&mut scope, js_function.clone());
             js_function.call(&mut scope, recv, &args);
 
             // Return result
@@ -71,4 +69,30 @@ pub fn deserialize_v8<'a>(
     }
 
     None
+}
+
+struct JsFunctionWrapper {
+    inner: rusty_v8::Global<rusty_v8::Function>,
+}
+
+unsafe impl Send for JsFunctionWrapper {}
+unsafe impl Sync for JsFunctionWrapper {}
+
+impl JsFunctionWrapper {
+    fn from_value(scope: &mut v8::HandleScope, value: v8::Local<v8::Value>) -> JsFunctionWrapper {
+        let js_function = v8::Local::<v8::Function>::try_from(value).unwrap();
+        let js_function = v8::Global::new(scope, js_function);
+
+        JsFunctionWrapper { inner: js_function }
+    }
+
+    pub fn call<'s>(
+        &self,
+        scope: &mut v8::HandleScope<'s>,
+        recv: v8::Local<v8::Value>,
+        args: &[v8::Local<v8::Value>],
+    ) -> Option<v8::Local<'s, v8::Value>> {
+        let js_function = v8::Local::<v8::Function>::new(scope, self.inner.clone());
+        js_function.call(scope, recv, &args)
+    }
 }
