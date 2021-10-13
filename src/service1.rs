@@ -41,7 +41,7 @@ impl IntrospectMethods<Serialized> for Service1 {
                 return_type: None,
                 call: MethodCaller::Mut(|this, args| {
                     let this = cast_service_mut::<Service1>(this);
-                    assert_argument_count(0, &args)?;
+                    assert_argument_count("increment", 0, &args)?;
 
                     this.increment();
                     Ok(None)
@@ -53,9 +53,9 @@ impl IntrospectMethods<Serialized> for Service1 {
                 return_type: None,
                 call: MethodCaller::Mut(|this, args| {
                     let this = cast_service_mut::<Service1>(this);
-                    assert_argument_count(1, &args)?;
+                    assert_argument_count("increment_by", 1, &args)?;
 
-                    let arg1 = cast_argument(0, &args, |arg| arg.as_i32())?;
+                    let arg1 = cast_argument("increment_by", 0, &args, |arg| arg.as_i32())?;
 
                     this.increment_by(arg1);
                     Ok(None)
@@ -67,7 +67,7 @@ impl IntrospectMethods<Serialized> for Service1 {
                 return_type: Some("i32".to_string()),
                 call: MethodCaller::Const(|this, args| {
                     let this = cast_service::<Service1>(this);
-                    assert_argument_count(0, &args)?;
+                    assert_argument_count("value", 0, &args)?;
 
                     let result = this.value();
                     Ok(Some(Serialized::I32(result)))

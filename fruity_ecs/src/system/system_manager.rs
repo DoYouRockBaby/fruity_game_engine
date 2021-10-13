@@ -5,6 +5,7 @@ use crate::service::utils::assert_argument_count;
 use crate::service::utils::cast_argument;
 use crate::service::utils::cast_service_mut;
 use fruity_any_derive::*;
+use fruity_introspect::log_introspect_error;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
@@ -64,12 +65,15 @@ impl IntrospectMethods<Serialized> for SystemManager {
             return_type: None,
             call: MethodCaller::Mut(|this, args| {
                 let this = cast_service_mut::<SystemManager>(this);
-                assert_argument_count(1, &args)?;
+                assert_argument_count("add_system", 1, &args)?;
 
-                let arg1 = cast_argument(0, &args, |arg| arg.as_callback())?;
+                let arg1 = cast_argument("add_system", 0, &args, |arg| arg.as_callback())?;
 
                 this.add_system(move |service_manager: &ServiceManager| {
-                    arg1(service_manager, vec![]);
+                    match arg1(service_manager, vec![]) {
+                        Ok(_) => (),
+                        Err(err) => log_introspect_error(&err),
+                    };
                 });
                 Ok(None)
             }),

@@ -1,3 +1,4 @@
+use crate::entity::entity_rwlock::EntityRwLock;
 use crate::service::service::Service;
 use crate::ServiceManager;
 use fruity_introspect::IntrospectError;
@@ -62,6 +63,9 @@ pub enum Serialized {
 
     /// Service reference value
     Service(Arc<RwLock<Box<dyn Service>>>),
+
+    /// Entity RwLock
+    Entity(Arc<EntityRwLock>),
 }
 
 impl Serialized {

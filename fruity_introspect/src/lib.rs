@@ -15,14 +15,49 @@ pub enum IntrospectError {
     /// Error that occure when you try to call a function with a name that don't exists
     UnknownMethod(String),
     /// Error that occure when you try to call a function with a parameter with the wrong type
-    IncorrectArgument,
+    IncorrectArgument {
+        /// The method name
+        method: String,
+        /// The argument index
+        arg_index: usize,
+    },
     /// Error that occure when you try to call a function with the wrong number of arguments
     WrongNumberArguments {
+        /// The method name
+        method: String,
         /// The provided number of arguments
         have: usize,
         /// The expected number of arguments
         expected: usize,
     },
+}
+
+/// Display in log an error related with introspection
+pub fn log_introspect_error(err: &IntrospectError) {
+    match err {
+        IntrospectError::UnknownMethod(method) => {
+            log::error!("Failed to call an unknown method named {}", method)
+        }
+        IntrospectError::IncorrectArgument { method, arg_index } => {
+            log::error!(
+                "Failed to call method {} cause the argument n°{} have a wrong type",
+                method,
+                arg_index
+            )
+        }
+        IntrospectError::WrongNumberArguments {
+            method,
+            have,
+            expected,
+        } => {
+            log::error!(
+                "Failed to call method {} cause you provided {} arguments, expected {}",
+                method,
+                have,
+                expected
+            )
+        }
+    }
 }
 
 /// Informations about a field of an introspect object

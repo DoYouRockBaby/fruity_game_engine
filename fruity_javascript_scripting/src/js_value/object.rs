@@ -5,6 +5,7 @@ use crate::serialize::serialize::serialize_v8;
 use core::ffi::c_void;
 use fruity_ecs::service::service::Service;
 use fruity_ecs::service::service_manager::ServiceManager;
+use fruity_introspect::log_introspect_error;
 use fruity_introspect::MethodCaller;
 use rusty_v8 as v8;
 use std::any::Any;
@@ -186,12 +187,24 @@ fn service_callback(
             MethodCaller::Const(call) => {
                 let reader = this.read().unwrap();
                 let this = &**reader.deref();
-                call(this.as_any_ref(), deserialized_args).unwrap()
+                match call(this.as_any_ref(), deserialized_args) {
+                    Ok(result) => result,
+                    Err(err) => {
+                        log_introspect_error(&err);
+                        None
+                    }
+                }
             }
             MethodCaller::Mut(call) => {
                 let mut writer = this.write().unwrap();
                 let this = &mut **writer.deref_mut();
-                call(this.as_any_mut(), deserialized_args).unwrap()
+                match call(this.as_any_mut(), deserialized_args) {
+                    Ok(result) => result,
+                    Err(err) => {
+                        log_introspect_error(&err);
+                        None
+                    }
+                }
             }
         };
 

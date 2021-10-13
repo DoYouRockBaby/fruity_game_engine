@@ -119,10 +119,10 @@ impl IntrospectMethods<Serialized> for ServiceManager {
                 return_type: None,
                 call: MethodCaller::Mut(|this, args| {
                     let this = cast_service_mut::<ServiceManager>(this);
-                    assert_argument_count(1, &args)?;
+                    assert_argument_count("register", 1, &args)?;
 
-                    let arg1 = cast_argument(0, &args, |arg| arg.as_string())?;
-                    let arg2 = cast_argument(0, &args, |arg| arg.as_service())?;
+                    let arg1 = cast_argument("register", 0, &args, |arg| arg.as_string())?;
+                    let arg2 = cast_argument("register", 0, &args, |arg| arg.as_service())?;
 
                     this.register_arc(&arg1, arg2);
                     Ok(None)
@@ -134,9 +134,9 @@ impl IntrospectMethods<Serialized> for ServiceManager {
                 return_type: Some("Service".to_string()),
                 call: MethodCaller::Const(|this, args| {
                     let this = cast_service::<ServiceManager>(this);
-                    assert_argument_count(1, &args)?;
+                    assert_argument_count("get_by_name", 1, &args)?;
 
-                    let arg1 = cast_argument(0, &args, |arg| arg.as_string())?;
+                    let arg1 = cast_argument("get_by_name", 0, &args, |arg| arg.as_string())?;
 
                     let result = this.get_by_name(&arg1);
                     Ok(result.map(|service| Serialized::Service(service)))

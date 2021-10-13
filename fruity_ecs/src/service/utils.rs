@@ -27,11 +27,13 @@ pub fn cast_service_mut<T: Any>(any: &mut dyn Any) -> &mut T {
 /// * `args` - The argument list
 ///
 pub fn assert_argument_count(
+    method: &str,
     expected: usize,
     args: &Vec<Serialized>,
 ) -> Result<(), IntrospectError> {
     if args.len() != expected {
         return Err(IntrospectError::WrongNumberArguments {
+            method: method.to_string(),
             have: args.len(),
             expected: expected,
         });
@@ -52,12 +54,16 @@ pub fn assert_argument_count(
 /// * `F` - The function type for the converter
 ///
 pub fn cast_argument<T, F: Fn(&Serialized) -> Option<T>>(
+    method: &str,
     index: usize,
     args: &Vec<Serialized>,
     converter: F,
 ) -> Result<T, IntrospectError> {
     match converter(args.get(index).unwrap()) {
         Some(arg) => Ok(arg),
-        None => Err(IntrospectError::IncorrectArgument),
+        None => Err(IntrospectError::IncorrectArgument {
+            method: method.to_string(),
+            arg_index: index,
+        }),
     }
 }

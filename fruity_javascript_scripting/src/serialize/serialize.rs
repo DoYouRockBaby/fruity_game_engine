@@ -28,5 +28,6 @@ pub fn serialize_v8<'a>(
             Some(object.build_v8_object(scope).into())
         }
         Serialized::Callback(_) => None,
+        Serialized::Entity(_) => None,
     }
 }
