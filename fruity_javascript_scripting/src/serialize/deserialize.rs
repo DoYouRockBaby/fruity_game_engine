@@ -4,8 +4,8 @@ use fruity_ecs::serialize::serialized::Serialized;
 use fruity_ecs::service::service_manager::ServiceManager;
 use fruity_introspect::IntrospectError;
 use rusty_v8 as v8;
-use rusty_v8::Handle;
 use std::convert::TryFrom;
+use std::sync::Arc;
 
 pub fn deserialize_v8<'a>(
     scope: &mut v8::HandleScope<'a>,
@@ -45,7 +45,8 @@ pub fn deserialize_v8<'a>(
             // Get scope
             let js_runtime = service_manager.get::<JsRuntime>().unwrap();
             let js_runtime = js_runtime.write().unwrap();
-            let scope = js_runtime.handle_scope();
+            let mut datas = js_runtime.datas.lock().unwrap();
+            let mut scope = datas.handle_scope();
             let context = v8::Context::new(&mut scope);
 
             // Instantiate parameters and return handle
@@ -66,13 +67,8 @@ pub fn deserialize_v8<'a>(
             Ok(result)
         };
 
-        return Some(Serialized::Callback(Box::new(callback)));
+        return Some(Serialized::Callback(Arc::new(callback)));
     }
 
     None
-}
-
-struct FunctionData<'a> {
-    js_function: v8::Local<'a, v8::Function>,
-    scope: &'a mut v8::HandleScope<'a>,
 }

@@ -5,7 +5,6 @@ use crate::js_value::object::JsObject;
 use crate::module_map::ModuleInfos;
 use crate::module_map::ModuleMap;
 use crate::normalize_path::normalize_path;
-use crate::value::JsResult;
 use fruity_any_derive::*;
 use fruity_ecs::serialize::serialized::Serialized;
 use fruity_ecs::service::service::Service;
@@ -16,23 +15,53 @@ use std::cell::RefCell;
 use std::path::Path;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
+
+#[derive(Debug, FruityAny)]
+pub struct JsRuntimeDatas {
+  v8_isolate: Option<v8::OwnedIsolate>,
+  global_context: v8::Global<v8::Context>,
+}
+
+unsafe impl Send for JsRuntimeDatas {}
+unsafe impl Sync for JsRuntimeDatas {}
 
 #[derive(Debug, FruityAny)]
 pub struct JsRuntime {
-  v8_isolate: Option<v8::OwnedIsolate>,
-  global_context: v8::Global<v8::Context>,
+  pub(crate) datas: Arc<Mutex<JsRuntimeDatas>>,
   global_object: JsObject,
+}
+
+impl Drop for JsRuntimeDatas {
+  fn drop(&mut self) {
+    std::mem::forget(self.v8_isolate.take());
+  }
 }
 
 impl Drop for JsRuntime {
   fn drop(&mut self) {
-    std::mem::forget(self.v8_isolate.take());
     std::mem::drop(self);
 
     unsafe {
       v8::V8::dispose();
     }
     v8::V8::shutdown_platform();
+  }
+}
+
+impl JsRuntimeDatas {
+  pub fn handle_scope(&mut self) -> v8::HandleScope {
+    let context = self.global_context();
+    v8::HandleScope::with_context(self.v8_isolate(), context)
+  }
+
+  pub fn global_context(&self) -> v8::Global<v8::Context> {
+    self.global_context.clone()
+  }
+
+  pub fn v8_isolate(&mut self) -> &mut v8::OwnedIsolate {
+    self.v8_isolate.as_mut().unwrap()
   }
 }
 
@@ -58,8 +87,10 @@ impl JsRuntime {
     isolate.set_slot(Rc::new(RefCell::new(ModuleMap::new())));
 
     let mut runtime = JsRuntime {
-      v8_isolate: Some(isolate),
-      global_context,
+      datas: Arc::new(Mutex::new(JsRuntimeDatas {
+        v8_isolate: Some(isolate),
+        global_context,
+      })),
       global_object: JsObject::new(),
     };
 
@@ -68,83 +99,66 @@ impl JsRuntime {
     runtime
   }
 
-  pub fn handle_scope(&mut self) -> v8::HandleScope {
-    let context = self.global_context();
-    v8::HandleScope::with_context(self.v8_isolate(), context)
-  }
-
-  pub fn global_context(&self) -> v8::Global<v8::Context> {
-    self.global_context.clone()
-  }
-
-  pub fn v8_isolate(&mut self) -> &mut v8::OwnedIsolate {
-    self.v8_isolate.as_mut().unwrap()
-  }
-
   fn setup_isolate(isolate: v8::OwnedIsolate) -> v8::OwnedIsolate {
     isolate
   }
 
-  pub fn run_script(&mut self, source: &str) -> Result<JsResult, JsError> {
+  pub fn run_script(&mut self, source: &str) -> Result<(), JsError> {
     // Enter the context for compiling and running the script
-    let mut scope = self.handle_scope();
-    let result = {
-      let mut try_catch = v8::TryCatch::new(&mut scope);
+    let mut datas = self.datas.lock().unwrap();
+    let mut scope = datas.handle_scope();
+    let mut try_catch = v8::TryCatch::new(&mut scope);
 
-      // Prepare the sources
-      let source = v8::String::new(&mut try_catch, &source).unwrap();
+    // Prepare the sources
+    let source = v8::String::new(&mut try_catch, &source).unwrap();
 
-      // Compile and run the script
-      let script = if let Some(script) = v8::Script::compile(&mut try_catch, source, None) {
-        script
-      } else {
-        return Err(JsError::CompileError);
-      };
-
-      let result = script.run(&mut try_catch);
-
-      if result.is_none() {
-        let exception = try_catch.exception().unwrap();
-        return exception_to_err_result(&mut try_catch, exception);
-      }
-
-      result
+    // Compile and run the script
+    let script = if let Some(script) = v8::Script::compile(&mut try_catch, source, None) {
+      script
+    } else {
+      return Err(JsError::CompileError);
     };
 
-    Ok(JsResult::new(scope, result))
+    let result = script.run(&mut try_catch);
+
+    if result.is_none() {
+      let exception = try_catch.exception().unwrap();
+      return exception_to_err_result(&mut try_catch, exception);
+    }
+
+    Ok(())
+    //Ok(JsResult::new(scope, result))
   }
 
-  pub fn run_module(&mut self, filepath: &str) -> Result<JsResult, JsError> {
+  #[allow(unused_must_use)]
+  pub fn run_module(&mut self, filepath: &str) -> Result<(), JsError> {
     // Enter the context for compiling and running the script
-    let mut scope = self.handle_scope();
-    let result = {
-      let mut try_catch = v8::TryCatch::new(&mut scope);
+    let mut datas = self.datas.lock().unwrap();
+    let mut scope = datas.handle_scope();
+    let mut try_catch = v8::TryCatch::new(&mut scope);
 
-      // Create the module
-      let module = compile_module(&mut try_catch, filepath)?;
+    // Create the module
+    let module = compile_module(&mut try_catch, filepath)?;
 
-      // Instantiate the module
-      let result = module.instantiate_module(&mut try_catch, module_resolve_callback);
-      if result.is_none() {
-        let exception = try_catch.exception().unwrap();
-        return exception_to_err_result(&mut try_catch, exception);
-      }
+    // Instantiate the module
+    let result = module.instantiate_module(&mut try_catch, module_resolve_callback);
+    if result.is_none() {
+      let exception = try_catch.exception().unwrap();
+      return exception_to_err_result(&mut try_catch, exception);
+    }
 
-      // Run the module
-      let result = module.evaluate(&mut try_catch);
+    // Run the module
+    module.evaluate(&mut try_catch);
 
-      // Update status after evaluating.
-      let status = module.get_status();
+    // Update status after evaluating.
+    let status = module.get_status();
 
-      if status == v8::ModuleStatus::Errored {
-        let exception = module.get_exception();
-        return exception_to_err_result(&mut try_catch, exception);
-      }
+    if status == v8::ModuleStatus::Errored {
+      let exception = module.get_exception();
+      return exception_to_err_result(&mut try_catch, exception);
+    }
 
-      result
-    };
-
-    Ok(JsResult::new(scope, result))
+    Ok(())
   }
 
   pub fn global_object(&mut self) -> &mut JsObject {
@@ -152,9 +166,11 @@ impl JsRuntime {
   }
 
   pub fn update_global_bindings(&mut self) {
-    let global_context = self.global_context();
+    let mut datas = self.datas.lock().unwrap();
+    let global_context = datas.global_context();
+
     let mut scope =
-      v8::HandleScope::with_context(self.v8_isolate.as_mut().unwrap(), global_context.clone());
+      v8::HandleScope::with_context(datas.v8_isolate.as_mut().unwrap(), global_context.clone());
 
     let global = { global_context.get(&mut scope).global(&mut scope) };
 

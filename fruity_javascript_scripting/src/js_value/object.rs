@@ -161,7 +161,7 @@ fn service_callback(
             let reader = reader.unwrap();
             let this = reader.deref();
 
-            let method_infos = this.get_method_infos();
+            let method_infos = this.get_method_infos().clone();
             let name = args
                 .data()
                 .unwrap()

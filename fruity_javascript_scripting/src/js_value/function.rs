@@ -7,6 +7,9 @@ pub struct JsFunction {
     pub(crate) function_builder: Option<v8::FunctionBuilder<'static, v8::Function>>,
 }
 
+unsafe impl Send for JsFunction {}
+unsafe impl Sync for JsFunction {}
+
 impl JsFunction {
     pub fn new(callback: impl v8::MapFnTo<v8::FunctionCallback>) -> JsFunction {
         JsFunction {

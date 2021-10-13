@@ -15,7 +15,9 @@ use fruity_ecs::world::World;
 use fruity_ecs::*;
 use fruity_ecs_derive::*;
 use fruity_introspect_derive::*;
-use fruity_javascript_scripting::execute_script;
+use fruity_javascript_scripting::error::log_js_error;
+use fruity_javascript_scripting::initialize as initialize_javascript;
+use fruity_javascript_scripting::runtime::JsRuntime;
 use pretty_env_logger::formatted_builder;
 
 #[derive(Debug, Clone, Component, Encodable, IntrospectFields, FruityAny)]
@@ -36,11 +38,8 @@ fn main() {
     builder.try_init().unwrap();
 
     let world = World::new();
-
-    {
-        let mut service_manager = world.service_manager.write().unwrap();
-        initialize_ecs(&mut service_manager);
-    }
+    initialize_ecs(&world);
+    initialize_javascript(&world);
 
     let entity_manager = {
         let service_manager = world.service_manager.read().unwrap();
@@ -104,8 +103,15 @@ fn main() {
     }
 
     {
-        let script_path = "src/javascript/index.js";
-        execute_script(&world, script_path);
+        // Javascript test
+        let service_manager = world.service_manager.read().unwrap();
+        let js_runtime = service_manager.get::<JsRuntime>().unwrap();
+        let mut js_runtime = js_runtime.write().unwrap();
+
+        match js_runtime.run_module("src/javascript/index.js") {
+            Ok(_) => (),
+            Err(err) => log_js_error(&err),
+        };
     }
 
     {

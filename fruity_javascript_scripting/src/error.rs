@@ -36,8 +36,7 @@ fn get_property<'a>(
     key: &str,
 ) -> Option<v8::Local<'a, v8::Value>> {
     let key = v8::String::new(scope, key).unwrap();
-    let test = object.get(scope, key.into());
-    test
+    object.get(scope, key.into())
 }
 
 pub fn log_js_error(err: &JsError) {

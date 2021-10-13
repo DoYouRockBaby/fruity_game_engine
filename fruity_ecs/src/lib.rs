@@ -13,6 +13,7 @@
 use crate::entity::entity_manager::EntityManager;
 use crate::service::service_manager::ServiceManager;
 use crate::system::system_manager::SystemManager;
+use crate::world::World;
 
 /// All related with components
 pub mod component;
@@ -49,7 +50,8 @@ macro_rules! entity_type {
 }
 
 /// Initialize this extension
-pub fn initialize(service_manager: &mut ServiceManager) {
+pub fn initialize(world: &World) {
+    let mut service_manager = world.service_manager.write().unwrap();
     service_manager.register("entity_manager", EntityManager::new());
     service_manager.register("system_manager", SystemManager::new());
 }

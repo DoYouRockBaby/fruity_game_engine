@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 /// A serialized value
-//#[derive(Clone)]
+#[derive(Clone)]
 pub enum Serialized {
     /// i8 value
     I8(i8),
@@ -52,7 +52,7 @@ pub enum Serialized {
 
     /// Service reference value
     Callback(
-        Box<
+        Arc<
             dyn Fn(&ServiceManager, Vec<Serialized>) -> Result<Option<Serialized>, IntrospectError>,
         >,
     ),
