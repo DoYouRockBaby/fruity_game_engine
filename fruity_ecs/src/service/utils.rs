@@ -1,5 +1,5 @@
+use crate::serialize::serialized::Serialized;
 use fruity_introspect::IntrospectError;
-use fruity_serialize::serialized::Serialized;
 use std::any::Any;
 
 /// Cast an any service

@@ -1,6 +1,6 @@
 use crate::serialize::deserialize::deserialize_v8;
-use fruity_serialize::deserialize::deserialize_any;
-use fruity_serialize::deserialize::Deserialize;
+use fruity_ecs::serialize::deserialize::deserialize_any;
+use fruity_ecs::serialize::deserialize::Deserialize;
 use rusty_v8 as v8;
 
 #[derive(Debug)]

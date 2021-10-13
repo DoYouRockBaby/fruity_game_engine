@@ -1,6 +1,6 @@
-use crate::deserialize::Deserialize;
-use crate::serialize::Serialize;
-use crate::serialized::Serialized;
+use crate::serialize::deserialize::Deserialize;
+use crate::serialize::serialize::Serialize;
+use crate::serialize::serialized::Serialized;
 
 macro_rules! impl_serialize_deserialize {
   { $type:ident, $enum:ident } => {

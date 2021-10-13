@@ -6,8 +6,8 @@
 //!
 
 use fruity_any::FruityAny;
-use fruity_serialize::serialized::Serialized;
 use std::any::Any;
+use std::fmt::Debug;
 
 #[derive(Debug, Clone)]
 /// Informations about a field of an introspect object
@@ -25,9 +25,13 @@ pub enum IntrospectError {
     },
 }
 
-#[derive(Clone)]
 /// Informations about a field of an introspect object
-pub struct FieldInfo {
+///
+/// # Arguments
+/// * `T` - The type of the object used to provide parameters and function result
+///
+#[derive(Clone)]
+pub struct FieldInfo<T> {
     /// The name of the field
     pub name: String,
 
@@ -39,7 +43,7 @@ pub struct FieldInfo {
     /// # Arguments
     /// * `property` - The field name
     ///
-    pub getter: fn(this: &dyn Any) -> Serialized,
+    pub getter: fn(this: &dyn Any) -> T,
 
     /// Function to set one of the entry field
     ///
@@ -47,33 +51,40 @@ pub struct FieldInfo {
     /// * `property` - The field name
     /// * `value` - The new field value as Any
     ///
-    pub setter: fn(this: &mut dyn Any, value: Serialized),
+    pub setter: fn(this: &mut dyn Any, value: T),
 }
 
 /// Trait to implement static introspection to an object
-pub trait IntrospectFields {
+///
+/// # Arguments
+/// * `T` - The type of the object used to provide parameters and function result
+///
+pub trait IntrospectFields<T> {
     /// Get a list of fields with many informations
-    fn get_field_infos(&self) -> Vec<FieldInfo>;
+    fn get_field_infos(&self) -> Vec<FieldInfo<T>>;
 }
 
 /// A method caller
+///
+/// # Arguments
+/// * `T` - The type of the object used to provide parameters and function result
+///
 #[derive(Clone)]
-pub enum MethodCaller {
+pub enum MethodCaller<T> {
     /// Without mutability
-    Const(fn(this: &dyn Any, args: Vec<Serialized>) -> Result<Option<Serialized>, IntrospectError>),
+    Const(fn(this: &dyn Any, args: Vec<T>) -> Result<Option<T>, IntrospectError>),
 
     /// With mutability
-    Mut(
-        fn(
-            this: &mut dyn Any,
-            args: Vec<Serialized>,
-        ) -> Result<Option<Serialized>, IntrospectError>,
-    ),
+    Mut(fn(this: &mut dyn Any, args: Vec<T>) -> Result<Option<T>, IntrospectError>),
 }
 
 /// Informations about a field of an introspect object
+///
+/// # Arguments
+/// * `T` - The type of the object used to provide parameters and function result
+///
 #[derive(Clone)]
-pub struct MethodInfo {
+pub struct MethodInfo<T> {
     /// The name of the method
     pub name: String,
 
@@ -84,11 +95,21 @@ pub struct MethodInfo {
     pub return_type: Option<String>,
 
     /// Call for the method with any field
-    pub call: MethodCaller,
+    pub call: MethodCaller<T>,
 }
 
 /// Trait to implement static introspection to an object
-pub trait IntrospectMethods: FruityAny {
+///
+/// # Arguments
+/// * `T` - The type of the object used to provide parameters and function result
+///
+pub trait IntrospectMethods<T>: FruityAny + Debug {
     /// Get a list of fields with many informations
-    fn get_method_infos(&self) -> Vec<MethodInfo>;
+    fn get_method_infos(&self) -> Vec<MethodInfo<T>>;
+}
+
+impl<T, U: IntrospectMethods<T>> IntrospectMethods<T> for Box<U> {
+    fn get_method_infos(&self) -> Vec<MethodInfo<T>> {
+        self.as_ref().get_method_infos()
+    }
 }

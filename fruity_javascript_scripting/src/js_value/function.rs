@@ -1,6 +1,7 @@
 use crate::js_value::value::JsValue;
 use rusty_v8 as v8;
 use std::any::Any;
+use std::fmt::Debug;
 
 pub struct JsFunction {
     pub(crate) function_builder: Option<v8::FunctionBuilder<'static, v8::Function>>,
@@ -39,5 +40,14 @@ impl JsValue for JsFunction {
 
     fn as_boxed_any(self: Box<Self>) -> Box<dyn Any> {
         self as Box<dyn Any>
+    }
+}
+
+impl Debug for JsFunction {
+    fn fmt(
+        &self,
+        _formatter: &mut std::fmt::Formatter<'_>,
+    ) -> std::result::Result<(), std::fmt::Error> {
+        Ok(())
     }
 }

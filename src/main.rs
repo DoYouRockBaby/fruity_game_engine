@@ -7,11 +7,11 @@ use crate::service1::Service1;
 use crate::system1::system1_untyped;
 use fruity_any_derive::*;
 use fruity_collections_derive::*;
-use fruity_core::service_manager::ServiceManager;
 use fruity_ecs::entity::entity::EntityId;
 use fruity_ecs::entity::entity_manager::EntityManager;
 use fruity_ecs::initialize as initialize_ecs;
 use fruity_ecs::system::system_manager::SystemManager;
+use fruity_ecs::world::World;
 use fruity_ecs::*;
 use fruity_ecs_derive::*;
 use fruity_introspect_derive::*;
@@ -35,15 +35,26 @@ fn main() {
     builder.parse_filters("trace");
     builder.try_init().unwrap();
 
-    let mut service_manager = ServiceManager::new();
-    initialize_ecs(&mut service_manager);
-
-    let entity_manager = service_manager.get::<EntityManager>().unwrap();
-    let system_manager = service_manager.get::<SystemManager>().unwrap();
+    let world = World::new();
 
     {
-        let mut entity_manager_writer = entity_manager.write().unwrap();
-        let mut system_manager_writer = system_manager.write().unwrap();
+        let mut service_manager = world.service_manager.write().unwrap();
+        initialize_ecs(&mut service_manager);
+    }
+
+    let entity_manager = {
+        let service_manager = world.service_manager.read().unwrap();
+        service_manager.get::<EntityManager>().unwrap()
+    };
+
+    let system_manager = {
+        let service_manager = world.service_manager.read().unwrap();
+        service_manager.get::<SystemManager>().unwrap()
+    };
+
+    {
+        let mut entity_manager = entity_manager.write().unwrap();
+        let mut system_manager = system_manager.write().unwrap();
 
         let component1 = Component1 {
             float1: 3.14,
@@ -74,37 +85,35 @@ fn main() {
         let component7 = Component2 { float1: 5.14 };
 
         let _entity_id_1 =
-            entity_manager_writer.create(entity!(Box::new(component1), Box::new(component2)));
-        let _entity_id_2 = entity_manager_writer.create(entity!(Box::new(component3)));
+            entity_manager.create(entity!(Box::new(component1), Box::new(component2)));
+        let _entity_id_2 = entity_manager.create(entity!(Box::new(component3)));
         let entity_id_3 =
-            entity_manager_writer.create(entity!(Box::new(component4), Box::new(component5)));
+            entity_manager.create(entity!(Box::new(component4), Box::new(component5)));
         let entity_id_4 =
-            entity_manager_writer.create(entity!(Box::new(component6), Box::new(component7)));
+            entity_manager.create(entity!(Box::new(component6), Box::new(component7)));
 
-        entity_manager_writer.remove(entity_id_3);
-        entity_manager_writer.remove(EntityId(0));
+        entity_manager.remove(entity_id_3);
+        entity_manager.remove(EntityId(0));
 
-        service_manager.register::<Service1>(Service1::new());
-        system_manager_writer.add_system(system1_untyped);
+        let mut service_manager = world.service_manager.write().unwrap();
+        service_manager.register::<Service1>("service1", Service1::new());
+        system_manager.add_system(system1_untyped);
 
         // println!("{:#?}", world);
-        println!("{:#?}", entity_manager_writer.get(entity_id_4));
+        println!("{:#?}", entity_manager.get(entity_id_4));
     }
 
-    let mut component1 = Component1 {
-        float1: 3.14,
-        // str1: "je suis une string 1".to_string(),
-        int1: 12,
-    };
-
-    let script_path = "src/javascript/index.js";
-    execute_script(&mut service_manager, &mut component1, script_path);
+    {
+        let script_path = "src/javascript/index.js";
+        execute_script(&world, script_path);
+    }
 
     {
-        let system_manager_reader = system_manager.read().unwrap();
+        let system_manager = system_manager.read().unwrap();
+        let service_manager = world.service_manager.read().unwrap();
 
-        system_manager_reader.run(&mut service_manager);
-        system_manager_reader.run(&mut service_manager);
-        system_manager_reader.run(&mut service_manager);
+        system_manager.run(&service_manager);
+        /*system_manager.run(&service_manager);
+        system_manager.run(&service_manager);*/
     }
 }

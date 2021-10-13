@@ -6,12 +6,18 @@ use crate::module_map::ModuleInfos;
 use crate::module_map::ModuleMap;
 use crate::normalize_path::normalize_path;
 use crate::value::JsResult;
+use fruity_any_derive::*;
+use fruity_ecs::serialize::serialized::Serialized;
+use fruity_ecs::service::service::Service;
+use fruity_introspect::IntrospectMethods;
+use fruity_introspect::MethodInfo;
 use rusty_v8 as v8;
 use std::cell::RefCell;
 use std::path::Path;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+#[derive(Debug, FruityAny)]
 pub struct JsRuntime {
   v8_isolate: Option<v8::OwnedIsolate>,
   global_context: v8::Global<v8::Context>,
@@ -292,3 +298,11 @@ pub fn get_specifier_filename<'a>(
     Err(JsError::ImportModuleWithoutPrefix(specifier.to_string()))
   }
 }
+
+impl IntrospectMethods<Serialized> for JsRuntime {
+  fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
+    vec![]
+  }
+}
+
+impl Service for JsRuntime {}

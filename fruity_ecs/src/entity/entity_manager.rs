@@ -5,8 +5,9 @@ use crate::entity::entity::EntityTypeIdentifier;
 use crate::entity::entity::Iter as EntityIter;
 use crate::entity::entity::IterMut as EntityIterMut;
 use crate::entity::entity_rwlock::EntityRwLock;
+use crate::serialize::serialized::Serialized;
+use crate::service::service::Service;
 use fruity_any_derive::*;
-use fruity_core::service::Service;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodInfo;
 use rayon::prelude::*;
@@ -178,8 +179,8 @@ impl EntityManager {
     }
 }
 
-impl IntrospectMethods for EntityManager {
-    fn get_method_infos(&self) -> Vec<MethodInfo> {
+impl IntrospectMethods<Serialized> for EntityManager {
+    fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
         vec![]
     }
 }

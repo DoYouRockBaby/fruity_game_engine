@@ -46,10 +46,10 @@ pub fn derive_introspect_fields(input: TokenStream) -> TokenStream {
                 let type_converter_as_string = format_ident!("as_{}", &type_as_string);
 
                 quote! {
-                    fruity_introspect::FieldInfo {
+                    fruity_introspect::FieldInfo::<fruity_ecs::serialize::serialized::Serialized> {
                         name: #name_as_string.to_string(),
                         ty: #type_as_string.to_string(),
-                        getter: |this| fruity_serialize::serialize::serialize_any(&this.downcast_ref::<#ident>().unwrap().#name).unwrap(),
+                        getter: |this| fruity_ecs::serialize::serialize::serialize_any(&this.downcast_ref::<#ident>().unwrap().#name).unwrap(),
                         setter: |this, value| {
                             let this = this.downcast_mut::<#ident>().unwrap();
 
@@ -72,7 +72,7 @@ pub fn derive_introspect_fields(input: TokenStream) -> TokenStream {
             });
 
             quote! {
-                fn get_field_infos(&self) -> Vec<fruity_introspect::FieldInfo> {
+                fn get_field_infos(&self) -> Vec<fruity_introspect::FieldInfo<fruity_ecs::serialize::serialized::Serialized>> {
                     vec![
                         #(#recurse_infos)*
                     ]
@@ -84,7 +84,7 @@ pub fn derive_introspect_fields(input: TokenStream) -> TokenStream {
     };
 
     let output = quote! {
-        impl fruity_introspect::IntrospectFields for #ident {
+        impl fruity_introspect::IntrospectFields<fruity_ecs::serialize::serialized::Serialized> for #ident {
             #body
         }
     };

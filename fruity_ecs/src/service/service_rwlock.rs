@@ -1,6 +1,6 @@
-use crate::service::Service;
-use crate::service_guard::ServiceReadGuard;
-use crate::service_guard::ServiceWriteGuard;
+use crate::service::service::Service;
+use crate::service::service_guard::ServiceReadGuard;
+use crate::service::service_guard::ServiceWriteGuard;
 use std::marker::PhantomData;
 use std::sync::Arc;
 use std::sync::PoisonError;

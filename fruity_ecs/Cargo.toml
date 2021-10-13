@@ -11,6 +11,5 @@ hashbrown = { version = "0.11.2", features = ["rayon"] }
 fruity_any = { path = "../fruity_any" }
 fruity_any_derive = { path = "../fruity_any_derive" }
 fruity_collections = { path = "../fruity_collections" }
-fruity_core = { path = "../fruity_core" }
 fruity_ecs_derive = { path = "../fruity_ecs_derive" }
 fruity_introspect = { path = "../fruity_introspect" }

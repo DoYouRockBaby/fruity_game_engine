@@ -1,9 +1,0 @@
-[package]
-name = "fruity_core"
-version = "0.1.0"
-edition = "2018"
-
-[dependencies]
-fruity_any = { path = "../fruity_any" }
-fruity_introspect = { path = "../fruity_introspect" }
-fruity_serialize = { path = "../fruity_serialize" }

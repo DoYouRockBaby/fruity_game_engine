@@ -1,4 +1,4 @@
-use crate::serialized::Serialized;
+use crate::serialize::serialized::Serialized;
 use std::any::Any;
 
 /// Trait that should be implemented to serialize the value

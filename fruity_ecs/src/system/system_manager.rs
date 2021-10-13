@@ -1,6 +1,7 @@
+use crate::serialize::serialized::Serialized;
+use crate::service::service::Service;
+use crate::service::service_manager::ServiceManager;
 use fruity_any_derive::*;
-use fruity_core::service::Service;
-use fruity_core::service_manager::ServiceManager;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodInfo;
 use rayon::prelude::*;
@@ -51,8 +52,8 @@ impl<'s> SystemManager {
     }
 }
 
-impl IntrospectMethods for SystemManager {
-    fn get_method_infos(&self) -> Vec<MethodInfo> {
+impl IntrospectMethods<Serialized> for SystemManager {
+    fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
         vec![]
     }
 }

@@ -1,5 +1,12 @@
+use crate::service::service::Service;
+use crate::ServiceManager;
+use fruity_introspect::IntrospectError;
+use std::fmt::Debug;
+use std::sync::Arc;
+use std::sync::RwLock;
+
 /// A serialized value
-#[derive(Debug, Clone)]
+//#[derive(Clone)]
 pub enum Serialized {
     /// i8 value
     I8(i8),
@@ -42,6 +49,16 @@ pub enum Serialized {
 
     /// String value
     String(String),
+
+    /// Service reference value
+    Callback(
+        Box<
+            dyn Fn(&ServiceManager, Vec<Serialized>) -> Result<Option<Serialized>, IntrospectError>,
+        >,
+    ),
+
+    /// Service reference value
+    Service(Arc<RwLock<Box<dyn Service>>>),
 }
 
 impl Serialized {
@@ -223,5 +240,23 @@ impl Serialized {
             Serialized::String(value) => Some(value.clone()),
             _ => None,
         }
+    }
+
+    /// Convert as bool
+    #[allow(dead_code)]
+    pub fn as_service(&self) -> Option<Arc<RwLock<Box<dyn Service>>>> {
+        match self {
+            Serialized::Service(value) => Some(value.clone()),
+            _ => None,
+        }
+    }
+}
+
+impl Debug for Serialized {
+    fn fmt(
+        &self,
+        _formatter: &mut std::fmt::Formatter<'_>,
+    ) -> std::result::Result<(), std::fmt::Error> {
+        Ok(())
     }
 }

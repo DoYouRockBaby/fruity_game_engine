@@ -1,13 +1,13 @@
 use fruity_any_derive::*;
-use fruity_core::service::Service;
-use fruity_core::utils::assert_argument_count;
-use fruity_core::utils::cast_argument;
-use fruity_core::utils::cast_service;
-use fruity_core::utils::cast_service_mut;
+use fruity_ecs::serialize::serialized::Serialized;
+use fruity_ecs::service::service::Service;
+use fruity_ecs::service::utils::assert_argument_count;
+use fruity_ecs::service::utils::cast_argument;
+use fruity_ecs::service::utils::cast_service;
+use fruity_ecs::service::utils::cast_service_mut;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
-use fruity_serialize::serialize::serialize_any;
 
 #[derive(Debug, Clone, FruityAny)]
 pub struct Service1 {
@@ -32,8 +32,8 @@ impl Service1 {
     }
 }
 
-impl IntrospectMethods for Service1 {
-    fn get_method_infos(&self) -> Vec<MethodInfo> {
+impl IntrospectMethods<Serialized> for Service1 {
+    fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
         vec![
             MethodInfo {
                 name: "increment".to_string(),
@@ -70,7 +70,7 @@ impl IntrospectMethods for Service1 {
                     assert_argument_count(0, &args)?;
 
                     let result = this.value();
-                    Ok(serialize_any(&result))
+                    Ok(Some(Serialized::I32(result)))
                 }),
             },
         ]

@@ -11,8 +11,8 @@
 //! - Components are structure where the datas are stored
 
 use crate::entity::entity_manager::EntityManager;
+use crate::service::service_manager::ServiceManager;
 use crate::system::system_manager::SystemManager;
-use fruity_core::service_manager::ServiceManager;
 
 /// All related with components
 pub mod component;
@@ -20,8 +20,17 @@ pub mod component;
 /// All related with entities
 pub mod entity;
 
+/// Provides a collection for services
+pub mod service;
+
+/// Provides structure to pass object between the rust ecosystem and the scripting system
+pub mod serialize;
+
 /// Provides collection for systems
 pub mod system;
+
+/// Provides a main object for the game engine
+pub mod world;
 
 /// Create an entity, use it like entity![Box::new(component1), Box::new(component2)])
 #[macro_export]
@@ -41,6 +50,6 @@ macro_rules! entity_type {
 
 /// Initialize this extension
 pub fn initialize(service_manager: &mut ServiceManager) {
-    service_manager.register(EntityManager::new());
-    service_manager.register(SystemManager::new());
+    service_manager.register("entity_manager", EntityManager::new());
+    service_manager.register("system_manager", SystemManager::new());
 }
