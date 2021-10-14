@@ -44,5 +44,13 @@ pub fn serialize_v8<'a>(
             let mut object = JsObject::from_entity(value.clone());
             Some(object.build_v8_object(scope).into())
         }
+        Serialized::Component(value) => {
+            let mut object = JsObject::from_component(value.clone());
+            Some(object.build_v8_object(scope).into())
+        }
+        Serialized::ComponentList(value) => {
+            let mut object = JsObject::from_component_list(value.clone());
+            Some(object.build_v8_object(scope).into())
+        }
     }
 }

@@ -1,5 +1,3 @@
-use crate::component::component_guard::ComponentReadGuard;
-use crate::component::component_guard::ComponentWriteGuard;
 use crate::entity::entity::Entity;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -33,17 +31,6 @@ impl<'s> ComponentListReadGuard<'s> {
             guard,
             component_indexes,
         }
-    }
-
-    /// Returns an reader for a specific component
-    ///
-    /// # Arguments
-    /// * `index` - The index of the component in this list
-    ///
-    pub(crate) fn get(&self, index: usize) -> Option<ComponentReadGuard<'s>> {
-        self.component_indexes
-            .get(index)
-            .map(|index| ComponentReadGuard::new(self.guard.clone(), *index))
     }
 }
 
@@ -82,28 +69,6 @@ impl<'s> ComponentListWriteGuard<'s> {
             guard,
             component_indexes,
         }
-    }
-
-    /// Returns an reader for a specific component
-    ///
-    /// # Arguments
-    /// * `index` - The index of the component in this list
-    ///
-    pub(crate) fn get(&self, index: usize) -> Option<ComponentWriteGuard<'s>> {
-        self.component_indexes
-            .get(index)
-            .map(|index| ComponentWriteGuard::new(self.guard.clone(), *index))
-    }
-
-    /// Returns an writer for a specific component
-    ///
-    /// # Arguments
-    /// * `index` - The index of the component in this list
-    ///
-    pub(crate) fn get_mut(&self, index: usize) -> Option<ComponentWriteGuard<'s>> {
-        self.component_indexes
-            .get(index)
-            .map(|index| ComponentWriteGuard::new(self.guard.clone(), *index))
     }
 }
 

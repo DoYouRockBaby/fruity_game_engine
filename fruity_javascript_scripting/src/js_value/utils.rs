@@ -15,6 +15,16 @@ pub fn get_internal_object_from_v8_args<'a>(
     unsafe { internal_object.as_ref().unwrap() }
 }
 
+pub fn get_internal_object_from_v8_property_args<'a>(
+    scope: &mut v8::HandleScope,
+    args: &v8::PropertyCallbackArguments,
+) -> &'a JsObjectInternalObject {
+    let this = args.this().get_internal_field(scope, 0).unwrap();
+    let this = unsafe { v8::Local::<v8::External>::cast(this) };
+    let internal_object = this.value() as *const JsObjectInternalObject;
+    unsafe { internal_object.as_ref().unwrap() }
+}
+
 pub fn inject_serialized_into_v8_return_value<'a>(
     scope: &mut v8::HandleScope,
     serialized: &Serialized,

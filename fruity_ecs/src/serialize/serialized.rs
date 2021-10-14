@@ -1,8 +1,10 @@
-use crate::component::component_list_guard::ComponentListReadGuard;
+use crate::component::component_list_rwlock::ComponentListRwLock;
+use crate::component::component_rwlock::ComponentRwLock;
 use crate::entity::entity_rwlock::EntityRwLock;
 use crate::service::service::Service;
 use crate::ServiceManager;
 use fruity_introspect::IntrospectError;
+use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -77,171 +79,114 @@ pub enum Serialized {
     /// Entity RwLock
     Entity(EntityRwLock),
 
-    /// Component read guard
-    ComponentList(ComponentListReadGuard),
+    /// Component RwLock
+    Component(ComponentRwLock),
+
+    /// Component list RwLock
+    ComponentList(ComponentListRwLock),
+}
+
+macro_rules! as_integer {
+    ( $value:expr, $type:ident ) => {
+        match $value {
+            Serialized::I8(value) => $type::try_from(value).ok(),
+            Serialized::I16(value) => $type::try_from(value).ok(),
+            Serialized::I32(value) => $type::try_from(value).ok(),
+            Serialized::I64(value) => $type::try_from(value).ok(),
+            Serialized::ISize(value) => $type::try_from(value).ok(),
+            Serialized::U8(value) => $type::try_from(value).ok(),
+            Serialized::U16(value) => $type::try_from(value).ok(),
+            Serialized::U32(value) => $type::try_from(value).ok(),
+            Serialized::U64(value) => $type::try_from(value).ok(),
+            Serialized::USize(value) => $type::try_from(value).ok(),
+            _ => None,
+        }
+    };
+}
+
+macro_rules! as_floating {
+    ( $value:expr, $type:ident ) => {
+        match $value {
+            Serialized::I8(value) => $type::try_from(value).ok(),
+            Serialized::I16(value) => $type::try_from(value).ok(),
+            Serialized::U8(value) => $type::try_from(value).ok(),
+            Serialized::U16(value) => $type::try_from(value).ok(),
+            _ => None,
+        }
+    };
 }
 
 impl Serialized {
     /// Convert as i8
     #[allow(dead_code)]
     pub fn as_i8(&self) -> Option<i8> {
-        match self {
-            Serialized::I8(value) => Some(*value),
-            _ => None,
-        }
+        as_integer!(*self, i8)
     }
 
     /// Convert as i16
     #[allow(dead_code)]
     pub fn as_i16(&self) -> Option<i16> {
-        match self {
-            Serialized::I8(value) => Some(*value as i16),
-            Serialized::I16(value) => Some(*value),
-            Serialized::U8(value) => Some(*value as i16),
-            _ => None,
-        }
+        as_integer!(*self, i16)
     }
 
     /// Convert as i32
     #[allow(dead_code)]
     pub fn as_i32(&self) -> Option<i32> {
-        match self {
-            Serialized::I8(value) => Some(*value as i32),
-            Serialized::I16(value) => Some(*value as i32),
-            Serialized::I32(value) => Some(*value as i32),
-            Serialized::ISize(value) => Some(*value as i32),
-            Serialized::U8(value) => Some(*value as i32),
-            Serialized::U16(value) => Some(*value as i32),
-            Serialized::F32(value) => Some(*value as i32),
-            _ => None,
-        }
+        as_integer!(*self, i32)
     }
 
     /// Convert as i64
     #[allow(dead_code)]
     pub fn as_i64(&self) -> Option<i64> {
-        match self {
-            Serialized::I8(value) => Some(*value as i64),
-            Serialized::I16(value) => Some(*value as i64),
-            Serialized::I32(value) => Some(*value as i64),
-            Serialized::I64(value) => Some(*value as i64),
-            Serialized::ISize(value) => Some(*value as i64),
-            Serialized::U8(value) => Some(*value as i64),
-            Serialized::U16(value) => Some(*value as i64),
-            Serialized::U32(value) => Some(*value as i64),
-            Serialized::USize(value) => Some(*value as i64),
-            Serialized::F32(value) => Some(*value as i64),
-            Serialized::F64(value) => Some(*value as i64),
-            _ => None,
-        }
+        as_integer!(*self, i64)
     }
 
     /// Convert as isize
     #[allow(dead_code)]
     pub fn as_isize(&self) -> Option<isize> {
-        match self {
-            Serialized::I8(value) => Some(*value as isize),
-            Serialized::I16(value) => Some(*value as isize),
-            Serialized::I32(value) => Some(*value as isize),
-            Serialized::ISize(value) => Some(*value as isize),
-            Serialized::U8(value) => Some(*value as isize),
-            Serialized::U16(value) => Some(*value as isize),
-            Serialized::F32(value) => Some(*value as isize),
-            _ => None,
-        }
+        as_integer!(*self, isize)
     }
 
     /// Convert as u8
     #[allow(dead_code)]
     pub fn as_u8(&self) -> Option<u8> {
-        match self {
-            Serialized::U8(value) => Some(*value),
-            _ => None,
-        }
+        as_integer!(*self, u8)
     }
 
     /// Convert as u16
     #[allow(dead_code)]
     pub fn as_u16(&self) -> Option<u16> {
-        match self {
-            Serialized::U8(value) => Some(*value as u16),
-            Serialized::U16(value) => Some(*value as u16),
-            _ => None,
-        }
+        as_integer!(*self, u16)
     }
 
     /// Convert as u32
     #[allow(dead_code)]
     pub fn as_u32(&self) -> Option<u32> {
-        match self {
-            Serialized::U8(value) => Some(*value as u32),
-            Serialized::U16(value) => Some(*value as u32),
-            Serialized::U32(value) => Some(*value as u32),
-            Serialized::USize(value) => Some(*value as u32),
-            _ => None,
-        }
+        as_integer!(*self, u32)
     }
 
     /// Convert as u64
     #[allow(dead_code)]
     pub fn as_u64(&self) -> Option<u64> {
-        match self {
-            Serialized::U8(value) => Some(*value as u64),
-            Serialized::U16(value) => Some(*value as u64),
-            Serialized::U32(value) => Some(*value as u64),
-            Serialized::USize(value) => Some(*value as u64),
-            Serialized::U64(value) => Some(*value as u64),
-            _ => None,
-        }
+        as_integer!(*self, u64)
     }
 
     /// Convert as usize
     #[allow(dead_code)]
     pub fn as_usize(&self) -> Option<usize> {
-        match self {
-            Serialized::U8(value) => Some(*value as usize),
-            Serialized::U16(value) => Some(*value as usize),
-            Serialized::U32(value) => Some(*value as usize),
-            Serialized::USize(value) => Some(*value as usize),
-            _ => None,
-        }
+        as_integer!(*self, usize)
     }
 
     /// Convert as f32
     #[allow(dead_code)]
     pub fn as_f32(&self) -> Option<f32> {
-        match self {
-            Serialized::I8(value) => Some(*value as f32),
-            Serialized::I16(value) => Some(*value as f32),
-            Serialized::I32(value) => Some(*value as f32),
-            Serialized::ISize(value) => Some(*value as f32),
-            Serialized::U8(value) => Some(*value as f32),
-            Serialized::U16(value) => Some(*value as f32),
-            Serialized::U32(value) => Some(*value as f32),
-            Serialized::USize(value) => Some(*value as f32),
-            Serialized::F32(value) => Some(*value as f32),
-            _ => None,
-        }
+        as_floating!(*self, f32)
     }
 
     /// Convert as f64
     #[allow(dead_code)]
     pub fn as_f64(&self) -> Option<f64> {
-        match self {
-            Serialized::I8(value) => Some(*value as f64),
-            Serialized::I16(value) => Some(*value as f64),
-            Serialized::I32(value) => Some(*value as f64),
-            Serialized::I64(value) => Some(*value as f64),
-            Serialized::ISize(value) => Some(*value as f64),
-            Serialized::U8(value) => Some(*value as f64),
-            Serialized::U16(value) => Some(*value as f64),
-            Serialized::U32(value) => Some(*value as f64),
-            Serialized::USize(value) => Some(*value as f64),
-            Serialized::U64(value) => Some(*value as f64),
-            Serialized::F32(value) => Some(*value as f64),
-            Serialized::F64(value) => Some(*value as f64),
-            _ => None,
-        }
+        as_floating!(*self, f64)
     }
 
     /// Convert as bool

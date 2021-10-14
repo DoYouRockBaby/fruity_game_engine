@@ -1,4 +1,5 @@
 use crate::js_value::function::JsFunction;
+use crate::js_value::property::JsProperty;
 use crate::js_value::utils::format_function_name_from_rust_to_js;
 use crate::js_value::utils::get_internal_object_from_v8_args;
 use crate::js_value::utils::inject_option_serialized_into_v8_return_value;
@@ -7,6 +8,8 @@ use crate::js_value::value::JsValue;
 use crate::serialize::deserialize::deserialize_v8;
 use crate::serialize::serialize::serialize_v8;
 use core::ffi::c_void;
+use fruity_ecs::component::component_list_rwlock::ComponentListRwLock;
+use fruity_ecs::component::component_rwlock::ComponentRwLock;
 use fruity_ecs::entity::entity_rwlock::EntityRwLock;
 use fruity_ecs::serialize::serialized::Serialized;
 use fruity_ecs::service::service::Service;
@@ -27,6 +30,8 @@ use std::sync::RwLock;
 pub enum JsObjectInternalObject {
     Service(Arc<RwLock<Box<dyn Service>>>),
     Entity(EntityRwLock),
+    Component(ComponentRwLock),
+    ComponentList(ComponentListRwLock),
     Iterator(Arc<RwLock<dyn Iterator<Item = Serialized> + Send + Sync>>),
     ServiceManager(Arc<RwLock<ServiceManager>>),
 }
@@ -145,11 +150,12 @@ impl JsObject {
 
                             // Execute next function
                             let next_value = next.call(scope, this.into(), &[]).unwrap();
-                            let next_value = v8::Local::<v8::Object>::try_from(next_value).unwrap();
+                            let mut next_value_object =
+                                v8::Local::<v8::Object>::try_from(next_value).unwrap();
 
                             // Get the next result.done value
                             let done_string = v8::String::new(scope, "done").unwrap();
-                            let mut next_done_value = next_value
+                            let mut next_done_value = next_value_object
                                 .get(scope, done_string.into())
                                 .unwrap()
                                 .boolean_value(scope);
@@ -159,7 +165,7 @@ impl JsObject {
                                 // Get the current iterator value
                                 let value_string = v8::String::new(scope, "value").unwrap();
                                 let next_value_value =
-                                    next_value.get(scope, value_string.into()).unwrap();
+                                    next_value_object.get(scope, value_string.into()).unwrap();
 
                                 // Call the callback
                                 let undefined = v8::undefined(scope);
@@ -168,9 +174,9 @@ impl JsObject {
                                 // Get the next result.done value
                                 match next.call(scope, this.into(), &[]) {
                                     Some(next_value) => {
-                                        let next_value =
+                                        next_value_object =
                                             v8::Local::<v8::Object>::try_from(next_value).unwrap();
-                                        next_done_value = next_value
+                                        next_done_value = next_value_object
                                             .get(scope, done_string.into())
                                             .unwrap()
                                             .boolean_value(scope);
@@ -245,6 +251,104 @@ impl JsObject {
         JsObject {
             fields,
             internal_object: Some(JsObjectInternalObject::Entity(entity)),
+        }
+    }
+
+    pub fn from_component(component: ComponentRwLock) -> JsObject {
+        let mut fields: HashMap<String, Box<dyn JsValue>> = HashMap::new();
+
+        let field_infos = {
+            let reader = component.read().unwrap();
+            reader.get_field_infos()
+        };
+
+        for field_info in field_infos {
+            fields.insert(field_info.name, Box::new(JsProperty::new()));
+        }
+
+        JsObject {
+            fields,
+            internal_object: Some(JsObjectInternalObject::Component(component)),
+        }
+    }
+
+    pub fn from_component_list(component_list: ComponentListRwLock) -> JsObject {
+        let mut fields: HashMap<String, Box<dyn JsValue>> = HashMap::new();
+
+        fields.insert(
+            "get".to_string(),
+            Box::new(JsFunction::new(
+                |scope: &mut v8::HandleScope,
+                 args: v8::FunctionCallbackArguments,
+                 mut return_value: v8::ReturnValue| {
+                    // Get this an entity
+                    let internal_object = get_internal_object_from_v8_args(scope, &args);
+
+                    if let JsObjectInternalObject::ComponentList(component_list) = internal_object {
+                        // Build the arguments
+                        let deserialized_args = (0..args.length())
+                            .filter_map(|index| deserialize_v8(scope, args.get(index)))
+                            .collect::<Vec<_>>();
+
+                        if deserialized_args.len() != 1 {
+                            log::error!(
+                                "Failed to call method get cause you provided {} arguments, expected 1",
+                                args.length(),
+                            );
+                            return ();
+                        }
+
+                        let arg1 = deserialized_args.get(0).unwrap();
+                        let arg1 = if let Some(arg) = arg1.as_usize() {
+                            arg
+                        } else {
+                            log::error!("Failed to call method get cause the argument n°0 have a wrong type");
+                            return ();
+                        };
+
+                        // Call the function
+                        let result = component_list.get(arg1);
+
+                        // Return the result
+                        if let Some(result) = result {
+                            inject_serialized_into_v8_return_value(
+                                scope,
+                                &Serialized::Component(result),
+                                &mut return_value,
+                            );
+                        }
+                    }
+                },
+            )),
+        );
+
+        fields.insert(
+            "lenght".to_string(),
+            Box::new(JsFunction::new(
+                |scope: &mut v8::HandleScope,
+                 args: v8::FunctionCallbackArguments,
+                 mut return_value: v8::ReturnValue| {
+                    // Get this an entity
+                    let internal_object = get_internal_object_from_v8_args(scope, &args);
+
+                    if let JsObjectInternalObject::ComponentList(component_list) = internal_object {
+                        // Call the function
+                        let result = component_list.len();
+
+                        // Return the result
+                        inject_serialized_into_v8_return_value(
+                            scope,
+                            &Serialized::USize(result),
+                            &mut return_value,
+                        );
+                    }
+                },
+            )),
+        );
+
+        JsObject {
+            fields,
+            internal_object: Some(JsObjectInternalObject::ComponentList(component_list)),
         }
     }
 
@@ -337,8 +441,7 @@ fn service_callback(
     if let JsObjectInternalObject::Service(this) = this {
         // Extract the current method info
         let method_info = {
-            let reader = this.read();
-            let reader = reader.unwrap();
+            let reader = this.read().unwrap();
             let this = reader.deref();
 
             let method_infos = this.get_method_infos().clone();

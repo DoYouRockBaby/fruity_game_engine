@@ -1,5 +1,4 @@
-use crate::component::component_list_guard::ComponentListReadGuard;
-use crate::component::component_list_guard::ComponentListWriteGuard;
+use crate::component::component_list_rwlock::ComponentListRwLock;
 use crate::entity::archetype::Archetype;
 use crate::entity::entity::Entity;
 use crate::entity::entity::EntityId;
@@ -21,7 +20,6 @@ use fruity_introspect::MethodInfo;
 use rayon::prelude::*;
 use std::any::Any;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::sync::RwLock;
 
 /// An error over entity deletion
@@ -88,26 +86,10 @@ impl EntityManager {
     pub fn iter_components(
         &self,
         entity_identifier: EntityTypeIdentifier,
-    ) -> impl Iterator<Item = ComponentListReadGuard> {
-        self.iter_entities(entity_identifier.clone())
-            .filter_map(move |entity| entity.read_components(&entity_identifier.clone()).ok())
-            .flatten()
-    }
-
-    /// Iterate over all entities with a specific archetype type
-    /// Use every entity that contains the provided entity type
-    /// Also map components to the order of provided entity type
-    /// identifier
-    ///
-    /// # Arguments
-    /// * `entity_identifier` - The entity type identifier
-    ///
-    pub fn iter_components_mut(
-        &self,
-        entity_identifier: EntityTypeIdentifier,
-    ) -> impl Iterator<Item = ComponentListWriteGuard> {
-        self.iter_entities(entity_identifier.clone())
-            .filter_map(move |entity| entity.write_components(&entity_identifier.clone()).ok())
+    ) -> impl Iterator<Item = ComponentListRwLock> {
+        let this = unsafe { &*(self as *const _) } as &EntityManager;
+        this.iter_entities(entity_identifier.clone())
+            .filter_map(move |entity| entity.iter_components(&entity_identifier.clone()).ok())
             .flatten()
     }
 
@@ -143,24 +125,13 @@ impl EntityManager {
         entity_identifier: EntityTypeIdentifier,
         callback: F,
     ) {
-        let entity_identifier_1 = Arc::new(Mutex::new(entity_identifier.clone()));
-        let entity_identifier_2 = Arc::new(Mutex::new(entity_identifier.clone()));
-
-        self.archetypes
-            .iter()
-            .filter(move |archetype| {
-                archetype
-                    .get_type_identifier()
-                    .contains(&entity_identifier_1.lock().unwrap())
-            })
-            .map(|archetype| archetype.iter())
-            .flatten()
+        self.iter_entities(entity_identifier.clone())
             .par_bridge()
             .for_each(move |entity| {
                 entity
                     .read()
                     .unwrap()
-                    .iter_component_tuple(&entity_identifier_2.lock().unwrap())
+                    .iter_component_tuple(&entity_identifier)
                     .for_each(|components| callback(components));
             });
     }
@@ -178,24 +149,13 @@ impl EntityManager {
         entity_identifier: EntityTypeIdentifier,
         callback: F,
     ) {
-        let entity_identifier_1 = Arc::new(Mutex::new(entity_identifier.clone()));
-        let entity_identifier_2 = Arc::new(Mutex::new(entity_identifier.clone()));
-
-        self.archetypes
-            .iter()
-            .filter(move |archetype| {
-                archetype
-                    .get_type_identifier()
-                    .contains(&entity_identifier_1.lock().unwrap())
-            })
-            .map(|archetype| archetype.iter())
-            .flatten()
+        self.iter_entities(entity_identifier.clone())
             .par_bridge()
             .for_each(move |entity| {
                 entity
                     .write()
                     .unwrap()
-                    .iter_mut_component_tuple(&entity_identifier_2.lock().unwrap())
+                    .iter_mut_component_tuple(&entity_identifier)
                     .for_each(|components| callback(components));
             });
     }
@@ -224,6 +184,7 @@ impl EntityManager {
             }
         }
     }
+
     /// Remove an entity based on its id
     ///
     /// # Arguments
@@ -247,6 +208,7 @@ impl EntityManager {
         }
     }
 
+    #[allow(dead_code)]
     fn archetype_by_identifier(
         &self,
         entity_identifier: EntityTypeIdentifier,
@@ -293,7 +255,6 @@ impl IntrospectMethods<Serialized> for EntityManager {
                 args: vec!["[String]".to_string()],
                 return_type: None,
                 call: MethodCaller::Const(Arc::new(move |this, args| {
-                    //let this = unsafe { &*(this as *const _) } as &dyn Any;
                     let this = cast_service::<EntityManager>(this);
                     assert_argument_count("iter_components", 1, &args)?;
 

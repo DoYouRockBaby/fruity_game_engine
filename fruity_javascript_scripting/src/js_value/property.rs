@@ -1,27 +1,24 @@
+use crate::js_value::object::JsObjectInternalObject;
+use crate::js_value::utils::get_internal_object_from_v8_property_args;
 use crate::js_value::value::JsValue;
+use crate::serialize::deserialize::deserialize_v8;
+use crate::serialize::serialize::serialize_v8;
 use rusty_v8 as v8;
 use std::any::Any;
 use std::fmt::Debug;
 
-pub struct JsProperty {
-    pub(crate) implement_setter: bool,
-}
+pub struct JsProperty {}
 
 impl JsProperty {
-    pub fn new(implement_setter: bool) -> JsProperty {
-        JsProperty { implement_setter }
+    pub fn new() -> JsProperty {
+        JsProperty {}
     }
 }
 
 impl JsValue for JsProperty {
     fn register(&mut self, scope: &mut v8::HandleScope, name: &str, parent: v8::Local<v8::Object>) {
         let key = v8::String::new(scope, name).unwrap();
-
-        if self.implement_setter {
-            parent.set_accessor_with_setter(scope, key.into(), component_getter, component_setter);
-        } else {
-            parent.set_accessor(scope, key.into(), component_getter);
-        }
+        parent.set_accessor_with_setter(scope, key.into(), component_getter, component_setter);
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -38,19 +35,73 @@ impl JsValue for JsProperty {
 }
 
 fn component_getter(
-    _scope: &mut v8::HandleScope,
-    _name: v8::Local<v8::Name>,
-    _args: v8::PropertyCallbackArguments,
-    mut _return_value: v8::ReturnValue,
+    scope: &mut v8::HandleScope,
+    name: v8::Local<v8::Name>,
+    args: v8::PropertyCallbackArguments,
+    mut return_value: v8::ReturnValue,
 ) {
+    // Get this as service methods
+    let internal_object = get_internal_object_from_v8_property_args(scope, &args);
+
+    // Extract the current method info
+    if let JsObjectInternalObject::Component(component) = internal_object {
+        let field_info = {
+            let component = component.read().unwrap();
+
+            let field_infos = component.get_field_infos();
+            let name = name.to_string(scope).unwrap().to_rust_string_lossy(scope);
+
+            field_infos
+                .iter()
+                .find(|method_info| method_info.name == name)
+                .unwrap()
+                .clone()
+        };
+
+        // Call the function
+        let component = component.read().unwrap();
+        let result = (field_info.getter)(component.as_any_ref());
+
+        // Return the result
+        let deserialized = serialize_v8(scope, &result);
+
+        if let Some(serialized) = deserialized {
+            return_value.set(serialized.into());
+        }
+    }
 }
 
 fn component_setter(
-    _scope: &mut v8::HandleScope,
-    _name: v8::Local<v8::Name>,
-    _value: v8::Local<v8::Value>,
-    _args: v8::PropertyCallbackArguments,
+    scope: &mut v8::HandleScope,
+    name: v8::Local<v8::Name>,
+    value: v8::Local<v8::Value>,
+    args: v8::PropertyCallbackArguments,
 ) {
+    // Get this as service methods
+    let internal_object = get_internal_object_from_v8_property_args(scope, &args);
+
+    // Extract the current method info
+    if let JsObjectInternalObject::Component(component) = internal_object {
+        let field_info = {
+            let component = component.read().unwrap();
+
+            let field_infos = component.get_field_infos();
+            let name = name.to_string(scope).unwrap().to_rust_string_lossy(scope);
+
+            field_infos
+                .iter()
+                .find(|method_info| method_info.name == name)
+                .unwrap()
+                .clone()
+        };
+
+        // Build the arguments
+        let deserialized_arg = deserialize_v8(scope, value).unwrap();
+
+        // Call the function
+        let mut component = component.write().unwrap();
+        (field_info.setter)(component.as_any_mut(), deserialized_arg);
+    }
 }
 
 impl Debug for JsProperty {
