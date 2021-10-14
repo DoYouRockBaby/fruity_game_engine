@@ -228,6 +228,40 @@ impl Entity {
         }
     }
 
+    /// Get a collection of component indexes
+    /// Cause an entity can contain multiple component of the same type, can returns multiple component index list
+    /// All components are mapped to the provided component identifiers in the same order
+    ///
+    /// # Arguments
+    /// * `type_identifiers` - The identifier list of the components, components will be returned with the same order
+    ///
+    pub fn iter_component_indexes(
+        &self,
+        target_identifier: &EntityTypeIdentifier,
+    ) -> impl Iterator<Item = Vec<usize>> {
+        let intern_identifier = self.get_type_identifier();
+        target_identifier
+            .clone()
+            .0
+            .into_iter()
+            .map(|type_identifier| {
+                intern_identifier
+                    .0
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, component_type)| {
+                        if *component_type == type_identifier {
+                            Some(index)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .multi_cartesian_product()
+            .map(|vec| Vec::from(vec))
+    }
+
     /// Iterate over specified components of the entity
     ///
     /// Cause an entity can contain multiple component of the same type, can returns multiple component list

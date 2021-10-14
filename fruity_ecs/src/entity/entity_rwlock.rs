@@ -1,5 +1,8 @@
+use crate::component::component_list_guard::ComponentListReadGuard;
+use crate::component::component_list_guard::ComponentListWriteGuard;
 use crate::entity::entity::Entity;
 use crate::entity::entity::EntityComponentInfo;
+use crate::entity::entity::EntityTypeIdentifier;
 use crate::entity::entity_guard::EntityReadGuard;
 use crate::entity::entity_guard::EntityWriteGuard;
 use fruity_any_derive::*;
@@ -45,7 +48,6 @@ impl EntityRwLock {
     ///
     /// This function might panic when called if the lock is already held by the current thread.
     ///
-    //pub fn write(&self) -> Result<EntityWriteGuard<'s>, PoisonError<RwLockWriteGuard<()>>> {
     pub fn read(&self) -> Result<EntityReadGuard, PoisonError<RwLockReadGuard<Entity>>> {
         let guard = self.entity.read()?;
         Ok(EntityReadGuard::new(guard))
@@ -67,6 +69,54 @@ impl EntityRwLock {
     pub fn write(&self) -> Result<EntityWriteGuard, PoisonError<RwLockWriteGuard<Entity>>> {
         let guard = self.entity.write()?;
         Ok(EntityWriteGuard::new(guard))
+    }
+
+    /// Get collections of components list reader
+    /// Cause an entity can contain multiple component of the same type, can returns multiple readers
+    /// All components are mapped to the provided component identifiers in the same order
+    ///
+    /// # Arguments
+    /// * `type_identifiers` - The identifier list of the components, components will be returned with the same order
+    ///
+    pub fn read_components(
+        &self,
+        target_identifier: &EntityTypeIdentifier,
+    ) -> Result<impl Iterator<Item = ComponentListReadGuard>, PoisonError<RwLockReadGuard<Entity>>>
+    {
+        let guard = self.entity.read()?;
+
+        Ok(guard
+            .iter_component_indexes(target_identifier)
+            .map(move |component_indexes| {
+                ComponentListReadGuard::new(
+                    Arc::new(RwLock::new(self.entity.read().unwrap())),
+                    component_indexes.clone(),
+                )
+            }))
+    }
+
+    /// Get collections of components list writer
+    /// Cause an entity can contain multiple component of the same type, can returns multiple writers
+    /// All components are mapped to the provided component identifiers in the same order
+    ///
+    /// # Arguments
+    /// * `type_identifiers` - The identifier list of the components, components will be returned with the same order
+    ///
+    pub fn write_components(
+        &self,
+        target_identifier: &EntityTypeIdentifier,
+    ) -> Result<impl Iterator<Item = ComponentListWriteGuard>, PoisonError<RwLockWriteGuard<Entity>>>
+    {
+        let guard = self.entity.write()?;
+
+        Ok(guard
+            .iter_component_indexes(target_identifier)
+            .map(move |component_indexes| {
+                ComponentListWriteGuard::new(
+                    Arc::new(RwLock::new(self.entity.write().unwrap())),
+                    component_indexes.clone(),
+                )
+            }))
     }
 }
 

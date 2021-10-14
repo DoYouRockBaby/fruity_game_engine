@@ -1,3 +1,4 @@
+use crate::component::component_list_guard::ComponentListReadGuard;
 use crate::entity::entity_rwlock::EntityRwLock;
 use crate::service::service::Service;
 use crate::ServiceManager;
@@ -75,6 +76,9 @@ pub enum Serialized {
 
     /// Entity RwLock
     Entity(EntityRwLock),
+
+    /// Component read guard
+    ComponentList(ComponentListReadGuard),
 }
 
 impl Serialized {

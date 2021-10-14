@@ -1,3 +1,5 @@
+use crate::component::component_list_guard::ComponentListReadGuard;
+use crate::component::component_list_guard::ComponentListWriteGuard;
 use crate::entity::archetype::Archetype;
 use crate::entity::entity::Entity;
 use crate::entity::entity::EntityId;
@@ -17,6 +19,7 @@ use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use rayon::prelude::*;
+use std::any::Any;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::RwLock;
@@ -50,7 +53,7 @@ impl EntityManager {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn get(&self, entity_id: EntityId) -> Option<EntityRwLock> {
+    pub fn get(&self, entity_id: EntityId) -> Option<&EntityRwLock> {
         self.archetypes
             .iter()
             .find_map(|archetype| archetype.get(entity_id))
@@ -62,20 +65,50 @@ impl EntityManager {
     /// # Arguments
     /// * `entity_identifier` - The entity type identifier
     ///
-    pub fn for_each_entity<F: Fn(EntityRwLock) + Sync + Send>(
+    pub fn iter_entities(
         &self,
         entity_identifier: EntityTypeIdentifier,
-        callback: F,
-    ) {
-        self.archetypes
+    ) -> impl Iterator<Item = &EntityRwLock> {
+        let archetypes = unsafe { &*(&self.archetypes as *const _) } as &Vec<Archetype>;
+        archetypes
             .iter()
             .filter(move |archetype| archetype.get_type_identifier().contains(&entity_identifier))
             .map(|archetype| archetype.iter())
             .flatten()
-            .par_bridge()
-            .for_each(move |entity| {
-                callback(entity);
-            });
+    }
+
+    /// Iterate over all entities with a specific archetype type
+    /// Use every entity that contains the provided entity type
+    /// Also map components to the order of provided entity type
+    /// identifier
+    ///
+    /// # Arguments
+    /// * `entity_identifier` - The entity type identifier
+    ///
+    pub fn iter_components(
+        &self,
+        entity_identifier: EntityTypeIdentifier,
+    ) -> impl Iterator<Item = ComponentListReadGuard> {
+        self.iter_entities(entity_identifier.clone())
+            .filter_map(move |entity| entity.read_components(&entity_identifier.clone()).ok())
+            .flatten()
+    }
+
+    /// Iterate over all entities with a specific archetype type
+    /// Use every entity that contains the provided entity type
+    /// Also map components to the order of provided entity type
+    /// identifier
+    ///
+    /// # Arguments
+    /// * `entity_identifier` - The entity type identifier
+    ///
+    pub fn iter_components_mut(
+        &self,
+        entity_identifier: EntityTypeIdentifier,
+    ) -> impl Iterator<Item = ComponentListWriteGuard> {
+        self.iter_entities(entity_identifier.clone())
+            .filter_map(move |entity| entity.write_components(&entity_identifier.clone()).ok())
+            .flatten()
     }
 
     /// Iterate over all entities with a specific archetype type
@@ -83,17 +116,18 @@ impl EntityManager {
     ///
     /// # Arguments
     /// * `entity_identifier` - The entity type identifier
+    /// * `callback` - The callback that will be called for every entity
     ///
-    pub fn iter_entities(
+    pub fn for_each_entity<F: Fn(EntityRwLock) + Sync + Send>(
         &self,
         entity_identifier: EntityTypeIdentifier,
-    ) -> impl Iterator<Item = EntityRwLock> {
-        let archetypes = unsafe { &*(&self.archetypes as *const _) } as &Vec<Archetype>;
-        archetypes
-            .iter()
-            .filter(move |archetype| archetype.get_type_identifier().contains(&entity_identifier))
-            .map(|archetype| archetype.iter())
-            .flatten()
+        callback: F,
+    ) {
+        self.iter_entities(entity_identifier)
+            .par_bridge()
+            .for_each(move |entity| {
+                callback(entity.clone());
+            });
     }
 
     /// Iterate over all entities with a specific archetype type
@@ -234,23 +268,46 @@ impl EntityManager {
 
 impl IntrospectMethods<Serialized> for EntityManager {
     fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
-        vec![MethodInfo {
-            name: "iter_entities".to_string(),
-            args: vec!["[String]".to_string(), "fn".to_string()],
-            return_type: None,
-            call: MethodCaller::Const(Arc::new(move |this, args| {
-                let this = cast_service::<EntityManager>(this);
-                assert_argument_count("iter_entities", 1, &args)?;
+        vec![
+            MethodInfo {
+                name: "iter_entities".to_string(),
+                args: vec!["[String]".to_string()],
+                return_type: None,
+                call: MethodCaller::Const(Arc::new(move |this, args| {
+                    let this = unsafe { &*(this as *const _) } as &dyn Any;
+                    let this = cast_service::<EntityManager>(this);
+                    assert_argument_count("iter_entities", 1, &args)?;
 
-                let arg1 = cast_argument("iter_entities", 0, &args, |arg| arg.as_string_array())?;
+                    let arg1 =
+                        cast_argument("iter_entities", 0, &args, |arg| arg.as_string_array())?;
 
-                let iterator = this
-                    .iter_entities(EntityTypeIdentifier(arg1))
-                    .map(|entity| Serialized::Entity(entity));
+                    let iterator = this
+                        .iter_entities(EntityTypeIdentifier(arg1))
+                        .map(|entity| Serialized::Entity(entity.clone()));
 
-                Ok(Some(Serialized::Iterator(Arc::new(RwLock::new(iterator)))))
-            })),
-        }]
+                    Ok(Some(Serialized::Iterator(Arc::new(RwLock::new(iterator)))))
+                })),
+            },
+            MethodInfo {
+                name: "iter_components".to_string(),
+                args: vec!["[String]".to_string()],
+                return_type: None,
+                call: MethodCaller::Const(Arc::new(move |this, args| {
+                    //let this = unsafe { &*(this as *const _) } as &dyn Any;
+                    let this = cast_service::<EntityManager>(this);
+                    assert_argument_count("iter_components", 1, &args)?;
+
+                    let arg1 =
+                        cast_argument("iter_components", 0, &args, |arg| arg.as_string_array())?;
+
+                    let iterator = this
+                        .iter_components(EntityTypeIdentifier(arg1))
+                        .map(|components| Serialized::ComponentList(components));
+
+                    Ok(Some(Serialized::Iterator(Arc::new(RwLock::new(iterator)))))
+                })),
+            },
+        ]
     }
 }
 
