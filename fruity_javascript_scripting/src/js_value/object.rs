@@ -5,6 +5,7 @@ use crate::js_value::utils::inject_option_serialized_into_v8_return_value;
 use crate::js_value::utils::inject_serialized_into_v8_return_value;
 use crate::js_value::value::JsValue;
 use crate::serialize::deserialize::deserialize_v8;
+use crate::serialize::serialize::serialize_v8;
 use core::ffi::c_void;
 use fruity_ecs::entity::entity_rwlock::EntityRwLock;
 use fruity_ecs::serialize::serialized::Serialized;
@@ -15,16 +16,28 @@ use fruity_introspect::MethodCaller;
 use rusty_v8 as v8;
 use std::any::Any;
 use std::collections::HashMap;
+use std::convert::TryFrom;
+use std::fmt::Debug;
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum JsObjectInternalObject {
     Service(Arc<RwLock<Box<dyn Service>>>),
     Entity(EntityRwLock),
+    Iterator(Arc<RwLock<dyn Iterator<Item = Serialized> + Send + Sync>>),
     ServiceManager(Arc<RwLock<ServiceManager>>),
+}
+
+impl Debug for JsObjectInternalObject {
+    fn fmt(
+        &self,
+        _formatter: &mut std::fmt::Formatter<'_>,
+    ) -> std::result::Result<(), std::fmt::Error> {
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
@@ -51,6 +64,132 @@ impl JsObject {
         JsObject {
             fields: HashMap::new(),
             internal_object: Some(internal_object),
+        }
+    }
+
+    pub fn from_iterator(
+        iterator: Arc<RwLock<dyn Iterator<Item = Serialized> + Send + Sync>>,
+    ) -> JsObject {
+        let mut fields: HashMap<String, Box<dyn JsValue>> = HashMap::new();
+
+        fields.insert(
+            "next".to_string(),
+            Box::new(JsFunction::new(
+                |scope: &mut v8::HandleScope,
+                 args: v8::FunctionCallbackArguments,
+                 mut return_value: v8::ReturnValue| {
+                    // Get this an entity
+                    let internal_object = get_internal_object_from_v8_args(scope, &args);
+
+                    if let JsObjectInternalObject::Iterator(iterator) = internal_object {
+                        // Call the function
+                        let mut iterator = iterator.write().unwrap();
+                        let result = iterator.next();
+
+                        // Return the result
+                        //let serialized = serialize_v8(scope, &serialized);
+                        let result = match result {
+                            Some(value) => serialize_v8(scope, &value),
+                            None => None,
+                        };
+
+                        let return_object = match result {
+                            Some(value) => {
+                                let result = v8::Object::new(scope);
+
+                                // Set done to false
+                                let done = v8::Boolean::new(scope, false);
+                                let done_string = v8::String::new(scope, "done").unwrap();
+                                result.set(scope, done_string.into(), done.into());
+
+                                // Set value
+                                let value_string = v8::String::new(scope, "value").unwrap();
+                                result.set(scope, value_string.into(), value);
+
+                                result
+                            }
+                            None => {
+                                let result = v8::Object::new(scope);
+
+                                // Set done to true
+                                let done = v8::Boolean::new(scope, true);
+                                let done_string = v8::String::new(scope, "done").unwrap();
+                                result.set(scope, done_string.into(), done.into());
+
+                                result
+                            }
+                        };
+
+                        return_value.set(return_object.into());
+                    }
+                },
+            )),
+        );
+
+        fields.insert(
+            "forEach".to_string(),
+            Box::new(JsFunction::new(
+                |scope: &mut v8::HandleScope,
+                 args: v8::FunctionCallbackArguments,
+                 mut _return_value: v8::ReturnValue| {
+                    let this = args.this();
+
+                    // Get callback
+                    let callback = args.get(0);
+                    match v8::Local::<v8::Function>::try_from(callback) {
+                        Ok(callback) => {
+                            // Get next function
+                            let next_string = v8::String::new(scope, "next").unwrap();
+                            let next = this.get(scope, next_string.into()).unwrap();
+                            let next = v8::Local::<v8::Function>::try_from(next).unwrap();
+
+                            // Execute next function
+                            let next_value = next.call(scope, this.into(), &[]).unwrap();
+                            let next_value = v8::Local::<v8::Object>::try_from(next_value).unwrap();
+
+                            // Get the next result.done value
+                            let done_string = v8::String::new(scope, "done").unwrap();
+                            let mut next_done_value = next_value
+                                .get(scope, done_string.into())
+                                .unwrap()
+                                .boolean_value(scope);
+
+                            // Iterate for each element
+                            while !next_done_value {
+                                // Get the current iterator value
+                                let value_string = v8::String::new(scope, "value").unwrap();
+                                let next_value_value =
+                                    next_value.get(scope, value_string.into()).unwrap();
+
+                                // Call the callback
+                                let undefined = v8::undefined(scope);
+                                callback.call(scope, undefined.into(), &[next_value_value]);
+
+                                // Get the next result.done value
+                                match next.call(scope, this.into(), &[]) {
+                                    Some(next_value) => {
+                                        let next_value =
+                                            v8::Local::<v8::Object>::try_from(next_value).unwrap();
+                                        next_done_value = next_value
+                                            .get(scope, done_string.into())
+                                            .unwrap()
+                                            .boolean_value(scope);
+                                    }
+                                    None => {
+                                        next_done_value = true;
+                                    }
+                                }
+                            }
+                        }
+                        Err(_) => (),
+                    };
+                },
+            )),
+        );
+
+        JsObject {
+            fields,
+            internal_object: Some(JsObjectInternalObject::Iterator(iterator)),
         }
     }
 

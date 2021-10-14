@@ -81,11 +81,15 @@ pub fn deserialize_v8<'a>(
                     let recv: v8::Local<v8::Value> = global.into();
 
                     // Call function
-                    js_function.call(&mut scope, recv, &args);
+                    let result = js_function.call(&mut scope, recv, &args);
 
                     // Return result
-                    let result = deserialize_v8(&mut scope, recv);
-                    Ok(result)
+                    if let Some(result) = result {
+                        let result = deserialize_v8(&mut scope, result);
+                        Ok(result)
+                    } else {
+                        Ok(None)
+                    }
                 }
                 Err(_) => Err(IntrospectError::NestedCallback),
             }

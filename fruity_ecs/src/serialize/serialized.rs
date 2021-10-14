@@ -51,8 +51,11 @@ pub enum Serialized {
     /// String value
     String(String),
 
-    /// Array of value
+    /// Array of values
     Array(Vec<Serialized>),
+
+    /// Iterator over values
+    Iterator(Arc<RwLock<dyn Iterator<Item = Serialized> + Send + Sync>>),
 
     /// Service reference value
     Callback(

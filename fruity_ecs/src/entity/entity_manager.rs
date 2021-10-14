@@ -13,7 +13,6 @@ use crate::service::utils::cast_service;
 use crate::ServiceManager;
 use crate::World;
 use fruity_any_derive::*;
-use fruity_introspect::log_introspect_error;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
@@ -77,6 +76,24 @@ impl EntityManager {
             .for_each(move |entity| {
                 callback(entity);
             });
+    }
+
+    /// Iterate over all entities with a specific archetype type
+    /// Use every entity that contains the provided entity type
+    ///
+    /// # Arguments
+    /// * `entity_identifier` - The entity type identifier
+    ///
+    pub fn iter_entities(
+        &self,
+        entity_identifier: EntityTypeIdentifier,
+    ) -> impl Iterator<Item = EntityRwLock> {
+        let archetypes = unsafe { &*(&self.archetypes as *const _) } as &Vec<Archetype>;
+        archetypes
+            .iter()
+            .filter(move |archetype| archetype.get_type_identifier().contains(&entity_identifier))
+            .map(|archetype| archetype.iter())
+            .flatten()
     }
 
     /// Iterate over all entities with a specific archetype type
@@ -217,28 +234,21 @@ impl EntityManager {
 
 impl IntrospectMethods<Serialized> for EntityManager {
     fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
-        let service_manager = self.service_manager.clone();
-
         vec![MethodInfo {
-            name: "for_each_entity".to_string(),
+            name: "iter_entities".to_string(),
             args: vec!["[String]".to_string(), "fn".to_string()],
             return_type: None,
             call: MethodCaller::Const(Arc::new(move |this, args| {
                 let this = cast_service::<EntityManager>(this);
-                assert_argument_count("for_each", 2, &args)?;
+                assert_argument_count("iter_entities", 1, &args)?;
 
-                let arg1 = cast_argument("for_each", 0, &args, |arg| arg.as_string_array())?;
-                let arg2 = cast_argument("for_each", 1, &args, |arg| arg.as_callback())?;
+                let arg1 = cast_argument("iter_entities", 0, &args, |arg| arg.as_string_array())?;
 
-                let service_manager = service_manager.clone();
-                this.for_each_entity(EntityTypeIdentifier(arg1), move |entity| {
-                    match arg2(service_manager.clone(), vec![Serialized::Entity(entity)]) {
-                        Ok(_) => (),
-                        Err(err) => log_introspect_error(&err),
-                    };
-                });
+                let iterator = this
+                    .iter_entities(EntityTypeIdentifier(arg1))
+                    .map(|entity| Serialized::Entity(entity));
 
-                Ok(None)
+                Ok(Some(Serialized::Iterator(Arc::new(RwLock::new(iterator)))))
             })),
         }]
     }
