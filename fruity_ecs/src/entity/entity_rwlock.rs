@@ -8,15 +8,16 @@ use fruity_collections::encodable::DecoderMut;
 use fruity_collections::encodable::Encodable;
 use fruity_collections::slice::copy;
 use std::any::TypeId;
+use std::sync::Arc;
 use std::sync::PoisonError;
 use std::sync::RwLock;
 use std::sync::RwLockReadGuard;
 use std::sync::RwLockWriteGuard;
 
 /// A read write locker for an entity instance
-#[derive(Debug, FruityAny)]
+#[derive(Debug, Clone, FruityAny)]
 pub struct EntityRwLock {
-    entity: RwLock<Entity>,
+    entity: Arc<RwLock<Entity>>,
 }
 
 impl EntityRwLock {
@@ -27,7 +28,7 @@ impl EntityRwLock {
     ///
     pub fn new(entity: Entity) -> EntityRwLock {
         EntityRwLock {
-            entity: RwLock::new(entity),
+            entity: Arc::new(RwLock::new(entity)),
         }
     }
 

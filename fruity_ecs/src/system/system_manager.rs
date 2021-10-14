@@ -4,6 +4,7 @@ use crate::service::service_manager::ServiceManager;
 use crate::service::utils::assert_argument_count;
 use crate::service::utils::cast_argument;
 use crate::service::utils::cast_service_mut;
+use crate::World;
 use fruity_any_derive::*;
 use fruity_introspect::log_introspect_error;
 use fruity_introspect::IntrospectMethods;
@@ -11,13 +12,16 @@ use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use rayon::prelude::*;
 use std::fmt::Debug;
+use std::sync::Arc;
+use std::sync::RwLock;
 
-type System = dyn Fn(&ServiceManager) + Sync + Send + 'static;
+type System = dyn Fn(Arc<RwLock<ServiceManager>>) + Sync + Send + 'static;
 
 /// A systems collection
 #[derive(FruityAny)]
 pub struct SystemManager {
     systems: Vec<Box<System>>,
+    service_manager: Arc<RwLock<ServiceManager>>,
 }
 
 impl Debug for SystemManager {
@@ -28,9 +32,10 @@ impl Debug for SystemManager {
 
 impl<'s> SystemManager {
     /// Returns a SystemManager
-    pub fn new() -> SystemManager {
+    pub fn new(world: &World) -> SystemManager {
         SystemManager {
             systems: Vec::new(),
+            service_manager: world.service_manager.clone(),
         }
     }
 
@@ -39,7 +44,10 @@ impl<'s> SystemManager {
     /// # Arguments
     /// * `system` - A function that will compute the world
     ///
-    pub fn add_system<T: Fn(&ServiceManager) + Sync + Send + 'static>(&mut self, system: T) {
+    pub fn add_system<T: Fn(Arc<RwLock<ServiceManager>>) + Sync + Send + 'static>(
+        &mut self,
+        system: T,
+    ) {
         self.systems.push(Box::new(system))
     }
 
@@ -49,11 +57,11 @@ impl<'s> SystemManager {
     /// * `entity_manager` - Entities collection
     /// * `service_manager` - Services collection
     ///
-    pub fn run(&self, service_manager: &ServiceManager) {
+    pub fn run(&self) {
         self.systems
             .iter()
             .par_bridge()
-            .for_each(|system| system(service_manager));
+            .for_each(|system| system(self.service_manager.clone()));
     }
 }
 
@@ -63,20 +71,20 @@ impl IntrospectMethods<Serialized> for SystemManager {
             name: "add_system".to_string(),
             args: vec!["fn".to_string()],
             return_type: None,
-            call: MethodCaller::Mut(|this, args| {
+            call: MethodCaller::Mut(Arc::new(|this, args| {
                 let this = cast_service_mut::<SystemManager>(this);
                 assert_argument_count("add_system", 1, &args)?;
 
                 let arg1 = cast_argument("add_system", 0, &args, |arg| arg.as_callback())?;
 
-                this.add_system(move |service_manager: &ServiceManager| {
+                this.add_system(move |service_manager| {
                     match arg1(service_manager, vec![]) {
                         Ok(_) => (),
                         Err(err) => log_introspect_error(&err),
                     };
                 });
                 Ok(None)
-            }),
+            })),
         }]
     }
 }

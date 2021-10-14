@@ -6,6 +6,7 @@ use fruity_introspect::IntrospectError;
 use rusty_v8 as v8;
 use std::convert::TryFrom;
 use std::sync::Arc;
+use std::sync::RwLock;
 
 pub fn deserialize_v8<'a>(
     scope: &mut v8::HandleScope<'a>,
@@ -35,34 +36,59 @@ pub fn deserialize_v8<'a>(
         return Some(Serialized::String(v8_value.to_rust_string_lossy(scope)));
     }
 
+    if v8_value.is_array() {
+        let v8_array = v8::Local::<v8::Array>::try_from(v8_value).unwrap();
+        let serialized_array = (0..v8_array.length())
+            .map(|index| {
+                Serialized::String(
+                    v8_array
+                        .get_index(scope, index)
+                        .unwrap()
+                        .to_rust_string_lossy(scope),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        return Some(Serialized::Array(serialized_array));
+    }
+
     if v8_value.is_function() {
         let js_function = JsFunctionWrapper::from_value(scope, v8_value);
 
-        let callback = move |service_manager: &ServiceManager,
+        let callback = move |service_manager: Arc<RwLock<ServiceManager>>,
                              args: Vec<Serialized>|
               -> Result<Option<Serialized>, IntrospectError> {
             // Get scope
-            let js_runtime = service_manager.get::<JsRuntime>().unwrap();
-            let js_runtime = js_runtime.write().unwrap();
-            let mut datas = js_runtime.datas.lock().unwrap();
-            let mut scope = datas.handle_scope();
-            let context = v8::Context::new(&mut scope);
+            let js_runtime = {
+                let service_manager = service_manager.read().unwrap();
+                service_manager.get::<JsRuntime>().unwrap()
+            };
 
-            // Instantiate parameters and return handle
-            let args = args
-                .iter()
-                .filter_map(|arg| serialize_v8(&mut scope, arg))
-                .collect::<Vec<_>>();
+            let js_runtime = js_runtime.read().unwrap();
+            let lock = js_runtime.datas.try_lock();
+            match lock {
+                Ok(mut datas) => {
+                    let mut scope = datas.handle_scope();
+                    let context = v8::Context::new(&mut scope);
 
-            let global = context.global(&mut scope);
-            let recv: v8::Local<v8::Value> = global.into();
+                    // Instantiate parameters and return handle
+                    let args = args
+                        .iter()
+                        .filter_map(|arg| serialize_v8(&mut scope, arg))
+                        .collect::<Vec<_>>();
 
-            // Call function
-            js_function.call(&mut scope, recv, &args);
+                    let global = context.global(&mut scope);
+                    let recv: v8::Local<v8::Value> = global.into();
 
-            // Return result
-            let result = deserialize_v8(&mut scope, recv);
-            Ok(result)
+                    // Call function
+                    js_function.call(&mut scope, recv, &args);
+
+                    // Return result
+                    let result = deserialize_v8(&mut scope, recv);
+                    Ok(result)
+                }
+                Err(_) => Err(IntrospectError::NestedCallback),
+            }
         };
 
         return Some(Serialized::Callback(Arc::new(callback)));

@@ -51,10 +51,16 @@ pub enum Serialized {
     /// String value
     String(String),
 
+    /// Array of value
+    Array(Vec<Serialized>),
+
     /// Service reference value
     Callback(
         Arc<
-            dyn Fn(&ServiceManager, Vec<Serialized>) -> Result<Option<Serialized>, IntrospectError>
+            dyn Fn(
+                    Arc<RwLock<ServiceManager>>,
+                    Vec<Serialized>,
+                ) -> Result<Option<Serialized>, IntrospectError>
                 + Sync
                 + Send
                 + 'static,
@@ -65,7 +71,7 @@ pub enum Serialized {
     Service(Arc<RwLock<Box<dyn Service>>>),
 
     /// Entity RwLock
-    Entity(Arc<EntityRwLock>),
+    Entity(EntityRwLock),
 }
 
 impl Serialized {
@@ -240,11 +246,22 @@ impl Serialized {
         }
     }
 
-    /// Convert as bool
+    /// Convert as String
     #[allow(dead_code)]
     pub fn as_string(&self) -> Option<String> {
         match self {
             Serialized::String(value) => Some(value.clone()),
+            _ => None,
+        }
+    }
+
+    /// Convert as String array
+    #[allow(dead_code)]
+    pub fn as_string_array(&self) -> Option<Vec<String>> {
+        match self {
+            Serialized::Array(value) => {
+                Some(value.iter().filter_map(|elem| elem.as_string()).collect())
+            }
             _ => None,
         }
     }
@@ -264,7 +281,10 @@ impl Serialized {
         &self,
     ) -> Option<
         Arc<
-            dyn Fn(&ServiceManager, Vec<Serialized>) -> Result<Option<Serialized>, IntrospectError>
+            dyn Fn(
+                    Arc<RwLock<ServiceManager>>,
+                    Vec<Serialized>,
+                ) -> Result<Option<Serialized>, IntrospectError>
                 + Sync
                 + Send
                 + 'static,

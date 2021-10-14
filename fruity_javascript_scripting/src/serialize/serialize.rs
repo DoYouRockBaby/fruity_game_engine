@@ -27,7 +27,18 @@ pub fn serialize_v8<'a>(
             let mut object = JsObject::from_service(value.clone());
             Some(object.build_v8_object(scope).into())
         }
+        Serialized::Array(value) => {
+            let elements = value
+                .iter()
+                .filter_map(|elem| serialize_v8(scope, elem))
+                .collect::<Vec<_>>();
+
+            Some(v8::Array::new_with_elements(scope, &elements).into())
+        }
         Serialized::Callback(_) => None,
-        Serialized::Entity(_) => None,
+        Serialized::Entity(value) => {
+            let mut object = JsObject::from_entity(value.clone());
+            Some(object.build_v8_object(scope).into())
+        }
     }
 }

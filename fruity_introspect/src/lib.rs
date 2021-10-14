@@ -8,6 +8,7 @@
 use fruity_any::FruityAny;
 use std::any::Any;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 /// Informations about a field of an introspect object
@@ -30,6 +31,8 @@ pub enum IntrospectError {
         /// The expected number of arguments
         expected: usize,
     },
+    /// Error that occure when a callback from scripting language is nested with an other one
+    NestedCallback,
 }
 
 /// Display in log an error related with introspection
@@ -56,6 +59,9 @@ pub fn log_introspect_error(err: &IntrospectError) {
                 have,
                 expected
             )
+        }
+        IntrospectError::NestedCallback => {
+            log::error!("Cannot call a callback from scripting language nested with an other one",)
         }
     }
 }
@@ -107,10 +113,10 @@ pub trait IntrospectFields<T> {
 #[derive(Clone)]
 pub enum MethodCaller<T> {
     /// Without mutability
-    Const(fn(this: &dyn Any, args: Vec<T>) -> Result<Option<T>, IntrospectError>),
+    Const(Arc<dyn Fn(&dyn Any, Vec<T>) -> Result<Option<T>, IntrospectError>>),
 
     /// With mutability
-    Mut(fn(this: &mut dyn Any, args: Vec<T>) -> Result<Option<T>, IntrospectError>),
+    Mut(Arc<dyn Fn(&mut dyn Any, Vec<T>) -> Result<Option<T>, IntrospectError>>),
 }
 
 /// Informations about a field of an introspect object

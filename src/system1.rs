@@ -4,6 +4,8 @@ use fruity_ecs::entity::entity_manager::EntityManager;
 use fruity_ecs::entity_type;
 use fruity_ecs::service::service_guard::ServiceWriteGuard;
 use fruity_ecs::service::service_manager::ServiceManager;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 pub fn system1(component1: &mut Component1, mut service1: ServiceWriteGuard<Service1>) {
     component1.int1 += 1;
@@ -12,18 +14,30 @@ pub fn system1(component1: &mut Component1, mut service1: ServiceWriteGuard<Serv
     println!("System1 speak: {:#?} {}", component1, service1.value());
 }
 
-pub fn system1_untyped(service_manager: &ServiceManager) {
-    let entity_manager = service_manager.get::<EntityManager>().unwrap();
-    let entity_manager_reader = entity_manager.read().unwrap();
-
-    let service1 = match service_manager.get::<Service1>() {
-        Some(service) => service,
-        None => {
-            log::error!("Service1 service is needed by a system but is not registered");
-            return;
+pub fn system1_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
+    let entity_manager = {
+        let service_manager = service_manager.read().unwrap();
+        match service_manager.get::<EntityManager>() {
+            Some(service) => service,
+            None => {
+                log::error!("EntityManager service is needed by a system but is not registered");
+                return;
+            }
         }
     };
 
+    let service1 = {
+        let service_manager = service_manager.read().unwrap();
+        match service_manager.get::<Service1>() {
+            Some(service) => service,
+            None => {
+                log::error!("Service1 service is needed by a system but is not registered");
+                return;
+            }
+        }
+    };
+
+    let entity_manager_reader = entity_manager.read().unwrap();
     entity_manager_reader.for_each_mut(
         entity_type!["Component1", "Component2"],
         |mut components| {

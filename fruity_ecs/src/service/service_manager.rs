@@ -117,7 +117,7 @@ impl IntrospectMethods<Serialized> for ServiceManager {
                 name: "register".to_string(),
                 args: vec!["String".to_string(), "Service".to_string()],
                 return_type: None,
-                call: MethodCaller::Mut(|this, args| {
+                call: MethodCaller::Mut(Arc::new(|this, args| {
                     let this = cast_service_mut::<ServiceManager>(this);
                     assert_argument_count("register", 1, &args)?;
 
@@ -126,13 +126,13 @@ impl IntrospectMethods<Serialized> for ServiceManager {
 
                     this.register_arc(&arg1, arg2);
                     Ok(None)
-                }),
+                })),
             },
             MethodInfo {
                 name: "get_by_name".to_string(),
                 args: vec!["String".to_string()],
                 return_type: Some("Service".to_string()),
-                call: MethodCaller::Const(|this, args| {
+                call: MethodCaller::Const(Arc::new(|this, args| {
                     let this = cast_service::<ServiceManager>(this);
                     assert_argument_count("get_by_name", 1, &args)?;
 
@@ -140,7 +140,7 @@ impl IntrospectMethods<Serialized> for ServiceManager {
 
                     let result = this.get_by_name(&arg1);
                     Ok(result.map(|service| Serialized::Service(service)))
-                }),
+                })),
             },
         ]
     }

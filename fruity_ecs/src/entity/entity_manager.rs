@@ -7,12 +7,20 @@ use crate::entity::entity::IterMut as EntityIterMut;
 use crate::entity::entity_rwlock::EntityRwLock;
 use crate::serialize::serialized::Serialized;
 use crate::service::service::Service;
+use crate::service::utils::assert_argument_count;
+use crate::service::utils::cast_argument;
+use crate::service::utils::cast_service;
+use crate::ServiceManager;
+use crate::World;
 use fruity_any_derive::*;
+use fruity_introspect::log_introspect_error;
 use fruity_introspect::IntrospectMethods;
+use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use rayon::prelude::*;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::RwLock;
 
 /// An error over entity deletion
 pub enum RemoveEntityError {
@@ -25,14 +33,16 @@ pub enum RemoveEntityError {
 pub struct EntityManager {
     id_incrementer: u64,
     archetypes: Vec<Archetype>,
+    service_manager: Arc<RwLock<ServiceManager>>,
 }
 
 impl EntityManager {
     /// Returns an EntityManager
-    pub fn new() -> EntityManager {
+    pub fn new(world: &World) -> EntityManager {
         EntityManager {
             id_incrementer: 0,
             archetypes: Vec::new(),
+            service_manager: world.service_manager.clone(),
         }
     }
 
@@ -41,7 +51,7 @@ impl EntityManager {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn get(&self, entity_id: EntityId) -> Option<&EntityRwLock> {
+    pub fn get(&self, entity_id: EntityId) -> Option<EntityRwLock> {
         self.archetypes
             .iter()
             .find_map(|archetype| archetype.get(entity_id))
@@ -49,6 +59,30 @@ impl EntityManager {
 
     /// Iterate over all entities with a specific archetype type
     /// Use every entity that contains the provided entity type
+    ///
+    /// # Arguments
+    /// * `entity_identifier` - The entity type identifier
+    ///
+    pub fn for_each_entity<F: Fn(EntityRwLock) + Sync + Send>(
+        &self,
+        entity_identifier: EntityTypeIdentifier,
+        callback: F,
+    ) {
+        self.archetypes
+            .iter()
+            .filter(move |archetype| archetype.get_type_identifier().contains(&entity_identifier))
+            .map(|archetype| archetype.iter())
+            .flatten()
+            .par_bridge()
+            .for_each(move |entity| {
+                callback(entity);
+            });
+    }
+
+    /// Iterate over all entities with a specific archetype type
+    /// Use every entity that contains the provided entity type
+    /// Also map components to the order of provided entity type
+    /// identifier
     ///
     /// # Arguments
     /// * `entity_identifier` - The entity type identifier
@@ -82,6 +116,8 @@ impl EntityManager {
 
     /// Iterate over all entities with a specific archetype type with mutability
     /// Use every entity that contains the provided entity type
+    /// Also map components to the order of provided entity type
+    /// identifier
     ///
     /// # Arguments
     /// * `entity_identifier` - The entity type identifier
@@ -181,7 +217,30 @@ impl EntityManager {
 
 impl IntrospectMethods<Serialized> for EntityManager {
     fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
-        vec![]
+        let service_manager = self.service_manager.clone();
+
+        vec![MethodInfo {
+            name: "for_each_entity".to_string(),
+            args: vec!["[String]".to_string(), "fn".to_string()],
+            return_type: None,
+            call: MethodCaller::Const(Arc::new(move |this, args| {
+                let this = cast_service::<EntityManager>(this);
+                assert_argument_count("for_each", 2, &args)?;
+
+                let arg1 = cast_argument("for_each", 0, &args, |arg| arg.as_string_array())?;
+                let arg2 = cast_argument("for_each", 1, &args, |arg| arg.as_callback())?;
+
+                let service_manager = service_manager.clone();
+                this.for_each_entity(EntityTypeIdentifier(arg1), move |entity| {
+                    match arg2(service_manager.clone(), vec![Serialized::Entity(entity)]) {
+                        Ok(_) => (),
+                        Err(err) => log_introspect_error(&err),
+                    };
+                });
+
+                Ok(None)
+            })),
+        }]
     }
 }
 

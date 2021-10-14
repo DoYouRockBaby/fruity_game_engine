@@ -45,7 +45,7 @@ impl Archetype {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn get(&self, entity_id: EntityId) -> Option<&EntityRwLock> {
+    pub fn get(&self, entity_id: EntityId) -> Option<EntityRwLock> {
         let index = match self.index_map.get(&entity_id) {
             Some(index) => index,
             None => return None,
@@ -59,7 +59,7 @@ impl Archetype {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn get_by_index(&self, index: usize) -> Option<&EntityRwLock> {
+    pub fn get_by_index(&self, index: usize) -> Option<EntityRwLock> {
         let entities = unsafe { &*(&self.entities as *const _) } as &EncodableVec;
         let entity = match entities.get(index) {
             Some(entity) => entity,
@@ -67,7 +67,7 @@ impl Archetype {
         };
 
         match entity.as_any_ref().downcast_ref::<EntityRwLock>() {
-            Some(entity) => Some(entity),
+            Some(entity) => Some(entity.clone()),
             None => None,
         }
     }
@@ -130,9 +130,9 @@ pub struct Iter<'s> {
 }
 
 impl<'s> Iterator for Iter<'s> {
-    type Item = &'s EntityRwLock;
+    type Item = EntityRwLock;
 
-    fn next(&mut self) -> Option<&'s EntityRwLock> {
+    fn next(&mut self) -> Option<EntityRwLock> {
         let result = self.archetype.get_by_index(self.current_index);
         self.current_index += 1;
 

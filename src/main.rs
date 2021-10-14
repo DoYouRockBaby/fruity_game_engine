@@ -116,9 +116,7 @@ fn main() {
 
     {
         let system_manager = system_manager.read().unwrap();
-        let service_manager = world.service_manager.read().unwrap();
-
-        system_manager.run(&service_manager);
+        system_manager.run();
         /*system_manager.run(&service_manager);
         system_manager.run(&service_manager);*/
     }

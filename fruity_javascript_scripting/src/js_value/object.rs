@@ -1,8 +1,13 @@
 use crate::js_value::function::JsFunction;
+use crate::js_value::utils::format_function_name_from_rust_to_js;
+use crate::js_value::utils::get_internal_object_from_v8_args;
+use crate::js_value::utils::inject_option_serialized_into_v8_return_value;
+use crate::js_value::utils::inject_serialized_into_v8_return_value;
 use crate::js_value::value::JsValue;
 use crate::serialize::deserialize::deserialize_v8;
-use crate::serialize::serialize::serialize_v8;
 use core::ffi::c_void;
+use fruity_ecs::entity::entity_rwlock::EntityRwLock;
+use fruity_ecs::serialize::serialized::Serialized;
 use fruity_ecs::service::service::Service;
 use fruity_ecs::service::service_manager::ServiceManager;
 use fruity_introspect::log_introspect_error;
@@ -18,6 +23,7 @@ use std::sync::RwLock;
 #[derive(Debug, Clone)]
 pub enum JsObjectInternalObject {
     Service(Arc<RwLock<Box<dyn Service>>>),
+    Entity(EntityRwLock),
     ServiceManager(Arc<RwLock<ServiceManager>>),
 }
 
@@ -58,7 +64,7 @@ impl JsObject {
 
         for method_info in method_infos {
             fields.insert(
-                method_info.name,
+                format_function_name_from_rust_to_js(&method_info.name),
                 Box::new(JsFunction::new(service_callback)),
             );
         }
@@ -69,8 +75,43 @@ impl JsObject {
         }
     }
 
+    pub fn from_entity(entity: EntityRwLock) -> JsObject {
+        let mut fields: HashMap<String, Box<dyn JsValue>> = HashMap::new();
+
+        fields.insert(
+            "lenght".to_string(),
+            Box::new(JsFunction::new(
+                |scope: &mut v8::HandleScope,
+                 args: v8::FunctionCallbackArguments,
+                 mut return_value: v8::ReturnValue| {
+                    // Get this an entity
+                    let internal_object = get_internal_object_from_v8_args(scope, &args);
+
+                    if let JsObjectInternalObject::Entity(entity) = internal_object {
+                        // Call the function
+                        let entity = entity.read().unwrap();
+                        let result = entity.len();
+
+                        // Return the result
+                        inject_serialized_into_v8_return_value(
+                            scope,
+                            &Serialized::USize(result),
+                            &mut return_value,
+                        );
+                    }
+                },
+            )),
+        );
+
+        JsObject {
+            fields,
+            internal_object: Some(JsObjectInternalObject::Entity(entity)),
+        }
+    }
+
     pub fn add_field<T: JsValue>(&mut self, name: &str, value: T) {
-        self.fields.insert(name.to_string(), Box::new(value));
+        self.fields
+            .insert(format_function_name_from_rust_to_js(name), Box::new(value));
     }
 
     pub fn set_func(
@@ -78,8 +119,10 @@ impl JsObject {
         name: &str,
         callback: impl v8::MapFnTo<v8::FunctionCallback>,
     ) -> &mut JsFunction {
-        self.fields
-            .insert(name.to_string(), Box::new(JsFunction::new(callback)));
+        self.fields.insert(
+            format_function_name_from_rust_to_js(name),
+            Box::new(JsFunction::new(callback)),
+        );
 
         self.fields
             .get_mut(&name.to_string())
@@ -150,10 +193,7 @@ fn service_callback(
     mut return_value: v8::ReturnValue,
 ) {
     // Get this as service
-    let this = args.this().get_internal_field(scope, 0).unwrap();
-    let this = unsafe { v8::Local::<v8::External>::cast(this) };
-    let this = this.value() as *const JsObjectInternalObject;
-    let this = unsafe { this.as_ref().unwrap() };
+    let this = get_internal_object_from_v8_args(scope, &args);
 
     if let JsObjectInternalObject::Service(this) = this {
         // Extract the current method info
@@ -172,7 +212,7 @@ fn service_callback(
 
             method_infos
                 .iter()
-                .find(|method_info| method_info.name == name)
+                .find(|method_info| format_function_name_from_rust_to_js(&method_info.name) == name)
                 .unwrap()
                 .clone()
         };
@@ -209,12 +249,6 @@ fn service_callback(
         };
 
         // Return the result
-        if let Some(result) = result {
-            let serialized = serialize_v8(scope, &result);
-
-            if let Some(serialized) = serialized {
-                return_value.set(serialized.into());
-            }
-        }
+        inject_option_serialized_into_v8_return_value(scope, &result, &mut return_value);
     }
 }

@@ -1,15 +1,18 @@
 let service1 = services.get("service1");
 let system_manager = services.get("system_manager");
+let entity_manager = services.get("entity_manager");
 
-system_manager.add_system(() => {
+service1.incrementBy(3);
+system_manager.addSystem(() => {
     console.log("JS System start");
     console.log(service1.value());
     service1.increment();
     console.log(service1.value());
-    service1.increment_by(3);
+    service1.incrementBy(3);
     console.log(service1.value());
     console.log("JS System end");
+
+    entity_manager.forEachEntity(["Component1", "Component2"], (entity) => {
+        console.log("len: " + entity.length());
+    });
 });
-/*console.log(component1_mut.int1);
-component1_mut.int1 += 2;
-console.log(component1.int1);*/
