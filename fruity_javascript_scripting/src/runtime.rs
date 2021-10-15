@@ -19,6 +19,11 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 #[derive(Debug, FruityAny)]
+pub struct JsRuntime {
+  pub(crate) handles: Arc<Mutex<JsRuntimeHandles>>,
+}
+
+#[derive(Debug, FruityAny)]
 pub struct JsRuntimeHandles {
   v8_isolate: Option<v8::OwnedIsolate>,
   global_context: v8::Global<v8::Context>,
@@ -26,11 +31,6 @@ pub struct JsRuntimeHandles {
 
 unsafe impl Send for JsRuntimeHandles {}
 unsafe impl Sync for JsRuntimeHandles {}
-
-#[derive(Debug, FruityAny)]
-pub struct JsRuntime {
-  pub(crate) handles: Arc<Mutex<JsRuntimeHandles>>,
-}
 
 impl Drop for JsRuntimeHandles {
   fn drop(&mut self) {
