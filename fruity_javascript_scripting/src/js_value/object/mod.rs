@@ -2,6 +2,7 @@ use crate::js_value::function::JsFunction;
 use crate::js_value::utils::format_function_name_from_rust_to_js;
 use crate::js_value::value::JsValue;
 use core::ffi::c_void;
+use fruity_any_derive::*;
 use rusty_v8 as v8;
 use std::any::Any;
 use std::fmt::Debug;
@@ -13,7 +14,7 @@ pub mod iterator;
 pub mod service;
 pub mod service_manager;
 
-#[derive(Debug)]
+#[derive(Debug, FruityAny)]
 pub struct JsObject {
     v8_value: v8::Global<v8::Object>,
 }
@@ -93,17 +94,5 @@ impl JsValue for JsObject {
         // Return the value
         let v8_value = v8::Local::new(scope, &self.v8_value);
         v8_value.into()
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self as &dyn Any
-    }
-
-    fn as_mut_any(&mut self) -> &mut dyn Any {
-        self as &mut dyn Any
-    }
-
-    fn as_boxed_any(self: Box<Self>) -> Box<dyn Any> {
-        self as Box<dyn Any>
     }
 }

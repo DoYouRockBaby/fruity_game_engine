@@ -1,8 +1,9 @@
 use crate::js_value::value::JsValue;
+use fruity_any_derive::*;
 use rusty_v8 as v8;
-use std::any::Any;
 use std::fmt::Debug;
 
+#[derive(FruityAny)]
 pub struct JsFunction {
     v8_value: v8::Global<v8::Function>,
 }
@@ -34,18 +35,6 @@ impl JsValue for JsFunction {
         // Return the value
         let v8_value = v8::Local::new(scope, &self.v8_value);
         v8_value.into()
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self as &dyn Any
-    }
-
-    fn as_mut_any(&mut self) -> &mut dyn Any {
-        self as &mut dyn Any
-    }
-
-    fn as_boxed_any(self: Box<Self>) -> Box<dyn Any> {
-        self as Box<dyn Any>
     }
 }
 

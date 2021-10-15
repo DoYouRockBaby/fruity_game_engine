@@ -118,79 +118,66 @@ macro_rules! as_floating {
 
 impl Serialized {
     /// Convert as i8
-    #[allow(dead_code)]
     pub fn as_i8(&self) -> Option<i8> {
         as_integer!(*self, i8)
     }
 
     /// Convert as i16
-    #[allow(dead_code)]
     pub fn as_i16(&self) -> Option<i16> {
         as_integer!(*self, i16)
     }
 
     /// Convert as i32
-    #[allow(dead_code)]
     pub fn as_i32(&self) -> Option<i32> {
         as_integer!(*self, i32)
     }
 
     /// Convert as i64
-    #[allow(dead_code)]
     pub fn as_i64(&self) -> Option<i64> {
         as_integer!(*self, i64)
     }
 
     /// Convert as isize
-    #[allow(dead_code)]
     pub fn as_isize(&self) -> Option<isize> {
         as_integer!(*self, isize)
     }
 
     /// Convert as u8
-    #[allow(dead_code)]
     pub fn as_u8(&self) -> Option<u8> {
         as_integer!(*self, u8)
     }
 
     /// Convert as u16
-    #[allow(dead_code)]
     pub fn as_u16(&self) -> Option<u16> {
         as_integer!(*self, u16)
     }
 
     /// Convert as u32
-    #[allow(dead_code)]
     pub fn as_u32(&self) -> Option<u32> {
         as_integer!(*self, u32)
     }
 
     /// Convert as u64
-    #[allow(dead_code)]
     pub fn as_u64(&self) -> Option<u64> {
         as_integer!(*self, u64)
     }
 
     /// Convert as usize
-    #[allow(dead_code)]
     pub fn as_usize(&self) -> Option<usize> {
         as_integer!(*self, usize)
     }
 
     /// Convert as f32
-    #[allow(dead_code)]
     pub fn as_f32(&self) -> Option<f32> {
         as_floating!(*self, f32)
     }
 
     /// Convert as f64
-    #[allow(dead_code)]
     pub fn as_f64(&self) -> Option<f64> {
         as_floating!(*self, f64)
     }
 
     /// Convert as bool
-    #[allow(dead_code)]
     pub fn as_bool(&self) -> Option<bool> {
         match self {
             Serialized::Bool(value) => Some(*value),
@@ -199,7 +186,6 @@ impl Serialized {
     }
 
     /// Convert as String
-    #[allow(dead_code)]
     pub fn as_string(&self) -> Option<String> {
         match self {
             Serialized::String(value) => Some(value.clone()),
@@ -208,7 +194,6 @@ impl Serialized {
     }
 
     /// Convert as String array
-    #[allow(dead_code)]
     pub fn as_string_array(&self) -> Option<Vec<String>> {
         match self {
             Serialized::Array(value) => {
@@ -219,7 +204,6 @@ impl Serialized {
     }
 
     /// Convert as a thread shared service
-    #[allow(dead_code)]
     pub fn as_service(&self) -> Option<Arc<RwLock<Box<dyn Service>>>> {
         match self {
             Serialized::Service(value) => Some(value.clone()),
@@ -228,7 +212,6 @@ impl Serialized {
     }
 
     /// Convert as a callback function
-    #[allow(dead_code)]
     pub fn as_callback(
         &self,
     ) -> Option<
