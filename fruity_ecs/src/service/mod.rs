@@ -8,6 +8,9 @@
 /// Provides collection for services
 pub mod service_manager;
 
+/// Provides a wrapper for service for a serialized object
+pub mod serialized_service;
+
 /// Provides trait for services
 pub mod service;
 

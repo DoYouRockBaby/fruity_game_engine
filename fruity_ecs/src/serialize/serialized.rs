@@ -4,6 +4,7 @@ use crate::entity::entity_rwlock::EntityRwLock;
 use crate::service::service::Service;
 use crate::ServiceManager;
 use fruity_introspect::IntrospectError;
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -56,6 +57,9 @@ pub enum Serialized {
 
     /// Array of values
     Array(Vec<Serialized>),
+
+    /// Array of values
+    Object(HashMap<String, Serialized>),
 
     /// Iterator over values
     Iterator(Arc<RwLock<dyn Iterator<Item = Serialized> + Send + Sync>>),

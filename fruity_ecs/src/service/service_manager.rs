@@ -1,14 +1,6 @@
-use crate::serialize::serialized::Serialized;
 use crate::service::service::Service;
 use crate::service::service_rwlock::ServiceRwLock;
-use crate::service::utils::assert_argument_count;
-use crate::service::utils::cast_argument;
-use crate::service::utils::cast_service;
-use crate::service::utils::cast_service_mut;
 use fruity_any_derive::*;
-use fruity_introspect::IntrospectMethods;
-use fruity_introspect::MethodCaller;
-use fruity_introspect::MethodInfo;
 use std::any::TypeId;
 use std::collections::hash_map::Iter as HashMapIter;
 use std::collections::HashMap;
@@ -109,41 +101,3 @@ impl<'s> Iterator for Iter<'s> {
         self.itern_iter.next().map(|(_, service)| service.clone())
     }
 }
-
-impl IntrospectMethods<Serialized> for ServiceManager {
-    fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
-        vec![
-            MethodInfo {
-                name: "register".to_string(),
-                args: vec!["String".to_string(), "Service".to_string()],
-                return_type: None,
-                call: MethodCaller::Mut(Arc::new(|this, args| {
-                    let this = cast_service_mut::<ServiceManager>(this);
-                    assert_argument_count("register", 1, &args)?;
-
-                    let arg1 = cast_argument("register", 0, &args, |arg| arg.as_string())?;
-                    let arg2 = cast_argument("register", 0, &args, |arg| arg.as_service())?;
-
-                    this.register_arc(&arg1, arg2);
-                    Ok(None)
-                })),
-            },
-            MethodInfo {
-                name: "get_by_name".to_string(),
-                args: vec!["String".to_string()],
-                return_type: Some("Service".to_string()),
-                call: MethodCaller::Const(Arc::new(|this, args| {
-                    let this = cast_service::<ServiceManager>(this);
-                    assert_argument_count("get_by_name", 1, &args)?;
-
-                    let arg1 = cast_argument("get_by_name", 0, &args, |arg| arg.as_string())?;
-
-                    let result = this.get_by_name(&arg1);
-                    Ok(result.map(|service| Serialized::Service(service)))
-                })),
-            },
-        ]
-    }
-}
-
-impl Service for ServiceManager {}

@@ -4,6 +4,7 @@ use fruity_ecs::serialize::serialized::Serialized;
 use fruity_ecs::service::service_manager::ServiceManager;
 use fruity_introspect::IntrospectError;
 use rusty_v8 as v8;
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -96,6 +97,46 @@ pub fn deserialize_v8<'a>(
         };
 
         return Some(Serialized::Callback(Arc::new(callback)));
+    }
+
+    if v8_value.is_object() {
+        let v8_object = v8::Local::<v8::Object>::try_from(v8_value).unwrap();
+
+        // Read all value properties recursively
+        let property_keys = v8_object.get_own_property_names(scope).unwrap();
+        let mut properties = (0..property_keys.length())
+            .filter_map(|property_index| {
+                let property_key = property_keys.get_index(scope, property_index).unwrap();
+                let property_name = property_key.to_rust_string_lossy(scope);
+                let property = v8_object.get(scope, property_key).unwrap();
+
+                deserialize_v8(scope, property).map(|serialized| (property_name, serialized))
+            })
+            .collect::<Vec<_>>();
+
+        // Read all prototype properties recursively
+        let prototype = v8_object.get_prototype(scope).unwrap();
+        let prototype = v8::Local::<v8::Object>::try_from(prototype).unwrap();
+        let property_keys = prototype.get_property_names(scope).unwrap();
+        let mut prototype_properties = (0..property_keys.length())
+            .filter_map(|property_index| {
+                let property_key = property_keys.get_index(scope, property_index).unwrap();
+                let property_name = property_key.to_rust_string_lossy(scope);
+                let property = prototype.get(scope, property_key).unwrap();
+
+                deserialize_v8(scope, property).map(|serialized| (property_name, serialized))
+            })
+            .collect::<Vec<_>>();
+
+        properties.append(&mut prototype_properties);
+
+        // Create the serialized object
+        let mut object_map = HashMap::new();
+        properties.iter().for_each(|property| {
+            object_map.insert(property.0.clone(), property.1.clone());
+        });
+
+        return Some(Serialized::Object(object_map));
     }
 
     None

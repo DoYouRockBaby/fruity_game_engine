@@ -51,6 +51,11 @@ fn main() {
         service_manager.get::<SystemManager>().unwrap()
     };
 
+    let js_runtime = {
+        let js_runtime = world.service_manager.read().unwrap();
+        js_runtime.get::<JsRuntime>().unwrap()
+    };
+
     {
         let mut entity_manager = entity_manager.write().unwrap();
         let mut system_manager = system_manager.write().unwrap();
@@ -104,8 +109,6 @@ fn main() {
 
     {
         // Javascript test
-        let service_manager = world.service_manager.read().unwrap();
-        let js_runtime = service_manager.get::<JsRuntime>().unwrap();
         let mut js_runtime = js_runtime.write().unwrap();
 
         match js_runtime.run_module("src/javascript/index.js") {

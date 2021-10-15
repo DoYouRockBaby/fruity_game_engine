@@ -114,8 +114,8 @@ impl JsRuntime {
 
   pub fn run_script(&mut self, source: &str) -> Result<(), JsError> {
     // Enter the context for compiling and running the script
-    let mut datas = self.handles.lock().unwrap();
-    let mut scope = datas.handle_scope();
+    let mut handles = self.handles.lock().unwrap();
+    let mut scope = handles.handle_scope();
     let mut try_catch = v8::TryCatch::new(&mut scope);
 
     // Prepare the sources
@@ -142,8 +142,8 @@ impl JsRuntime {
   #[allow(unused_must_use)]
   pub fn run_module(&mut self, filepath: &str) -> Result<(), JsError> {
     // Enter the context for compiling and running the script
-    let mut datas = self.handles.lock().unwrap();
-    let mut scope = datas.handle_scope();
+    let mut handles = self.handles.lock().unwrap();
+    let mut scope = handles.handle_scope();
     let mut try_catch = v8::TryCatch::new(&mut scope);
 
     // Create the module
