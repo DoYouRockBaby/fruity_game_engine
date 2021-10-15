@@ -102,6 +102,18 @@ pub fn deserialize_v8<'a>(
     if v8_value.is_object() {
         let v8_object = v8::Local::<v8::Object>::try_from(v8_value).unwrap();
 
+        // Read the class name
+        let class_name = {
+            let constructor_key = v8::String::new(scope, "constructor").unwrap();
+            let constructor_object = v8_object.get(scope, constructor_key.into())?;
+            let constructor_object = v8::Local::<v8::Object>::try_from(constructor_object).ok()?;
+
+            let name_key = v8::String::new(scope, "name").unwrap();
+            let name_string = constructor_object.get(scope, name_key.into())?;
+            let name_string = v8::Local::<v8::String>::try_from(name_string).ok()?;
+            name_string.to_rust_string_lossy(scope)
+        };
+
         // Read all value properties recursively
         let property_keys = v8_object.get_own_property_names(scope).unwrap();
         let mut properties = (0..property_keys.length())
@@ -131,12 +143,12 @@ pub fn deserialize_v8<'a>(
         properties.append(&mut prototype_properties);
 
         // Create the serialized object
-        let mut object_map = HashMap::new();
+        let mut fields = HashMap::new();
         properties.iter().for_each(|property| {
-            object_map.insert(property.0.clone(), property.1.clone());
+            fields.insert(property.0.clone(), property.1.clone());
         });
 
-        return Some(Serialized::Object(object_map));
+        return Some(Serialized::Object { class_name, fields });
     }
 
     None

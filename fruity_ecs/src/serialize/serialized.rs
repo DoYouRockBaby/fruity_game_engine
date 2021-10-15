@@ -59,7 +59,13 @@ pub enum Serialized {
     Array(Vec<Serialized>),
 
     /// Array of values
-    Object(HashMap<String, Serialized>),
+    Object {
+        /// The object class name
+        class_name: String,
+
+        /// The object fields
+        fields: HashMap<String, Serialized>,
+    },
 
     /// Iterator over values
     Iterator(Arc<RwLock<dyn Iterator<Item = Serialized> + Send + Sync>>),

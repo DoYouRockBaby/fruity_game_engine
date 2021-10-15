@@ -49,8 +49,8 @@ pub fn derive_introspect_fields(input: TokenStream) -> TokenStream {
                     fruity_introspect::FieldInfo::<fruity_ecs::serialize::serialized::Serialized> {
                         name: #name_as_string.to_string(),
                         ty: #type_as_string.to_string(),
-                        getter: |this| fruity_ecs::serialize::serialize::serialize_any(&this.downcast_ref::<#ident>().unwrap().#name).unwrap(),
-                        setter: |this, value| {
+                        getter: std::sync::Arc::new(|this| fruity_ecs::serialize::serialize::serialize_any(&this.downcast_ref::<#ident>().unwrap().#name).unwrap()),
+                        setter: std::sync::Arc::new(|this, value| {
                             let this = this.downcast_mut::<#ident>().unwrap();
 
                             match value.#type_converter_as_string () {
@@ -66,7 +66,7 @@ pub fn derive_introspect_fields(input: TokenStream) -> TokenStream {
                                     );
                                 }
                             }
-                        },
+                        }),
                     },
                 }
             });

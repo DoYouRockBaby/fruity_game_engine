@@ -253,6 +253,7 @@ dependencies = [
  "fruity_any",
  "fruity_any_derive",
  "fruity_collections",
+ "fruity_collections_derive",
  "fruity_ecs_derive",
  "fruity_introspect",
  "hashbrown",

@@ -3,7 +3,7 @@ use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
 
 #[proc_macro_derive(FruityAny)]
-pub fn derive_encodable_any(input: TokenStream) -> TokenStream {
+pub fn derive_fruity_any(input: TokenStream) -> TokenStream {
     let DeriveInput { ident, .. } = parse_macro_input!(input);
 
     let output = quote! {

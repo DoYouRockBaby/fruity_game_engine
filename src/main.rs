@@ -6,7 +6,6 @@ mod system1;
 use crate::service1::Service1;
 use crate::system1::system1_untyped;
 use fruity_any_derive::*;
-use fruity_collections_derive::*;
 use fruity_ecs::entity::entity::EntityId;
 use fruity_ecs::entity::entity_manager::EntityManager;
 use fruity_ecs::initialize as initialize_ecs;
@@ -20,14 +19,14 @@ use fruity_javascript_scripting::initialize as initialize_javascript;
 use fruity_javascript_scripting::runtime::JsRuntime;
 use pretty_env_logger::formatted_builder;
 
-#[derive(Debug, Clone, Component, Encodable, IntrospectFields, FruityAny)]
+#[derive(Debug, Clone, Component, IntrospectFields, FruityAny)]
 pub struct Component1 {
     pub float1: f64,
     // pub str1: String,
     pub int1: i32,
 }
 
-#[derive(Debug, Clone, Component, Encodable, IntrospectFields, FruityAny)]
+#[derive(Debug, Clone, Component, IntrospectFields, FruityAny)]
 pub struct Component2 {
     pub float1: f64,
 }

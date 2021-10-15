@@ -33,8 +33,8 @@ impl IntrospectMethods<Serialized> for SerializedService {
     fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
         let this = self.clone();
 
-        if let Serialized::Object(object) = this.serialized {
-            object
+        if let Serialized::Object { fields, .. } = this.serialized {
+            fields
                 .iter()
                 .filter_map(|(key, value)| match value {
                     Serialized::Callback(callback) => Some((key, callback)),

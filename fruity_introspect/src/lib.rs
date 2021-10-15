@@ -84,7 +84,7 @@ pub struct FieldInfo<T> {
     /// # Arguments
     /// * `property` - The field name
     ///
-    pub getter: fn(this: &dyn Any) -> T,
+    pub getter: Arc<dyn Fn(&dyn Any) -> T>,
 
     /// Function to set one of the entry field
     ///
@@ -92,7 +92,7 @@ pub struct FieldInfo<T> {
     /// * `property` - The field name
     /// * `value` - The new field value as Any
     ///
-    pub setter: fn(this: &mut dyn Any, value: T),
+    pub setter: Arc<dyn Fn(&mut dyn Any, T)>,
 }
 
 /// Trait to implement static introspection to an object
