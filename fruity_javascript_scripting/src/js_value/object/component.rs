@@ -1,19 +1,13 @@
 use crate::js_value::utils::get_intern_value_from_v8_properties;
 use crate::js_value::utils::inject_serialized_into_v8_return_value;
-use crate::runtime::JsRuntimeHandles;
 use crate::serialize::deserialize::deserialize_v8;
 use crate::JsObject;
 use fruity_ecs::component::component_rwlock::ComponentRwLock;
 use rusty_v8 as v8;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 impl JsObject {
-    pub fn from_component(
-        handles: Arc<Mutex<JsRuntimeHandles>>,
-        component: ComponentRwLock,
-    ) -> JsObject {
-        let object = JsObject::from_intern_value(handles, component);
+    pub fn from_component(scope: &mut v8::HandleScope, component: ComponentRwLock) -> JsObject {
+        let mut object = JsObject::from_intern_value(scope, component.clone());
 
         let field_infos = {
             let reader = component.read().unwrap();
@@ -21,12 +15,7 @@ impl JsObject {
         };
 
         for field_info in field_infos {
-            object.add_property(
-                handles,
-                &field_info.name,
-                component_getter,
-                component_setter,
-            );
+            object.add_property(scope, &field_info.name, component_getter, component_setter);
         }
 
         object
@@ -39,7 +28,7 @@ fn component_getter(
     args: v8::PropertyCallbackArguments,
     mut return_value: v8::ReturnValue,
 ) {
-    // Get the component
+    // Get this as a component
     let intern_value = get_intern_value_from_v8_properties::<ComponentRwLock>(scope, &args);
 
     if let Some(component) = intern_value {
@@ -72,7 +61,7 @@ fn component_setter(
     value: v8::Local<v8::Value>,
     args: v8::PropertyCallbackArguments,
 ) {
-    // Get the component
+    // Get this as a component
     let intern_value = get_intern_value_from_v8_properties::<ComponentRwLock>(scope, &args);
 
     if let Some(component) = intern_value {

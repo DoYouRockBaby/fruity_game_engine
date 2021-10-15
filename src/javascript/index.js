@@ -1,8 +1,12 @@
+console.log("1");
 const service1 = services.get("service1");
+console.log("2");
 const systemManager = services.get("system_manager");
 const entityManager = services.get("entity_manager");
 
-//service1.incrementBy(3);
+console.log("1");
+service1.incrementBy(3);
+console.log("2");
 systemManager.addSystem(() => {
     /*console.log("JS System start");
     console.log(service1.value());

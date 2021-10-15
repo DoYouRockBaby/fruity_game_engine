@@ -1,3 +1,4 @@
+use crate::js_value::value::JsValue;
 use crate::JsObject;
 use fruity_ecs::serialize::serialized::Serialized;
 use rusty_v8 as v8;
@@ -24,8 +25,8 @@ pub fn serialize_v8<'a>(
         Serialized::Bool(value) => Some(v8::Boolean::new(scope, *value).into()),
         Serialized::String(value) => Some(v8::String::new(scope, value).unwrap().into()),
         Serialized::Service(value) => {
-            let mut object = JsObject::from_service(value.clone());
-            Some(object.build_v8_object(scope).into())
+            let mut object = JsObject::from_service(scope, value.clone());
+            Some(object.as_v8(scope).into())
         }
         Serialized::Array(value) => {
             let elements = value
@@ -36,21 +37,21 @@ pub fn serialize_v8<'a>(
             Some(v8::Array::new_with_elements(scope, &elements).into())
         }
         Serialized::Iterator(value) => {
-            let mut object = JsObject::from_iterator(value.clone());
-            Some(object.build_v8_object(scope).into())
+            let mut object = JsObject::from_iterator(scope, value.clone());
+            Some(object.as_v8(scope).into())
         }
         Serialized::Callback(_) => None,
         Serialized::Entity(value) => {
-            let mut object = JsObject::from_entity(value.clone());
-            Some(object.build_v8_object(scope).into())
+            let mut object = JsObject::from_entity(scope, value.clone());
+            Some(object.as_v8(scope).into())
         }
         Serialized::Component(value) => {
-            let mut object = JsObject::from_component(value.clone());
-            Some(object.build_v8_object(scope).into())
+            let mut object = JsObject::from_component(scope, value.clone());
+            Some(object.as_v8(scope).into())
         }
         Serialized::ComponentList(value) => {
-            let mut object = JsObject::from_component_list(value.clone());
-            Some(object.build_v8_object(scope).into())
+            let mut object = JsObject::from_component_list(scope, value.clone());
+            Some(object.as_v8(scope).into())
         }
     }
 }

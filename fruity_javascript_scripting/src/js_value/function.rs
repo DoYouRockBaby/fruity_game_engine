@@ -1,10 +1,7 @@
 use crate::js_value::value::JsValue;
-use crate::runtime::JsRuntimeHandles;
 use rusty_v8 as v8;
 use std::any::Any;
 use std::fmt::Debug;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 pub struct JsFunction {
     v8_value: v8::Global<v8::Function>,
@@ -15,29 +12,27 @@ unsafe impl Sync for JsFunction {}
 
 impl JsFunction {
     pub fn new(
-        handles: Arc<Mutex<JsRuntimeHandles>>,
+        scope: &mut v8::HandleScope,
+        name: &str,
         callback: impl v8::MapFnTo<v8::FunctionCallback>,
     ) -> JsFunction {
-        // Get scope
-        let handles_lock = handles.lock().unwrap();
-        let scope = handles_lock.handle_scope();
-
         // Create the function
-        let function = v8::Function::builder(callback).build(&mut scope).unwrap();
-        let function = v8::Global::new(&mut scope, function);
+        let name = v8::String::new(scope, name).unwrap();
+        let function = v8::Function::builder(callback)
+            .data(name.into())
+            .build(scope)
+            .unwrap();
+
+        let function = v8::Global::new(scope, function);
 
         JsFunction { v8_value: function }
     }
 }
 
 impl JsValue for JsFunction {
-    fn as_v8(&mut self, handles: Arc<Mutex<JsRuntimeHandles>>) -> v8::Local<v8::Value> {
-        // Get scope
-        let handles = handles.lock().unwrap();
-        let scope = handles.handle_scope();
-
+    fn as_v8<'a>(&mut self, scope: &mut v8::HandleScope<'a>) -> v8::Local<'a, v8::Value> {
         // Return the value
-        let v8_value = v8::Local::new(&mut scope, self.v8_value);
+        let v8_value = v8::Local::new(scope, &self.v8_value);
         v8_value.into()
     }
 

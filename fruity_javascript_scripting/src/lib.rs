@@ -16,7 +16,6 @@ mod serialize;
 pub fn initialize(world: &World) {
     let mut runtime = JsRuntime::new();
     configure_services(&mut runtime, world);
-    runtime.update_global_bindings();
 
     let mut service_manager = world.service_manager.write().unwrap();
     service_manager.register("js_runtime", runtime);

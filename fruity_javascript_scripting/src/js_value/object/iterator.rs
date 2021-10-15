@@ -1,22 +1,20 @@
 use crate::js_value::utils::get_intern_value_from_v8_args;
-use crate::runtime::JsRuntimeHandles;
 use crate::serialize::serialize::serialize_v8;
 use crate::JsObject;
 use fruity_ecs::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 use std::convert::TryFrom;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::sync::RwLock;
 
 impl JsObject {
     pub fn from_iterator(
-        handles: Arc<Mutex<JsRuntimeHandles>>,
+        scope: &mut v8::HandleScope,
         iterator: Arc<RwLock<dyn Iterator<Item = Serialized> + Send + Sync>>,
     ) -> JsObject {
-        let object = JsObject::from_intern_value(handles, iterator);
-        object.set_func(handles, "next", iterator_next_callback);
-        object.set_func(handles, "for_each", iterator_for_each_callback);
+        let mut object = JsObject::from_intern_value(scope, iterator);
+        object.set_func(scope, "next", iterator_next_callback);
+        object.set_func(scope, "for_each", iterator_for_each_callback);
 
         object
     }
@@ -27,7 +25,7 @@ fn iterator_next_callback(
     args: v8::FunctionCallbackArguments,
     mut return_value: v8::ReturnValue,
 ) {
-    // Get this an entity
+    // Get this a as an iterator
     let intern_value = get_intern_value_from_v8_args::<
         Arc<RwLock<dyn Iterator<Item = Serialized> + Send + Sync>>,
     >(scope, &args);
@@ -78,7 +76,7 @@ fn iterator_next_callback(
 fn iterator_for_each_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
-    mut return_value: v8::ReturnValue,
+    mut _return_value: v8::ReturnValue,
 ) {
     let this = args.this();
 

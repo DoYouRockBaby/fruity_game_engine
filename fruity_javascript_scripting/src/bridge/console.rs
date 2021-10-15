@@ -4,10 +4,13 @@ use crate::JsRuntime;
 use rusty_v8 as v8;
 
 pub fn configure_console(runtime: &mut JsRuntime) {
-    let global_object = runtime.global_object();
-    let mut console_object = JsObject::new();
+    let mut handles = runtime.handles.lock().unwrap();
+    let mut global_object = handles.global_object();
+    let scope = &mut handles.handle_scope();
+    let mut console_object = JsObject::new(scope);
 
     console_object.set_func(
+        scope,
         "log",
         |scope: &mut v8::HandleScope,
          args: v8::FunctionCallbackArguments,
@@ -17,6 +20,7 @@ pub fn configure_console(runtime: &mut JsRuntime) {
     );
 
     console_object.set_func(
+        scope,
         "debug",
         |scope: &mut v8::HandleScope,
          args: v8::FunctionCallbackArguments,
@@ -26,6 +30,7 @@ pub fn configure_console(runtime: &mut JsRuntime) {
     );
 
     console_object.set_func(
+        scope,
         "info",
         |scope: &mut v8::HandleScope,
          args: v8::FunctionCallbackArguments,
@@ -35,6 +40,7 @@ pub fn configure_console(runtime: &mut JsRuntime) {
     );
 
     console_object.set_func(
+        scope,
         "warn",
         |scope: &mut v8::HandleScope,
          args: v8::FunctionCallbackArguments,
@@ -44,6 +50,7 @@ pub fn configure_console(runtime: &mut JsRuntime) {
     );
 
     console_object.set_func(
+        scope,
         "error",
         |scope: &mut v8::HandleScope,
          args: v8::FunctionCallbackArguments,
@@ -52,7 +59,7 @@ pub fn configure_console(runtime: &mut JsRuntime) {
         },
     );
 
-    global_object.add_field("console", console_object);
+    global_object.add_field(scope, "console", console_object);
 }
 
 fn print_args<F: Fn(&str)>(

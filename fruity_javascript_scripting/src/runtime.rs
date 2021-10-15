@@ -22,7 +22,6 @@ use std::sync::Mutex;
 pub struct JsRuntimeHandles {
   v8_isolate: Option<v8::OwnedIsolate>,
   global_context: v8::Global<v8::Context>,
-  global_object: JsObject,
 }
 
 unsafe impl Send for JsRuntimeHandles {}
@@ -53,8 +52,14 @@ impl JsRuntimeHandles {
     self.v8_isolate.as_mut().unwrap()
   }
 
-  pub fn global_object(&mut self) -> &mut JsObject {
-    &mut self.global_object
+  pub fn global_object(&mut self) -> JsObject {
+    let global_context = self.global_context();
+    let isolate = self.v8_isolate();
+    let mut scope = v8::HandleScope::with_context(isolate, global_context.clone());
+
+    let global = global_context.get(&mut scope).global(&mut scope);
+    let global = v8::Global::new(&mut scope, global);
+    JsObject::from_v8(global)
   }
 }
 
@@ -90,19 +95,11 @@ impl JsRuntime {
 
     isolate.set_slot(Rc::new(RefCell::new(ModuleMap::new())));
 
-    // Create the global object
-    let mut scope = v8::HandleScope::with_context(&mut isolate, global_context.clone());
-
-    let global = { global_context.get(&mut scope).global(&mut scope) };
-    let global = v8::Global::new(&mut scope, global);
-    let global_object = JsObject { v8_value: global };
-
     // Create the runtime
     let mut runtime = JsRuntime {
       handles: Arc::new(Mutex::new(JsRuntimeHandles {
         v8_isolate: Some(isolate),
         global_context,
-        global_object,
       })),
     };
 
@@ -171,20 +168,6 @@ impl JsRuntime {
     }
 
     Ok(())
-  }
-
-  pub fn update_global_bindings(&mut self) {
-    let mut datas = self.handles.lock().unwrap();
-    let global_context = datas.global_context();
-
-    let mut scope =
-      v8::HandleScope::with_context(datas.v8_isolate.as_mut().unwrap(), global_context.clone());
-
-    let global = { global_context.get(&mut scope).global(&mut scope) };
-
-    for (name, field) in self.global_object.fields.iter_mut() {
-      field.register(&mut scope, &name, global);
-    }
   }
 
   pub fn module_map(isolate: &v8::Isolate) -> Rc<RefCell<ModuleMap>> {
