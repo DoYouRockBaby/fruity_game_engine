@@ -12,11 +12,29 @@ class Service2 {
     }
 }
 
-services.register("service2", new Service2());
+class ComponentJs1 {
+    constructor(str1, int1) {
+        this.str1 = str1;
+        this.int1 = int1;
+    }
+}
+
+//services.register("service2", new Service2());
 const systemManager = services.get("system_manager");
+const entityManager = services.get("entity_manager");
+
+entityManager.create([new ComponentJs1("test1", 3)]);
 
 systemManager.addSystem(() => {
-    const service1 = services.get("service1");
+    console.log("JS System");
+    entityManager
+        .iterComponents(["ComponentJs1"])
+        .forEach(components => {
+            console.log(components.get(0).int1, components.get(0).str1);
+            components.get(0).int1 += 1;
+        });
+
+    /*const service1 = services.get("service1");
     const service2 = services.get("service2");
     const entityManager = services.get("entity_manager");
 
@@ -26,7 +44,7 @@ systemManager.addSystem(() => {
     console.log("1");
 
     service1.incrementBy(3);
-    console.log("2");
+    console.log("2");*/
 
     /*console.log("JS System start");
     console.log(service1.value());

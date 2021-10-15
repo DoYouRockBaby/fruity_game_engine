@@ -10,20 +10,32 @@ use std::sync::Arc;
 /// A wrapper for components that come from scripting languages as serialized
 #[derive(Debug, Clone, FruityAny)]
 pub struct SerializedComponent {
-    component_type: String,
     serialized: Serialized,
+}
+
+impl SerializedComponent {
+    /// Returns a SerializedComponent
+    pub fn new(serialized: Serialized) -> SerializedComponent {
+        SerializedComponent {
+            serialized
+        }
+    }
 }
 
 impl Component for SerializedComponent {
     fn get_component_type(&self) -> String {
-        self.component_type.clone()
+        if let Serialized::Object { class_name, .. } = &self.serialized {
+            class_name.clone()
+        } else {
+            "unknown".to_string()
+        }
     }
 
     fn encode_size(&self) -> usize {
         std::mem::size_of::<Self>()
     }
 
-    fn encode(self: Box<Self>, buffer: &mut [u8]) {
+    fn encode(&self, buffer: &mut [u8]) {
         let encoded = unsafe {
             std::slice::from_raw_parts(
                 (&*self as *const Self) as *const u8,
@@ -63,7 +75,7 @@ impl IntrospectFields<Serialized> for SerializedComponent {
                         ty: "".to_string(),
                         getter: Arc::new(move |this| {
                             let this = this.downcast_ref::<SerializedComponent>().unwrap();
-                            if let Serialized::Object { fields, .. } = this.serialized.clone() {
+                            if let Serialized::Object { fields, .. } = &this.serialized {
                                 return fields.get(&key1).unwrap().clone();
                             } else {
                                 panic!("A getter try to access an inexistant property in serialized component, should never be reached");
@@ -71,7 +83,7 @@ impl IntrospectFields<Serialized> for SerializedComponent {
                         }),
                         setter: Arc::new(move |this, value| {
                             let this = this.downcast_mut::<SerializedComponent>().unwrap();
-                            if let Serialized::Object { fields, .. } = &mut this.serialized.clone() {
+                            if let Serialized::Object { fields, .. } = &mut this.serialized {
                                 fields.insert(key2.clone(), value);
                             } else {
                                 panic!("A setter try to access an inexistant property in serialized component, should never be reached");

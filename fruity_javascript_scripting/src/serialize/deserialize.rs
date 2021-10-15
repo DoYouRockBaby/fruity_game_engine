@@ -40,13 +40,9 @@ pub fn deserialize_v8<'a>(
     if v8_value.is_array() {
         let v8_array = v8::Local::<v8::Array>::try_from(v8_value).unwrap();
         let serialized_array = (0..v8_array.length())
-            .map(|index| {
-                Serialized::String(
-                    v8_array
-                        .get_index(scope, index)
-                        .unwrap()
-                        .to_rust_string_lossy(scope),
-                )
+            .filter_map(|index| {
+                let v8_element = v8_array.get_index(scope, index).unwrap();
+                deserialize_v8(scope, v8_element)
             })
             .collect::<Vec<_>>();
 

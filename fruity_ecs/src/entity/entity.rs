@@ -118,6 +118,9 @@ impl Entity {
         let object_buffer = &mut self.buffer[object_buffer_start..object_buffer_end];
 
         component.encode(object_buffer);
+
+        // Forget the component
+        std::mem::forget(component);
     }
 
     /// Returns the entity type identifier of the entity

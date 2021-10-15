@@ -11,6 +11,7 @@ use crate::service::service::Service;
 use crate::service::utils::assert_argument_count;
 use crate::service::utils::cast_argument;
 use crate::service::utils::cast_service;
+use crate::service::utils::cast_service_mut;
 use crate::ServiceManager;
 use crate::World;
 use fruity_any_derive::*;
@@ -231,6 +232,22 @@ impl EntityManager {
 impl IntrospectMethods<Serialized> for EntityManager {
     fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
         vec![
+            MethodInfo {
+                name: "create".to_string(),
+                args: vec!["[Object]".to_string()],
+                return_type: None,
+                call: MethodCaller::Mut(Arc::new(move |this, args| {
+                    let this = unsafe { &mut *(this as *mut _) } as &mut dyn Any;
+                    let this = cast_service_mut::<EntityManager>(this);
+                    assert_argument_count("create", 1, &args)?;
+
+                    let arg1 = cast_argument("create", 0, &args, |arg| arg.as_component_array())?;
+
+                    this.create(Entity::new(arg1));
+
+                    Ok(None)
+                })),
+            },
             MethodInfo {
                 name: "iter_entities".to_string(),
                 args: vec!["[String]".to_string()],

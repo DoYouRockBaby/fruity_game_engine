@@ -1,5 +1,7 @@
+use crate::component::component::Component;
 use crate::component::component_list_rwlock::ComponentListRwLock;
 use crate::component::component_rwlock::ComponentRwLock;
+use crate::component::serialized_component::SerializedComponent;
 use crate::entity::entity_rwlock::EntityRwLock;
 use crate::service::service::Service;
 use crate::ServiceManager;
@@ -203,12 +205,33 @@ impl Serialized {
         }
     }
 
+    /// Convert as String
+    pub fn as_component(&self) -> Option<Box<dyn Component>> {
+        match self {
+            Serialized::Object { .. } => Some(Box::new(SerializedComponent::new(self.clone()))),
+            _ => None,
+        }
+    }
+
     /// Convert as String array
     pub fn as_string_array(&self) -> Option<Vec<String>> {
         match self {
             Serialized::Array(value) => {
                 Some(value.iter().filter_map(|elem| elem.as_string()).collect())
             }
+            _ => None,
+        }
+    }
+
+    /// Convert as component array
+    pub fn as_component_array(&self) -> Option<Vec<Box<dyn Component>>> {
+        match self {
+            Serialized::Array(value) => Some(
+                value
+                    .iter()
+                    .filter_map(|elem| elem.as_component())
+                    .collect(),
+            ),
             _ => None,
         }
     }

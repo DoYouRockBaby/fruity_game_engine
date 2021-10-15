@@ -22,7 +22,7 @@ pub trait Component: IntrospectFields<Serialized> + Debug + Send + Sync + Fruity
     /// # Arguments
     /// * `buffer` - The buffer where the encoder will write, should match the result of encode_size function
     ///
-    fn encode(self: Box<Self>, buffer: &mut [u8]);
+    fn encode(&self, buffer: &mut [u8]);
 
     /// Return a function to decode an object from byte array to an any reference
     fn get_decoder(&self) -> ComponentDecoder;
