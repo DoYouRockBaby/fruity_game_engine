@@ -1,28 +1,28 @@
-use crate::js_value::object::JsObjectInternalObject;
 use crate::serialize::serialize::serialize_v8;
 use convert_case::Case;
 use convert_case::Casing;
 use fruity_ecs::serialize::serialized::Serialized;
 use rusty_v8 as v8;
+use std::any::Any;
 
-pub fn get_internal_object_from_v8_args<'a>(
+pub fn get_intern_value_from_v8_args<'a, T: Any>(
     scope: &mut v8::HandleScope,
     args: &v8::FunctionCallbackArguments,
-) -> &'a JsObjectInternalObject {
-    let this = args.this().get_internal_field(scope, 0).unwrap();
+) -> Option<&'a T> {
+    let this = args.this().get_internal_field(scope, 0)?;
     let this = unsafe { v8::Local::<v8::External>::cast(this) };
-    let internal_object = this.value() as *const JsObjectInternalObject;
-    unsafe { internal_object.as_ref().unwrap() }
+    let internal_object = this.value() as *const T;
+    unsafe { internal_object.as_ref() }
 }
 
-pub fn get_internal_object_from_v8_property_args<'a>(
+pub fn get_intern_value_from_v8_properties<'a, T: Any>(
     scope: &mut v8::HandleScope,
     args: &v8::PropertyCallbackArguments,
-) -> &'a JsObjectInternalObject {
-    let this = args.this().get_internal_field(scope, 0).unwrap();
+) -> Option<&'a T> {
+    let this = args.this().get_internal_field(scope, 0)?;
     let this = unsafe { v8::Local::<v8::External>::cast(this) };
-    let internal_object = this.value() as *const JsObjectInternalObject;
-    unsafe { internal_object.as_ref().unwrap() }
+    let internal_object = this.value() as *const T;
+    unsafe { internal_object.as_ref() }
 }
 
 pub fn inject_serialized_into_v8_return_value<'a>(

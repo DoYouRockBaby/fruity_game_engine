@@ -19,38 +19,27 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 #[derive(Debug, FruityAny)]
-pub struct JsRuntimeDatas {
+pub struct JsRuntimeHandles {
   v8_isolate: Option<v8::OwnedIsolate>,
   global_context: v8::Global<v8::Context>,
-}
-
-unsafe impl Send for JsRuntimeDatas {}
-unsafe impl Sync for JsRuntimeDatas {}
-
-#[derive(Debug, FruityAny)]
-pub struct JsRuntime {
-  pub(crate) datas: Arc<Mutex<JsRuntimeDatas>>,
   global_object: JsObject,
 }
 
-impl Drop for JsRuntimeDatas {
+unsafe impl Send for JsRuntimeHandles {}
+unsafe impl Sync for JsRuntimeHandles {}
+
+#[derive(Debug, FruityAny)]
+pub struct JsRuntime {
+  pub(crate) handles: Arc<Mutex<JsRuntimeHandles>>,
+}
+
+impl Drop for JsRuntimeHandles {
   fn drop(&mut self) {
     std::mem::forget(self.v8_isolate.take());
   }
 }
 
-impl Drop for JsRuntime {
-  fn drop(&mut self) {
-    std::mem::drop(self);
-
-    unsafe {
-      v8::V8::dispose();
-    }
-    v8::V8::shutdown_platform();
-  }
-}
-
-impl JsRuntimeDatas {
+impl JsRuntimeHandles {
   pub fn handle_scope(&mut self) -> v8::HandleScope {
     let context = self.global_context();
     v8::HandleScope::with_context(self.v8_isolate(), context)
@@ -62,6 +51,21 @@ impl JsRuntimeDatas {
 
   pub fn v8_isolate(&mut self) -> &mut v8::OwnedIsolate {
     self.v8_isolate.as_mut().unwrap()
+  }
+
+  pub fn global_object(&mut self) -> &mut JsObject {
+    &mut self.global_object
+  }
+}
+
+impl Drop for JsRuntime {
+  fn drop(&mut self) {
+    std::mem::drop(self);
+
+    unsafe {
+      v8::V8::dispose();
+    }
+    v8::V8::shutdown_platform();
   }
 }
 
@@ -86,12 +90,20 @@ impl JsRuntime {
 
     isolate.set_slot(Rc::new(RefCell::new(ModuleMap::new())));
 
+    // Create the global object
+    let mut scope = v8::HandleScope::with_context(&mut isolate, global_context.clone());
+
+    let global = { global_context.get(&mut scope).global(&mut scope) };
+    let global = v8::Global::new(&mut scope, global);
+    let global_object = JsObject { v8_value: global };
+
+    // Create the runtime
     let mut runtime = JsRuntime {
-      datas: Arc::new(Mutex::new(JsRuntimeDatas {
+      handles: Arc::new(Mutex::new(JsRuntimeHandles {
         v8_isolate: Some(isolate),
         global_context,
+        global_object,
       })),
-      global_object: JsObject::new(),
     };
 
     configure_console(&mut runtime);
@@ -105,7 +117,7 @@ impl JsRuntime {
 
   pub fn run_script(&mut self, source: &str) -> Result<(), JsError> {
     // Enter the context for compiling and running the script
-    let mut datas = self.datas.lock().unwrap();
+    let mut datas = self.handles.lock().unwrap();
     let mut scope = datas.handle_scope();
     let mut try_catch = v8::TryCatch::new(&mut scope);
 
@@ -133,7 +145,7 @@ impl JsRuntime {
   #[allow(unused_must_use)]
   pub fn run_module(&mut self, filepath: &str) -> Result<(), JsError> {
     // Enter the context for compiling and running the script
-    let mut datas = self.datas.lock().unwrap();
+    let mut datas = self.handles.lock().unwrap();
     let mut scope = datas.handle_scope();
     let mut try_catch = v8::TryCatch::new(&mut scope);
 
@@ -161,12 +173,8 @@ impl JsRuntime {
     Ok(())
   }
 
-  pub fn global_object(&mut self) -> &mut JsObject {
-    &mut self.global_object
-  }
-
   pub fn update_global_bindings(&mut self) {
-    let mut datas = self.datas.lock().unwrap();
+    let mut datas = self.handles.lock().unwrap();
     let global_context = datas.global_context();
 
     let mut scope =

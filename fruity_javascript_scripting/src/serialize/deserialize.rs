@@ -65,7 +65,7 @@ pub fn deserialize_v8<'a>(
             };
 
             let js_runtime = js_runtime.read().unwrap();
-            let lock = js_runtime.datas.try_lock();
+            let lock = js_runtime.handles.try_lock();
             match lock {
                 Ok(mut datas) => {
                     let mut scope = datas.handle_scope();

@@ -6,31 +6,28 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-pub struct JsFunction {
-    v8_value: v8::Global<v8::Function>,
+pub struct JsString {
+    v8_value: v8::Global<v8::String>,
 }
 
-unsafe impl Send for JsFunction {}
-unsafe impl Sync for JsFunction {}
+unsafe impl Send for JsString {}
+unsafe impl Sync for JsString {}
 
-impl JsFunction {
-    pub fn new(
-        handles: Arc<Mutex<JsRuntimeHandles>>,
-        callback: impl v8::MapFnTo<v8::FunctionCallback>,
-    ) -> JsFunction {
+impl JsString {
+    pub fn new(handles: Arc<Mutex<JsRuntimeHandles>>, string: &str) -> JsString {
         // Get scope
         let handles_lock = handles.lock().unwrap();
         let scope = handles_lock.handle_scope();
 
-        // Create the function
-        let function = v8::Function::builder(callback).build(&mut scope).unwrap();
-        let function = v8::Global::new(&mut scope, function);
+        // Create the value
+        let v8_value = v8::String::new(&mut scope, string).unwrap();
+        let v8_value = v8::Global::new(&mut scope, v8_value);
 
-        JsFunction { v8_value: function }
+        JsString { v8_value }
     }
 }
 
-impl JsValue for JsFunction {
+impl JsValue for JsString {
     fn as_v8(&mut self, handles: Arc<Mutex<JsRuntimeHandles>>) -> v8::Local<v8::Value> {
         // Get scope
         let handles = handles.lock().unwrap();
@@ -54,7 +51,7 @@ impl JsValue for JsFunction {
     }
 }
 
-impl Debug for JsFunction {
+impl Debug for JsString {
     fn fmt(
         &self,
         _formatter: &mut std::fmt::Formatter<'_>,
