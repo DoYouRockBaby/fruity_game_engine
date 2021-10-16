@@ -15,7 +15,6 @@ use fruity_ecs::world::World;
 use fruity_ecs::*;
 use fruity_ecs_derive::*;
 use fruity_introspect_derive::*;
-use fruity_javascript_scripting::error::log_js_error;
 use fruity_javascript_scripting::initialize as initialize_javascript;
 use fruity_javascript_scripting::javascript_engine::JavascriptEngine;
 use fruity_windows::initialize as initialize_windows;

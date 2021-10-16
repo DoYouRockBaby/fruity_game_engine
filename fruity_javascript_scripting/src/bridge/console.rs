@@ -4,9 +4,8 @@ use crate::JsRuntime;
 use rusty_v8 as v8;
 
 pub fn configure_console(runtime: &mut JsRuntime) {
-    let mut handles = runtime.handles.lock().unwrap();
-    let mut global_object = handles.global_object();
-    let scope = &mut handles.handle_scope();
+    let mut global_object = runtime.global_object();
+    let scope = &mut runtime.handle_scope();
     let mut console_object = JsObject::new(scope);
 
     console_object.set_func(

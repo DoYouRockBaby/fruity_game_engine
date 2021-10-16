@@ -14,54 +14,16 @@ use std::cell::RefCell;
 use std::path::Path;
 use std::path::PathBuf;
 use std::rc::Rc;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 #[derive(Debug)]
 pub struct JsRuntime {
-  pub(crate) handles: Arc<Mutex<JsRuntimeHandles>>,
-}
-
-#[derive(Debug)]
-pub struct JsRuntimeHandles {
   v8_isolate: Option<v8::OwnedIsolate>,
   global_context: v8::Global<v8::Context>,
 }
 
-impl Drop for JsRuntimeHandles {
-  fn drop(&mut self) {
-    std::mem::forget(self.v8_isolate.take());
-  }
-}
-
-impl JsRuntimeHandles {
-  pub fn handle_scope(&mut self) -> v8::HandleScope {
-    let context = self.global_context();
-    v8::HandleScope::with_context(self.v8_isolate(), context)
-  }
-
-  pub fn global_context(&self) -> v8::Global<v8::Context> {
-    self.global_context.clone()
-  }
-
-  pub fn v8_isolate(&mut self) -> &mut v8::OwnedIsolate {
-    self.v8_isolate.as_mut().unwrap()
-  }
-
-  pub fn global_object(&mut self) -> JsObject {
-    let global_context = self.global_context();
-    let isolate = self.v8_isolate();
-    let mut scope = v8::HandleScope::with_context(isolate, global_context.clone());
-
-    let global = global_context.get(&mut scope).global(&mut scope);
-    let global = v8::Global::new(&mut scope, global);
-    JsObject::from_v8(global)
-  }
-}
-
 impl Drop for JsRuntime {
   fn drop(&mut self) {
-    std::mem::drop(self);
+    std::mem::forget(self.v8_isolate.take());
 
     unsafe {
       v8::V8::dispose();
@@ -93,10 +55,8 @@ impl JsRuntime {
 
     // Create the runtime
     let mut runtime = JsRuntime {
-      handles: Arc::new(Mutex::new(JsRuntimeHandles {
-        v8_isolate: Some(isolate),
-        global_context,
-      })),
+      v8_isolate: Some(isolate),
+      global_context,
     };
 
     configure_console(&mut runtime);
@@ -108,10 +68,32 @@ impl JsRuntime {
     isolate
   }
 
+  pub fn handle_scope(&mut self) -> v8::HandleScope {
+    let context = self.global_context();
+    v8::HandleScope::with_context(self.v8_isolate(), context)
+  }
+
+  pub fn global_context(&self) -> v8::Global<v8::Context> {
+    self.global_context.clone()
+  }
+
+  pub fn v8_isolate(&mut self) -> &mut v8::OwnedIsolate {
+    self.v8_isolate.as_mut().unwrap()
+  }
+
+  pub fn global_object(&mut self) -> JsObject {
+    let global_context = self.global_context();
+    let isolate = self.v8_isolate();
+    let mut scope = v8::HandleScope::with_context(isolate, global_context.clone());
+
+    let global = global_context.get(&mut scope).global(&mut scope);
+    let global = v8::Global::new(&mut scope, global);
+    JsObject::from_v8(global)
+  }
+
   pub fn run_script(&mut self, source: &str) -> Result<(), JsError> {
     // Enter the context for compiling and running the script
-    let mut handles = self.handles.lock().unwrap();
-    let mut scope = handles.handle_scope();
+    let mut scope = self.handle_scope();
     let mut try_catch = v8::TryCatch::new(&mut scope);
 
     // Prepare the sources
@@ -138,8 +120,7 @@ impl JsRuntime {
   #[allow(unused_must_use)]
   pub fn run_module(&mut self, filepath: &str) -> Result<(), JsError> {
     // Enter the context for compiling and running the script
-    let mut handles = self.handles.lock().unwrap();
-    let mut scope = handles.handle_scope();
+    let mut scope = self.handle_scope();
     let mut try_catch = v8::TryCatch::new(&mut scope);
 
     // Create the module
@@ -167,8 +148,7 @@ impl JsRuntime {
   }
 
   pub fn run_stored_callback(&mut self, identifier: CallbackIdentifier, args: Vec<Serialized>) {
-    let mut data = self.handles.lock().unwrap();
-    let mut scope = data.handle_scope();
+    let mut scope = self.handle_scope();
     let context = v8::Context::new(&mut scope);
 
     // Get the function from a specific global object
@@ -196,9 +176,7 @@ impl JsRuntime {
 
 /// Called by V8 during `JsRuntime::instantiate_module`.
 ///
-/// This function borrows `ModuleMap` from the isolate slot,
-/// so it is crucial to ensure there are no existing borrows
-/// of `ModuleMap` when `JsRuntime::instantiate_module` is called.
+/// This function is made to load module files recursively
 pub fn module_resolve_callback<'s>(
   context: v8::Local<'s, v8::Context>,
   specifier: v8::Local<'s, v8::String>,
