@@ -82,7 +82,7 @@ impl JsRuntime {
     v8::V8::initialize();
 
     // Create isolate
-    let params = v8::Isolate::create_params().heap_limits(0, 3 * 1024 * 1024);
+    let params = v8::Isolate::create_params();
     let isolate = v8::Isolate::new(params);
     let mut isolate = JsRuntime::setup_isolate(isolate);
 
