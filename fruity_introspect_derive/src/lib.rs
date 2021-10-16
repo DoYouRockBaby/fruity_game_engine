@@ -55,14 +55,13 @@ pub fn derive_introspect_fields(input: TokenStream) -> TokenStream {
 
                             match value.#type_converter_as_string () {
                                 Some(value) => {
-                                    this.#name = value.clone();
+                                    this.#name = value
                                 }
                                 None => {
                                     log::error!(
-                                        "Expected a {} for property {:?}, got {:#?}",
+                                        "Expected a {} for property {:?}",
                                         #type_as_string,
                                         #name_as_string,
-                                        value
                                     );
                                 }
                             }

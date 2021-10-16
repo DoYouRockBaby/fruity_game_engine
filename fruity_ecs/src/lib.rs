@@ -10,6 +10,7 @@
 //! - Entities represent any object stored in the ecs, entities are composed of components, in a game engine, a game object for example
 //! - Components are structure where the datas are stored
 
+use crate::component::components_factory::ComponentsFactory;
 use crate::entity::entity_manager::EntityManager;
 use crate::service::service_manager::ServiceManager;
 use crate::system::system_manager::SystemManager;
@@ -54,4 +55,5 @@ pub fn initialize(world: &World) {
     let mut service_manager = world.service_manager.write().unwrap();
     service_manager.register("entity_manager", EntityManager::new(world));
     service_manager.register("system_manager", SystemManager::new(world));
+    service_manager.register("components_factory", ComponentsFactory::new());
 }

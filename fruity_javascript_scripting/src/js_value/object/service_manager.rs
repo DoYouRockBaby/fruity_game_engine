@@ -1,4 +1,4 @@
-use crate::js_value::utils::get_intern_value_from_v8_args;
+use crate::js_value::utils::get_intern_value_from_v8_object;
 use crate::js_value::utils::inject_option_serialized_into_v8_return_value;
 use crate::serialize::deserialize::deserialize_v8;
 use crate::JsObject;
@@ -14,7 +14,7 @@ impl JsObject {
         scope: &mut v8::HandleScope,
         service_manager: Arc<RwLock<ServiceManager>>,
     ) -> JsObject {
-        let mut object = JsObject::from_intern_value(scope, service_manager);
+        let mut object = JsObject::from_intern_value(scope, "ServiceManager", service_manager);
         object.set_func(scope, "register", service_manager_register_callback);
         object.set_func(scope, "get", service_manager_get_callback);
 
@@ -28,7 +28,8 @@ fn service_manager_register_callback(
     mut _return_value: v8::ReturnValue,
 ) {
     // Get this as an service_manager
-    let intern_value = get_intern_value_from_v8_args::<Arc<RwLock<ServiceManager>>>(scope, &args);
+    let intern_value =
+        get_intern_value_from_v8_object::<Arc<RwLock<ServiceManager>>>(scope, args.this());
 
     if let Some(service_manager) = intern_value {
         // Build the arguments
@@ -53,7 +54,8 @@ fn service_manager_get_callback(
     mut return_value: v8::ReturnValue,
 ) {
     // Get this as an service_manager
-    let intern_value = get_intern_value_from_v8_args::<Arc<RwLock<ServiceManager>>>(scope, &args);
+    let intern_value =
+        get_intern_value_from_v8_object::<Arc<RwLock<ServiceManager>>>(scope, args.this());
 
     if let Some(service_manager) = intern_value {
         // Build the arguments

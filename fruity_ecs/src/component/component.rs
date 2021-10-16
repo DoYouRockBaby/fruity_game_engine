@@ -17,6 +17,9 @@ pub trait Component: IntrospectFields<Serialized> + Debug + Send + Sync + Fruity
     /// Return the size that is required to encode the object
     fn encode_size(&self) -> usize;
 
+    /// Duplicate this component
+    fn duplicate(&self) -> Box<dyn Component>;
+
     /// Encode the object to a byte array
     ///
     /// # Arguments
@@ -29,4 +32,10 @@ pub trait Component: IntrospectFields<Serialized> + Debug + Send + Sync + Fruity
 
     /// Return a function to decode an object from byte array to an any mutable reference
     fn get_decoder_mut(&self) -> ComponentDecoderMut;
+}
+
+impl Clone for Box<dyn Component> {
+    fn clone(&self) -> Self {
+        self.duplicate()
+    }
 }

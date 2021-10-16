@@ -35,6 +35,10 @@ impl Component for SerializedComponent {
         std::mem::size_of::<Self>()
     }
 
+    fn duplicate(&self) -> Box<dyn Component> {
+        Box::new(self.clone())
+    }
+
     fn encode(&self, buffer: &mut [u8]) {
         let encoded = unsafe {
             std::slice::from_raw_parts(
@@ -63,14 +67,14 @@ impl Component for SerializedComponent {
 
 impl IntrospectFields<Serialized> for SerializedComponent {
     fn get_field_infos(&self) -> Vec<FieldInfo<Serialized>> {
-        if let Serialized::Object { fields, .. } = self.serialized.clone() {
+        if let Serialized::Object { fields, .. } = &self.serialized {
             fields
                 .iter()
                 .map(|(key, _field)| {
                     let key1 = key.clone();
                     let key2 = key.clone();
                     
-                    FieldInfo {
+                    FieldInfo::<Serialized> {
                         name: key.clone(),
                         ty: "".to_string(),
                         getter: Arc::new(move |this| {

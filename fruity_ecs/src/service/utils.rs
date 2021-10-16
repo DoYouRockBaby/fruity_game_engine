@@ -42,10 +42,9 @@ pub fn assert_argument_count(
     Ok(())
 }
 
-/// Cast a serialized argument from an argument list
+/// Cast a serialized argument from an argument list, take the first one
 ///
 /// # Arguments
-/// * `index` - The index of the argument
 /// * `args` - The argument list
 /// * `converter` - The converter that will turn the argument to a typed one
 ///
@@ -53,17 +52,15 @@ pub fn assert_argument_count(
 /// * `T` - The type to cast
 /// * `F` - The function type for the converter
 ///
-pub fn cast_argument<T, F: Fn(&Serialized) -> Option<T>>(
+pub fn cast_next_argument<T, F: Fn(Serialized) -> Option<T>>(
     method: &str,
-    index: usize,
-    args: &Vec<Serialized>,
+    args: &mut Vec<Serialized>,
     converter: F,
 ) -> Result<T, IntrospectError> {
-    match converter(args.get(index).unwrap()) {
+    match converter(args.remove(0)) {
         Some(arg) => Ok(arg),
         None => Err(IntrospectError::IncorrectArgument {
             method: method.to_string(),
-            arg_index: index,
         }),
     }
 }

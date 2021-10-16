@@ -17,6 +17,10 @@ pub fn derive_component(input: TokenStream) -> TokenStream {
                 std::mem::size_of::<Self>()
             }
 
+            fn duplicate(&self) -> Box<dyn fruity_ecs::component::component::Component> {
+                Box::new(self.clone())
+            }
+
             fn encode(&self, buffer: &mut [u8]) {
                 let encoded = unsafe {
                     std::slice::from_raw_parts(

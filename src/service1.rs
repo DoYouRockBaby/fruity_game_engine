@@ -2,7 +2,7 @@ use fruity_any_derive::*;
 use fruity_ecs::serialize::serialized::Serialized;
 use fruity_ecs::service::service::Service;
 use fruity_ecs::service::utils::assert_argument_count;
-use fruity_ecs::service::utils::cast_argument;
+use fruity_ecs::service::utils::cast_next_argument;
 use fruity_ecs::service::utils::cast_service;
 use fruity_ecs::service::utils::cast_service_mut;
 use fruity_introspect::IntrospectMethods;
@@ -52,11 +52,11 @@ impl IntrospectMethods<Serialized> for Service1 {
                 name: "increment_by".to_string(),
                 args: vec!["i32".to_string()],
                 return_type: None,
-                call: MethodCaller::Mut(Arc::new(|this, args| {
+                call: MethodCaller::Mut(Arc::new(|this, mut args| {
                     let this = cast_service_mut::<Service1>(this);
                     assert_argument_count("increment_by", 1, &args)?;
 
-                    let arg1 = cast_argument("increment_by", 0, &args, |arg| arg.as_i32())?;
+                    let arg1 = cast_next_argument("increment_by", &mut args, |arg| arg.as_i32())?;
 
                     this.increment_by(arg1);
                     Ok(None)

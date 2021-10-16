@@ -1,4 +1,4 @@
-use crate::js_value::utils::get_intern_value_from_v8_args;
+use crate::js_value::utils::get_intern_value_from_v8_object;
 use crate::serialize::serialize::serialize_v8;
 use crate::JsObject;
 use fruity_ecs::serialize::serialized::Serialized;
@@ -12,7 +12,7 @@ impl JsObject {
         scope: &mut v8::HandleScope,
         iterator: Arc<RwLock<dyn Iterator<Item = Serialized> + Send + Sync>>,
     ) -> JsObject {
-        let mut object = JsObject::from_intern_value(scope, iterator);
+        let mut object = JsObject::from_intern_value(scope, "Iterator", iterator);
         object.set_func(scope, "next", iterator_next_callback);
         object.set_func(scope, "for_each", iterator_for_each_callback);
 
@@ -26,9 +26,9 @@ fn iterator_next_callback(
     mut return_value: v8::ReturnValue,
 ) {
     // Get this a as an iterator
-    let intern_value = get_intern_value_from_v8_args::<
+    let intern_value = get_intern_value_from_v8_object::<
         Arc<RwLock<dyn Iterator<Item = Serialized> + Send + Sync>>,
-    >(scope, &args);
+    >(scope, args.this());
 
     if let Some(iterator) = intern_value {
         // Call the function

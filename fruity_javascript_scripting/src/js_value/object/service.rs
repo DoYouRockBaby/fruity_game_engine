@@ -1,5 +1,5 @@
 use crate::js_value::utils::format_function_name_from_rust_to_js;
-use crate::js_value::utils::get_intern_value_from_v8_args;
+use crate::js_value::utils::get_intern_value_from_v8_object;
 use crate::js_value::utils::inject_option_serialized_into_v8_return_value;
 use crate::serialize::deserialize::deserialize_v8;
 use crate::JsObject;
@@ -15,7 +15,7 @@ impl JsObject {
         scope: &mut v8::HandleScope,
         service: Arc<RwLock<Box<dyn Service>>>,
     ) -> JsObject {
-        let mut object = JsObject::from_intern_value(scope, service.clone());
+        let mut object = JsObject::from_intern_value(scope, "Service", service.clone());
 
         let method_infos = {
             let reader = service.read().unwrap();
@@ -40,7 +40,8 @@ fn service_callback(
     mut return_value: v8::ReturnValue,
 ) {
     // Get this as a service
-    let intern_value = get_intern_value_from_v8_args::<Arc<RwLock<Box<dyn Service>>>>(scope, &args);
+    let intern_value =
+        get_intern_value_from_v8_object::<Arc<RwLock<Box<dyn Service>>>>(scope, args.this());
 
     if let Some(service) = intern_value {
         // Extract the current method info

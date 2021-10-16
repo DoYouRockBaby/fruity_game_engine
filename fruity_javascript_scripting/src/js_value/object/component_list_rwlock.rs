@@ -1,4 +1,4 @@
-use crate::js_value::utils::get_intern_value_from_v8_args;
+use crate::js_value::utils::get_intern_value_from_v8_object;
 use crate::js_value::utils::inject_serialized_into_v8_return_value;
 use crate::serialize::deserialize::deserialize_v8;
 use crate::JsObject;
@@ -7,11 +7,11 @@ use fruity_ecs::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 
 impl JsObject {
-    pub fn from_component_list(
+    pub fn from_component_list_rwlock(
         scope: &mut v8::HandleScope,
         component_list: ComponentListRwLock,
     ) -> JsObject {
-        let mut object = JsObject::from_intern_value(scope, component_list);
+        let mut object = JsObject::from_intern_value(scope, "ComponentListRwLock", component_list);
         object.set_func(scope, "get", component_list_get_callback);
         object.set_func(scope, "length", component_list_length_callback);
 
@@ -25,11 +25,11 @@ fn component_list_get_callback(
     mut return_value: v8::ReturnValue,
 ) {
     // Get this as a component list
-    let intern_value = get_intern_value_from_v8_args::<ComponentListRwLock>(scope, &args);
+    let intern_value = get_intern_value_from_v8_object::<ComponentListRwLock>(scope, args.this());
 
     if let Some(component_list) = intern_value {
         // Build the arguments
-        let deserialized_args = (0..args.length())
+        let mut deserialized_args = (0..args.length())
             .filter_map(|index| deserialize_v8(scope, args.get(index)))
             .collect::<Vec<_>>();
 
@@ -41,7 +41,7 @@ fn component_list_get_callback(
             return ();
         }
 
-        let arg1 = deserialized_args.get(0).unwrap();
+        let arg1 = deserialized_args.remove(0);
         let arg1 = if let Some(arg) = arg1.as_usize() {
             arg
         } else {
@@ -56,7 +56,7 @@ fn component_list_get_callback(
         if let Some(result) = result {
             inject_serialized_into_v8_return_value(
                 scope,
-                &Serialized::Component(result),
+                &Serialized::ComponentRwLock(result),
                 &mut return_value,
             );
         }
@@ -69,7 +69,7 @@ fn component_list_length_callback(
     mut return_value: v8::ReturnValue,
 ) {
     // Get this as a component list
-    let intern_value = get_intern_value_from_v8_args::<ComponentListRwLock>(scope, &args);
+    let intern_value = get_intern_value_from_v8_object::<ComponentListRwLock>(scope, args.this());
 
     if let Some(component_list) = intern_value {
         // Call the function

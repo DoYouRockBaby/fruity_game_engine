@@ -6,6 +6,7 @@ mod system1;
 use crate::service1::Service1;
 use crate::system1::system1_untyped;
 use fruity_any_derive::*;
+use fruity_ecs::component::components_factory::ComponentsFactory;
 use fruity_ecs::entity::entity::EntityId;
 use fruity_ecs::entity::entity_manager::EntityManager;
 use fruity_ecs::initialize as initialize_ecs;
@@ -51,13 +52,28 @@ fn main() {
     };
 
     let js_runtime = {
-        let js_runtime = world.service_manager.read().unwrap();
-        js_runtime.get::<JsRuntime>().unwrap()
+        let service_manager = world.service_manager.read().unwrap();
+        service_manager.get::<JsRuntime>().unwrap()
+    };
+
+    let components_factory = {
+        let service_manager = world.service_manager.read().unwrap();
+        service_manager.get::<ComponentsFactory>().unwrap()
     };
 
     {
+        let mut components_factory = components_factory.write().unwrap();
         let mut entity_manager = entity_manager.write().unwrap();
         let mut system_manager = system_manager.write().unwrap();
+
+        components_factory.add("Component1", || {
+            Box::new(Component1 {
+                float1: 0.0,
+                int1: 0,
+            })
+        });
+
+        components_factory.add("Component2", || Box::new(Component2 { float1: 0.0 }));
 
         let component1 = Component1 {
             float1: 3.14,

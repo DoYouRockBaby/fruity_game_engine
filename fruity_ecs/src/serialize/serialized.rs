@@ -91,11 +91,14 @@ pub enum Serialized {
     /// Entity RwLock
     Entity(EntityRwLock),
 
+    /// Component
+    Component(Box<dyn Component>),
+
     /// Component RwLock
-    Component(ComponentRwLock),
+    ComponentRwLock(ComponentRwLock),
 
     /// Component list RwLock
-    ComponentList(ComponentListRwLock),
+    ComponentListRwLock(ComponentListRwLock),
 }
 
 macro_rules! as_integer {
@@ -111,18 +114,27 @@ macro_rules! as_integer {
             Serialized::U32(value) => $type::try_from(value).ok(),
             Serialized::U64(value) => $type::try_from(value).ok(),
             Serialized::USize(value) => $type::try_from(value).ok(),
+            Serialized::F32(value) => $type::try_from(value as i64).ok(),
+            Serialized::F64(value) => $type::try_from(value as i64).ok(),
             _ => None,
         }
     };
 }
-
 macro_rules! as_floating {
     ( $value:expr, $type:ident ) => {
         match $value {
-            Serialized::I8(value) => $type::try_from(value).ok(),
-            Serialized::I16(value) => $type::try_from(value).ok(),
-            Serialized::U8(value) => $type::try_from(value).ok(),
-            Serialized::U16(value) => $type::try_from(value).ok(),
+            Serialized::I8(value) => Some(value as $type),
+            Serialized::I16(value) => Some(value as $type),
+            Serialized::I32(value) => Some(value as $type),
+            Serialized::I64(value) => Some(value as $type),
+            Serialized::ISize(value) => Some(value as $type),
+            Serialized::U8(value) => Some(value as $type),
+            Serialized::U16(value) => Some(value as $type),
+            Serialized::U32(value) => Some(value as $type),
+            Serialized::U64(value) => Some(value as $type),
+            Serialized::USize(value) => Some(value as $type),
+            Serialized::F32(value) => Some(value as $type),
+            Serialized::F64(value) => Some(value as $type),
             _ => None,
         }
     };
@@ -130,105 +142,109 @@ macro_rules! as_floating {
 
 impl Serialized {
     /// Convert as i8
-    pub fn as_i8(&self) -> Option<i8> {
-        as_integer!(*self, i8)
+    pub fn as_i8(self) -> Option<i8> {
+        as_integer!(self, i8)
     }
 
     /// Convert as i16
-    pub fn as_i16(&self) -> Option<i16> {
-        as_integer!(*self, i16)
+    pub fn as_i16(self) -> Option<i16> {
+        as_integer!(self, i16)
     }
 
     /// Convert as i32
-    pub fn as_i32(&self) -> Option<i32> {
-        as_integer!(*self, i32)
+    pub fn as_i32(self) -> Option<i32> {
+        as_integer!(self, i32)
     }
 
     /// Convert as i64
-    pub fn as_i64(&self) -> Option<i64> {
-        as_integer!(*self, i64)
+    pub fn as_i64(self) -> Option<i64> {
+        as_integer!(self, i64)
     }
 
     /// Convert as isize
-    pub fn as_isize(&self) -> Option<isize> {
-        as_integer!(*self, isize)
+    pub fn as_isize(self) -> Option<isize> {
+        as_integer!(self, isize)
     }
 
     /// Convert as u8
-    pub fn as_u8(&self) -> Option<u8> {
-        as_integer!(*self, u8)
+    pub fn as_u8(self) -> Option<u8> {
+        as_integer!(self, u8)
     }
 
     /// Convert as u16
-    pub fn as_u16(&self) -> Option<u16> {
-        as_integer!(*self, u16)
+    pub fn as_u16(self) -> Option<u16> {
+        as_integer!(self, u16)
     }
 
     /// Convert as u32
-    pub fn as_u32(&self) -> Option<u32> {
-        as_integer!(*self, u32)
+    pub fn as_u32(self) -> Option<u32> {
+        as_integer!(self, u32)
     }
 
     /// Convert as u64
-    pub fn as_u64(&self) -> Option<u64> {
-        as_integer!(*self, u64)
+    pub fn as_u64(self) -> Option<u64> {
+        as_integer!(self, u64)
     }
 
     /// Convert as usize
-    pub fn as_usize(&self) -> Option<usize> {
-        as_integer!(*self, usize)
+    pub fn as_usize(self) -> Option<usize> {
+        as_integer!(self, usize)
     }
 
     /// Convert as f32
-    pub fn as_f32(&self) -> Option<f32> {
-        as_floating!(*self, f32)
+    pub fn as_f32(self) -> Option<f32> {
+        as_floating!(self, f32)
     }
 
     /// Convert as f64
-    pub fn as_f64(&self) -> Option<f64> {
-        as_floating!(*self, f64)
+    pub fn as_f64(self) -> Option<f64> {
+        as_floating!(self, f64)
     }
 
     /// Convert as bool
-    pub fn as_bool(&self) -> Option<bool> {
+    pub fn as_bool(self) -> Option<bool> {
         match self {
-            Serialized::Bool(value) => Some(*value),
+            Serialized::Bool(value) => Some(value),
             _ => None,
         }
     }
 
     /// Convert as String
-    pub fn as_string(&self) -> Option<String> {
+    pub fn as_string(self) -> Option<String> {
         match self {
-            Serialized::String(value) => Some(value.clone()),
+            Serialized::String(value) => Some(value),
             _ => None,
         }
     }
 
     /// Convert as String
-    pub fn as_component(&self) -> Option<Box<dyn Component>> {
+    pub fn as_component(self) -> Option<Box<dyn Component>> {
         match self {
-            Serialized::Object { .. } => Some(Box::new(SerializedComponent::new(self.clone()))),
+            Serialized::Object { .. } => Some(Box::new(SerializedComponent::new(self))),
+            Serialized::Component(component) => Some(component.duplicate()),
             _ => None,
         }
     }
 
     /// Convert as String array
-    pub fn as_string_array(&self) -> Option<Vec<String>> {
+    pub fn as_string_array(self) -> Option<Vec<String>> {
         match self {
-            Serialized::Array(value) => {
-                Some(value.iter().filter_map(|elem| elem.as_string()).collect())
-            }
+            Serialized::Array(value) => Some(
+                value
+                    .into_iter()
+                    .filter_map(|elem| elem.as_string())
+                    .collect(),
+            ),
             _ => None,
         }
     }
 
     /// Convert as component array
-    pub fn as_component_array(&self) -> Option<Vec<Box<dyn Component>>> {
+    pub fn as_component_array(self) -> Option<Vec<Box<dyn Component>>> {
         match self {
             Serialized::Array(value) => Some(
                 value
-                    .iter()
+                    .into_iter()
                     .filter_map(|elem| elem.as_component())
                     .collect(),
             ),
@@ -237,7 +253,7 @@ impl Serialized {
     }
 
     /// Convert as a thread shared service
-    pub fn as_service(&self) -> Option<Arc<RwLock<Box<dyn Service>>>> {
+    pub fn as_service(self) -> Option<Arc<RwLock<Box<dyn Service>>>> {
         match self {
             Serialized::Service(value) => Some(value.clone()),
             _ => None,
@@ -246,7 +262,7 @@ impl Serialized {
 
     /// Convert as a callback function
     pub fn as_callback(
-        &self,
+        self,
     ) -> Option<
         Arc<
             dyn Fn(

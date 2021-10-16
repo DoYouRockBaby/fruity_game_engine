@@ -19,8 +19,6 @@ pub enum IntrospectError {
     IncorrectArgument {
         /// The method name
         method: String,
-        /// The argument index
-        arg_index: usize,
     },
     /// Error that occure when you try to call a function with the wrong number of arguments
     WrongNumberArguments {
@@ -41,11 +39,10 @@ pub fn log_introspect_error(err: &IntrospectError) {
         IntrospectError::UnknownMethod(method) => {
             log::error!("Failed to call an unknown method named {}", method)
         }
-        IntrospectError::IncorrectArgument { method, arg_index } => {
+        IntrospectError::IncorrectArgument { method } => {
             log::error!(
-                "Failed to call method {} cause the argument n°{} have a wrong type",
+                "Failed to call method {} cause an argument have a wrong type",
                 method,
-                arg_index
             )
         }
         IntrospectError::WrongNumberArguments {

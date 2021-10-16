@@ -13,24 +13,30 @@ class Service2 {
 }
 
 class ComponentJs1 {
-    constructor(str1, int1) {
-        this.str1 = str1;
-        this.int1 = int1;
+    constructor(args) {
+        Object.assign(this, args);
     }
 }
 
 //services.register("service2", new Service2());
 const systemManager = services.get("system_manager");
 const entityManager = services.get("entity_manager");
+const componentFactory = services.get("components_factory");
 
-entityManager.create([new ComponentJs1("test1", 3)]);
+entityManager.create([new ComponentJs1({ str1: "test1", int1: 3 })]);
+
+const test_component_1 = componentFactory.instantiate("Component1", { float1: 10.101, int1: 30 });
+console.log(test_component_1.int1, test_component_1.float1);
+
+entityManager.create([test_component_1, new ComponentJs1({ str1: "test1", int1: 3 })]);
 
 systemManager.addSystem(() => {
     console.log("JS System");
     entityManager
-        .iterComponents(["ComponentJs1"])
+        .iterComponents(["ComponentJs1", "Component1"])
         .forEach(components => {
             console.log(components.get(0).int1, components.get(0).str1);
+            console.log(components.get(1).int1, components.get(1).float1);
             components.get(0).int1 += 1;
         });
 

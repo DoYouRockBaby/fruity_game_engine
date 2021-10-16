@@ -1,17 +1,21 @@
-use crate::js_value::utils::check_object_intern_identifier;
 use crate::js_value::utils::get_intern_value_from_v8_object;
-use crate::js_value::utils::get_intern_value_from_v8_object_mut;
 use crate::js_value::utils::inject_serialized_into_v8_return_value;
 use crate::serialize::deserialize::deserialize_v8;
 use crate::JsObject;
-use fruity_ecs::component::component::Component;
+use fruity_ecs::component::component_rwlock::ComponentRwLock;
 use rusty_v8 as v8;
 
 impl JsObject {
-    pub fn from_component(scope: &mut v8::HandleScope, component: Box<dyn Component>) -> JsObject {
-        let mut object = JsObject::from_intern_value(scope, "Component", component.clone());
+    pub fn from_component_rwlock(
+        scope: &mut v8::HandleScope,
+        component: ComponentRwLock,
+    ) -> JsObject {
+        let mut object = JsObject::from_intern_value(scope, "ComponentRwLock", component.clone());
 
-        let field_infos = component.get_field_infos();
+        let field_infos = {
+            let reader = component.read().unwrap();
+            reader.get_field_infos()
+        };
 
         for field_info in field_infos {
             object.add_property(scope, &field_info.name, component_getter, component_setter);
@@ -28,11 +32,13 @@ fn component_getter(
     mut return_value: v8::ReturnValue,
 ) {
     // Get this as a component
-    let intern_value = get_intern_value_from_v8_object::<Box<dyn Component>>(scope, args.this());
+    let intern_value = get_intern_value_from_v8_object::<ComponentRwLock>(scope, args.this());
 
     if let Some(component) = intern_value {
         // Extract the current field info
         let field_info = {
+            let component = component.read().unwrap();
+
             let field_infos = component.get_field_infos();
             let name = name.to_string(scope).unwrap().to_rust_string_lossy(scope);
 
@@ -44,6 +50,7 @@ fn component_getter(
         };
 
         // Call the function
+        let component = component.read().unwrap();
         let result = (field_info.getter)(component.as_any_ref());
 
         // Return the result
@@ -58,12 +65,13 @@ fn component_setter(
     args: v8::PropertyCallbackArguments,
 ) {
     // Get this as a component
-    let intern_value =
-        get_intern_value_from_v8_object_mut::<Box<dyn Component>>(scope, args.this());
+    let intern_value = get_intern_value_from_v8_object::<ComponentRwLock>(scope, args.this());
 
     if let Some(component) = intern_value {
         // Extract the current field info
         let field_info = {
+            let component = component.read().unwrap();
+
             let field_infos = component.get_field_infos();
             let name = name.to_string(scope).unwrap().to_rust_string_lossy(scope);
 
@@ -78,16 +86,7 @@ fn component_setter(
         let deserialized_arg = deserialize_v8(scope, value).unwrap();
 
         // Call the function
+        let mut component = component.write().unwrap();
         (field_info.setter)(component.as_any_mut(), deserialized_arg);
     }
-}
-
-pub fn deserialize_v8_component(
-    scope: &mut v8::HandleScope,
-    v8_value: v8::Local<v8::Value>,
-) -> Option<Box<dyn Component>> {
-    let v8_object = check_object_intern_identifier(scope, v8_value, "Component")?;
-    let intern_value = get_intern_value_from_v8_object::<Box<dyn Component>>(scope, v8_object)?;
-
-    Some(intern_value.clone())
 }

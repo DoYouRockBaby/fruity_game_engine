@@ -8,7 +8,8 @@ use std::any::Any;
 use std::fmt::Debug;
 
 pub mod component;
-pub mod component_list;
+pub mod component_list_rwlock;
+pub mod component_rwlock;
 pub mod entity;
 pub mod iterator;
 pub mod service;
@@ -34,17 +35,23 @@ impl JsObject {
         JsObject { v8_value }
     }
 
-    pub fn from_intern_value<T: Any>(scope: &mut v8::HandleScope, intern_value: T) -> JsObject {
+    pub fn from_intern_value<T: Any>(
+        scope: &mut v8::HandleScope,
+        identifier: &str,
+        intern_value: T,
+    ) -> JsObject {
         // Set the intern value
         let object_template = v8::ObjectTemplate::new(scope);
-        object_template.set_internal_field_count(1);
+        object_template.set_internal_field_count(2);
 
         let object = object_template.new_instance(scope).unwrap();
 
         let intern_value = Box::new(intern_value);
         let ref_value = v8::External::new(scope, Box::leak(intern_value) as *mut T as *mut c_void);
+        let identifier = v8::String::new(scope, identifier).unwrap();
 
         object.set_internal_field(0, ref_value.into());
+        object.set_internal_field(1, identifier.into());
 
         // Create the object
         JsObject {
