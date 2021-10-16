@@ -1,8 +1,10 @@
+use crate::js_value::utils::check_object_intern_identifier;
 use crate::js_value::utils::format_function_name_from_rust_to_js;
 use crate::js_value::utils::get_intern_value_from_v8_object;
 use crate::js_value::utils::inject_option_serialized_into_v8_return_value;
 use crate::serialize::deserialize::deserialize_v8;
 use crate::JsObject;
+use fruity_ecs::serialize::serialized::Serialized;
 use fruity_ecs::service::service::Service;
 use fruity_introspect::log_introspect_error;
 use fruity_introspect::MethodCaller;
@@ -23,10 +25,12 @@ impl JsObject {
         };
 
         for method_info in method_infos {
+            let function_name = format_function_name_from_rust_to_js(&method_info.name);
             object.set_func(
                 scope,
-                &format_function_name_from_rust_to_js(&method_info.name),
+                &function_name,
                 service_callback,
+                Some(Serialized::String(function_name.clone())),
             );
         }
 
@@ -95,4 +99,15 @@ fn service_callback(
         // Return the result
         inject_option_serialized_into_v8_return_value(scope, &result, &mut return_value);
     }
+}
+
+pub fn deserialize_v8_service(
+    scope: &mut v8::HandleScope,
+    v8_value: v8::Local<v8::Value>,
+) -> Option<Arc<RwLock<Box<dyn Service>>>> {
+    let v8_object = check_object_intern_identifier(scope, v8_value, "Service")?;
+    let intern_value =
+        get_intern_value_from_v8_object::<Arc<RwLock<Box<dyn Service>>>>(scope, v8_object)?;
+
+    Some(intern_value.clone())
 }

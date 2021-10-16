@@ -65,6 +65,12 @@ impl ComponentsFactory {
 
         Some(component)
     }
+
+    /// Iterate over all component factories
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &fn() -> Box<dyn Component>)> {
+        let test = self.factories.iter();
+        test
+    }
 }
 
 impl IntrospectMethods<Serialized> for ComponentsFactory {

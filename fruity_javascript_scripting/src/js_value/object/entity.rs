@@ -8,7 +8,7 @@ use rusty_v8 as v8;
 impl JsObject {
     pub fn from_entity(scope: &mut v8::HandleScope, entity: EntityRwLock) -> JsObject {
         let mut object = JsObject::from_intern_value(scope, "Entity", entity);
-        object.set_func(scope, "length", entity_length_callback);
+        object.set_func(scope, "length", entity_length_callback, None);
 
         object
     }

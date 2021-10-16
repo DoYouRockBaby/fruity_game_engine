@@ -25,7 +25,9 @@ const componentFactory = services.get("components_factory");
 
 entityManager.create([new ComponentJs1({ str1: "test1", int1: 3 })]);
 
-const test_component_1 = componentFactory.instantiate("Component1", { float1: 10.101, int1: 30 });
+// const test_component_1 = componentFactory.instantiate("Component1", { float1: 10.101, int1: 30 });
+const test_component_1 = new Component1({ float1: 10.101, int1: 30 });
+
 console.log(test_component_1.int1, test_component_1.float1);
 
 entityManager.create([test_component_1, new ComponentJs1({ str1: "test1", int1: 3 })]);

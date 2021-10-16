@@ -13,8 +13,8 @@ impl JsObject {
         iterator: Arc<RwLock<dyn Iterator<Item = Serialized> + Send + Sync>>,
     ) -> JsObject {
         let mut object = JsObject::from_intern_value(scope, "Iterator", iterator);
-        object.set_func(scope, "next", iterator_next_callback);
-        object.set_func(scope, "for_each", iterator_for_each_callback);
+        object.set_func(scope, "next", iterator_next_callback, None);
+        object.set_func(scope, "for_each", iterator_for_each_callback, None);
 
         object
     }

@@ -1,5 +1,7 @@
 use crate::js_value::value::JsValue;
+use crate::serialize::serialize::serialize_v8;
 use fruity_any_derive::*;
+use fruity_ecs::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 use std::fmt::Debug;
 
@@ -14,15 +16,19 @@ unsafe impl Sync for JsFunction {}
 impl JsFunction {
     pub fn new(
         scope: &mut v8::HandleScope,
-        name: &str,
+        data: Option<Serialized>,
         callback: impl v8::MapFnTo<v8::FunctionCallback>,
     ) -> JsFunction {
         // Create the function
-        let name = v8::String::new(scope, name).unwrap();
-        let function = v8::Function::builder(callback)
-            .data(name.into())
-            .build(scope)
-            .unwrap();
+        let mut builder = v8::Function::builder(callback);
+
+        if let Some(data) = data {
+            if let Some(data) = serialize_v8(scope, &data) {
+                builder = builder.data(data);
+            }
+        }
+
+        let function = builder.build(scope).unwrap();
 
         let function = v8::Global::new(scope, function);
 

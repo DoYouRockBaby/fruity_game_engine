@@ -9,7 +9,7 @@ use std::sync::RwLockReadGuard;
 use std::sync::RwLockWriteGuard;
 
 /// A read write locker for an service instance
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ServiceRwLock<T: Service> {
     service: Arc<RwLock<Box<dyn Service>>>,
     _phantom: PhantomData<T>,
@@ -26,6 +26,11 @@ impl<T: Service> ServiceRwLock<T> {
             service: service,
             _phantom: PhantomData,
         }
+    }
+
+    /// Get the inner Arc for this service
+    pub fn inner_arc(&self) -> Arc<RwLock<Box<dyn Service>>> {
+        self.service.clone()
     }
 
     /// Locks this rwlock with shared read access, blocking the current thread

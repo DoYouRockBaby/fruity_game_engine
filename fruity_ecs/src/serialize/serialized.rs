@@ -217,7 +217,15 @@ impl Serialized {
         }
     }
 
-    /// Convert as String
+    /// Convert as Serialized object
+    pub fn as_object_fields(self) -> Option<HashMap<String, Serialized>> {
+        match self {
+            Serialized::Object { fields, .. } => Some(fields),
+            _ => None,
+        }
+    }
+
+    /// Convert as Component
     pub fn as_component(self) -> Option<Box<dyn Component>> {
         match self {
             Serialized::Object { .. } => Some(Box::new(SerializedComponent::new(self))),

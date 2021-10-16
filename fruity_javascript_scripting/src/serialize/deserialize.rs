@@ -1,4 +1,5 @@
 use crate::js_value::object::component::deserialize_v8_component;
+use crate::js_value::object::service::deserialize_v8_service;
 use crate::serialize::serialize::serialize_v8;
 use crate::JsRuntime;
 use fruity_ecs::serialize::serialized::Serialized;
@@ -98,6 +99,10 @@ pub fn deserialize_v8<'a>(
 
     if let Some(component) = deserialize_v8_component(scope, v8_value) {
         return Some(Serialized::Component(component));
+    }
+
+    if let Some(service) = deserialize_v8_service(scope, v8_value) {
+        return Some(Serialized::Service(service));
     }
 
     if v8_value.is_object() {

@@ -17,6 +17,7 @@ pub fn configure_console(runtime: &mut JsRuntime) {
          mut _retval: v8::ReturnValue| {
             print_args(scope, args, |message| log::debug!("{}", message));
         },
+        None,
     );
 
     console_object.set_func(
@@ -27,6 +28,7 @@ pub fn configure_console(runtime: &mut JsRuntime) {
          mut _retval: v8::ReturnValue| {
             print_args(scope, args, |message| log::debug!("{}", message));
         },
+        None,
     );
 
     console_object.set_func(
@@ -37,6 +39,7 @@ pub fn configure_console(runtime: &mut JsRuntime) {
          mut _retval: v8::ReturnValue| {
             print_args(scope, args, |message| log::info!("{}", message));
         },
+        None,
     );
 
     console_object.set_func(
@@ -47,6 +50,7 @@ pub fn configure_console(runtime: &mut JsRuntime) {
          mut _retval: v8::ReturnValue| {
             print_args(scope, args, |message| log::warn!("{}", message));
         },
+        None,
     );
 
     console_object.set_func(
@@ -57,6 +61,7 @@ pub fn configure_console(runtime: &mut JsRuntime) {
          mut _retval: v8::ReturnValue| {
             print_args(scope, args, |message| log::error!("{}", message));
         },
+        None,
     );
 
     global_object.add_field(scope, "console", console_object);

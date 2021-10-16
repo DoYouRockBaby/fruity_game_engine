@@ -36,7 +36,18 @@ pub fn serialize_v8<'a>(
 
             Some(v8::Array::new_with_elements(scope, &elements).into())
         }
-        Serialized::Object { .. } => None,
+        Serialized::Object { fields, .. } => {
+            let v8_object = v8::Object::new(scope);
+
+            fields.iter().for_each(|(key, value)| {
+                let key = v8::String::new(scope, key).unwrap();
+                if let Some(serialized) = serialize_v8(scope, value) {
+                    v8_object.set(scope, key.into(), serialized);
+                }
+            });
+
+            Some(v8_object.into())
+        }
         Serialized::Iterator(value) => {
             let mut object = JsObject::from_iterator(scope, value.clone());
             Some(object.as_v8(scope).into())

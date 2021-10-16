@@ -1,0 +1,13 @@
+[ ] Tests for fruity_collections
+[ ] Tests for javascript
+[ ] Tests for fruity_ecs
+[ ] Rust doc for fruity_javascript_scripting
+[ ] Remove as many unwrap as possible (ecs and javascript)
+[ ] A lot of unsafe code were created to avoid lifetime issue, many should be removed to be as safe as possible (ecs and javascript)
+[ ] There should be some memory leak in component storage (in Entity) and entity storage (in EncodableVec)
+[ ] Javascript module is highly unsafe cause i force to put a one thread runtime into a multi thread host
+    [ ] Implement web workers
+    [ ] Fix javascript -> rust calls
+    [ ] Fix rust -> Javascript call
+    [ ] Make javascript able to import modules via package.json
+    [ ] Test and make microjob library compatible with javascript

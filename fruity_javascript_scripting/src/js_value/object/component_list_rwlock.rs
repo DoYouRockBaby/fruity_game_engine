@@ -12,8 +12,8 @@ impl JsObject {
         component_list: ComponentListRwLock,
     ) -> JsObject {
         let mut object = JsObject::from_intern_value(scope, "ComponentListRwLock", component_list);
-        object.set_func(scope, "get", component_list_get_callback);
-        object.set_func(scope, "length", component_list_length_callback);
+        object.set_func(scope, "get", component_list_get_callback, None);
+        object.set_func(scope, "length", component_list_length_callback, None);
 
         object
     }

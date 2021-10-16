@@ -15,8 +15,8 @@ impl JsObject {
         service_manager: Arc<RwLock<ServiceManager>>,
     ) -> JsObject {
         let mut object = JsObject::from_intern_value(scope, "ServiceManager", service_manager);
-        object.set_func(scope, "register", service_manager_register_callback);
-        object.set_func(scope, "get", service_manager_get_callback);
+        object.set_func(scope, "register", service_manager_register_callback, None);
+        object.set_func(scope, "get", service_manager_get_callback, None);
 
         object
     }

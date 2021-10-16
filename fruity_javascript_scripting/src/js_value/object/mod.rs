@@ -3,6 +3,7 @@ use crate::js_value::utils::format_function_name_from_rust_to_js;
 use crate::js_value::value::JsValue;
 use core::ffi::c_void;
 use fruity_any_derive::*;
+use fruity_ecs::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 use std::any::Any;
 use std::fmt::Debug;
@@ -59,9 +60,18 @@ impl JsObject {
         }
     }
 
-    pub fn add_field<T: JsValue>(&mut self, scope: &mut v8::HandleScope, name: &str, mut value: T) {
+    pub fn add_field<T: JsValue>(&mut self, scope: &mut v8::HandleScope, name: &str, value: T) {
+        self.add_field_with_raw_name(scope, &format_function_name_from_rust_to_js(name), value);
+    }
+
+    pub fn add_field_with_raw_name<T: JsValue>(
+        &mut self,
+        scope: &mut v8::HandleScope,
+        name: &str,
+        mut value: T,
+    ) {
         // Add the value into the object field
-        let key = v8::String::new(scope, &format_function_name_from_rust_to_js(name)).unwrap();
+        let key = v8::String::new(scope, name).unwrap();
         let v8_value = v8::Local::new(scope, &self.v8_value);
 
         let field_value = value.as_v8(scope);
@@ -77,8 +87,23 @@ impl JsObject {
         getter: impl for<'s> v8::MapFnTo<v8::AccessorNameGetterCallback<'s>>,
         setter: impl for<'s> v8::MapFnTo<v8::AccessorNameSetterCallback<'s>>,
     ) {
+        self.add_property_with_raw_name(
+            scope,
+            &format_function_name_from_rust_to_js(name),
+            getter,
+            setter,
+        )
+    }
+
+    pub fn add_property_with_raw_name(
+        &mut self,
+        scope: &mut v8::HandleScope,
+        name: &str,
+        getter: impl for<'s> v8::MapFnTo<v8::AccessorNameGetterCallback<'s>>,
+        setter: impl for<'s> v8::MapFnTo<v8::AccessorNameSetterCallback<'s>>,
+    ) {
         // Add the value into the object field
-        let key = v8::String::new(scope, &format_function_name_from_rust_to_js(name)).unwrap();
+        let key = v8::String::new(scope, name).unwrap();
         let v8_value = v8::Local::new(scope, &self.v8_value);
         v8_value.set_accessor_with_setter(scope, key.into(), getter, setter);
         // TODO: try to remove
@@ -90,9 +115,25 @@ impl JsObject {
         scope: &mut v8::HandleScope,
         name: &str,
         callback: impl v8::MapFnTo<v8::FunctionCallback>,
+        data: Option<Serialized>,
     ) {
-        let function = JsFunction::new(scope, name, callback);
-        self.add_field(scope, name, function);
+        self.set_func_with_raw_name(
+            scope,
+            &format_function_name_from_rust_to_js(name),
+            callback,
+            data,
+        )
+    }
+
+    pub fn set_func_with_raw_name(
+        &mut self,
+        scope: &mut v8::HandleScope,
+        name: &str,
+        callback: impl v8::MapFnTo<v8::FunctionCallback>,
+        data: Option<Serialized>,
+    ) {
+        let function = JsFunction::new(scope, data, callback);
+        self.add_field_with_raw_name(scope, name, function);
     }
 }
 
