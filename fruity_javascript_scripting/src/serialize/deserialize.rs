@@ -1,6 +1,7 @@
 use crate::js_value::object::component::deserialize_v8_component;
 use crate::js_value::object::service::deserialize_v8_service;
-use crate::serialize::serialize::serialize_v8;
+use crate::js_value::utils::store_callback;
+use crate::JavascriptEngine;
 use crate::JsRuntime;
 use fruity_ecs::serialize::serialized::Serialized;
 use fruity_ecs::service::service_manager::ServiceManager;
@@ -52,46 +53,23 @@ pub fn deserialize_v8<'a>(
     }
 
     if v8_value.is_function() {
-        let js_function = JsFunctionWrapper::from_value(scope, v8_value);
+        // Store the function into a global object
+        let v8_function = v8::Local::<v8::Function>::try_from(v8_value).unwrap();
+        let callback_identifier = store_callback(scope, v8_function);
 
         let callback = move |service_manager: Arc<RwLock<ServiceManager>>,
                              args: Vec<Serialized>|
               -> Result<Option<Serialized>, IntrospectError> {
             // Get scope
-            let js_runtime = {
+            let javascript_engine = {
                 let service_manager = service_manager.read().unwrap();
-                service_manager.get::<JsRuntime>().unwrap()
+                service_manager.get::<JavascriptEngine>().unwrap()
             };
 
-            let js_runtime = js_runtime.read().unwrap();
-            let lock = js_runtime.handles.try_lock();
-            match lock {
-                Ok(mut datas) => {
-                    let mut scope = datas.handle_scope();
-                    let context = v8::Context::new(&mut scope);
+            let javascript_engine = javascript_engine.read().unwrap();
+            javascript_engine.run_callback(callback_identifier, args);
 
-                    // Instantiate parameters and return handle
-                    let args = args
-                        .iter()
-                        .filter_map(|arg| serialize_v8(&mut scope, arg))
-                        .collect::<Vec<_>>();
-
-                    let global = context.global(&mut scope);
-                    let recv: v8::Local<v8::Value> = global.into();
-
-                    // Call function
-                    let result = js_function.call(&mut scope, recv, &args);
-
-                    // Return result
-                    if let Some(result) = result {
-                        let result = deserialize_v8(&mut scope, result);
-                        Ok(result)
-                    } else {
-                        Ok(None)
-                    }
-                }
-                Err(_) => Err(IntrospectError::NestedCallback),
-            }
+            Ok(None)
         };
 
         return Some(Serialized::Callback(Arc::new(callback)));
@@ -158,30 +136,4 @@ pub fn deserialize_v8<'a>(
     }
 
     None
-}
-
-struct JsFunctionWrapper {
-    inner: rusty_v8::Global<rusty_v8::Function>,
-}
-
-unsafe impl Send for JsFunctionWrapper {}
-unsafe impl Sync for JsFunctionWrapper {}
-
-impl JsFunctionWrapper {
-    fn from_value(scope: &mut v8::HandleScope, value: v8::Local<v8::Value>) -> JsFunctionWrapper {
-        let js_function = v8::Local::<v8::Function>::try_from(value).unwrap();
-        let js_function = v8::Global::new(scope, js_function);
-
-        JsFunctionWrapper { inner: js_function }
-    }
-
-    pub fn call<'s>(
-        &self,
-        scope: &mut v8::HandleScope<'s>,
-        recv: v8::Local<v8::Value>,
-        args: &[v8::Local<v8::Value>],
-    ) -> Option<v8::Local<'s, v8::Value>> {
-        let js_function = v8::Local::<v8::Function>::new(scope, self.inner.clone());
-        js_function.call(scope, recv, &args)
-    }
 }

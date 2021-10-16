@@ -3,16 +3,18 @@ use crate::serialize::deserialize::deserialize_v8;
 use crate::JsRuntime;
 use fruity_ecs::component::components_factory::ComponentsFactory;
 use fruity_ecs::serialize::serialized::Serialized;
-use fruity_ecs::world::World;
+use fruity_ecs::service::service_manager::ServiceManager;
 use rusty_v8 as v8;
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::RwLock;
 
-pub fn configure_components(runtime: &mut JsRuntime, world: &World) {
+pub fn configure_components(runtime: &mut JsRuntime, service_manager: Arc<RwLock<ServiceManager>>) {
     let mut handles = runtime.handles.lock().unwrap();
     let mut global_object = handles.global_object();
     let scope = &mut handles.handle_scope();
 
-    let service_manager = world.service_manager.read().unwrap();
+    let service_manager = service_manager.read().unwrap();
     let components_factory = service_manager.get::<ComponentsFactory>().unwrap();
     let components_factory_reader = components_factory.read().unwrap();
 

@@ -1,15 +1,14 @@
 use crate::bridge::console::configure_console;
 use crate::error::JsError;
 use crate::exception::exception_to_err_result;
+use crate::javascript_engine::CallbackIdentifier;
 use crate::js_value::object::JsObject;
+use crate::js_value::utils::get_stored_callback;
 use crate::module_map::ModuleInfos;
 use crate::module_map::ModuleMap;
 use crate::normalize_path::normalize_path;
-use fruity_any_derive::*;
+use crate::serialize::serialize::serialize_v8;
 use fruity_ecs::serialize::serialized::Serialized;
-use fruity_ecs::service::service::Service;
-use fruity_introspect::IntrospectMethods;
-use fruity_introspect::MethodInfo;
 use rusty_v8 as v8;
 use std::cell::RefCell;
 use std::path::Path;
@@ -18,19 +17,16 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-#[derive(Debug, FruityAny)]
+#[derive(Debug)]
 pub struct JsRuntime {
   pub(crate) handles: Arc<Mutex<JsRuntimeHandles>>,
 }
 
-#[derive(Debug, FruityAny)]
+#[derive(Debug)]
 pub struct JsRuntimeHandles {
   v8_isolate: Option<v8::OwnedIsolate>,
   global_context: v8::Global<v8::Context>,
 }
-
-unsafe impl Send for JsRuntimeHandles {}
-unsafe impl Sync for JsRuntimeHandles {}
 
 impl Drop for JsRuntimeHandles {
   fn drop(&mut self) {
@@ -170,6 +166,28 @@ impl JsRuntime {
     Ok(())
   }
 
+  pub fn run_stored_callback(&mut self, identifier: CallbackIdentifier, args: Vec<Serialized>) {
+    let mut data = self.handles.lock().unwrap();
+    let mut scope = data.handle_scope();
+    let context = v8::Context::new(&mut scope);
+
+    // Get the function from a specific global object
+    let callback = get_stored_callback(&mut scope, identifier);
+
+    if let Some(callback) = callback {
+      // Instantiate parameters and return handle
+      let args = args
+        .iter()
+        .filter_map(|arg| serialize_v8(&mut scope, arg))
+        .collect::<Vec<_>>();
+      let global = context.global(&mut scope);
+      let recv: v8::Local<v8::Value> = global.into();
+
+      // Call function
+      callback.call(&mut scope, recv, &args);
+    }
+  }
+
   pub fn module_map(isolate: &v8::Isolate) -> Rc<RefCell<ModuleMap>> {
     let module_map = isolate.get_slot::<Rc<RefCell<ModuleMap>>>().unwrap();
     module_map.clone()
@@ -305,11 +323,3 @@ pub fn get_specifier_filename<'a>(
     Err(JsError::ImportModuleWithoutPrefix(specifier.to_string()))
   }
 }
-
-impl IntrospectMethods<Serialized> for JsRuntime {
-  fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
-    vec![]
-  }
-}
-
-impl Service for JsRuntime {}

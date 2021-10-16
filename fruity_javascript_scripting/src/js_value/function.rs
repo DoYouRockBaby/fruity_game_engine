@@ -10,9 +10,6 @@ pub struct JsFunction {
     v8_value: v8::Global<v8::Function>,
 }
 
-unsafe impl Send for JsFunction {}
-unsafe impl Sync for JsFunction {}
-
 impl JsFunction {
     pub fn new(
         scope: &mut v8::HandleScope,

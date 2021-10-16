@@ -17,7 +17,7 @@ use fruity_ecs_derive::*;
 use fruity_introspect_derive::*;
 use fruity_javascript_scripting::error::log_js_error;
 use fruity_javascript_scripting::initialize as initialize_javascript;
-use fruity_javascript_scripting::runtime::JsRuntime;
+use fruity_javascript_scripting::javascript_engine::JavascriptEngine;
 use fruity_windows::initialize as initialize_windows;
 use fruity_windows::windows_manager::WindowsManager;
 use pretty_env_logger::formatted_builder;
@@ -71,9 +71,9 @@ fn main() {
         service_manager.get::<SystemManager>().unwrap()
     };
 
-    let js_runtime = {
+    let javascript_engine = {
         let service_manager = world.service_manager.read().unwrap();
-        service_manager.get::<JsRuntime>().unwrap()
+        service_manager.get::<JavascriptEngine>().unwrap()
     };
 
     {
@@ -129,12 +129,8 @@ fn main() {
 
     {
         // Javascript test
-        let mut js_runtime = js_runtime.write().unwrap();
-
-        match js_runtime.run_module("src/javascript/index.js") {
-            Ok(_) => (),
-            Err(err) => log_js_error(&err),
-        };
+        let javascript_engine = javascript_engine.read().unwrap();
+        javascript_engine.run_module("src/javascript/index.js");
     }
 
     {

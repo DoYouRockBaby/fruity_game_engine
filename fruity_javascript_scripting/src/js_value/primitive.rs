@@ -7,9 +7,6 @@ pub struct JsString {
     v8_value: v8::Global<v8::String>,
 }
 
-unsafe impl Send for JsString {}
-unsafe impl Sync for JsString {}
-
 impl JsString {
     pub fn new(scope: &mut v8::HandleScope, string: &str) -> JsString {
         // Create the value
