@@ -1,4 +1,4 @@
-class Service2 {
+/*class Service2 {
     constructor() {
         this.hello = this.hello.bind(this);
     }
@@ -10,7 +10,7 @@ class Service2 {
     hello2 = (str) => {
         console.log("Hello 2", str);
     }
-}
+}*/
 
 class ComponentJs1 {
     constructor(args) {
@@ -23,19 +23,12 @@ const systemManager = services.get("system_manager");
 const entityManager = services.get("entity_manager");
 const componentFactory = services.get("components_factory");
 const windowsManager = services.get("windows_manager");
+//const service2 = services.get("service2");
 
 entityManager.create([new ComponentJs1({ str1: "test1", int1: 3 })]);
-
-// const test_component_1 = componentFactory.instantiate("Component1", { float1: 10.101, int1: 30 });
-const test_component_1 = new Component1({ float1: 10.101, int1: 30 });
-
-console.log(test_component_1.int1, test_component_1.float1);
-
-entityManager.create([test_component_1, new ComponentJs1({ str1: "test1", int1: 3 })]);
+entityManager.create([new Component1({ float1: 10.101, int1: 30 }), new ComponentJs1({ str1: "test1", int1: 3 })]);
 
 systemManager.addSystem(() => {
-    console.log("JS System", windowsManager.getSize());
-
     entityManager
         .iterComponents(["ComponentJs1", "Component1"])
         .forEach(components => {
@@ -43,6 +36,12 @@ systemManager.addSystem(() => {
             console.log(components.get(1).int1, components.get(1).float1);
             components.get(0).int1 += 1;
         });
+
+    /*console.log("JS System", windowsManager.getSize());
+    console.log("1");
+    service2.hello("World");
+    service2.hello2("World");
+    console.log("1");*/
 
     /*const service1 = services.get("service1");
     const service2 = services.get("service2");

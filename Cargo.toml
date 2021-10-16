@@ -8,6 +8,7 @@ fruity_any = { path = "fruity_any" }
 fruity_any_derive = { path = "fruity_any_derive" }
 fruity_ecs = { path = "fruity_ecs" }
 fruity_ecs_derive = { path = "fruity_ecs_derive" }
+fruity_graphic = { path = "fruity_graphic" }
 fruity_introspect = { path = "fruity_introspect" }
 fruity_introspect_derive = { path = "fruity_introspect_derive" }
 fruity_collections = { path = "fruity_collections" }

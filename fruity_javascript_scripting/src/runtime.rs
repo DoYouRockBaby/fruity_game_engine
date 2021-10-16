@@ -114,7 +114,6 @@ impl JsRuntime {
     }
 
     Ok(())
-    //Ok(JsResult::new(scope, result))
   }
 
   #[allow(unused_must_use)]

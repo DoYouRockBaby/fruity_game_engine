@@ -15,6 +15,9 @@ use std::thread;
 pub struct CallbackIdentifier(pub i32);
 
 pub(crate) enum RuntimeEvent {
+    RunScript {
+        source: String,
+    },
     RunModule {
         path: String,
     },
@@ -44,6 +47,12 @@ impl JavascriptEngine {
 
             for received in receiver {
                 match received {
+                    RuntimeEvent::RunScript { source } => {
+                        match runtime.run_script(&source) {
+                            Ok(_) => (),
+                            Err(err) => log_js_error(&err),
+                        };
+                    }
                     RuntimeEvent::RunModule { path } => {
                         match runtime.run_module(&path) {
                             Ok(_) => (),
@@ -62,15 +71,32 @@ impl JavascriptEngine {
         }
     }
 
+    pub fn run_script(&self, source: &str) {
+        match self.channel_sender.send(RuntimeEvent::RunScript {
+            source: source.to_string(),
+        }) {
+            Ok(()) => (),
+            Err(err) => log::error!("{}", err.to_string()),
+        }
+    }
+
     pub fn run_module(&self, path: &str) {
-        self.channel_sender.send(RuntimeEvent::RunModule {
+        match self.channel_sender.send(RuntimeEvent::RunModule {
             path: path.to_string(),
-        });
+        }) {
+            Ok(()) => (),
+            Err(err) => log::error!("{}", err.to_string()),
+        }
     }
 
     pub fn run_callback(&self, identifier: CallbackIdentifier, args: Vec<Serialized>) {
-        self.channel_sender
-            .send(RuntimeEvent::RunCallback { identifier, args });
+        match self
+            .channel_sender
+            .send(RuntimeEvent::RunCallback { identifier, args })
+        {
+            Ok(()) => (),
+            Err(err) => log::error!("{}", err.to_string()),
+        }
     }
 }
 
