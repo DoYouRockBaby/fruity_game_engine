@@ -1,7 +1,6 @@
 use fruity_any_derive::*;
 use fruity_ecs::serialize::serialized::Serialized;
 use fruity_ecs::service::service::Service;
-use fruity_ecs::service::utils::assert_argument_count;
 use fruity_ecs::service::utils::cast_next_argument;
 use fruity_ecs::service::utils::cast_service;
 use fruity_ecs::service::utils::cast_service_mut;
@@ -40,10 +39,8 @@ impl IntrospectMethods<Serialized> for Service1 {
                 name: "increment".to_string(),
                 args: vec![],
                 return_type: None,
-                call: MethodCaller::Mut(Arc::new(|this, args| {
+                call: MethodCaller::Mut(Arc::new(|this, _args| {
                     let this = cast_service_mut::<Service1>(this);
-                    assert_argument_count("increment", 0, &args)?;
-
                     this.increment();
                     Ok(None)
                 })),
@@ -54,7 +51,6 @@ impl IntrospectMethods<Serialized> for Service1 {
                 return_type: None,
                 call: MethodCaller::Mut(Arc::new(|this, mut args| {
                     let this = cast_service_mut::<Service1>(this);
-                    assert_argument_count("increment_by", 1, &args)?;
 
                     let arg1 = cast_next_argument("increment_by", &mut args, |arg| arg.as_i32())?;
 
@@ -66,10 +62,8 @@ impl IntrospectMethods<Serialized> for Service1 {
                 name: "value".to_string(),
                 args: vec![],
                 return_type: Some("i32".to_string()),
-                call: MethodCaller::Const(Arc::new(|this, args| {
+                call: MethodCaller::Const(Arc::new(|this, _args| {
                     let this = cast_service::<Service1>(this);
-                    assert_argument_count("value", 0, &args)?;
-
                     let result = this.value();
                     Ok(Some(Serialized::I32(result)))
                 })),

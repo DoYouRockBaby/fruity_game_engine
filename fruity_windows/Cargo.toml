@@ -1,0 +1,11 @@
+[package]
+name = "fruity_windows"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+winit = "0.25.0"
+fruity_any = { path = "../fruity_any" }
+fruity_any_derive = { path = "../fruity_any_derive" }
+fruity_ecs = { path = "../fruity_ecs" }
+fruity_introspect = { path = "../fruity_introspect" }

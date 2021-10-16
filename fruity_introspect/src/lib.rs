@@ -24,10 +24,6 @@ pub enum IntrospectError {
     WrongNumberArguments {
         /// The method name
         method: String,
-        /// The provided number of arguments
-        have: usize,
-        /// The expected number of arguments
-        expected: usize,
     },
     /// Error that occure when a callback from scripting language is nested with an other one
     NestedCallback,
@@ -45,16 +41,10 @@ pub fn log_introspect_error(err: &IntrospectError) {
                 method,
             )
         }
-        IntrospectError::WrongNumberArguments {
-            method,
-            have,
-            expected,
-        } => {
+        IntrospectError::WrongNumberArguments { method } => {
             log::error!(
-                "Failed to call method {} cause you provided {} arguments, expected {}",
+                "Failed to call method {} cause you provided a wrong number of arguments",
                 method,
-                have,
-                expected
             )
         }
         IntrospectError::NestedCallback => {

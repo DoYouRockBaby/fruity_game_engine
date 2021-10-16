@@ -8,7 +8,6 @@ use crate::entity::entity::IterMut as EntityIterMut;
 use crate::entity::entity_rwlock::EntityRwLock;
 use crate::serialize::serialized::Serialized;
 use crate::service::service::Service;
-use crate::service::utils::assert_argument_count;
 use crate::service::utils::cast_next_argument;
 use crate::service::utils::cast_service;
 use crate::service::utils::cast_service_mut;
@@ -239,7 +238,6 @@ impl IntrospectMethods<Serialized> for EntityManager {
                 call: MethodCaller::Mut(Arc::new(move |this, mut args| {
                     let this = unsafe { &mut *(this as *mut _) } as &mut dyn Any;
                     let this = cast_service_mut::<EntityManager>(this);
-                    assert_argument_count("create", 1, &args)?;
 
                     let arg1 =
                         cast_next_argument("create", &mut args, |arg| arg.as_component_array())?;
@@ -256,7 +254,6 @@ impl IntrospectMethods<Serialized> for EntityManager {
                 call: MethodCaller::Const(Arc::new(move |this, mut args| {
                     let this = unsafe { &*(this as *const _) } as &dyn Any;
                     let this = cast_service::<EntityManager>(this);
-                    assert_argument_count("iter_entities", 1, &args)?;
 
                     let arg1 = cast_next_argument("iter_entities", &mut args, |arg| {
                         arg.as_string_array()
@@ -275,7 +272,6 @@ impl IntrospectMethods<Serialized> for EntityManager {
                 return_type: None,
                 call: MethodCaller::Const(Arc::new(move |this, mut args| {
                     let this = cast_service::<EntityManager>(this);
-                    assert_argument_count("iter_components", 1, &args)?;
 
                     let arg1 = cast_next_argument("iter_components", &mut args, |arg| {
                         arg.as_string_array()

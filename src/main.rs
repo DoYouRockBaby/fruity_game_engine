@@ -18,6 +18,8 @@ use fruity_introspect_derive::*;
 use fruity_javascript_scripting::error::log_js_error;
 use fruity_javascript_scripting::initialize as initialize_javascript;
 use fruity_javascript_scripting::runtime::JsRuntime;
+use fruity_windows::initialize as initialize_windows;
+use fruity_windows::windows_manager::WindowsManager;
 use pretty_env_logger::formatted_builder;
 
 #[derive(Debug, Clone, Component, IntrospectFields, FruityAny)]
@@ -39,6 +41,7 @@ fn main() {
 
     let world = World::new();
     initialize_ecs(&world);
+    initialize_windows(&world);
 
     // Initialize component
     {
@@ -135,9 +138,17 @@ fn main() {
     }
 
     {
-        let system_manager = system_manager.read().unwrap();
+        let windows_manager = {
+            let service_manager = world.service_manager.read().unwrap();
+            service_manager.get::<WindowsManager>().unwrap()
+        };
+
+        let windows_manager = windows_manager.read().unwrap();
+        windows_manager.run();
+
+        /*let system_manager = system_manager.read().unwrap();
         system_manager.run();
         system_manager.run();
-        /*system_manager.run(&service_manager);*/
+        system_manager.run(&service_manager);*/
     }
 }

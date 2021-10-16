@@ -22,6 +22,7 @@ class ComponentJs1 {
 const systemManager = services.get("system_manager");
 const entityManager = services.get("entity_manager");
 const componentFactory = services.get("components_factory");
+const windowsManager = services.get("windows_manager");
 
 entityManager.create([new ComponentJs1({ str1: "test1", int1: 3 })]);
 
@@ -33,7 +34,8 @@ console.log(test_component_1.int1, test_component_1.float1);
 entityManager.create([test_component_1, new ComponentJs1({ str1: "test1", int1: 3 })]);
 
 systemManager.addSystem(() => {
-    console.log("JS System");
+    console.log("JS System", windowsManager.getSize());
+
     entityManager
         .iterComponents(["ComponentJs1", "Component1"])
         .forEach(components => {

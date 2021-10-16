@@ -1,7 +1,6 @@
 use crate::serialize::serialized::Serialized;
 use crate::service::service::Service;
 use crate::service::service_manager::ServiceManager;
-use crate::service::utils::assert_argument_count;
 use crate::service::utils::cast_next_argument;
 use crate::service::utils::cast_service_mut;
 use crate::World;
@@ -73,7 +72,6 @@ impl IntrospectMethods<Serialized> for SystemManager {
             return_type: None,
             call: MethodCaller::Mut(Arc::new(|this, mut args| {
                 let this = cast_service_mut::<SystemManager>(this);
-                assert_argument_count("add_system", 1, &args)?;
 
                 let arg1 = cast_next_argument("add_system", &mut args, |arg| arg.as_callback())?;
 

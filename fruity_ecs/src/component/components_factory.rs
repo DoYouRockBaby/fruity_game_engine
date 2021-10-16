@@ -1,7 +1,6 @@
 use crate::component::component::Component;
 use crate::serialize::serialized::Serialized;
 use crate::service::service::Service;
-use crate::service::utils::assert_argument_count;
 use crate::service::utils::cast_next_argument;
 use crate::service::utils::cast_service;
 use fruity_any_derive::*;
@@ -81,7 +80,6 @@ impl IntrospectMethods<Serialized> for ComponentsFactory {
             return_type: None,
             call: MethodCaller::Const(Arc::new(move |this, mut args| {
                 let this = cast_service::<ComponentsFactory>(this);
-                assert_argument_count("instantiate", 2, &args)?;
 
                 let arg1 = cast_next_argument("instantiate", &mut args, |arg| arg.as_string())?;
                 let arg2 = cast_next_argument("instantiate", &mut args, |arg| Some(arg))?;

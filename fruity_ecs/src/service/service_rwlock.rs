@@ -9,7 +9,7 @@ use std::sync::RwLockReadGuard;
 use std::sync::RwLockWriteGuard;
 
 /// A read write locker for an service instance
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ServiceRwLock<T: Service> {
     service: Arc<RwLock<Box<dyn Service>>>,
     _phantom: PhantomData<T>,
@@ -72,5 +72,14 @@ impl<T: Service> ServiceRwLock<T> {
     ) -> Result<ServiceWriteGuard<T>, PoisonError<RwLockWriteGuard<Box<dyn Service>>>> {
         let guard = self.service.write()?;
         Ok(ServiceWriteGuard::new(guard))
+    }
+}
+
+impl<T: Service> Clone for ServiceRwLock<T> {
+    fn clone(&self) -> Self {
+        ServiceRwLock {
+            service: self.service.clone(),
+            _phantom: PhantomData,
+        }
     }
 }
