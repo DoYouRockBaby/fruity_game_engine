@@ -1,5 +1,5 @@
 [package]
-name = "fruity_any"
+name = "fruity_observer"
 version = "0.1.0"
 edition = "2021"
 

@@ -8,6 +8,8 @@ use fruity_ecs::system::system_manager::SystemManager;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
+use fruity_observer::Signal;
+use std::fmt::Debug;
 use std::ops::DerefMut;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -19,16 +21,25 @@ use winit::event_loop::EventLoop;
 use winit::window::Window;
 use winit::window::WindowBuilder;
 
-#[derive(Debug, FruityAny)]
+#[derive(FruityAny)]
 pub struct WindowsManager {
     system_manager: ServiceRwLock<SystemManager>,
     event_stack: Arc<RwLock<Vec<FruityWindowsEvent>>>,
-    window: RwLock<Option<Window>>,
+    window: RwLock<Option<Arc<RwLock<Window>>>>,
+    pub on_init: Signal<Arc<RwLock<Window>>>,
+    pub on_draw: Signal<Arc<RwLock<Window>>>,
+    pub on_resize: Signal<(usize, usize)>,
 }
 
 #[derive(Debug)]
-enum FruityWindowsEvent {
+pub enum FruityWindowsEvent {
     Close,
+}
+
+impl Debug for WindowsManager {
+    fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        Ok(())
+    }
 }
 
 impl WindowsManager {
@@ -37,6 +48,9 @@ impl WindowsManager {
             system_manager,
             event_stack: Arc::new(RwLock::new(Vec::new())),
             window: RwLock::new(None),
+            on_init: Signal::new(),
+            on_draw: Signal::new(),
+            on_resize: Signal::new(),
         }
     }
 
@@ -52,14 +66,24 @@ impl WindowsManager {
                 .unwrap();
 
             let window_id = window.id();
+            let window = Arc::new(RwLock::new(window));
+            self.on_init.notify(window.clone());
+
             let mut window_writer = self.window.write().unwrap();
             *window_writer.deref_mut() = Some(window);
+
             window_id
         };
 
         // Run the event loop
         let system_manager = self.system_manager.clone();
         let event_stack = self.event_stack.clone();
+        let window = {
+            let window = self.window.read().unwrap();
+            window.as_ref().unwrap().clone()
+        };
+
+        let on_draw = self.on_draw.clone();
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Wait;
 
@@ -86,6 +110,9 @@ impl WindowsManager {
             // Run the systems
             let system_manager_writer = system_manager.write().unwrap();
             system_manager_writer.run();
+
+            // Draw
+            on_draw.notify(window.clone());
         });
     }
 
@@ -97,6 +124,7 @@ impl WindowsManager {
     pub fn set_resizable(&self, resizable: bool) {
         let window = self.window.read().unwrap();
         if let Some(window) = window.as_ref() {
+            let window = window.read().unwrap();
             window.set_resizable(resizable);
         }
     }
@@ -104,6 +132,7 @@ impl WindowsManager {
     pub fn get_size(&self) -> (usize, usize) {
         let window = self.window.read().unwrap();
         if let Some(window) = window.as_ref() {
+            let window = window.read().unwrap();
             (
                 window.inner_size().width as usize,
                 window.inner_size().height as usize,
@@ -116,13 +145,16 @@ impl WindowsManager {
     pub fn set_size(&self, width: usize, height: usize) {
         let window = self.window.read().unwrap();
         if let Some(window) = window.as_ref() {
+            let window = window.read().unwrap();
             window.set_inner_size(LogicalSize::new(width as i32, height as i32));
+            self.on_resize.notify((width, height))
         }
     }
 
     pub fn set_title(&self, title: &str) {
         let window = self.window.read().unwrap();
         if let Some(window) = window.as_ref() {
+            let window = window.read().unwrap();
             window.set_title(title);
         }
     }
