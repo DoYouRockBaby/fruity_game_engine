@@ -123,6 +123,7 @@ impl GraphicsManager {
         if let Some(state) = &mut self.state {
             let output = state.surface.get_current_texture().unwrap();
 
+            // Get the texture view where the scene will be rendered
             let view = output
                 .texture
                 .create_view(&wgpu::TextureViewDescriptor::default());
@@ -134,6 +135,7 @@ impl GraphicsManager {
                         label: Some("Render Encoder"),
                     });
 
+            // Begin the main render pass
             {
                 let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: Some("Render Pass"),
