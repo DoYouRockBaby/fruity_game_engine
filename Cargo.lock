@@ -655,6 +655,7 @@ dependencies = [
  "fruity_introspect",
  "fruity_introspect_derive",
  "fruity_javascript_scripting",
+ "fruity_resources",
  "fruity_windows",
  "log",
  "mini-redis",
@@ -714,6 +715,13 @@ dependencies = [
 [[package]]
 name = "fruity_observer"
 version = "0.1.0"
+
+[[package]]
+name = "fruity_resources"
+version = "0.1.0"
+dependencies = [
+ "fruity_ecs",
+]
 
 [[package]]
 name = "fruity_windows"
