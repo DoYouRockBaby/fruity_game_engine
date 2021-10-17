@@ -672,6 +672,7 @@ dependencies = [
  "fruity_introspect",
  "fruity_observer",
  "fruity_windows",
+ "tokio",
  "wgpu",
  "winit",
 ]

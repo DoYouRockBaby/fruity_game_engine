@@ -84,19 +84,38 @@ impl WindowsManager {
         };
 
         let on_draw = self.on_draw.clone();
+        let on_resize = self.on_resize.clone();
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Wait;
 
-            // Check if the user has closed the window from the OS
-            if let Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                window_id: event_window_id,
-                ..
-            } = event
-            {
-                if event_window_id == window_id {
-                    *control_flow = ControlFlow::Exit;
+            match event {
+                // Check if the user has closed the window from the OS
+                Event::WindowEvent {
+                    event: WindowEvent::CloseRequested,
+                    window_id: event_window_id,
+                    ..
+                } => {
+                    if event_window_id == window_id {
+                        *control_flow = ControlFlow::Exit;
+                    }
                 }
+                // Check if the user has resized the window from the OS
+                Event::WindowEvent {
+                    event: WindowEvent::Resized(physical_size),
+                    ..
+                } => {
+                    on_resize.notify((physical_size.width as usize, physical_size.height as usize));
+                }
+                Event::WindowEvent {
+                    event: WindowEvent::ScaleFactorChanged { new_inner_size, .. },
+                    ..
+                } => {
+                    on_resize.notify((
+                        new_inner_size.width as usize,
+                        new_inner_size.height as usize,
+                    ));
+                }
+                _ => (),
             }
 
             // Check custom events

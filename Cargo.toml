@@ -1,7 +1,8 @@
 [package]
 name = "fruity_game_engine"
 version = "0.1.0"
-edition = "2021"
+edition = "2018"
+resolver = "2"
 
 [dependencies]
 fruity_any = { path = "fruity_any" }

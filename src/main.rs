@@ -14,6 +14,7 @@ use fruity_ecs::system::system_manager::SystemManager;
 use fruity_ecs::world::World;
 use fruity_ecs::*;
 use fruity_ecs_derive::*;
+use fruity_graphic::initialize as fruity_graphic;
 use fruity_introspect_derive::*;
 use fruity_javascript_scripting::initialize as initialize_javascript;
 use fruity_javascript_scripting::javascript_engine::JavascriptEngine;
@@ -41,6 +42,7 @@ fn main() {
     let world = World::new();
     initialize_ecs(&world);
     initialize_windows(&world);
+    fruity_graphic(&world);
 
     // Initialize component
     {
