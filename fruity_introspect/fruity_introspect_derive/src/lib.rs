@@ -1,5 +1,4 @@
 use proc_macro::{self, TokenStream};
-use quote::format_ident;
 use quote::quote;
 use syn::{parse_macro_input, Data, DeriveInput, Fields, Index};
 
@@ -50,11 +49,22 @@ pub fn derive_introspect_fields(input: TokenStream) -> TokenStream {
                         ty: #type_as_string.to_string(),
                         getter: std::sync::Arc::new(|this| fruity_ecs::serialize::serialize::serialize_any(&this.downcast_ref::<#ident>().unwrap().#name).unwrap()),
                         setter: std::sync::Arc::new(|this, value| {
-                            use std::convert::TryFrom;
-                    
+                            fn convert<
+                                T: std::convert::TryFrom<fruity_ecs::serialize::serialized::Serialized>,
+                            >(
+                                value: fruity_ecs::serialize::serialized::Serialized,
+                            ) -> Result<
+                                T,
+                                <T as std::convert::TryFrom<
+                                    fruity_ecs::serialize::serialized::Serialized,
+                                >>::Error,
+                            > {
+                                T::try_from(value)
+                            }
+        
                             let this = this.downcast_mut::<#ident>().unwrap();
 
-                            match #ty::try_from(value) {
+                            match convert::<#ty>(value) {
                                 Ok(value) => {
                                     this.#name = value
                                 }
