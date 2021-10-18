@@ -10,6 +10,7 @@ use fruity_introspect::IntrospectError;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::Debug;
+use std::ops::Deref;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -27,11 +28,29 @@ pub type Callback = Arc<
 /// A list of serialized object fields
 pub type ObjectFields = HashMap<String, Serialized>;
 
-/// A list of serialized object fields
+/// A reference over a service stored as any
 pub type AnyServiceReference = Arc<RwLock<Box<dyn Service>>>;
 
-/// A list of serialized object fields
+/// A reference over a service
 pub type ServiceReference<T> = Arc<RwLock<Box<T>>>;
+
+/// A reference over a resource
+#[derive(Debug)]
+pub struct ResourceReference<T: Resource>(Arc<T>);
+
+impl<T: Resource> Clone for ResourceReference<T> {
+    fn clone(&self) -> Self {
+        ResourceReference(self.0.clone())
+    }
+}
+
+impl<T: Resource> Deref for ResourceReference<T> {
+    type Target = T;
+
+    fn deref(&self) -> &<Self as std::ops::Deref>::Target {
+        &self.0
+    }
+}
 
 /// A serialized value
 #[derive(Clone)]
@@ -254,6 +273,22 @@ impl TryFrom<Serialized> for Arc<dyn Resource> {
     fn try_from(value: Serialized) -> Result<Self, Self::Error> {
         match value {
             Serialized::Resource(resource) => Ok(resource),
+            _ => Err(format!("Couldn't convert {:?} to resource", value)),
+        }
+    }
+}
+
+impl<T: Resource> TryFrom<Serialized> for ResourceReference<T> {
+    type Error = String;
+
+    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value.clone() {
+            Serialized::Resource(resource) => {
+                match resource.as_any_arc_send_sync().downcast::<T>() {
+                    Ok(value) => Ok(ResourceReference(value)),
+                    Err(_) => Err(format!("Couldn't convert {:?} to resource", value)),
+                }
+            }
             _ => Err(format!("Couldn't convert {:?} to resource", value)),
         }
     }

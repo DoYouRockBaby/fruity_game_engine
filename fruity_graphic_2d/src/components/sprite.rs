@@ -1,10 +1,10 @@
 use fruity_any::*;
-use fruity_ecs::resource::resource::Resource;
+use fruity_ecs::serialize::serialized::ResourceReference;
 use fruity_ecs::*;
+use fruity_graphic::image_resource::ImageResource;
 use fruity_introspect::*;
-use std::sync::Arc;
 
 #[derive(Debug, Clone, Component, IntrospectFields, FruityAny)]
-pub struct Size {
-    pub texture: Arc<dyn Resource>,
+pub struct Sprite {
+    pub texture: ResourceReference<ImageResource>,
 }
