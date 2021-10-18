@@ -36,7 +36,7 @@ pub type ServiceReference<T> = Arc<RwLock<Box<T>>>;
 
 /// A reference over a resource
 #[derive(Debug)]
-pub struct ResourceReference<T: Resource>(Arc<T>);
+pub struct ResourceReference<T: Resource>(Option<Arc<T>>);
 
 impl<T: Resource> Clone for ResourceReference<T> {
     fn clone(&self) -> Self {
@@ -44,8 +44,18 @@ impl<T: Resource> Clone for ResourceReference<T> {
     }
 }
 
+impl<T: Resource> ResourceReference<T> {
+    pub fn new() -> Self {
+        ResourceReference(None)
+    }
+
+    pub fn from_resource(resource: Arc<T>) -> Self {
+        ResourceReference(Some(resource))
+    }
+}
+
 impl<T: Resource> Deref for ResourceReference<T> {
-    type Target = T;
+    type Target = Option<Arc<T>>;
 
     fn deref(&self) -> &<Self as std::ops::Deref>::Target {
         &self.0
@@ -285,7 +295,7 @@ impl<T: Resource> TryFrom<Serialized> for ResourceReference<T> {
         match value.clone() {
             Serialized::Resource(resource) => {
                 match resource.as_any_arc_send_sync().downcast::<T>() {
-                    Ok(value) => Ok(ResourceReference(value)),
+                    Ok(value) => Ok(ResourceReference(Some(value))),
                     Err(_) => Err(format!("Couldn't convert {:?} to resource", value)),
                 }
             }
