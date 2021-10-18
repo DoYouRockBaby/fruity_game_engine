@@ -12,6 +12,5 @@ lazy_static = "1.4.0"
 pretty_env_logger = "0.4.0"
 convert_case = "0.1.0"
 fruity_any = { path = "../fruity_any" }
-fruity_any_derive = { path = "../fruity_any_derive" }
 fruity_ecs = { path = "../fruity_ecs" }
 fruity_introspect = { path = "../fruity_introspect" }

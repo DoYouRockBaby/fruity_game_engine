@@ -2,7 +2,7 @@ use crate::resource::resource::Resource;
 use crate::resource::resources_manager::ResourceIdentifier;
 use crate::serialize::serialized::Serialized;
 use crate::ResourcesManager;
-use fruity_any_derive::*;
+use fruity_any::*;
 use std::collections::HashMap;
 use std::io::Read;
 use yaml_rust::Yaml;

@@ -1,4 +1,4 @@
-use fruity_any_derive::*;
+use fruity_any::*;
 use fruity_ecs::serialize::serialized::Serialized;
 use fruity_ecs::service::service::Service;
 use fruity_ecs::service::utils::cast_service;

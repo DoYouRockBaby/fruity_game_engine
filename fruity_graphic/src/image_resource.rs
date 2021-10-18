@@ -1,4 +1,4 @@
-use fruity_any_derive::*;
+use fruity_any::*;
 use fruity_ecs::resource::resource::Resource;
 use image::DynamicImage;
 

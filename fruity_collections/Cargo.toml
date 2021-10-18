@@ -6,4 +6,4 @@ resolver = "2"
 
 [dependencies]
 fruity_any = { path = "../fruity_any" }
-fruity_any_derive = { path = "../fruity_any_derive" }
+fruity_collections_derive = { path = "fruity_collections_derive" }

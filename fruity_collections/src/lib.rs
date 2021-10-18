@@ -6,6 +6,8 @@
 //! This object should implement a specific interface to encode/decode it to the desired trait.
 //!
 
+pub use fruity_collections_derive::Encodable;
+
 /// Trait for an encodable object that can be stored as an array of u8
 pub mod encodable;
 

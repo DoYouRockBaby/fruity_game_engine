@@ -2,7 +2,7 @@ use crate::configure_components;
 use crate::configure_services;
 use crate::error::log_js_error;
 use crate::JsRuntime;
-use fruity_any_derive::*;
+use fruity_any::*;
 use fruity_ecs::serialize::serialized::Serialized;
 use fruity_ecs::service::service::Service;
 use fruity_ecs::world::World;

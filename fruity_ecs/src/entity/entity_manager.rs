@@ -13,7 +13,7 @@ use crate::service::utils::cast_service_mut;
 use crate::service::utils::ArgumentCaster;
 use crate::ServiceManager;
 use crate::World;
-use fruity_any_derive::*;
+use fruity_any::*;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;

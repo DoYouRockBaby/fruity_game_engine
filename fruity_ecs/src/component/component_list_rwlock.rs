@@ -2,7 +2,7 @@ use crate::component::component_list_guard::ComponentListReadGuard;
 use crate::component::component_list_guard::ComponentListWriteGuard;
 use crate::component::component_rwlock::ComponentRwLock;
 use crate::entity::entity::Entity;
-use fruity_any_derive::*;
+use fruity_any::*;
 use std::sync::Arc;
 use std::sync::PoisonError;
 use std::sync::RwLock;

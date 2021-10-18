@@ -2,7 +2,7 @@ use crate::serialize::serialized::Serialized;
 use crate::service::service::Service;
 use crate::service::utils::cast_service_mut;
 use crate::ServiceManager;
-use fruity_any_derive::*;
+use fruity_any::*;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;

@@ -4,7 +4,7 @@ use crate::service::service_manager::ServiceManager;
 use crate::service::utils::cast_service_mut;
 use crate::service::utils::ArgumentCaster;
 use crate::World;
-use fruity_any_derive::*;
+use fruity_any::*;
 use fruity_introspect::log_introspect_error;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodCaller;

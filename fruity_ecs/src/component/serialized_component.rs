@@ -2,7 +2,7 @@ use crate::component::component::Component;
 use crate::component::component::ComponentDecoder;
 use crate::component::component::ComponentDecoderMut;
 use crate::serialize::serialized::Serialized;
-use fruity_any_derive::*;
+use fruity_any::*;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectFields;
 use std::sync::Arc;

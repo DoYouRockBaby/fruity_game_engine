@@ -4,6 +4,8 @@
 //!
 //! The difference with the classic Any is that this Any needs to implement converter
 
+pub use fruity_any_derive::FruityAny;
+pub use fruity_any_derive::FruityAnySyncSend;
 use std::any::Any;
 use std::sync::Arc;
 

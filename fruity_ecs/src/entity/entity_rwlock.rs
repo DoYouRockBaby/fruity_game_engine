@@ -4,7 +4,7 @@ use crate::entity::entity::EntityComponentInfo;
 use crate::entity::entity::EntityTypeIdentifier;
 use crate::entity::entity_guard::EntityReadGuard;
 use crate::entity::entity_guard::EntityWriteGuard;
-use fruity_any_derive::*;
+use fruity_any::*;
 use fruity_collections::encodable::Decoder;
 use fruity_collections::encodable::DecoderMut;
 use fruity_collections::encodable::Encodable;

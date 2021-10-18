@@ -1,6 +1,6 @@
 use crate::service::service::Service;
 use crate::service::service_rwlock::ServiceRwLock;
-use fruity_any_derive::*;
+use fruity_any::*;
 use std::any::TypeId;
 use std::collections::hash_map::Iter as HashMapIter;
 use std::collections::HashMap;

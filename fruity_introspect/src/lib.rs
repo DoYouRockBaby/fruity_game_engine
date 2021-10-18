@@ -6,6 +6,7 @@
 //!
 
 use fruity_any::FruityAny;
+pub use fruity_introspect_derive::IntrospectFields;
 use std::any::Any;
 use std::fmt::Debug;
 use std::sync::Arc;

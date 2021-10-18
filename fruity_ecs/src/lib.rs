@@ -19,6 +19,8 @@ use crate::settings::settings_loader;
 use crate::system::system_manager::SystemManager;
 use crate::world::World;
 
+pub use fruity_ecs_derive::Component;
+
 /// All related with components
 pub mod component;
 

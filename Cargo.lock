@@ -633,6 +633,9 @@ dependencies = [
 [[package]]
 name = "fruity_any"
 version = "0.1.0"
+dependencies = [
+ "fruity_any_derive",
+]
 
 [[package]]
 name = "fruity_any_derive"
@@ -648,7 +651,7 @@ name = "fruity_collections"
 version = "0.1.0"
 dependencies = [
  "fruity_any",
- "fruity_any_derive",
+ "fruity_collections_derive",
 ]
 
 [[package]]
@@ -665,9 +668,7 @@ name = "fruity_ecs"
 version = "0.1.0"
 dependencies = [
  "fruity_any",
- "fruity_any_derive",
  "fruity_collections",
- "fruity_collections_derive",
  "fruity_ecs_derive",
  "fruity_introspect",
  "itertools",
@@ -690,14 +691,10 @@ name = "fruity_game_engine"
 version = "0.1.0"
 dependencies = [
  "fruity_any",
- "fruity_any_derive",
  "fruity_collections",
- "fruity_collections_derive",
  "fruity_ecs",
- "fruity_ecs_derive",
  "fruity_graphic",
  "fruity_introspect",
- "fruity_introspect_derive",
  "fruity_javascript_scripting",
  "fruity_windows",
  "log",
@@ -711,7 +708,6 @@ name = "fruity_graphic"
 version = "0.1.0"
 dependencies = [
  "fruity_any",
- "fruity_any_derive",
  "fruity_ecs",
  "fruity_introspect",
  "fruity_observer",
@@ -728,6 +724,7 @@ name = "fruity_introspect"
 version = "0.1.0"
 dependencies = [
  "fruity_any",
+ "fruity_introspect_derive",
  "log",
  "serde",
 ]
@@ -747,7 +744,6 @@ version = "0.1.0"
 dependencies = [
  "convert_case",
  "fruity_any",
- "fruity_any_derive",
  "fruity_ecs",
  "fruity_introspect",
  "lazy_static",
@@ -766,7 +762,6 @@ name = "fruity_windows"
 version = "0.1.0"
 dependencies = [
  "fruity_any",
- "fruity_any_derive",
  "fruity_ecs",
  "fruity_introspect",
  "fruity_observer",
