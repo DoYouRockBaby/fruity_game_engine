@@ -3,6 +3,7 @@ use crate::component::component_list_rwlock::ComponentListRwLock;
 use crate::component::component_rwlock::ComponentRwLock;
 use crate::component::serialized_component::SerializedComponent;
 use crate::entity::entity_rwlock::EntityRwLock;
+use crate::resource::resource::Resource;
 use crate::service::service::Service;
 use crate::ServiceManager;
 use fruity_introspect::IntrospectError;
@@ -99,6 +100,9 @@ pub enum Serialized {
 
     /// Component list RwLock
     ComponentListRwLock(ComponentListRwLock),
+
+    /// Resource
+    Resource(Arc<dyn Resource>),
 }
 
 macro_rules! as_integer {
@@ -264,6 +268,14 @@ impl Serialized {
     pub fn as_service(self) -> Option<Arc<RwLock<Box<dyn Service>>>> {
         match self {
             Serialized::Service(value) => Some(value.clone()),
+            _ => None,
+        }
+    }
+
+    /// Convert as Resource
+    pub fn as_resource(self) -> Option<Arc<dyn Resource>> {
+        match self {
+            Serialized::Resource(resource) => Some(resource),
             _ => None,
         }
     }

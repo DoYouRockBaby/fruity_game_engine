@@ -19,6 +19,43 @@ pub fn derive_fruity_any(input: TokenStream) -> TokenStream {
             fn as_any_box(self: Box<Self>) -> Box<dyn std::any::Any> {
                 self
             }
+
+            fn as_any_arc(self: std::sync::Arc<Self>) -> std::sync::Arc<dyn std::any::Any> {
+                self
+            }
+        }
+    };
+
+    output.into()
+}
+
+#[proc_macro_derive(FruityAnySyncSend)]
+pub fn derive_fruity_any_send_sync(input: TokenStream) -> TokenStream {
+    let DeriveInput { ident, .. } = parse_macro_input!(input);
+
+    let output = quote! {
+        impl fruity_any::FruityAny for #ident {
+            fn as_any_ref(&self) -> &std::any::Any {
+                self
+            }
+
+            fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+                self
+            }
+
+            fn as_any_box(self: Box<Self>) -> Box<dyn std::any::Any> {
+                self
+            }
+
+            fn as_any_arc(self: std::sync::Arc<Self>) -> std::sync::Arc<dyn std::any::Any> {
+                self
+            }
+        }
+
+        impl fruity_any::FruityAnySendSync for #ident {
+            fn as_any_arc_send_sync(self: std::sync::Arc<Self>) -> std::sync::Arc<dyn std::any::Any + Send + Sync> {
+                self
+            }
         }
     };
 

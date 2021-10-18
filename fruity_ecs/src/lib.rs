@@ -22,6 +22,9 @@ pub mod component;
 /// All related with entities
 pub mod entity;
 
+/// All related with resources
+pub mod resource;
+
 /// Provides a collection for services
 pub mod service;
 

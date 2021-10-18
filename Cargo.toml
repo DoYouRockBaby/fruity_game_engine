@@ -15,7 +15,6 @@ fruity_introspect_derive = { path = "fruity_introspect_derive" }
 fruity_collections = { path = "fruity_collections" }
 fruity_collections_derive = { path = "fruity_collections_derive" }
 fruity_javascript_scripting = { path = "fruity_javascript_scripting" }
-fruity_resources = { path = "fruity_resources" }
 fruity_windows = { path = "fruity_windows" }
 pretty_env_logger = "0.4.0"
 log = "0.4.14"
