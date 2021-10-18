@@ -19,11 +19,17 @@ pub enum IntrospectError {
     IncorrectArgument {
         /// The method name
         method: String,
+        /// The argument index
+        arg_index: usize,
     },
     /// Error that occure when you try to call a function with the wrong number of arguments
     WrongNumberArguments {
         /// The method name
         method: String,
+        /// The provided number of arguments
+        have: usize,
+        /// The expected number of arguments
+        expected: usize,
     },
     /// Error that occure when a callback from scripting language is nested with an other one
     NestedCallback,
@@ -35,16 +41,23 @@ pub fn log_introspect_error(err: &IntrospectError) {
         IntrospectError::UnknownMethod(method) => {
             log::error!("Failed to call an unknown method named {}", method)
         }
-        IntrospectError::IncorrectArgument { method } => {
+        IntrospectError::IncorrectArgument { method, arg_index } => {
             log::error!(
-                "Failed to call method {} cause an argument have a wrong type",
+                "Failed to call method {} cause the argument n°{} have a wrong type",
                 method,
+                arg_index
             )
         }
-        IntrospectError::WrongNumberArguments { method } => {
+        IntrospectError::WrongNumberArguments {
+            method,
+            have,
+            expected,
+        } => {
             log::error!(
-                "Failed to call method {} cause you provided a wrong number of arguments",
+                "Failed to call method {} cause you provided {} arguments, expected {}",
                 method,
+                have,
+                expected
             )
         }
         IntrospectError::NestedCallback => {
@@ -115,12 +128,6 @@ pub enum MethodCaller<T> {
 pub struct MethodInfo<T> {
     /// The name of the method
     pub name: String,
-
-    /// The type of the arguments
-    pub args: Vec<String>,
-
-    /// The type of the returned value
-    pub return_type: Option<String>,
 
     /// Call for the method with any field
     pub call: MethodCaller<T>,

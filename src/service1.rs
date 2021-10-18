@@ -1,9 +1,9 @@
 use fruity_any_derive::*;
 use fruity_ecs::serialize::serialized::Serialized;
 use fruity_ecs::service::service::Service;
-use fruity_ecs::service::utils::cast_next_argument;
 use fruity_ecs::service::utils::cast_service;
 use fruity_ecs::service::utils::cast_service_mut;
+use fruity_ecs::service::utils::ArgumentCaster;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
@@ -37,8 +37,6 @@ impl IntrospectMethods<Serialized> for Service1 {
         vec![
             MethodInfo {
                 name: "increment".to_string(),
-                args: vec![],
-                return_type: None,
                 call: MethodCaller::Mut(Arc::new(|this, _args| {
                     let this = cast_service_mut::<Service1>(this);
                     this.increment();
@@ -47,12 +45,11 @@ impl IntrospectMethods<Serialized> for Service1 {
             },
             MethodInfo {
                 name: "increment_by".to_string(),
-                args: vec!["i32".to_string()],
-                return_type: None,
-                call: MethodCaller::Mut(Arc::new(|this, mut args| {
+                call: MethodCaller::Mut(Arc::new(|this, args| {
                     let this = cast_service_mut::<Service1>(this);
 
-                    let arg1 = cast_next_argument("increment_by", &mut args, |arg| arg.as_i32())?;
+                    let mut caster = ArgumentCaster::new("increment_by", args);
+                    let arg1 = caster.cast_next(|arg| arg.as_i32())?;
 
                     this.increment_by(arg1);
                     Ok(None)
@@ -60,8 +57,6 @@ impl IntrospectMethods<Serialized> for Service1 {
             },
             MethodInfo {
                 name: "value".to_string(),
-                args: vec![],
-                return_type: Some("i32".to_string()),
                 call: MethodCaller::Const(Arc::new(|this, _args| {
                     let this = cast_service::<Service1>(this);
                     let result = this.value();

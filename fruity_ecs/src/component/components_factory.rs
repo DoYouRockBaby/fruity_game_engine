@@ -1,8 +1,8 @@
 use crate::component::component::Component;
 use crate::serialize::serialized::Serialized;
 use crate::service::service::Service;
-use crate::service::utils::cast_next_argument;
 use crate::service::utils::cast_service;
+use crate::service::utils::ArgumentCaster;
 use fruity_any_derive::*;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodCaller;
@@ -76,13 +76,12 @@ impl IntrospectMethods<Serialized> for ComponentsFactory {
     fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
         vec![MethodInfo {
             name: "instantiate".to_string(),
-            args: vec!["String".to_string()],
-            return_type: None,
-            call: MethodCaller::Const(Arc::new(move |this, mut args| {
+            call: MethodCaller::Const(Arc::new(move |this, args| {
                 let this = cast_service::<ComponentsFactory>(this);
 
-                let arg1 = cast_next_argument("instantiate", &mut args, |arg| arg.as_string())?;
-                let arg2 = cast_next_argument("instantiate", &mut args, |arg| Some(arg))?;
+                let mut caster = ArgumentCaster::new("instantiate", args);
+                let arg1 = caster.cast_next(|arg| arg.as_string())?;
+                let arg2 = caster.cast_next(|arg| Some(arg))?;
 
                 let component = this.instantiate(&arg1, arg2);
                 if let Some(component) = component {

@@ -8,9 +8,9 @@ use crate::entity::entity::IterMut as EntityIterMut;
 use crate::entity::entity_rwlock::EntityRwLock;
 use crate::serialize::serialized::Serialized;
 use crate::service::service::Service;
-use crate::service::utils::cast_next_argument;
 use crate::service::utils::cast_service;
 use crate::service::utils::cast_service_mut;
+use crate::service::utils::ArgumentCaster;
 use crate::ServiceManager;
 use crate::World;
 use fruity_any_derive::*;
@@ -233,14 +233,12 @@ impl IntrospectMethods<Serialized> for EntityManager {
         vec![
             MethodInfo {
                 name: "create".to_string(),
-                args: vec!["[Object]".to_string()],
-                return_type: None,
-                call: MethodCaller::Mut(Arc::new(move |this, mut args| {
+                call: MethodCaller::Mut(Arc::new(move |this, args| {
                     let this = unsafe { &mut *(this as *mut _) } as &mut dyn Any;
                     let this = cast_service_mut::<EntityManager>(this);
 
-                    let arg1 =
-                        cast_next_argument("create", &mut args, |arg| arg.as_component_array())?;
+                    let mut caster = ArgumentCaster::new("create", args);
+                    let arg1 = caster.cast_next(|arg| arg.as_component_array())?;
 
                     this.create(Entity::new(arg1));
 
@@ -249,15 +247,12 @@ impl IntrospectMethods<Serialized> for EntityManager {
             },
             MethodInfo {
                 name: "iter_entities".to_string(),
-                args: vec!["[String]".to_string()],
-                return_type: None,
-                call: MethodCaller::Const(Arc::new(move |this, mut args| {
+                call: MethodCaller::Const(Arc::new(move |this, args| {
                     let this = unsafe { &*(this as *const _) } as &dyn Any;
                     let this = cast_service::<EntityManager>(this);
 
-                    let arg1 = cast_next_argument("iter_entities", &mut args, |arg| {
-                        arg.as_string_array()
-                    })?;
+                    let mut caster = ArgumentCaster::new("iter_entities", args);
+                    let arg1 = caster.cast_next(|arg| arg.as_string_array())?;
 
                     let iterator = this
                         .iter_entities(EntityTypeIdentifier(arg1))
@@ -268,14 +263,11 @@ impl IntrospectMethods<Serialized> for EntityManager {
             },
             MethodInfo {
                 name: "iter_components".to_string(),
-                args: vec!["[String]".to_string()],
-                return_type: None,
-                call: MethodCaller::Const(Arc::new(move |this, mut args| {
+                call: MethodCaller::Const(Arc::new(move |this, args| {
                     let this = cast_service::<EntityManager>(this);
 
-                    let arg1 = cast_next_argument("iter_components", &mut args, |arg| {
-                        arg.as_string_array()
-                    })?;
+                    let mut caster = ArgumentCaster::new("iter_components", args);
+                    let arg1 = caster.cast_next(|arg| arg.as_string_array())?;
 
                     let iterator = this
                         .iter_components(EntityTypeIdentifier(arg1))

@@ -2,8 +2,8 @@ use fruity_any_derive::*;
 use fruity_ecs::serialize::serialized::Serialized;
 use fruity_ecs::service::service::Service;
 use fruity_ecs::service::service_rwlock::ServiceRwLock;
-use fruity_ecs::service::utils::cast_next_argument;
 use fruity_ecs::service::utils::cast_service;
+use fruity_ecs::service::utils::ArgumentCaster;
 use fruity_ecs::system::system_manager::SystemManager;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodCaller;
@@ -184,8 +184,6 @@ impl IntrospectMethods<Serialized> for WindowsManager {
         vec![
             MethodInfo {
                 name: "run".to_string(),
-                args: vec![],
-                return_type: None,
                 call: MethodCaller::Const(Arc::new(|this, _args| {
                     let this = cast_service::<WindowsManager>(this);
                     this.run();
@@ -194,8 +192,6 @@ impl IntrospectMethods<Serialized> for WindowsManager {
             },
             MethodInfo {
                 name: "close".to_string(),
-                args: vec![],
-                return_type: None,
                 call: MethodCaller::Const(Arc::new(|this, _args| {
                     let this = cast_service::<WindowsManager>(this);
                     this.close();
@@ -204,12 +200,11 @@ impl IntrospectMethods<Serialized> for WindowsManager {
             },
             MethodInfo {
                 name: "set_resizable".to_string(),
-                args: vec![],
-                return_type: None,
-                call: MethodCaller::Const(Arc::new(|this, mut args| {
+                call: MethodCaller::Const(Arc::new(|this, args| {
                     let this = cast_service::<WindowsManager>(this);
 
-                    let arg1 = cast_next_argument("set_resizable", &mut args, |arg| arg.as_bool())?;
+                    let mut caster = ArgumentCaster::new("set_resizable", args);
+                    let arg1 = caster.cast_next(|arg| arg.as_bool())?;
 
                     this.set_resizable(arg1);
                     Ok(None)
@@ -217,8 +212,6 @@ impl IntrospectMethods<Serialized> for WindowsManager {
             },
             MethodInfo {
                 name: "get_size".to_string(),
-                args: vec![],
-                return_type: None,
                 call: MethodCaller::Const(Arc::new(|this, _args| {
                     let this = cast_service::<WindowsManager>(this);
                     let result = this.get_size();
@@ -231,13 +224,12 @@ impl IntrospectMethods<Serialized> for WindowsManager {
             },
             MethodInfo {
                 name: "set_size".to_string(),
-                args: vec![],
-                return_type: None,
-                call: MethodCaller::Const(Arc::new(|this, mut args| {
+                call: MethodCaller::Const(Arc::new(|this, args| {
                     let this = cast_service::<WindowsManager>(this);
 
-                    let arg1 = cast_next_argument("set_size", &mut args, |arg| arg.as_usize())?;
-                    let arg2 = cast_next_argument("set_size", &mut args, |arg| arg.as_usize())?;
+                    let mut caster = ArgumentCaster::new("set_size", args);
+                    let arg1 = caster.cast_next(|arg| arg.as_usize())?;
+                    let arg2 = caster.cast_next(|arg| arg.as_usize())?;
 
                     this.set_size(arg1, arg2);
                     Ok(None)
@@ -245,12 +237,11 @@ impl IntrospectMethods<Serialized> for WindowsManager {
             },
             MethodInfo {
                 name: "set_title".to_string(),
-                args: vec![],
-                return_type: None,
-                call: MethodCaller::Const(Arc::new(|this, mut args| {
+                call: MethodCaller::Const(Arc::new(|this, args| {
                     let this = cast_service::<WindowsManager>(this);
 
-                    let arg1 = cast_next_argument("set_title", &mut args, |arg| arg.as_string())?;
+                    let mut caster = ArgumentCaster::new("set_title", args);
+                    let arg1 = caster.cast_next(|arg| arg.as_string())?;
 
                     this.set_title(&arg1);
                     Ok(None)

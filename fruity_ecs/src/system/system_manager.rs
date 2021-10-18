@@ -1,8 +1,8 @@
 use crate::serialize::serialized::Serialized;
 use crate::service::service::Service;
 use crate::service::service_manager::ServiceManager;
-use crate::service::utils::cast_next_argument;
 use crate::service::utils::cast_service_mut;
+use crate::service::utils::ArgumentCaster;
 use crate::World;
 use fruity_any_derive::*;
 use fruity_introspect::log_introspect_error;
@@ -68,12 +68,11 @@ impl IntrospectMethods<Serialized> for SystemManager {
     fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
         vec![MethodInfo {
             name: "add_system".to_string(),
-            args: vec!["fn".to_string()],
-            return_type: None,
-            call: MethodCaller::Mut(Arc::new(|this, mut args| {
+            call: MethodCaller::Mut(Arc::new(|this, args| {
                 let this = cast_service_mut::<SystemManager>(this);
 
-                let arg1 = cast_next_argument("add_system", &mut args, |arg| arg.as_callback())?;
+                let mut caster = ArgumentCaster::new("add_system", args);
+                let arg1 = caster.cast_next(|arg| arg.as_callback())?;
 
                 this.add_system(move |service_manager| {
                     match arg1(service_manager, vec![]) {

@@ -45,8 +45,6 @@ impl IntrospectMethods<Serialized> for SerializedService {
 
                     MethodInfo {
                         name: key.clone(),
-                        args: vec![],
-                        return_type: None,
                         call: MethodCaller::Mut(Arc::new(move |this, args| {
                             let this = cast_service_mut::<SerializedService>(this);
                             callback(this.service_manager.clone(), args)
