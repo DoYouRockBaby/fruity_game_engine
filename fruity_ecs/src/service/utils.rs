@@ -31,7 +31,7 @@ pub struct ArgumentCaster<'s> {
 }
 
 impl<'s> ArgumentCaster<'s> {
-    // Return an ArgumentCaster
+    /// Return an ArgumentCaster
     pub fn new<'a>(method: &'a str, args: Vec<Serialized>) -> ArgumentCaster<'a> {
         ArgumentCaster::<'a> {
             method,
