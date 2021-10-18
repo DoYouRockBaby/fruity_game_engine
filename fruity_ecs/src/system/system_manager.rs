@@ -1,3 +1,4 @@
+use crate::serialize::serialized::Callback;
 use crate::serialize::serialized::Serialized;
 use crate::service::service::Service;
 use crate::service::service_manager::ServiceManager;
@@ -17,7 +18,7 @@ use std::sync::RwLock;
 type System = dyn Fn(Arc<RwLock<ServiceManager>>) + Sync + Send + 'static;
 
 /// A systems collection
-#[derive(FruityAny)]
+#[derive(FruityAnySyncSend)]
 pub struct SystemManager {
     systems: Vec<Box<System>>,
     service_manager: Arc<RwLock<ServiceManager>>,
@@ -72,7 +73,7 @@ impl IntrospectMethods<Serialized> for SystemManager {
                 let this = cast_service_mut::<SystemManager>(this);
 
                 let mut caster = ArgumentCaster::new("add_system", args);
-                let arg1 = caster.cast_next(|arg| arg.as_callback())?;
+                let arg1 = caster.cast_next::<Callback>()?;
 
                 this.add_system(move |service_manager| {
                     match arg1(service_manager, vec![]) {

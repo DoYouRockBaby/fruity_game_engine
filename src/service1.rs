@@ -9,7 +9,7 @@ use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use std::sync::Arc;
 
-#[derive(Debug, Clone, FruityAny)]
+#[derive(Debug, Clone, FruityAnySyncSend)]
 pub struct Service1 {
     incrementer: i32,
 }
@@ -49,7 +49,7 @@ impl IntrospectMethods<Serialized> for Service1 {
                     let this = cast_service_mut::<Service1>(this);
 
                     let mut caster = ArgumentCaster::new("increment_by", args);
-                    let arg1 = caster.cast_next(|arg| arg.as_i32())?;
+                    let arg1 = caster.cast_next::<i32>()?;
 
                     this.increment_by(arg1);
                     Ok(None)

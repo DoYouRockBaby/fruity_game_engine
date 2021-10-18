@@ -5,6 +5,7 @@ use crate::JsObject;
 use fruity_ecs::component::component_list_rwlock::ComponentListRwLock;
 use fruity_ecs::serialize::serialized::Serialized;
 use rusty_v8 as v8;
+use std::convert::TryFrom;
 
 impl JsObject {
     pub fn from_component_list_rwlock(
@@ -42,7 +43,7 @@ fn component_list_get_callback(
         }
 
         let arg1 = deserialized_args.remove(0);
-        let arg1 = if let Some(arg) = arg1.as_usize() {
+        let arg1 = if let Ok(arg) = usize::try_from(arg1) {
             arg
         } else {
             log::error!("Failed to call method get cause the argument n°0 have a wrong type");

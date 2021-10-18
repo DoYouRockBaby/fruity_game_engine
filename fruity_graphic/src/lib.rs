@@ -20,6 +20,9 @@ pub fn initialize(world: &World) {
         .add_resource_loader("png", image_loader)
         .unwrap();
     resources_manager
+        .add_resource_loader("jpeg", image_loader)
+        .unwrap();
+    resources_manager
         .add_resource_loader("jpg", image_loader)
         .unwrap();
     resources_manager

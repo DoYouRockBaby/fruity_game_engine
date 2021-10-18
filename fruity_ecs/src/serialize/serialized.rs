@@ -6,12 +6,33 @@ use crate::entity::entity_rwlock::EntityRwLock;
 use crate::resource::resource::Resource;
 use crate::service::service::Service;
 use crate::ServiceManager;
+use fruity_any::FruityAnySendSync;
 use fruity_introspect::IntrospectError;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::sync::RwLock;
+
+/// A callback for the serialized type
+pub type Callback = Arc<
+    dyn Fn(
+            Arc<RwLock<ServiceManager>>,
+            Vec<Serialized>,
+        ) -> Result<Option<Serialized>, IntrospectError>
+        + Sync
+        + Send
+        + 'static,
+>;
+
+/// A list of serialized object fields
+pub type ObjectFields = HashMap<String, Serialized>;
+
+/// A list of serialized object fields
+pub type AnyServiceReference = Arc<RwLock<Box<dyn Service>>>;
+
+/// A list of serialized object fields
+pub type ServiceReference<T: Service> = Arc<RwLock<Box<T>>>;
 
 /// A serialized value
 #[derive(Clone)]
@@ -105,198 +126,147 @@ pub enum Serialized {
     Resource(Arc<dyn Resource>),
 }
 
-macro_rules! as_integer {
-    ( $value:expr, $type:ident ) => {
-        match $value {
-            Serialized::I8(value) => $type::try_from(value).ok(),
-            Serialized::I16(value) => $type::try_from(value).ok(),
-            Serialized::I32(value) => $type::try_from(value).ok(),
-            Serialized::I64(value) => $type::try_from(value).ok(),
-            Serialized::ISize(value) => $type::try_from(value).ok(),
-            Serialized::U8(value) => $type::try_from(value).ok(),
-            Serialized::U16(value) => $type::try_from(value).ok(),
-            Serialized::U32(value) => $type::try_from(value).ok(),
-            Serialized::U64(value) => $type::try_from(value).ok(),
-            Serialized::USize(value) => $type::try_from(value).ok(),
-            Serialized::F32(value) => $type::try_from(value as i64).ok(),
-            Serialized::F64(value) => $type::try_from(value as i64).ok(),
-            _ => None,
-        }
-    };
-}
-macro_rules! as_floating {
-    ( $value:expr, $type:ident ) => {
-        match $value {
-            Serialized::I8(value) => Some(value as $type),
-            Serialized::I16(value) => Some(value as $type),
-            Serialized::I32(value) => Some(value as $type),
-            Serialized::I64(value) => Some(value as $type),
-            Serialized::ISize(value) => Some(value as $type),
-            Serialized::U8(value) => Some(value as $type),
-            Serialized::U16(value) => Some(value as $type),
-            Serialized::U32(value) => Some(value as $type),
-            Serialized::U64(value) => Some(value as $type),
-            Serialized::USize(value) => Some(value as $type),
-            Serialized::F32(value) => Some(value as $type),
-            Serialized::F64(value) => Some(value as $type),
-            _ => None,
+macro_rules! impl_numeric_from_serialized {
+    ( $type:ident ) => {
+        impl TryFrom<Serialized> for $type {
+            type Error = String;
+
+            fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+                match value {
+                    Serialized::I8(value) => Ok(value as $type),
+                    Serialized::I16(value) => Ok(value as $type),
+                    Serialized::I32(value) => Ok(value as $type),
+                    Serialized::I64(value) => Ok(value as $type),
+                    Serialized::ISize(value) => Ok(value as $type),
+                    Serialized::U8(value) => Ok(value as $type),
+                    Serialized::U16(value) => Ok(value as $type),
+                    Serialized::U32(value) => Ok(value as $type),
+                    Serialized::U64(value) => Ok(value as $type),
+                    Serialized::USize(value) => Ok(value as $type),
+                    Serialized::F32(value) => Ok(value as $type),
+                    Serialized::F64(value) => Ok(value as $type),
+                    _ => Err(format!("Couldn't convert {:?} to {}", value, "$type")),
+                }
+            }
         }
     };
 }
 
-impl Serialized {
-    /// Convert as i8
-    pub fn as_i8(self) -> Option<i8> {
-        as_integer!(self, i8)
-    }
+impl_numeric_from_serialized!(i8);
+impl_numeric_from_serialized!(i16);
+impl_numeric_from_serialized!(i32);
+impl_numeric_from_serialized!(i64);
+impl_numeric_from_serialized!(isize);
+impl_numeric_from_serialized!(u8);
+impl_numeric_from_serialized!(u16);
+impl_numeric_from_serialized!(u32);
+impl_numeric_from_serialized!(u64);
+impl_numeric_from_serialized!(usize);
+impl_numeric_from_serialized!(f32);
+impl_numeric_from_serialized!(f64);
 
-    /// Convert as i16
-    pub fn as_i16(self) -> Option<i16> {
-        as_integer!(self, i16)
-    }
+impl TryFrom<Serialized> for bool {
+    type Error = String;
 
-    /// Convert as i32
-    pub fn as_i32(self) -> Option<i32> {
-        as_integer!(self, i32)
-    }
-
-    /// Convert as i64
-    pub fn as_i64(self) -> Option<i64> {
-        as_integer!(self, i64)
-    }
-
-    /// Convert as isize
-    pub fn as_isize(self) -> Option<isize> {
-        as_integer!(self, isize)
-    }
-
-    /// Convert as u8
-    pub fn as_u8(self) -> Option<u8> {
-        as_integer!(self, u8)
-    }
-
-    /// Convert as u16
-    pub fn as_u16(self) -> Option<u16> {
-        as_integer!(self, u16)
-    }
-
-    /// Convert as u32
-    pub fn as_u32(self) -> Option<u32> {
-        as_integer!(self, u32)
-    }
-
-    /// Convert as u64
-    pub fn as_u64(self) -> Option<u64> {
-        as_integer!(self, u64)
-    }
-
-    /// Convert as usize
-    pub fn as_usize(self) -> Option<usize> {
-        as_integer!(self, usize)
-    }
-
-    /// Convert as f32
-    pub fn as_f32(self) -> Option<f32> {
-        as_floating!(self, f32)
-    }
-
-    /// Convert as f64
-    pub fn as_f64(self) -> Option<f64> {
-        as_floating!(self, f64)
-    }
-
-    /// Convert as bool
-    pub fn as_bool(self) -> Option<bool> {
-        match self {
-            Serialized::Bool(value) => Some(value),
-            _ => None,
+    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::Bool(value) => Ok(value),
+            _ => Err(format!("Couldn't convert {:?} to bool", value)),
         }
     }
+}
 
-    /// Convert as String
-    pub fn as_string(self) -> Option<String> {
-        match self {
-            Serialized::String(value) => Some(value),
-            _ => None,
+impl TryFrom<Serialized> for String {
+    type Error = String;
+
+    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::String(value) => Ok(value),
+            _ => Err(format!("Couldn't convert {:?} to bool", value)),
         }
     }
+}
 
-    /// Convert as Serialized object
-    pub fn as_object_fields(self) -> Option<HashMap<String, Serialized>> {
-        match self {
-            Serialized::Object { fields, .. } => Some(fields),
-            _ => None,
+impl TryFrom<Serialized> for ObjectFields {
+    type Error = String;
+
+    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::Object { fields, .. } => Ok(fields),
+            _ => Err(format!("Couldn't convert {:?} to field hashmap", value)),
         }
     }
+}
 
-    /// Convert as Component
-    pub fn as_component(self) -> Option<Box<dyn Component>> {
-        match self {
-            Serialized::Object { .. } => Some(Box::new(SerializedComponent::new(self))),
-            Serialized::Component(component) => Some(component.duplicate()),
-            _ => None,
+impl TryFrom<Serialized> for Box<dyn Component> {
+    type Error = String;
+
+    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::Object { .. } => Ok(Box::new(SerializedComponent::new(value))),
+            Serialized::Component(component) => Ok(component.duplicate()),
+            _ => Err(format!("Couldn't convert {:?} to field hashmap", value)),
         }
     }
+}
 
-    /// Convert as String array
-    pub fn as_string_array(self) -> Option<Vec<String>> {
-        match self {
-            Serialized::Array(value) => Some(
-                value
-                    .into_iter()
-                    .filter_map(|elem| elem.as_string())
-                    .collect(),
-            ),
-            _ => None,
+impl<T: TryFrom<Serialized>> TryFrom<Serialized> for Vec<T> {
+    type Error = String;
+
+    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::Array(value) => Ok(value
+                .into_iter()
+                .filter_map(|elem| T::try_from(elem).ok())
+                .collect()),
+            _ => Err(format!("Couldn't convert {:?} to array", value)),
         }
     }
+}
 
-    /// Convert as component array
-    pub fn as_component_array(self) -> Option<Vec<Box<dyn Component>>> {
-        match self {
-            Serialized::Array(value) => Some(
-                value
-                    .into_iter()
-                    .filter_map(|elem| elem.as_component())
-                    .collect(),
-            ),
-            _ => None,
+impl TryFrom<Serialized> for AnyServiceReference {
+    type Error = String;
+
+    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::Service(value) => Ok(value.clone()),
+            _ => Err(format!("Couldn't convert {:?} to service", value)),
         }
     }
+}
 
-    /// Convert as a thread shared service
-    pub fn as_service(self) -> Option<Arc<RwLock<Box<dyn Service>>>> {
-        match self {
-            Serialized::Service(value) => Some(value.clone()),
-            _ => None,
+// TODO
+/*impl<T: Service> TryFrom<Serialized> for ServiceReference<T> {
+    type Error = String;
+
+    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+        let service = AnyServiceReference::try_from(value)?;
+
+        service
+            .as_any_arc_send_sync()
+            .downcast::<RwLock<Box<T>>>()
+            .map_err(|_| format!("Couldn't convert {:?} to service", value))
+    }
+}*/
+
+impl TryFrom<Serialized> for Arc<dyn Resource> {
+    type Error = String;
+
+    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::Resource(resource) => Ok(resource),
+            _ => Err(format!("Couldn't convert {:?} to resource", value)),
         }
     }
+}
 
-    /// Convert as Resource
-    pub fn as_resource(self) -> Option<Arc<dyn Resource>> {
-        match self {
-            Serialized::Resource(resource) => Some(resource),
-            _ => None,
-        }
-    }
+impl TryFrom<Serialized> for Callback {
+    type Error = String;
 
-    /// Convert as a callback function
-    pub fn as_callback(
-        self,
-    ) -> Option<
-        Arc<
-            dyn Fn(
-                    Arc<RwLock<ServiceManager>>,
-                    Vec<Serialized>,
-                ) -> Result<Option<Serialized>, IntrospectError>
-                + Sync
-                + Send
-                + 'static,
-        >,
-    > {
-        match self {
-            Serialized::Callback(value) => Some(value.clone()),
-            _ => None,
+    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::Callback(value) => Ok(value.clone()),
+            _ => Err(format!("Couldn't convert {:?} to callback", value)),
         }
     }
 }

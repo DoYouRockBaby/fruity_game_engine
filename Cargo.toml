@@ -8,6 +8,7 @@ resolver = "2"
 fruity_any = { path = "fruity_any" }
 fruity_ecs = { path = "fruity_ecs" }
 fruity_graphic = { path = "fruity_graphic" }
+fruity_graphic_2d = { path = "fruity_graphic_2d" }
 fruity_introspect = { path = "fruity_introspect" }
 fruity_collections = { path = "fruity_collections" }
 fruity_javascript_scripting = { path = "fruity_javascript_scripting" }

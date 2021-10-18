@@ -21,7 +21,7 @@ use winit::event_loop::EventLoop;
 use winit::window::Window;
 use winit::window::WindowBuilder;
 
-#[derive(FruityAny)]
+#[derive(FruityAnySyncSend)]
 pub struct WindowsManager {
     system_manager: ServiceRwLock<SystemManager>,
     event_stack: Arc<RwLock<Vec<FruityWindowsEvent>>>,
@@ -204,7 +204,7 @@ impl IntrospectMethods<Serialized> for WindowsManager {
                     let this = cast_service::<WindowsManager>(this);
 
                     let mut caster = ArgumentCaster::new("set_resizable", args);
-                    let arg1 = caster.cast_next(|arg| arg.as_bool())?;
+                    let arg1 = caster.cast_next::<bool>()?;
 
                     this.set_resizable(arg1);
                     Ok(None)
@@ -228,8 +228,8 @@ impl IntrospectMethods<Serialized> for WindowsManager {
                     let this = cast_service::<WindowsManager>(this);
 
                     let mut caster = ArgumentCaster::new("set_size", args);
-                    let arg1 = caster.cast_next(|arg| arg.as_usize())?;
-                    let arg2 = caster.cast_next(|arg| arg.as_usize())?;
+                    let arg1 = caster.cast_next::<usize>()?;
+                    let arg2 = caster.cast_next::<usize>()?;
 
                     this.set_size(arg1, arg2);
                     Ok(None)
@@ -241,7 +241,7 @@ impl IntrospectMethods<Serialized> for WindowsManager {
                     let this = cast_service::<WindowsManager>(this);
 
                     let mut caster = ArgumentCaster::new("set_title", args);
-                    let arg1 = caster.cast_next(|arg| arg.as_string())?;
+                    let arg1 = caster.cast_next::<String>()?;
 
                     this.set_title(&arg1);
                     Ok(None)

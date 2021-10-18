@@ -1,6 +1,7 @@
 use crate::serialize::serialized::Serialized;
 use fruity_introspect::IntrospectError;
 use std::any::Any;
+use std::convert::TryFrom;
 use std::iter::Enumerate;
 use std::vec::IntoIter as VecIntoIter;
 
@@ -41,29 +42,34 @@ impl<'s> ArgumentCaster<'s> {
         }
     }
 
-    /// Cast a serialized argument from an argument list
-    ///
-    /// # Arguments
-    /// * `converter` - The converter that will turn the argument to a typed one
-    ///
-    /// # Generic Arguments
-    /// * `T` - The type to cast
-    /// * `F` - The function type for the converter
-    ///
-    pub fn cast_next<T, F: Fn(Serialized) -> Option<T>>(
-        &mut self,
-        converter: F,
-    ) -> Result<T, IntrospectError> {
+    /// Get a serialized argument from an argument list
+    pub fn next(&mut self) -> Result<Serialized, IntrospectError> {
         match self.iter.next() {
             Some((index, arg)) => {
                 self.last_index = index + 1;
-                match converter(arg) {
-                    Some(arg) => Ok(arg),
-                    None => Err(IntrospectError::IncorrectArgument {
-                        method: self.method.to_string(),
-                        arg_index: index,
-                    }),
-                }
+                Ok(arg)
+            }
+            None => Err(IntrospectError::WrongNumberArguments {
+                method: self.method.to_string(),
+                have: self.last_index,
+                expected: self.args_count,
+            }),
+        }
+    }
+
+    /// Cast a serialized argument from an argument list
+    ///
+    /// # Generic Arguments
+    /// * `T` - The type to cast
+    ///
+    pub fn cast_next<T: TryFrom<Serialized>>(&mut self) -> Result<T, IntrospectError> {
+        match self.iter.next() {
+            Some((index, arg)) => {
+                self.last_index = index + 1;
+                T::try_from(arg).map_err(|_| IntrospectError::IncorrectArgument {
+                    method: self.method.to_string(),
+                    arg_index: index,
+                })
             }
             None => Err(IntrospectError::WrongNumberArguments {
                 method: self.method.to_string(),

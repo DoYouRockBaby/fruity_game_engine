@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 /// Provides a factory for the component types
 /// This will be used by the scripting language to expose component creation
-#[derive(Debug, FruityAny)]
+#[derive(Debug, FruityAnySyncSend)]
 pub struct ComponentsFactory {
     factories: HashMap<String, fn() -> Box<dyn Component>>,
 }
@@ -80,8 +80,8 @@ impl IntrospectMethods<Serialized> for ComponentsFactory {
                 let this = cast_service::<ComponentsFactory>(this);
 
                 let mut caster = ArgumentCaster::new("instantiate", args);
-                let arg1 = caster.cast_next(|arg| arg.as_string())?;
-                let arg2 = caster.cast_next(|arg| Some(arg))?;
+                let arg1 = caster.cast_next::<String>()?;
+                let arg2 = caster.next()?;
 
                 let component = this.instantiate(&arg1, arg2);
                 if let Some(component) = component {

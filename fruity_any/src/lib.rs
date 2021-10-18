@@ -8,6 +8,7 @@ pub use fruity_any_derive::FruityAny;
 pub use fruity_any_derive::FruityAnySyncSend;
 use std::any::Any;
 use std::sync::Arc;
+use std::sync::RwLock;
 
 /// The any trait
 pub trait FruityAny: Any {
@@ -44,6 +45,60 @@ impl<T: FruityAny> FruityAny for Box<T> {
     }
 
     fn as_any_arc(self: Arc<Self>) -> Arc<dyn Any> {
+        self
+    }
+}
+
+impl<T: FruityAny> FruityAny for Arc<T> {
+    fn as_any_ref(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn as_any_box(self: Box<Self>) -> Box<dyn Any> {
+        self
+    }
+
+    fn as_any_arc(self: Arc<Self>) -> Arc<dyn Any> {
+        self
+    }
+}
+
+impl<T: FruityAny> FruityAny for RwLock<T> {
+    fn as_any_ref(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn as_any_box(self: Box<Self>) -> Box<dyn Any> {
+        self
+    }
+
+    fn as_any_arc(self: Arc<Self>) -> Arc<dyn Any> {
+        self
+    }
+}
+
+impl<T: FruityAnySendSync> FruityAnySendSync for Box<T> {
+    fn as_any_arc_send_sync(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
+        self
+    }
+}
+
+impl<T: FruityAnySendSync> FruityAnySendSync for Arc<T> {
+    fn as_any_arc_send_sync(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
+        self
+    }
+}
+
+impl<T: FruityAnySendSync> FruityAnySendSync for RwLock<T> {
+    fn as_any_arc_send_sync(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
         self
     }
 }

@@ -1,3 +1,4 @@
+use crate::component::component::Component;
 use crate::component::component_list_rwlock::ComponentListRwLock;
 use crate::entity::archetype::Archetype;
 use crate::entity::entity::Entity;
@@ -29,7 +30,7 @@ pub enum RemoveEntityError {
 }
 
 /// A storage for every entities, use [’Archetypes’] to store entities of different types
-#[derive(Debug, FruityAny)]
+#[derive(Debug, FruityAnySyncSend)]
 pub struct EntityManager {
     id_incrementer: u64,
     archetypes: Vec<Archetype>,
@@ -238,7 +239,7 @@ impl IntrospectMethods<Serialized> for EntityManager {
                     let this = cast_service_mut::<EntityManager>(this);
 
                     let mut caster = ArgumentCaster::new("create", args);
-                    let arg1 = caster.cast_next(|arg| arg.as_component_array())?;
+                    let arg1 = caster.cast_next::<Vec<Box<dyn Component>>>()?;
 
                     this.create(Entity::new(arg1));
 
@@ -252,7 +253,7 @@ impl IntrospectMethods<Serialized> for EntityManager {
                     let this = cast_service::<EntityManager>(this);
 
                     let mut caster = ArgumentCaster::new("iter_entities", args);
-                    let arg1 = caster.cast_next(|arg| arg.as_string_array())?;
+                    let arg1 = caster.cast_next::<Vec<String>>()?;
 
                     let iterator = this
                         .iter_entities(EntityTypeIdentifier(arg1))
@@ -267,7 +268,7 @@ impl IntrospectMethods<Serialized> for EntityManager {
                     let this = cast_service::<EntityManager>(this);
 
                     let mut caster = ArgumentCaster::new("iter_components", args);
-                    let arg1 = caster.cast_next(|arg| arg.as_string_array())?;
+                    let arg1 = caster.cast_next::<Vec<String>>()?;
 
                     let iterator = this
                         .iter_components(EntityTypeIdentifier(arg1))

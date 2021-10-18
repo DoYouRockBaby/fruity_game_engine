@@ -27,7 +27,7 @@ pub(crate) enum RuntimeEvent {
     },
 }
 
-#[derive(Debug, FruityAny)]
+#[derive(Debug, FruityAnySyncSend)]
 pub struct JavascriptEngine {
     channel_sender: mpsc::SyncSender<RuntimeEvent>,
 }

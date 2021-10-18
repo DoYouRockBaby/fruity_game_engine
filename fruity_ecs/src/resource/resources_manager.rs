@@ -29,7 +29,7 @@ pub type ResourceLoader = fn(
 );
 
 /// The resource manager
-#[derive(FruityAny)]
+#[derive(FruityAnySyncSend)]
 pub struct ResourcesManager {
     resources: HashMap<ResourceIdentifier, Arc<dyn Resource>>,
     resource_loaders: HashMap<String, ResourceLoader>,
@@ -191,10 +191,9 @@ impl IntrospectMethods<Serialized> for ResourcesManager {
                 let this = cast_service::<ResourcesManager>(this);
 
                 let mut caster = ArgumentCaster::new("get_resource", args);
-                let arg1 =
-                    caster.cast_next(|arg| arg.as_string().map(|arg| ResourceIdentifier(arg)))?;
+                let arg1 = caster.cast_next::<String>()?;
 
-                let result = this.get_untyped_resource(arg1);
+                let result = this.get_untyped_resource(ResourceIdentifier(arg1));
 
                 Ok(result.map(|result| Serialized::Resource(result)))
             })),

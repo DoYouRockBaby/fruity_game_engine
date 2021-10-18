@@ -10,7 +10,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 /// A wrapper for services that come from scripting languages as serialized
-#[derive(Debug, FruityAny)]
+#[derive(Debug, FruityAnySyncSend)]
 pub struct SerializedService {
     service_manager: Arc<RwLock<ServiceManager>>,
     serialized: Serialized,

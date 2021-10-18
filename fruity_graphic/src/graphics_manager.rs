@@ -18,7 +18,7 @@ struct State {
     config: wgpu::SurfaceConfiguration,
 }
 
-#[derive(Debug, FruityAny)]
+#[derive(Debug, FruityAnySyncSend)]
 pub struct GraphicsManager {
     state: Option<State>,
 }
@@ -29,6 +29,7 @@ impl GraphicsManager {
         let windows_manager = service_manager.get::<WindowsManager>().unwrap();
         let windows_manager = windows_manager.read().unwrap();
 
+        // Subscribe to windows observer to proceed the graphics when it's neededs
         let service_manager = world.service_manager.clone();
         windows_manager.on_init.add_observer(move |window| {
             let service_manager = service_manager.read().unwrap();

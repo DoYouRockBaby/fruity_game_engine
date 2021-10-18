@@ -2,10 +2,13 @@ use crate::js_value::utils::inject_serialized_into_v8_return_value;
 use crate::serialize::deserialize::deserialize_v8;
 use crate::JsRuntime;
 use fruity_ecs::component::components_factory::ComponentsFactory;
+use fruity_ecs::serialize::serialized::AnyServiceReference;
+use fruity_ecs::serialize::serialized::ObjectFields;
 use fruity_ecs::serialize::serialized::Serialized;
 use fruity_ecs::service::service_manager::ServiceManager;
 use rusty_v8 as v8;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -42,15 +45,13 @@ pub fn configure_components(runtime: &mut JsRuntime, service_manager: Arc<RwLock
              mut return_value: v8::ReturnValue| {
                 // Get the data
                 let data = deserialize_v8(scope, args.data().unwrap()).unwrap();
-                let data_fields = data.as_object_fields().unwrap();
+                let data_fields = ObjectFields::try_from(data).unwrap();
 
                 // Get the components factory
-                let test = data_fields
-                    .get("components_factory")
-                    .unwrap()
-                    .clone()
-                    .as_service();
-                let components_factory = test.unwrap();
+                let components_factory = AnyServiceReference::try_from(
+                    data_fields.get("components_factory").unwrap().clone(),
+                )
+                .unwrap();
                 let components_factory = components_factory.read().unwrap();
 
                 let components_factory = components_factory
@@ -59,12 +60,9 @@ pub fn configure_components(runtime: &mut JsRuntime, service_manager: Arc<RwLock
                     .unwrap();
 
                 // Get the components identifier
-                let component_identifier = data_fields
-                    .get("component_identifier")
-                    .unwrap()
-                    .clone()
-                    .as_string()
-                    .unwrap();
+                let component_identifier =
+                    String::try_from(data_fields.get("component_identifier").unwrap().clone())
+                        .unwrap();
 
                 // Build the arguments
                 let mut deserialized_args = (0..args.length())

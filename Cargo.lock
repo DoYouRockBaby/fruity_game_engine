@@ -694,6 +694,7 @@ dependencies = [
  "fruity_collections",
  "fruity_ecs",
  "fruity_graphic",
+ "fruity_graphic_2d",
  "fruity_introspect",
  "fruity_javascript_scripting",
  "fruity_windows",
@@ -715,6 +716,22 @@ dependencies = [
  "image",
  "log",
  "tokio",
+ "wgpu",
+ "winit",
+]
+
+[[package]]
+name = "fruity_graphic_2d"
+version = "0.1.0"
+dependencies = [
+ "fruity_any",
+ "fruity_collections",
+ "fruity_ecs",
+ "fruity_graphic",
+ "fruity_introspect",
+ "fruity_observer",
+ "image",
+ "log",
  "wgpu",
  "winit",
 ]

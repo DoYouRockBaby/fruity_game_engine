@@ -43,7 +43,6 @@ pub fn derive_introspect_fields(input: TokenStream) -> TokenStream {
             let recurse_infos = fields.iter().map(|(name, ty)| {
                 let name_as_string = name.to_string();
                 let type_as_string = ty.to_string();
-                let type_converter_as_string = format_ident!("as_{}", &type_as_string);
 
                 quote! {
                     fruity_introspect::FieldInfo::<fruity_ecs::serialize::serialized::Serialized> {
@@ -51,13 +50,15 @@ pub fn derive_introspect_fields(input: TokenStream) -> TokenStream {
                         ty: #type_as_string.to_string(),
                         getter: std::sync::Arc::new(|this| fruity_ecs::serialize::serialize::serialize_any(&this.downcast_ref::<#ident>().unwrap().#name).unwrap()),
                         setter: std::sync::Arc::new(|this, value| {
+                            use std::convert::TryFrom;
+                    
                             let this = this.downcast_mut::<#ident>().unwrap();
 
-                            match value.#type_converter_as_string () {
-                                Some(value) => {
+                            match #ty::try_from(value) {
+                                Ok(value) => {
                                     this.#name = value
                                 }
-                                None => {
+                                Err(_) => {
                                     log::error!(
                                         "Expected a {} for property {:?}",
                                         #type_as_string,
