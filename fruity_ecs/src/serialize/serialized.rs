@@ -6,7 +6,6 @@ use crate::entity::entity_rwlock::EntityRwLock;
 use crate::resource::resource::Resource;
 use crate::service::service::Service;
 use crate::ServiceManager;
-use fruity_any::FruityAnySendSync;
 use fruity_introspect::IntrospectError;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -32,7 +31,7 @@ pub type ObjectFields = HashMap<String, Serialized>;
 pub type AnyServiceReference = Arc<RwLock<Box<dyn Service>>>;
 
 /// A list of serialized object fields
-pub type ServiceReference<T: Service> = Arc<RwLock<Box<T>>>;
+pub type ServiceReference<T> = Arc<RwLock<Box<T>>>;
 
 /// A serialized value
 #[derive(Clone)]
