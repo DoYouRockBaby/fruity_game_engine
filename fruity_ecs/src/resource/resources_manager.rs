@@ -19,11 +19,14 @@ use std::sync::Arc;
 
 /// A unique resource identifier
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ResourceIdentifier(String);
+pub struct ResourceIdentifier(pub String);
 
 /// A resource loader, it is a function that is intended to parse a resource and add some resource in the resource manager
-pub type ResourceLoader =
-    fn(resources_manager: &mut ResourcesManager, identifier: ResourceIdentifier, read: &dyn Read);
+pub type ResourceLoader = fn(
+    resources_manager: &mut ResourcesManager,
+    identifier: ResourceIdentifier,
+    reader: &mut dyn Read,
+);
 
 /// The resource manager
 #[derive(FruityAny)]
@@ -109,10 +112,10 @@ impl ResourcesManager {
         &mut self,
         identifier: ResourceIdentifier,
         resource_type: &str,
-        read: &dyn Read,
+        reader: &mut dyn Read,
     ) -> Result<(), LoadResourceError> {
         if let Some(resource_loader) = self.resource_loaders.get(resource_type) {
-            resource_loader(self, identifier, read);
+            resource_loader(self, identifier, reader);
             Ok(())
         } else {
             Err(LoadResourceError::ResourceTypeNotKnown(

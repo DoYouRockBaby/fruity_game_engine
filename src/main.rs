@@ -10,6 +10,8 @@ use fruity_ecs::component::components_factory::ComponentsFactory;
 use fruity_ecs::entity::entity::EntityId;
 use fruity_ecs::entity::entity_manager::EntityManager;
 use fruity_ecs::initialize as initialize_ecs;
+use fruity_ecs::resource::resources_manager::ResourceIdentifier;
+use fruity_ecs::resource::resources_manager::ResourcesManager;
 use fruity_ecs::system::system_manager::SystemManager;
 use fruity_ecs::world::World;
 use fruity_ecs::*;
@@ -21,6 +23,7 @@ use fruity_javascript_scripting::javascript_engine::JavascriptEngine;
 use fruity_windows::initialize as initialize_windows;
 use fruity_windows::windows_manager::WindowsManager;
 use pretty_env_logger::formatted_builder;
+use std::fs::File;
 
 #[derive(Debug, Clone, Component, IntrospectFields, FruityAny)]
 pub struct Component1 {
@@ -43,6 +46,23 @@ fn main() {
     initialize_ecs(&world);
     initialize_windows(&world);
     fruity_graphic(&world);
+
+    // Initialize resources
+    {
+        let service_manager = world.service_manager.read().unwrap();
+        let resources_manager = service_manager.get::<ResourcesManager>().unwrap();
+        let mut resources_manager = resources_manager.write().unwrap();
+
+        let logo_path = "assets/logo.png";
+        let mut logo_file = File::open(logo_path).unwrap();
+        resources_manager
+            .load_resource(
+                ResourceIdentifier(logo_path.to_string()),
+                "png",
+                &mut logo_file,
+            )
+            .unwrap();
+    }
 
     // Initialize component
     {

@@ -12,6 +12,7 @@
 
 use crate::component::components_factory::ComponentsFactory;
 use crate::entity::entity_manager::EntityManager;
+use crate::resource::resources_manager::ResourcesManager;
 use crate::service::service_manager::ServiceManager;
 use crate::system::system_manager::SystemManager;
 use crate::world::World;
@@ -59,4 +60,5 @@ pub fn initialize(world: &World) {
     service_manager.register("entity_manager", EntityManager::new(world));
     service_manager.register("system_manager", SystemManager::new(world));
     service_manager.register("components_factory", ComponentsFactory::new());
+    service_manager.register("resources_manager", ResourcesManager::new());
 }
