@@ -53,13 +53,13 @@ fn main() {
         let resources_manager = service_manager.get::<ResourcesManager>().unwrap();
         let mut resources_manager = resources_manager.write().unwrap();
 
-        let logo_path = "assets/logo.png";
-        let mut logo_file = File::open(logo_path).unwrap();
+        let settings_path = "assets/resources.yaml";
+        let mut settings_file = File::open(settings_path).unwrap();
         resources_manager
             .load_resource(
-                ResourceIdentifier(logo_path.to_string()),
-                "png",
-                &mut logo_file,
+                ResourceIdentifier(settings_path.to_string()),
+                "resource_settings",
+                &mut settings_file,
             )
             .unwrap();
     }

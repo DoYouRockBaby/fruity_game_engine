@@ -14,6 +14,8 @@ use crate::component::components_factory::ComponentsFactory;
 use crate::entity::entity_manager::EntityManager;
 use crate::resource::resources_manager::ResourcesManager;
 use crate::service::service_manager::ServiceManager;
+use crate::settings::resources_loader::resources_loader;
+use crate::settings::settings_loader;
 use crate::system::system_manager::SystemManager;
 use crate::world::World;
 
@@ -28,6 +30,9 @@ pub mod resource;
 
 /// Provides a collection for services
 pub mod service;
+
+/// Provides a collection for settings
+pub mod settings;
 
 /// Provides structure to pass object between the rust ecosystem and the scripting system
 pub mod serialize;
@@ -61,4 +66,13 @@ pub fn initialize(world: &World) {
     service_manager.register("system_manager", SystemManager::new(world));
     service_manager.register("components_factory", ComponentsFactory::new());
     service_manager.register("resources_manager", ResourcesManager::new());
+
+    let resources_manager = service_manager.get::<ResourcesManager>().unwrap();
+    let mut resources_manager = resources_manager.write().unwrap();
+    resources_manager
+        .add_resource_loader("resource_settings", resources_loader)
+        .unwrap();
+    resources_manager
+        .add_resource_loader("yaml", settings_loader)
+        .unwrap();
 }

@@ -32,6 +32,7 @@ systemManager.addSystem(() => {
     entityManager
         .iterComponents(["ComponentJs1", "Component1"])
         .forEach(components => {
+            console.log("test");
             console.log(components.get(0).int1, components.get(0).str1);
             console.log(components.get(1).int1, components.get(1).float1);
             components.get(0).int1 += 1;
