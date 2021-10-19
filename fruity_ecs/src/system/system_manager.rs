@@ -21,6 +21,8 @@ type System = dyn Fn(Arc<RwLock<ServiceManager>>) + Sync + Send + 'static;
 #[derive(FruityAnySyncSend)]
 pub struct SystemManager {
     systems: Vec<Box<System>>,
+    begin_systems: Vec<Box<System>>,
+    end_systems: Vec<Box<System>>,
     service_manager: Arc<RwLock<ServiceManager>>,
 }
 
@@ -35,6 +37,8 @@ impl<'s> SystemManager {
     pub fn new(world: &World) -> SystemManager {
         SystemManager {
             systems: Vec::new(),
+            begin_systems: Vec::new(),
+            end_systems: Vec::new(),
             service_manager: world.service_manager.clone(),
         }
     }
@@ -51,14 +55,49 @@ impl<'s> SystemManager {
         self.systems.push(Box::new(system))
     }
 
-    /// Run all the stored systems
+    /// Add a begin system to the collection
     ///
     /// # Arguments
-    /// * `entity_manager` - Entities collection
-    /// * `service_manager` - Services collection
+    /// * `system` - A function that will compute the world
     ///
+    pub fn add_begin_system<T: Fn(Arc<RwLock<ServiceManager>>) + Sync + Send + 'static>(
+        &mut self,
+        system: T,
+    ) {
+        self.begin_systems.push(Box::new(system))
+    }
+
+    /// Add an end system to the collection
+    ///
+    /// # Arguments
+    /// * `system` - A function that will compute the world
+    ///
+    pub fn add_end_system<T: Fn(Arc<RwLock<ServiceManager>>) + Sync + Send + 'static>(
+        &mut self,
+        system: T,
+    ) {
+        self.end_systems.push(Box::new(system))
+    }
+
+    /// Run all the stored systems
     pub fn run(&self) {
         self.systems
+            .iter()
+            .par_bridge()
+            .for_each(|system| system(self.service_manager.clone()));
+    }
+
+    /// Run all the stored begin systems
+    pub fn run_begin(&self) {
+        self.begin_systems
+            .iter()
+            .par_bridge()
+            .for_each(|system| system(self.service_manager.clone()));
+    }
+
+    /// Run all the stored end systems
+    pub fn run_end(&self) {
+        self.end_systems
             .iter()
             .par_bridge()
             .for_each(|system| system(self.service_manager.clone()));

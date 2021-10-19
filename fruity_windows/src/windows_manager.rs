@@ -63,7 +63,7 @@ impl WindowsManager {
         let window_id = {
             let window = WindowBuilder::new()
                 .with_title("Hit space to toggle resizability.")
-                .with_inner_size(LogicalSize::new(400, 200))
+                .with_inner_size(LogicalSize::new(800, 800))
                 .with_resizable(true)
                 .build(&event_loop)
                 .unwrap();
@@ -86,6 +86,12 @@ impl WindowsManager {
         let on_start_update = self.on_start_update.clone();
         let on_end_update = self.on_end_update.clone();
         let on_resize = self.on_resize.clone();
+
+        // Run the begin systems before everything
+        let system_manager_writer = self.system_manager.write().unwrap();
+        system_manager_writer.run_begin();
+        std::mem::drop(system_manager_writer);
+
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Wait;
 

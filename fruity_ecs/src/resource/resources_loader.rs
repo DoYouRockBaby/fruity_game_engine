@@ -1,7 +1,7 @@
+use crate::resource::resources_manager::ResourceIdentifier;
 use crate::resource::resources_manager::ResourceLoaderParams;
 use crate::serialize::serialized::Serialized;
 use crate::settings::build_settings_serialized_from_yaml;
-use crate::settings::ResourceIdentifier;
 use crate::ResourcesManager;
 use crate::ServiceManager;
 use std::fs::File;

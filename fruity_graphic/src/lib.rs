@@ -1,12 +1,10 @@
 use crate::graphics_manager::GraphicsManager;
-use crate::image_loader::image_loader;
+use crate::resources::image_loader::image_loader;
 use fruity_ecs::resource::resources_manager::ResourcesManager;
 use fruity_ecs::world::World;
 
 pub mod graphics_manager;
-pub mod image_loader;
-pub mod image_resource;
-pub mod texture_resource;
+pub mod resources;
 
 /// Initialize this extension
 pub fn initialize(world: &World) {

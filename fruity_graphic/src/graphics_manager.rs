@@ -17,26 +17,14 @@ pub struct State {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
     pub config: wgpu::SurfaceConfiguration,
-}
-
-pub struct FrameState {
-    pub encoder: wgpu::CommandEncoder,
     pub rendering_view: wgpu::TextureView,
-}
-
-impl Debug for FrameState {
-    fn fmt(
-        &self,
-        _formatter: &mut std::fmt::Formatter<'_>,
-    ) -> std::result::Result<(), std::fmt::Error> {
-        Ok(())
-    }
 }
 
 #[derive(Debug, FruityAnySyncSend)]
 pub struct GraphicsManager {
     state: Option<State>,
-    frame_state: Option<FrameState>,
+    current_output: Option<wgpu::SurfaceTexture>,
+    current_encoder: Option<RwLock<wgpu::CommandEncoder>>,
 }
 
 impl GraphicsManager {
@@ -83,7 +71,8 @@ impl GraphicsManager {
 
         GraphicsManager {
             state: None,
-            frame_state: None,
+            current_encoder: None,
+            current_output: None,
         }
     }
 
@@ -129,12 +118,19 @@ impl GraphicsManager {
 
             surface.configure(&device, &config);
 
+            // Get the texture view where the scene will be rendered
+            let output = surface.get_current_texture().unwrap();
+            let rendering_view = output
+                .texture
+                .create_view(&wgpu::TextureViewDescriptor::default());
+
             // Update state
             self.state = Some(State {
                 surface,
                 device,
                 queue,
                 config,
+                rendering_view,
             });
         };
 
@@ -147,12 +143,14 @@ impl GraphicsManager {
 
     pub fn start_draw(&mut self) {
         if let Some(state) = &mut self.state {
-            let output = state.surface.get_current_texture().unwrap();
-
             // Get the texture view where the scene will be rendered
-            let view = output
+            let output = state.surface.get_current_texture().unwrap();
+            let rendering_view = output
                 .texture
                 .create_view(&wgpu::TextureViewDescriptor::default());
+
+            self.current_output = Some(output);
+            state.rendering_view = rendering_view;
 
             let encoder = state
                 .device
@@ -161,26 +159,27 @@ impl GraphicsManager {
                 });
 
             // Store the handles about this frame
-            self.frame_state = Some(FrameState {
-                encoder,
-                rendering_view: view,
-            })
+            self.current_encoder = Some(RwLock::new(encoder))
         }
     }
 
     pub fn end_draw(&mut self) {
-        let frame_state = if let Some(frame_state) = self.frame_state.take() {
-            frame_state
+        let encoder = if let Some(encoder) = self.current_encoder.take() {
+            encoder.into_inner().unwrap()
+        } else {
+            return;
+        };
+
+        let output = if let Some(output) = self.current_output.take() {
+            output
         } else {
             return;
         };
 
         let queue = self.get_queue().unwrap();
-        let surface = self.get_surface().unwrap();
 
         // submit will accept anything that implements IntoIter
-        let output = surface.get_current_texture().unwrap();
-        queue.submit(std::iter::once(frame_state.encoder.finish()));
+        queue.submit(std::iter::once(encoder.finish()));
         output.present();
     }
 
@@ -209,8 +208,12 @@ impl GraphicsManager {
         self.state.as_ref().map(|state| &state.config)
     }
 
-    pub fn get_frame_state(&mut self) -> Option<&mut FrameState> {
-        self.frame_state.as_mut()
+    pub fn get_rendering_view(&self) -> Option<&wgpu::TextureView> {
+        self.state.as_ref().map(|state| &state.rendering_view)
+    }
+
+    pub fn get_encoder(&self) -> Option<&RwLock<wgpu::CommandEncoder>> {
+        self.current_encoder.as_ref()
     }
 }
 

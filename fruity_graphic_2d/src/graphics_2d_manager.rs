@@ -4,16 +4,40 @@ use fruity_ecs::service::service::Service;
 use fruity_ecs::service::service_rwlock::ServiceRwLock;
 use fruity_ecs::world::World;
 use fruity_graphic::graphics_manager::GraphicsManager;
-use fruity_graphic::texture_resource::TextureResource;
+use fruity_graphic::resources::texture_resource::TextureResource;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodInfo;
+use std::fs::File;
+use std::io::Read;
 use wgpu::util::DeviceExt;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct Vertex {
     position: [f32; 3],
-    color: [f32; 3],
+    tex_coords: [f32; 2],
+}
+
+impl Vertex {
+    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
+        use std::mem;
+        wgpu::VertexBufferLayout {
+            array_stride: mem::size_of::<Vertex>() as wgpu::BufferAddress,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &[
+                wgpu::VertexAttribute {
+                    offset: 0,
+                    shader_location: 0,
+                    format: wgpu::VertexFormat::Float32x3,
+                },
+                wgpu::VertexAttribute {
+                    offset: mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                    shader_location: 1,
+                    format: wgpu::VertexFormat::Float32x2, // NEW!
+                },
+            ],
+        }
+    }
 }
 
 #[derive(Debug, FruityAnySyncSend)]
@@ -38,60 +62,19 @@ impl Graphics2dManager {
 
         let device = graphics_manager.get_device().unwrap();
         let config = graphics_manager.get_config().unwrap();
-
-        let mut graphics_manager = self.graphics_manager.write().unwrap();
-        let frame_state = graphics_manager.get_frame_state().unwrap();
+        let rendering_view = graphics_manager.get_rendering_view().unwrap();
 
         // Create the main render pipeline
+        let mut buffer = String::new();
+        let mut settings_file = File::open("assets/shader.wgsl").unwrap();
+        if let Err(err) = settings_file.read_to_string(&mut buffer) {
+            log::error!("{}", err.to_string());
+            return;
+        }
+
         let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
-            source: wgpu::ShaderSource::Wgsl("assets/shader.wgsl".into()),
-        });
-
-        let render_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[],
-                push_constant_ranges: &[],
-            });
-
-        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Render Pipeline"),
-            layout: Some(&render_pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: "main", // 1.
-                buffers: &[],        // 2.
-            },
-            fragment: Some(wgpu::FragmentState {
-                // 3.
-                module: &shader,
-                entry_point: "main",
-                targets: &[wgpu::ColorTargetState {
-                    // 4.
-                    format: config.format,
-                    blend: Some(wgpu::BlendState::REPLACE),
-                    write_mask: wgpu::ColorWrites::ALL,
-                }],
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList, // 1.
-                strip_index_format: None,
-                front_face: wgpu::FrontFace::Ccw, // 2.
-                cull_mode: Some(wgpu::Face::Back),
-                // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
-                polygon_mode: wgpu::PolygonMode::Fill,
-                // Requires Features::DEPTH_CLAMPING
-                clamp_depth: false,
-                // Requires Features::CONSERVATIVE_RASTERIZATION
-                conservative: false,
-            },
-            depth_stencil: None, // 1.
-            multisample: wgpu::MultisampleState {
-                count: 1,                         // 2.
-                mask: !0,                         // 3.
-                alpha_to_coverage_enabled: false, // 4.
-            },
+            source: wgpu::ShaderSource::Wgsl(buffer.into()),
         });
 
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
@@ -121,11 +104,7 @@ impl Graphics2dManager {
                         binding: 1,
                         visibility: wgpu::ShaderStages::FRAGMENT,
                         ty: wgpu::BindingType::Sampler {
-                            // This is only for TextureSampleType::Depth
                             comparison: false,
-                            // This should be true if the sample_type of the texture is:
-                            //     TextureSampleType::Float { filterable: true }
-                            // Otherwise you'll get an error.
                             filtering: true,
                         },
                         count: None,
@@ -149,26 +128,73 @@ impl Graphics2dManager {
             label: Some("diffuse_bind_group"),
         });
 
+        let render_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Render Pipeline Layout"),
+                bind_group_layouts: &[&texture_bind_group_layout],
+                push_constant_ranges: &[],
+            });
+
+        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("Render Pipeline"),
+            layout: Some(&render_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: "main",
+                buffers: &[Vertex::desc()],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: "main",
+                targets: &[wgpu::ColorTargetState {
+                    format: config.format,
+                    blend: Some(wgpu::BlendState {
+                        color: wgpu::BlendComponent::REPLACE,
+                        alpha: wgpu::BlendComponent::REPLACE,
+                    }),
+                    write_mask: wgpu::ColorWrites::ALL,
+                }],
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: Some(wgpu::Face::Back),
+                // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
+                polygon_mode: wgpu::PolygonMode::Fill,
+                // Requires Features::DEPTH_CLAMPING
+                clamp_depth: false,
+                // Requires Features::CONSERVATIVE_RASTERIZATION
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState {
+                count: 1,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+        });
+
         let vertices: &[Vertex] = &[
             Vertex {
                 position: [x, y, 0.0],
-                color: [1.0, 0.0, 0.0],
+                tex_coords: [0.0, 1.0],
             },
             Vertex {
                 position: [x + w, y, 0.0],
-                color: [0.0, 1.0, 0.0],
+                tex_coords: [1.0, 1.0],
             },
             Vertex {
                 position: [x + w, y + h, 0.0],
-                color: [0.0, 0.0, 1.0],
+                tex_coords: [1.0, 0.0],
             },
             Vertex {
                 position: [x, y + h, 0.0],
-                color: [0.0, 0.0, 1.0],
+                tex_coords: [0.0, 0.0],
             },
         ];
 
-        let indices: &[u16] = &[0, 1, 4, 1, 2, 4, 2, 3, 4, 0];
+        let indices: &[u16] = &[0, 1, 2, 3, 0, 2, /* padding */ 0];
         let num_indices = indices.len() as u32;
 
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -183,26 +209,25 @@ impl Graphics2dManager {
             usage: wgpu::BufferUsages::INDEX,
         });
 
+        let mut encoder = graphics_manager.get_encoder().unwrap().write().unwrap();
         let mut render_pass = {
-            frame_state
-                .encoder
-                .begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: Some("Render Pass"),
-                    color_attachments: &[wgpu::RenderPassColorAttachment {
-                        view: &frame_state.rendering_view,
-                        resolve_target: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(wgpu::Color {
-                                r: 0.1,
-                                g: 0.2,
-                                b: 0.3,
-                                a: 1.0,
-                            }),
-                            store: true,
-                        },
-                    }],
-                    depth_stencil_attachment: None,
-                })
+            encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Render Pass"),
+                color_attachments: &[wgpu::RenderPassColorAttachment {
+                    view: rendering_view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: 0.1,
+                            g: 0.2,
+                            b: 0.3,
+                            a: 1.0,
+                        }),
+                        store: true,
+                    },
+                }],
+                depth_stencil_attachment: None,
+            })
         };
 
         render_pass.set_pipeline(&render_pipeline);

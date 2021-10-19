@@ -12,9 +12,6 @@ use std::sync::RwLock;
 use yaml_rust::Yaml;
 use yaml_rust::YamlLoader;
 
-/// Load many resources using a resource settings file
-pub mod resources_loader;
-
 /// Settings collection
 #[derive(Debug, Clone, FruityAnySyncSend)]
 pub struct Settings {

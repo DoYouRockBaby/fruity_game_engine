@@ -12,9 +12,9 @@
 
 use crate::component::components_factory::ComponentsFactory;
 use crate::entity::entity_manager::EntityManager;
+use crate::resource::resources_loader::resources_loader;
 use crate::resource::resources_manager::ResourcesManager;
 use crate::service::service_manager::ServiceManager;
-use crate::settings::resources_loader::resources_loader;
 use crate::settings::settings_loader;
 use crate::system::system_manager::SystemManager;
 use crate::world::World;

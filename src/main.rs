@@ -7,12 +7,12 @@ use crate::service1::Service1;
 use crate::system1::system1_untyped;
 use fruity_any::*;
 use fruity_ecs::component::components_factory::ComponentsFactory;
-use fruity_ecs::entity::entity::EntityId;
 use fruity_ecs::entity::entity_manager::EntityManager;
 use fruity_ecs::initialize as initialize_ecs;
 use fruity_ecs::resource::resources_manager::ResourceIdentifier;
 use fruity_ecs::resource::resources_manager::ResourceLoaderParams;
 use fruity_ecs::resource::resources_manager::ResourcesManager;
+use fruity_ecs::service::service_manager::ServiceManager;
 use fruity_ecs::system::system_manager::SystemManager;
 use fruity_ecs::world::World;
 use fruity_ecs::*;
@@ -28,6 +28,8 @@ use fruity_windows::initialize as initialize_windows;
 use fruity_windows::windows_manager::WindowsManager;
 use pretty_env_logger::formatted_builder;
 use std::fs::File;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 #[derive(Debug, Clone, Component, IntrospectFields, FruityAny)]
 pub struct Component1 {
@@ -41,6 +43,39 @@ pub struct Component2 {
     pub float1: f64,
 }
 
+pub fn init_system(service_manager: Arc<RwLock<ServiceManager>>) {
+    let service_manager = service_manager.read().unwrap();
+
+    // Load resources
+    let mut resources_manager = service_manager.write::<ResourcesManager>();
+
+    let settings_path = "assets/resources.yaml";
+    let mut settings_file = File::open(settings_path).unwrap();
+    resources_manager
+        .load_resource(
+            ResourceIdentifier(settings_path.to_string()),
+            "resource_settings",
+            &mut settings_file,
+            ResourceLoaderParams::new(),
+        )
+        .unwrap();
+
+    // Create components
+    let mut entity_manager = service_manager.write::<EntityManager>();
+
+    entity_manager.create(entity!(
+        Box::new(Position { x: 0.25, y: 0.25 }),
+        Box::new(Size {
+            width: 0.5,
+            height: 0.5,
+        }),
+        Box::new(Sprite {
+            texture: resources_manager
+                .get_resource(ResourceIdentifier("assets/logo.png".to_string()))
+        })
+    ));
+}
+
 fn main() {
     let mut builder = formatted_builder();
     builder.parse_filters("trace");
@@ -52,7 +87,7 @@ fn main() {
     initialize_graphic(&world);
     initialize_graphic_2d(&world);
 
-    // Initialize component
+    // Initialize custom component
     {
         let service_manager = world.service_manager.read().unwrap();
         let mut components_factory = service_manager.write::<ComponentsFactory>();
@@ -67,61 +102,30 @@ fn main() {
         components_factory.add("Component2", || Box::new(Component2 { float1: 0.0 }));
     }
 
-    initialize_javascript(&world);
-
+    // Initialize custom services
     {
         let mut service_manager = world.service_manager.write().unwrap();
         service_manager.register::<Service1>("service1", Service1::new());
     }
 
+    // Initialized custom systems
     {
         let service_manager = world.service_manager.read().unwrap();
         let mut system_manager = service_manager.write::<SystemManager>();
         system_manager.add_system(system1_untyped);
+        system_manager.add_begin_system(init_system);
     }
 
-    // Initialize resources
+    initialize_javascript(&world);
+
+    // Run the javascript module
     {
-        let service_manager = world.service_manager.read().unwrap();
-        let mut resources_manager = service_manager.write::<ResourcesManager>();
-
-        let settings_path = "assets/resources.yaml";
-        let mut settings_file = File::open(settings_path).unwrap();
-        resources_manager
-            .load_resource(
-                ResourceIdentifier(settings_path.to_string()),
-                "resource_settings",
-                &mut settings_file,
-                ResourceLoaderParams::new(),
-            )
-            .unwrap();
-    }
-
-    {
-        let service_manager = world.service_manager.read().unwrap();
-        let mut entity_manager = service_manager.write::<EntityManager>();
-        let resources_manager = service_manager.read::<ResourcesManager>();
-
-        entity_manager.create(entity!(
-            Box::new(Position { x: 10.0, y: 10.0 }),
-            Box::new(Size {
-                width: 10.0,
-                height: 10.0
-            }),
-            Box::new(Sprite {
-                texture: resources_manager
-                    .get_resource(ResourceIdentifier("assets/logo.png".to_string()))
-            })
-        ));
-    }
-
-    {
-        // Javascript test
         let service_manager = world.service_manager.read().unwrap();
         let javascript_engine = service_manager.write::<JavascriptEngine>();
         javascript_engine.run_module("src/javascript/index.js");
     }
 
+    // Run the engine
     {
         let service_manager = world.service_manager.read().unwrap();
         let windows_manager = service_manager.read::<WindowsManager>();
