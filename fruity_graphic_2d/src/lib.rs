@@ -16,8 +16,7 @@ pub fn initialize(world: &World) {
     let mut service_manager = world.service_manager.write().unwrap();
     service_manager.register("graphic_2d_manager", graphic_2d_manager);
 
-    let components_factory = service_manager.get::<ComponentsFactory>().unwrap();
-    let mut components_factory = components_factory.write().unwrap();
+    let mut components_factory = service_manager.write::<ComponentsFactory>();
 
     components_factory.add("Position", || Box::new(Position { x: 0.0, y: 0.0 }));
     components_factory.add("Size", || {

@@ -1,4 +1,6 @@
 use crate::service::service::Service;
+use crate::service::service_guard::ServiceReadGuard;
+use crate::service::service_guard::ServiceWriteGuard;
 use crate::service::service_rwlock::ServiceRwLock;
 use fruity_any::*;
 use std::any::TypeId;
@@ -57,6 +59,34 @@ impl<'s> ServiceManager {
         match self.get_by_type_id(&TypeId::of::<T>()) {
             Some(service) => Some(ServiceRwLock::new(service)),
             None => None,
+        }
+    }
+
+    /// Get a read locker over an existing service
+    ///
+    /// # Generic Arguments
+    /// * `T` - The service type
+    ///
+    pub fn read<T: Service>(&self) -> ServiceReadGuard<T> {
+        match self.services.get(&TypeId::of::<T>()) {
+            Some(service) => ServiceReadGuard::new(service.read().unwrap()),
+            None => {
+                panic!("Tryed to access required service that is not registered")
+            }
+        }
+    }
+
+    /// Get a write locker over an existing service
+    ///
+    /// # Generic Arguments
+    /// * `T` - The service type
+    ///
+    pub fn write<T: Service>(&self) -> ServiceWriteGuard<T> {
+        match self.services.get(&TypeId::of::<T>()) {
+            Some(service) => ServiceWriteGuard::new(service.write().unwrap()),
+            None => {
+                panic!("Tryed to access required service that is not registered")
+            }
         }
     }
 

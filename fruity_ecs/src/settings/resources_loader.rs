@@ -1,10 +1,14 @@
+use crate::resource::resources_manager::ResourceLoaderParams;
 use crate::serialize::serialized::Serialized;
 use crate::settings::build_settings_serialized_from_yaml;
 use crate::settings::ResourceIdentifier;
 use crate::ResourcesManager;
+use crate::ServiceManager;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+use std::sync::Arc;
+use std::sync::RwLock;
 use yaml_rust::Yaml;
 use yaml_rust::YamlLoader;
 
@@ -13,6 +17,8 @@ pub fn resources_loader(
     resources_manager: &mut ResourcesManager,
     _identifier: ResourceIdentifier,
     reader: &mut dyn Read,
+    _params: ResourceLoaderParams,
+    _service_manager: Arc<RwLock<ServiceManager>>,
 ) {
     // read the whole file
     let mut buffer = String::new();
@@ -46,22 +52,28 @@ fn load_resource_from_settings(
     };
 
     // Get the resource path
-    let path = fields.get("path")?;
-    let path = if let Serialized::String(path) = path {
-        path
-    } else {
-        return None;
+    let path = {
+        if let Serialized::String(path) = fields.get("path")? {
+            path.clone()
+        } else {
+            return None;
+        }
     };
 
     // Deduce informations about the resource from the path
-    let resource_type = Path::new(path).extension()?;
+    let resource_type = Path::new(&path).extension()?;
     let resource_type = resource_type.to_str()?;
     let resource_identifier = ResourceIdentifier(path.clone());
-    let mut resource_file = File::open(path).ok()?;
+    let mut resource_file = File::open(&path).ok()?;
 
     // Load the resource
     resources_manager
-        .load_resource(resource_identifier, resource_type, &mut resource_file)
+        .load_resource(
+            resource_identifier,
+            resource_type,
+            &mut resource_file,
+            ResourceLoaderParams(fields),
+        )
         .ok()?;
 
     Some(())

@@ -26,8 +26,9 @@ pub struct WindowsManager {
     system_manager: ServiceRwLock<SystemManager>,
     event_stack: Arc<RwLock<Vec<FruityWindowsEvent>>>,
     window: RwLock<Option<Arc<RwLock<Window>>>>,
-    pub on_init: Signal<Arc<RwLock<Window>>>,
-    pub on_draw: Signal<Arc<RwLock<Window>>>,
+    pub on_windows_creation: Signal<()>,
+    pub on_starting_event_loop: Signal<()>,
+    pub on_draw: Signal<()>,
     pub on_resize: Signal<(usize, usize)>,
 }
 
@@ -48,7 +49,8 @@ impl WindowsManager {
             system_manager,
             event_stack: Arc::new(RwLock::new(Vec::new())),
             window: RwLock::new(None),
-            on_init: Signal::new(),
+            on_windows_creation: Signal::new(),
+            on_starting_event_loop: Signal::new(),
             on_draw: Signal::new(),
             on_resize: Signal::new(),
         }
@@ -67,21 +69,18 @@ impl WindowsManager {
 
             let window_id = window.id();
             let window = Arc::new(RwLock::new(window));
-            self.on_init.notify(window.clone());
 
             let mut window_writer = self.window.write().unwrap();
-            *window_writer.deref_mut() = Some(window);
+            *window_writer = Some(window);
 
             window_id
         };
+        self.on_windows_creation.notify(());
 
         // Run the event loop
         let system_manager = self.system_manager.clone();
         let event_stack = self.event_stack.clone();
-        let window = {
-            let window = self.window.read().unwrap();
-            window.as_ref().unwrap().clone()
-        };
+        self.on_starting_event_loop.notify(());
 
         let on_draw = self.on_draw.clone();
         let on_resize = self.on_resize.clone();
@@ -131,8 +130,13 @@ impl WindowsManager {
             system_manager_writer.run();
 
             // Draw
-            on_draw.notify(window.clone());
+            on_draw.notify(());
         });
+    }
+
+    pub fn get_window(&self) -> Option<Arc<RwLock<Window>>> {
+        let window = self.window.read().ok()?;
+        window.as_ref().map(|window| window.clone())
     }
 
     pub fn close(&self) {

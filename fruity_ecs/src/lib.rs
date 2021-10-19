@@ -67,10 +67,9 @@ pub fn initialize(world: &World) {
     service_manager.register("entity_manager", EntityManager::new(world));
     service_manager.register("system_manager", SystemManager::new(world));
     service_manager.register("components_factory", ComponentsFactory::new());
-    service_manager.register("resources_manager", ResourcesManager::new());
+    service_manager.register("resources_manager", ResourcesManager::new(world));
 
-    let resources_manager = service_manager.get::<ResourcesManager>().unwrap();
-    let mut resources_manager = resources_manager.write().unwrap();
+    let mut resources_manager = service_manager.write::<ResourcesManager>();
     resources_manager
         .add_resource_loader("resource_settings", resources_loader)
         .unwrap();

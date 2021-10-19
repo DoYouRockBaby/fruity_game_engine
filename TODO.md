@@ -10,6 +10,6 @@
 [ ] Fix javascript services
 [ ] Make javascript able to import modules via package.json
 [ ] Test and make microjob library compatible with javascript
-[ ] Fin a better way to store SerializedComponent, to have something more effective on read (bincode ?)
+[ ] Find a better way to store SerializedComponent, to have something more effective on read (bincode ?)
 [ ] Maybe separate base services/component and Introspect implementation
 [ ] Abstract everything (espescialy javascript and render)

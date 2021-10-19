@@ -7,25 +7,35 @@ use crate::serialize::serialized::Serialized;
 use crate::service::service::Service;
 use crate::service::utils::cast_service;
 use crate::service::utils::ArgumentCaster;
+use crate::ServiceManager;
+use crate::World;
 use fruity_any::*;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use std::any::Any;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::io::Read;
 use std::sync::Arc;
+use std::sync::RwLock;
 
 /// A unique resource identifier
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ResourceIdentifier(pub String);
+
+/// A unique resource identifier
+#[derive(Debug, Clone)]
+pub struct ResourceLoaderParams(pub HashMap<String, Serialized>);
 
 /// A resource loader, it is a function that is intended to parse a resource and add some resource in the resource manager
 pub type ResourceLoader = fn(
     resources_manager: &mut ResourcesManager,
     identifier: ResourceIdentifier,
     reader: &mut dyn Read,
+    params: ResourceLoaderParams,
+    service_manager: Arc<RwLock<ServiceManager>>,
 );
 
 /// The resource manager
@@ -33,6 +43,7 @@ pub type ResourceLoader = fn(
 pub struct ResourcesManager {
     resources: HashMap<ResourceIdentifier, Arc<dyn Resource>>,
     resource_loaders: HashMap<String, ResourceLoader>,
+    service_manager: Arc<RwLock<ServiceManager>>,
 }
 
 impl Debug for ResourcesManager {
@@ -46,10 +57,11 @@ impl Debug for ResourcesManager {
 
 impl ResourcesManager {
     /// Returns a ResourcesManager
-    pub fn new() -> ResourcesManager {
+    pub fn new(world: &World) -> ResourcesManager {
         ResourcesManager {
             resources: HashMap::new(),
             resource_loaders: HashMap::new(),
+            service_manager: world.service_manager.clone(),
         }
     }
 
@@ -113,9 +125,16 @@ impl ResourcesManager {
         identifier: ResourceIdentifier,
         resource_type: &str,
         reader: &mut dyn Read,
+        params: ResourceLoaderParams,
     ) -> Result<(), LoadResourceError> {
         if let Some(resource_loader) = self.resource_loaders.get(resource_type) {
-            resource_loader(self, identifier, reader);
+            resource_loader(
+                self,
+                identifier,
+                reader,
+                params,
+                self.service_manager.clone(),
+            );
             Ok(())
         } else {
             Err(LoadResourceError::ResourceTypeNotKnown(
@@ -198,6 +217,29 @@ impl IntrospectMethods<Serialized> for ResourcesManager {
                 Ok(result.map(|result| Serialized::Resource(result)))
             })),
         }]
+    }
+}
+
+impl ResourceLoaderParams {
+    /// Returns a ResourceLoaderParams
+    pub fn new() -> ResourceLoaderParams {
+        ResourceLoaderParams(HashMap::new())
+    }
+
+    /// Get a field into the params
+    ///
+    /// # Arguments
+    /// * `key` - The field identifier
+    /// * `default` - The default value, if not found or couldn't serialize
+    ///
+    /// # Generic Arguments
+    /// * `T` - The type to cast the value
+    ///
+    pub fn get<T: TryFrom<Serialized>>(&self, key: &str, default: T) -> T {
+        match self.0.get(key) {
+            Some(value) => T::try_from(value.clone()).unwrap_or(default),
+            None => default,
+        }
     }
 }
 

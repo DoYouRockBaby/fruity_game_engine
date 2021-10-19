@@ -11,6 +11,7 @@ use fruity_ecs::entity::entity::EntityId;
 use fruity_ecs::entity::entity_manager::EntityManager;
 use fruity_ecs::initialize as initialize_ecs;
 use fruity_ecs::resource::resources_manager::ResourceIdentifier;
+use fruity_ecs::resource::resources_manager::ResourceLoaderParams;
 use fruity_ecs::resource::resources_manager::ResourcesManager;
 use fruity_ecs::system::system_manager::SystemManager;
 use fruity_ecs::world::World;
@@ -46,28 +47,10 @@ fn main() {
     initialize_windows(&world);
     fruity_graphic(&world);
 
-    // Initialize resources
-    {
-        let service_manager = world.service_manager.read().unwrap();
-        let resources_manager = service_manager.get::<ResourcesManager>().unwrap();
-        let mut resources_manager = resources_manager.write().unwrap();
-
-        let settings_path = "assets/resources.yaml";
-        let mut settings_file = File::open(settings_path).unwrap();
-        resources_manager
-            .load_resource(
-                ResourceIdentifier(settings_path.to_string()),
-                "resource_settings",
-                &mut settings_file,
-            )
-            .unwrap();
-    }
-
     // Initialize component
     {
         let service_manager = world.service_manager.read().unwrap();
-        let components_factory = service_manager.get::<ComponentsFactory>().unwrap();
-        let mut components_factory = components_factory.write().unwrap();
+        let mut components_factory = service_manager.write::<ComponentsFactory>();
 
         components_factory.add("Component1", || {
             Box::new(Component1 {
@@ -81,24 +64,9 @@ fn main() {
 
     initialize_javascript(&world);
 
-    let entity_manager = {
-        let service_manager = world.service_manager.read().unwrap();
-        service_manager.get::<EntityManager>().unwrap()
-    };
-
-    let system_manager = {
-        let service_manager = world.service_manager.read().unwrap();
-        service_manager.get::<SystemManager>().unwrap()
-    };
-
-    let javascript_engine = {
-        let service_manager = world.service_manager.read().unwrap();
-        service_manager.get::<JavascriptEngine>().unwrap()
-    };
-
     {
-        let mut entity_manager = entity_manager.write().unwrap();
-        let mut system_manager = system_manager.write().unwrap();
+        let service_manager = world.service_manager.read().unwrap();
+        let mut entity_manager = service_manager.write::<EntityManager>();
 
         let component1 = Component1 {
             float1: 3.14,
@@ -133,38 +101,59 @@ fn main() {
         let _entity_id_2 = entity_manager.create(entity!(Box::new(component3)));
         let entity_id_3 =
             entity_manager.create(entity!(Box::new(component4), Box::new(component5)));
-        let entity_id_4 =
+        let _entity_id_4 =
             entity_manager.create(entity!(Box::new(component6), Box::new(component7)));
 
         entity_manager.remove(entity_id_3);
         entity_manager.remove(EntityId(0));
+    }
 
+    {
         let mut service_manager = world.service_manager.write().unwrap();
         service_manager.register::<Service1>("service1", Service1::new());
-        system_manager.add_system(system1_untyped);
+    }
 
-        // println!("{:#?}", world);
-        println!("{:#?}", entity_manager.get(entity_id_4));
+    {
+        let service_manager = world.service_manager.read().unwrap();
+        let mut system_manager = service_manager.write::<SystemManager>();
+        system_manager.add_system(system1_untyped);
+    }
+
+    // Prepare windows
+    {
+        let service_manager = world.service_manager.read().unwrap();
+        let windows_manager = service_manager.read::<WindowsManager>();
+
+        windows_manager.run();
+    }
+
+    // Initialize resources
+    {
+        let service_manager = world.service_manager.read().unwrap();
+        let mut resources_manager = service_manager.write::<ResourcesManager>();
+
+        let settings_path = "assets/resources.yaml";
+        let mut settings_file = File::open(settings_path).unwrap();
+        resources_manager
+            .load_resource(
+                ResourceIdentifier(settings_path.to_string()),
+                "resource_settings",
+                &mut settings_file,
+                ResourceLoaderParams::new(),
+            )
+            .unwrap();
     }
 
     {
         // Javascript test
-        let javascript_engine = javascript_engine.read().unwrap();
+        let service_manager = world.service_manager.read().unwrap();
+        let javascript_engine = service_manager.write::<JavascriptEngine>();
         javascript_engine.run_module("src/javascript/index.js");
     }
 
     {
-        let windows_manager = {
-            let service_manager = world.service_manager.read().unwrap();
-            service_manager.get::<WindowsManager>().unwrap()
-        };
-
-        let windows_manager = windows_manager.read().unwrap();
+        let service_manager = world.service_manager.read().unwrap();
+        let windows_manager = service_manager.read::<WindowsManager>();
         windows_manager.run();
-
-        /*let system_manager = system_manager.read().unwrap();
-        system_manager.run();
-        system_manager.run();
-        system_manager.run(&service_manager);*/
     }
 }

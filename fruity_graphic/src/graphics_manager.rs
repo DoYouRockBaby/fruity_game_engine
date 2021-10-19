@@ -26,15 +26,15 @@ pub struct GraphicsManager {
 impl GraphicsManager {
     pub fn new(world: &World) -> GraphicsManager {
         let service_manager = world.service_manager.read().unwrap();
-        let windows_manager = service_manager.get::<WindowsManager>().unwrap();
-        let windows_manager = windows_manager.read().unwrap();
+        let windows_manager = service_manager.read::<WindowsManager>();
 
         // Subscribe to windows observer to proceed the graphics when it's neededs
         let service_manager = world.service_manager.clone();
-        windows_manager.on_init.add_observer(move |window| {
+        windows_manager.on_windows_creation.add_observer(move |_| {
             let service_manager = service_manager.read().unwrap();
-            let graphics_manager = service_manager.get::<GraphicsManager>().unwrap();
-            let mut graphics_manager = graphics_manager.write().unwrap();
+            let mut graphics_manager = service_manager.write::<GraphicsManager>();
+            let windows_manager = service_manager.read::<WindowsManager>();
+            let window = windows_manager.get_window().unwrap();
 
             graphics_manager.initialize(window.clone());
         });
@@ -42,8 +42,7 @@ impl GraphicsManager {
         let service_manager = world.service_manager.clone();
         windows_manager.on_draw.add_observer(move |_| {
             let service_manager = service_manager.read().unwrap();
-            let graphics_manager = service_manager.get::<GraphicsManager>().unwrap();
-            let mut graphics_manager = graphics_manager.write().unwrap();
+            let mut graphics_manager = service_manager.write::<GraphicsManager>();
 
             graphics_manager.draw();
         });
@@ -53,8 +52,7 @@ impl GraphicsManager {
             .on_resize
             .add_observer(move |(width, height)| {
                 let service_manager = service_manager.read().unwrap();
-                let graphics_manager = service_manager.get::<GraphicsManager>().unwrap();
-                let mut graphics_manager = graphics_manager.write().unwrap();
+                let mut graphics_manager = service_manager.write::<GraphicsManager>();
 
                 graphics_manager.resize(*width, *height);
             });
@@ -170,6 +168,18 @@ impl GraphicsManager {
 
             state.surface.configure(&state.device, &state.config)
         }
+    }
+
+    pub fn get_device(&self) -> Option<&wgpu::Device> {
+        self.state.as_ref().map(|state| &state.device)
+    }
+
+    pub fn get_queue(&self) -> Option<&wgpu::Queue> {
+        self.state.as_ref().map(|state| &state.queue)
+    }
+
+    pub fn get_surface(&self) -> Option<&wgpu::Surface> {
+        self.state.as_ref().map(|state| &state.surface)
     }
 }
 

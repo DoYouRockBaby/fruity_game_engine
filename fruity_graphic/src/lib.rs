@@ -6,6 +6,7 @@ use fruity_ecs::world::World;
 pub mod graphics_manager;
 pub mod image_loader;
 pub mod image_resource;
+pub mod texture_resource;
 
 /// Initialize this extension
 pub fn initialize(world: &World) {
@@ -14,8 +15,7 @@ pub fn initialize(world: &World) {
     let mut service_manager = world.service_manager.write().unwrap();
     service_manager.register("graphics_manager", graphics_manager);
 
-    let resources_manager = service_manager.get::<ResourcesManager>().unwrap();
-    let mut resources_manager = resources_manager.write().unwrap();
+    let mut resources_manager = service_manager.write::<ResourcesManager>();
     resources_manager
         .add_resource_loader("png", image_loader)
         .unwrap();

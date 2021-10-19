@@ -60,12 +60,8 @@ pub fn deserialize_v8<'a>(
                              args: Vec<Serialized>|
               -> Result<Option<Serialized>, IntrospectError> {
             // Get scope
-            let javascript_engine = {
-                let service_manager = service_manager.read().unwrap();
-                service_manager.get::<JavascriptEngine>().unwrap()
-            };
-
-            let javascript_engine = javascript_engine.read().unwrap();
+            let service_manager = service_manager.read().unwrap();
+            let javascript_engine = service_manager.read::<JavascriptEngine>();
             javascript_engine.run_callback(callback_identifier, args);
 
             Ok(None)

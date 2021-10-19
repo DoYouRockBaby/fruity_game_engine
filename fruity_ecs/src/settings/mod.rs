@@ -1,10 +1,14 @@
 use crate::resource::resource::Resource;
 use crate::resource::resources_manager::ResourceIdentifier;
+use crate::resource::resources_manager::ResourceLoaderParams;
 use crate::serialize::serialized::Serialized;
 use crate::ResourcesManager;
+use crate::ServiceManager;
 use fruity_any::*;
 use std::collections::HashMap;
 use std::io::Read;
+use std::sync::Arc;
+use std::sync::RwLock;
 use yaml_rust::Yaml;
 use yaml_rust::YamlLoader;
 
@@ -31,6 +35,8 @@ pub fn settings_loader(
     resources_manager: &mut ResourcesManager,
     identifier: ResourceIdentifier,
     reader: &mut dyn Read,
+    _params: ResourceLoaderParams,
+    _service_manager: Arc<RwLock<ServiceManager>>,
 ) {
     // read the whole file
     let mut buffer = String::new();

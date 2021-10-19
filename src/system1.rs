@@ -15,30 +15,10 @@ pub fn system1(component1: &mut Component1, mut service1: ServiceWriteGuard<Serv
 }
 
 pub fn system1_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
-    let entity_manager = {
-        let service_manager = service_manager.read().unwrap();
-        match service_manager.get::<EntityManager>() {
-            Some(service) => service,
-            None => {
-                log::error!("EntityManager service is needed by a system but is not registered");
-                return;
-            }
-        }
-    };
+    let service_manager = service_manager.read().unwrap();
+    let entity_manager = service_manager.read::<EntityManager>();
 
-    let service1 = {
-        let service_manager = service_manager.read().unwrap();
-        match service_manager.get::<Service1>() {
-            Some(service) => service,
-            None => {
-                log::error!("Service1 service is needed by a system but is not registered");
-                return;
-            }
-        }
-    };
-
-    let entity_manager_reader = entity_manager.read().unwrap();
-    entity_manager_reader.for_each_mut(
+    entity_manager.for_each_mut(
         entity_type!["Component1", "Component2"],
         |mut components| {
             let component1 = match components.next() {
@@ -60,8 +40,7 @@ pub fn system1_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
                 }
             };
 
-            let service1 = service1.write().unwrap();
-
+            let service1 = service_manager.write::<Service1>();
             system1(component1, service1);
         },
     );
