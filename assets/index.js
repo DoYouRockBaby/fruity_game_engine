@@ -12,30 +12,44 @@
     }
 }*/
 
-class ComponentJs1 {
+class Velocity {
     constructor(args) {
         Object.assign(this, args);
     }
 }
 
+console.log("ICI");
 //services.register("service2", new Service2());
 const systemManager = services.get("system_manager");
 const entityManager = services.get("entity_manager");
 const componentFactory = services.get("components_factory");
 const windowsManager = services.get("windows_manager");
-//const service2 = services.get("service2");
+const resourcesManager = services.get("resources_manager");
 
-entityManager.create([new ComponentJs1({ str1: "test1", int1: 3 })]);
-entityManager.create([new Component1({ float1: 10.101, int1: 30 }), new ComponentJs1({ str1: "test1", int1: 3 })]);
+console.log("ICI");
+
+
+systemManager.addBeginSystem(() => {
+    resourcesManager.readResourceSettings("assets/resources.yaml");
+
+    entityManager.create([
+        new Position({ x: 0.25, y: 0.25 }),
+        new Size({ width: 0.5, height: 0.5 }),
+        new Sprite({ texture: resourcesManager.getResource("assets/logo.png") }),
+        new Velocity({ x: 0.001, y: 0.001 })]);
+
+    /*entityManager.create([
+        new Position({ x: 0.75, y: 0.75 }),
+        new Size({ width: 0.8, height: 0.8 }),
+        new Sprite({ texture: resources_manager.get_resource("assets/logo.png") })]);*/
+});
 
 systemManager.addSystem(() => {
     entityManager
-        .iterComponents(["ComponentJs1", "Component1"])
+        .iterComponents(["Position", "Velocity"])
         .forEach(components => {
-            console.log("test");
-            console.log(components.get(0).int1, components.get(0).str1);
-            console.log(components.get(1).int1, components.get(1).float1);
-            components.get(0).int1 += 1;
+            components.get(0).x += components.get(1).x;
+            components.get(0).y += components.get(1).y;
         });
 
     /*console.log("JS System", windowsManager.getSize());

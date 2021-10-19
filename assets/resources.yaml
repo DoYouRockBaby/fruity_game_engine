@@ -1,2 +1,3 @@
 - path: "assets/logo.png"
   type: texture
+- path: "assets/shader.wgsl"

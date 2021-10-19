@@ -10,6 +10,7 @@ use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodInfo;
 use std::sync::mpsc;
 use std::thread;
+use std::thread::JoinHandle;
 
 #[derive(Clone, Copy)]
 pub struct CallbackIdentifier(pub i32);
@@ -17,13 +18,16 @@ pub struct CallbackIdentifier(pub i32);
 pub(crate) enum RuntimeEvent {
     RunScript {
         source: String,
+        notify_done_sender: mpsc::Sender<()>,
     },
     RunModule {
         path: String,
+        notify_done_sender: mpsc::Sender<()>,
     },
     RunCallback {
         identifier: CallbackIdentifier,
         args: Vec<Serialized>,
+        notify_done_sender: mpsc::Sender<()>,
     },
 }
 
@@ -36,6 +40,7 @@ impl JavascriptEngine {
     pub fn new(world: &World) -> JavascriptEngine {
         // TODO: think about a good number for sync channel
         let (sender, receiver) = mpsc::sync_channel::<RuntimeEvent>(10);
+        let (loading_sender, loading_receiver) = mpsc::channel::<()>();
 
         // Create a thread that will be dedicated to the javascript runtime
         // An event channel will be used to make the runtime do what we want
@@ -44,27 +49,45 @@ impl JavascriptEngine {
             let mut runtime = JsRuntime::new();
             configure_services(&mut runtime, service_manager.clone());
             configure_components(&mut runtime, service_manager.clone());
+            loading_sender.send(()).unwrap();
 
             for received in receiver {
                 match received {
-                    RuntimeEvent::RunScript { source } => {
+                    RuntimeEvent::RunScript {
+                        source,
+                        notify_done_sender,
+                    } => {
                         match runtime.run_script(&source) {
                             Ok(_) => (),
                             Err(err) => log_js_error(&err),
                         };
+
+                        notify_done_sender.send(()).unwrap();
                     }
-                    RuntimeEvent::RunModule { path } => {
+                    RuntimeEvent::RunModule {
+                        path,
+                        notify_done_sender,
+                    } => {
                         match runtime.run_module(&path) {
                             Ok(_) => (),
                             Err(err) => log_js_error(&err),
                         };
+
+                        notify_done_sender.send(()).unwrap();
                     }
-                    RuntimeEvent::RunCallback { identifier, args } => {
-                        runtime.run_stored_callback(identifier, args)
+                    RuntimeEvent::RunCallback {
+                        identifier,
+                        args,
+                        notify_done_sender,
+                    } => {
+                        runtime.run_stored_callback(identifier, args);
+                        notify_done_sender.send(()).unwrap();
                     }
                 };
             }
         });
+
+        loading_receiver.recv().unwrap();
 
         JavascriptEngine {
             channel_sender: sender,
@@ -72,31 +95,46 @@ impl JavascriptEngine {
     }
 
     pub fn run_script(&self, source: &str) {
+        let (notify_done_sender, notify_done_receiver) = mpsc::channel::<()>();
+
         match self.channel_sender.send(RuntimeEvent::RunScript {
             source: source.to_string(),
+            notify_done_sender,
         }) {
             Ok(()) => (),
             Err(err) => log::error!("{}", err.to_string()),
-        }
+        };
+
+        notify_done_receiver.recv().unwrap();
     }
 
     pub fn run_module(&self, path: &str) {
+        let (notify_done_sender, notify_done_receiver) = mpsc::channel::<()>();
+
         match self.channel_sender.send(RuntimeEvent::RunModule {
             path: path.to_string(),
+            notify_done_sender,
         }) {
             Ok(()) => (),
             Err(err) => log::error!("{}", err.to_string()),
-        }
+        };
+
+        notify_done_receiver.recv().unwrap();
     }
 
     pub fn run_callback(&self, identifier: CallbackIdentifier, args: Vec<Serialized>) {
-        match self
-            .channel_sender
-            .send(RuntimeEvent::RunCallback { identifier, args })
-        {
+        let (notify_done_sender, notify_done_receiver) = mpsc::channel::<()>();
+
+        match self.channel_sender.send(RuntimeEvent::RunCallback {
+            identifier,
+            args,
+            notify_done_sender,
+        }) {
             Ok(()) => (),
             Err(err) => log::error!("{}", err.to_string()),
-        }
+        };
+
+        notify_done_receiver.recv().unwrap();
     }
 }
 

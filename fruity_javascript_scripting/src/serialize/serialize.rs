@@ -69,6 +69,9 @@ pub fn serialize_v8<'a>(
             let mut object = JsObject::from_component_list_rwlock(scope, value.clone());
             Some(object.as_v8(scope).into())
         }
-        Serialized::Resource(_) => None,
+        Serialized::Resource(value) => {
+            let mut object = JsObject::from_resource(scope, value.clone());
+            Some(object.as_v8(scope).into())
+        }
     }
 }

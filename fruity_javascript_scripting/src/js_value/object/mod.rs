@@ -13,6 +13,7 @@ pub mod component_list_rwlock;
 pub mod component_rwlock;
 pub mod entity;
 pub mod iterator;
+pub mod resource;
 pub mod service;
 pub mod service_manager;
 

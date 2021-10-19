@@ -56,10 +56,6 @@ impl Graphics2dManager {
     pub fn draw_texture(&self, texture: &TextureResource, x: f32, y: f32, w: f32, h: f32) {
         let graphics_manager = self.graphics_manager.read().unwrap();
 
-        let texture_view = texture
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
-
         let device = graphics_manager.get_device().unwrap();
         let config = graphics_manager.get_config().unwrap();
         let rendering_view = graphics_manager.get_rendering_view().unwrap();
@@ -75,16 +71,6 @@ impl Graphics2dManager {
         let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
             source: wgpu::ShaderSource::Wgsl(buffer.into()),
-        });
-
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Nearest,
-            mipmap_filter: wgpu::FilterMode::Nearest,
-            ..Default::default()
         });
 
         let texture_bind_group_layout =
@@ -118,11 +104,11 @@ impl Graphics2dManager {
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&texture_view),
+                    resource: wgpu::BindingResource::TextureView(&texture.view),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&sampler),
+                    resource: wgpu::BindingResource::Sampler(&texture.sampler),
                 },
             ],
             label: Some("diffuse_bind_group"),

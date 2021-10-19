@@ -1,4 +1,5 @@
 use crate::js_value::object::component::deserialize_v8_component;
+use crate::js_value::object::resource::deserialize_v8_resource;
 use crate::js_value::object::service::deserialize_v8_service;
 use crate::js_value::utils::store_callback;
 use crate::JavascriptEngine;
@@ -76,6 +77,10 @@ pub fn deserialize_v8<'a>(
 
     if let Some(service) = deserialize_v8_service(scope, v8_value) {
         return Some(Serialized::Service(service));
+    }
+
+    if let Some(resource) = deserialize_v8_resource(scope, v8_value) {
+        return Some(Serialized::Resource(resource));
     }
 
     if v8_value.is_object() {

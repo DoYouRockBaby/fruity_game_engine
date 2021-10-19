@@ -7,6 +7,7 @@ use crate::serialize::serialized::ResourceReference;
 use crate::serialize::serialized::Serialized;
 use crate::service::service::Service;
 use crate::service::utils::cast_service;
+use crate::service::utils::cast_service_mut;
 use crate::service::utils::ArgumentCaster;
 use crate::ServiceManager;
 use crate::World;
@@ -17,6 +18,7 @@ use fruity_introspect::MethodInfo;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::Debug;
+use std::fs::File;
 use std::io::Read;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -143,6 +145,25 @@ impl ResourcesManager {
         }
     }
 
+    /// Load a resource configuration file
+    ///
+    /// # Arguments
+    /// * `path` - The path of the file
+    /// * `resource_type` - The resource type
+    /// * `read` - The reader, generaly a file reader
+    ///
+    pub fn read_resource_settings(&mut self, path: &str) -> Result<(), LoadResourceError> {
+        let mut file = File::open(path).unwrap();
+        self.load_resource(
+            ResourceIdentifier(path.to_string()),
+            "resource_settings",
+            &mut file,
+            ResourceLoaderParams::new(),
+        )?;
+
+        Ok(())
+    }
+
     /// Add a resource into the collection
     ///
     /// # Arguments
@@ -204,19 +225,34 @@ impl ResourcesManager {
 
 impl IntrospectMethods<Serialized> for ResourcesManager {
     fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
-        vec![MethodInfo {
-            name: "get_resource".to_string(),
-            call: MethodCaller::Const(Arc::new(|this, args| {
-                let this = cast_service::<ResourcesManager>(this);
+        vec![
+            MethodInfo {
+                name: "get_resource".to_string(),
+                call: MethodCaller::Const(Arc::new(|this, args| {
+                    let this = cast_service::<ResourcesManager>(this);
 
-                let mut caster = ArgumentCaster::new("get_resource", args);
-                let arg1 = caster.cast_next::<String>()?;
+                    let mut caster = ArgumentCaster::new("get_resource", args);
+                    let arg1 = caster.cast_next::<String>()?;
 
-                let result = this.get_untyped_resource(ResourceIdentifier(arg1));
+                    let result = this.get_untyped_resource(ResourceIdentifier(arg1));
 
-                Ok(result.map(|result| Serialized::Resource(result)))
-            })),
-        }]
+                    Ok(result.map(|result| Serialized::Resource(result)))
+                })),
+            },
+            MethodInfo {
+                name: "read_resource_settings".to_string(),
+                call: MethodCaller::Mut(Arc::new(|this, args| {
+                    let this = cast_service_mut::<ResourcesManager>(this);
+
+                    let mut caster = ArgumentCaster::new("read_resource_settings", args);
+                    let arg1 = caster.cast_next::<String>()?;
+
+                    this.read_resource_settings(&arg1).unwrap();
+
+                    Ok(None)
+                })),
+            },
+        ]
     }
 }
 

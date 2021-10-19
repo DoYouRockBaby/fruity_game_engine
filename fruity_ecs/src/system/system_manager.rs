@@ -106,24 +106,62 @@ impl<'s> SystemManager {
 
 impl IntrospectMethods<Serialized> for SystemManager {
     fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
-        vec![MethodInfo {
-            name: "add_system".to_string(),
-            call: MethodCaller::Mut(Arc::new(|this, args| {
-                let this = cast_service_mut::<SystemManager>(this);
+        vec![
+            MethodInfo {
+                name: "add_system".to_string(),
+                call: MethodCaller::Mut(Arc::new(|this, args| {
+                    let this = cast_service_mut::<SystemManager>(this);
 
-                let mut caster = ArgumentCaster::new("add_system", args);
-                let arg1 = caster.cast_next::<Callback>()?;
+                    let mut caster = ArgumentCaster::new("add_system", args);
+                    let arg1 = caster.cast_next::<Callback>()?;
 
-                this.add_system(move |service_manager| {
-                    match arg1(service_manager, vec![]) {
-                        Ok(_) => (),
-                        Err(err) => log_introspect_error(&err),
-                    };
-                });
+                    this.add_system(move |service_manager| {
+                        match arg1(service_manager, vec![]) {
+                            Ok(_) => (),
+                            Err(err) => log_introspect_error(&err),
+                        };
+                    });
 
-                Ok(None)
-            })),
-        }]
+                    Ok(None)
+                })),
+            },
+            MethodInfo {
+                name: "add_begin_system".to_string(),
+                call: MethodCaller::Mut(Arc::new(|this, args| {
+                    let this = cast_service_mut::<SystemManager>(this);
+
+                    let mut caster = ArgumentCaster::new("add_begin_system", args);
+                    let arg1 = caster.cast_next::<Callback>()?;
+
+                    this.add_begin_system(move |service_manager| {
+                        match arg1(service_manager, vec![]) {
+                            Ok(_) => (),
+                            Err(err) => log_introspect_error(&err),
+                        };
+                    });
+
+                    Ok(None)
+                })),
+            },
+            MethodInfo {
+                name: "add_end_system".to_string(),
+                call: MethodCaller::Mut(Arc::new(|this, args| {
+                    let this = cast_service_mut::<SystemManager>(this);
+
+                    let mut caster = ArgumentCaster::new("add_end_system", args);
+                    let arg1 = caster.cast_next::<Callback>()?;
+
+                    this.add_end_system(move |service_manager| {
+                        match arg1(service_manager, vec![]) {
+                            Ok(_) => (),
+                            Err(err) => log_introspect_error(&err),
+                        };
+                    });
+
+                    Ok(None)
+                })),
+            },
+        ]
     }
 }
 
