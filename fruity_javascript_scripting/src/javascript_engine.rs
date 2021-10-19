@@ -10,7 +10,6 @@ use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodInfo;
 use std::sync::mpsc;
 use std::thread;
-use std::thread::JoinHandle;
 
 #[derive(Clone, Copy)]
 pub struct CallbackIdentifier(pub i32);

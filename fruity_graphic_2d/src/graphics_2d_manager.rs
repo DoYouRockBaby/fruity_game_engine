@@ -4,6 +4,7 @@ use fruity_ecs::service::service::Service;
 use fruity_ecs::service::service_rwlock::ServiceRwLock;
 use fruity_ecs::world::World;
 use fruity_graphic::graphics_manager::GraphicsManager;
+use fruity_graphic::resources::shader_resource::ShaderResource;
 use fruity_graphic::resources::texture_resource::TextureResource;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodInfo;
@@ -53,7 +54,15 @@ impl Graphics2dManager {
         Graphics2dManager { graphics_manager }
     }
 
-    pub fn draw_texture(&self, texture: &TextureResource, x: f32, y: f32, w: f32, h: f32) {
+    pub fn draw_texture(
+        &self,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        texture: &TextureResource,
+        shader: &ShaderResource,
+    ) {
         let graphics_manager = self.graphics_manager.read().unwrap();
 
         let device = graphics_manager.get_device().unwrap();
@@ -68,39 +77,8 @@ impl Graphics2dManager {
             return;
         }
 
-        let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
-            label: Some("Shader"),
-            source: wgpu::ShaderSource::Wgsl(buffer.into()),
-        });
-
-        let texture_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Texture {
-                            multisampled: false,
-                            view_dimension: wgpu::TextureViewDimension::D2,
-                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Sampler {
-                            comparison: false,
-                            filtering: true,
-                        },
-                        count: None,
-                    },
-                ],
-                label: Some("texture_bind_group_layout"),
-            });
-
         let diffuse_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &texture_bind_group_layout,
+            layout: &shader.bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
@@ -117,7 +95,7 @@ impl Graphics2dManager {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&texture_bind_group_layout],
+                bind_group_layouts: &[&shader.bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -125,12 +103,12 @@ impl Graphics2dManager {
             label: Some("Render Pipeline"),
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
-                module: &shader,
+                module: &shader.shader,
                 entry_point: "main",
                 buffers: &[Vertex::desc()],
             },
             fragment: Some(wgpu::FragmentState {
-                module: &shader,
+                module: &shader.shader,
                 entry_point: "main",
                 targets: &[wgpu::ColorTargetState {
                     format: config.format,

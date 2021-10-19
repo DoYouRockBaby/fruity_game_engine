@@ -35,7 +35,10 @@ systemManager.addBeginSystem(() => {
     entityManager.create([
         new Position({ x: 0.25, y: 0.25 }),
         new Size({ width: 0.5, height: 0.5 }),
-        new Sprite({ texture: resourcesManager.getResource("assets/logo.png") }),
+        new Sprite({
+            texture: resourcesManager.getResource("assets/logo.png"),
+            shader: resourcesManager.getResource("assets/shader.wgsl"),
+        }),
         new Velocity({ x: 0.001, y: 0.001 })]);
 
     /*entityManager.create([

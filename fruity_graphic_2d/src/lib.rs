@@ -31,6 +31,7 @@ pub fn initialize(world: &World) {
     components_factory.add("Sprite", || {
         Box::new(Sprite {
             texture: ResourceReference::new(),
+            shader: ResourceReference::new(),
         })
     });
 

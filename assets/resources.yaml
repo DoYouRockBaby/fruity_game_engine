@@ -1,3 +1,10 @@
 - path: "assets/logo.png"
   type: texture
 - path: "assets/shader.wgsl"
+  bindings:
+  - id: 0
+    visibility: fragment
+    type: texture
+  - id: 1
+    visibility: fragment
+    type: sampler

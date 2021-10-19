@@ -4,6 +4,7 @@ use crate::component::component_rwlock::ComponentRwLock;
 use crate::component::serialized_component::SerializedComponent;
 use crate::entity::entity_rwlock::EntityRwLock;
 use crate::resource::resource::Resource;
+use crate::resource::resources_manager::ResourceLoaderParams;
 use crate::service::service::Service;
 use crate::ServiceManager;
 use fruity_introspect::IntrospectError;
@@ -300,6 +301,17 @@ impl<T: Resource> TryFrom<Serialized> for ResourceReference<T> {
                 }
             }
             _ => Err(format!("Couldn't convert {:?} to resource", value)),
+        }
+    }
+}
+
+impl TryFrom<Serialized> for ResourceLoaderParams {
+    type Error = String;
+
+    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::Object { fields, .. } => Ok(ResourceLoaderParams(fields)),
+            _ => Err(format!("Couldn't convert {:?} to callback", value)),
         }
     }
 }
