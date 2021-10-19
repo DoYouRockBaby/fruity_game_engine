@@ -8,8 +8,6 @@ use fruity_graphic::resources::material_resource::MaterialResource;
 use fruity_graphic::resources::material_resource::Vertex;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodInfo;
-use std::fs::File;
-use std::io::Read;
 use wgpu::util::DeviceExt;
 
 #[derive(Debug, FruityAnySyncSend)]
@@ -32,13 +30,6 @@ impl Graphics2dManager {
         let rendering_view = graphics_manager.get_rendering_view().unwrap();
 
         // Create the main render pipeline
-        let mut buffer = String::new();
-        let mut settings_file = File::open("assets/shader.wgsl").unwrap();
-        if let Err(err) = settings_file.read_to_string(&mut buffer) {
-            log::error!("{}", err.to_string());
-            return;
-        }
-
         let vertices: &[Vertex] = &[
             Vertex {
                 position: [x, y, 0.0],
