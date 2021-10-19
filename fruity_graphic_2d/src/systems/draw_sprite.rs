@@ -15,10 +15,9 @@ pub fn draw_sprite(
     sprite: &Sprite,
     graphics_2d_manager: ServiceReadGuard<Graphics2dManager>,
 ) {
-    let texture = sprite.texture.as_ref().unwrap();
-    let shader = sprite.shader.as_ref().unwrap();
+    let material = sprite.material.as_ref().unwrap();
 
-    graphics_2d_manager.draw_texture(position.x, position.y, size.width, size.height, texture.deref(), shader.deref());
+    graphics_2d_manager.draw_texture(position.x, position.y, size.width, size.height, material.deref());
 }
 
 pub fn draw_sprite_untyped(service_manager: Arc<RwLock<ServiceManager>>) {

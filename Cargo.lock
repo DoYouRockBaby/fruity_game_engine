@@ -722,6 +722,7 @@ dependencies = [
 name = "fruity_graphic"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
  "fruity_any",
  "fruity_ecs",
  "fruity_introspect",
@@ -732,6 +733,7 @@ dependencies = [
  "tokio",
  "wgpu",
  "winit",
+ "yaml-rust",
 ]
 
 [[package]]

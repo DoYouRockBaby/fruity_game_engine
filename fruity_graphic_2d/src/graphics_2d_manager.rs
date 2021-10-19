@@ -4,42 +4,13 @@ use fruity_ecs::service::service::Service;
 use fruity_ecs::service::service_rwlock::ServiceRwLock;
 use fruity_ecs::world::World;
 use fruity_graphic::graphics_manager::GraphicsManager;
-use fruity_graphic::resources::shader_resource::ShaderResource;
-use fruity_graphic::resources::texture_resource::TextureResource;
+use fruity_graphic::resources::material_resource::MaterialResource;
+use fruity_graphic::resources::material_resource::Vertex;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodInfo;
 use std::fs::File;
 use std::io::Read;
 use wgpu::util::DeviceExt;
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-struct Vertex {
-    position: [f32; 3],
-    tex_coords: [f32; 2],
-}
-
-impl Vertex {
-    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
-        use std::mem;
-        wgpu::VertexBufferLayout {
-            array_stride: mem::size_of::<Vertex>() as wgpu::BufferAddress,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &[
-                wgpu::VertexAttribute {
-                    offset: 0,
-                    shader_location: 0,
-                    format: wgpu::VertexFormat::Float32x3,
-                },
-                wgpu::VertexAttribute {
-                    offset: mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
-                    shader_location: 1,
-                    format: wgpu::VertexFormat::Float32x2, // NEW!
-                },
-            ],
-        }
-    }
-}
 
 #[derive(Debug, FruityAnySyncSend)]
 pub struct Graphics2dManager {
@@ -54,19 +25,10 @@ impl Graphics2dManager {
         Graphics2dManager { graphics_manager }
     }
 
-    pub fn draw_texture(
-        &self,
-        x: f32,
-        y: f32,
-        w: f32,
-        h: f32,
-        texture: &TextureResource,
-        shader: &ShaderResource,
-    ) {
+    pub fn draw_texture(&self, x: f32, y: f32, w: f32, h: f32, material: &MaterialResource) {
         let graphics_manager = self.graphics_manager.read().unwrap();
 
         let device = graphics_manager.get_device().unwrap();
-        let config = graphics_manager.get_config().unwrap();
         let rendering_view = graphics_manager.get_rendering_view().unwrap();
 
         // Create the main render pipeline
@@ -76,68 +38,6 @@ impl Graphics2dManager {
             log::error!("{}", err.to_string());
             return;
         }
-
-        let diffuse_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &shader.bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&texture.view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&texture.sampler),
-                },
-            ],
-            label: Some("diffuse_bind_group"),
-        });
-
-        let render_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&shader.bind_group_layout],
-                push_constant_ranges: &[],
-            });
-
-        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Render Pipeline"),
-            layout: Some(&render_pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &shader.shader,
-                entry_point: "main",
-                buffers: &[Vertex::desc()],
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &shader.shader,
-                entry_point: "main",
-                targets: &[wgpu::ColorTargetState {
-                    format: config.format,
-                    blend: Some(wgpu::BlendState {
-                        color: wgpu::BlendComponent::REPLACE,
-                        alpha: wgpu::BlendComponent::REPLACE,
-                    }),
-                    write_mask: wgpu::ColorWrites::ALL,
-                }],
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                strip_index_format: None,
-                front_face: wgpu::FrontFace::Ccw,
-                cull_mode: Some(wgpu::Face::Back),
-                // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
-                polygon_mode: wgpu::PolygonMode::Fill,
-                // Requires Features::DEPTH_CLAMPING
-                clamp_depth: false,
-                // Requires Features::CONSERVATIVE_RASTERIZATION
-                conservative: false,
-            },
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState {
-                count: 1,
-                mask: !0,
-                alpha_to_coverage_enabled: false,
-            },
-        });
 
         let vertices: &[Vertex] = &[
             Vertex {
@@ -194,8 +94,8 @@ impl Graphics2dManager {
             })
         };
 
-        render_pass.set_pipeline(&render_pipeline);
-        render_pass.set_bind_group(0, &diffuse_bind_group, &[]);
+        render_pass.set_pipeline(&material.render_pipeline);
+        render_pass.set_bind_group(0, &material.bind_group, &[]);
         render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
         render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
         render_pass.draw_indexed(0..num_indices, 0, 0..1);

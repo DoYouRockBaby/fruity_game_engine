@@ -1,5 +1,6 @@
 use crate::graphics_manager::GraphicsManager;
 use crate::resources::image_resource::image_loader;
+use crate::resources::material_resource::material_loader;
 use crate::resources::shader_resource::shader_loader;
 use fruity_ecs::resource::resources_manager::ResourcesManager;
 use fruity_ecs::world::World;
@@ -38,5 +39,8 @@ pub fn initialize(world: &World) {
         .unwrap();
     resources_manager
         .add_resource_loader("wgsl", shader_loader)
+        .unwrap();
+    resources_manager
+        .add_resource_loader("material", material_loader)
         .unwrap();
 }

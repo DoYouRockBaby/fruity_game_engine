@@ -1,3 +1,4 @@
+use crate::components::camera::Camera;
 use crate::components::position::Position;
 use crate::components::size::Size;
 use crate::components::sprite::Sprite;
@@ -30,8 +31,13 @@ pub fn initialize(world: &World) {
     });
     components_factory.add("Sprite", || {
         Box::new(Sprite {
-            texture: ResourceReference::new(),
-            shader: ResourceReference::new(),
+            material: ResourceReference::new(),
+        })
+    });
+    components_factory.add("Camera", || {
+        Box::new(Camera {
+            near: 0.1,
+            far: 100.0,
         })
     });
 

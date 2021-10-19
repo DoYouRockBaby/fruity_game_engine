@@ -1,0 +1,8 @@
+shader: "assets/shader.wgsl"
+bindings:
+- type: texture
+  id: 0
+  texture: "assets/logo.png"
+- type: sampler
+  id: 1
+  texture: "assets/logo.png"

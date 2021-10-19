@@ -37,7 +37,7 @@ systemManager.addBeginSystem(() => {
         new Size({ width: 0.5, height: 0.5 }),
         new Sprite({
             texture: resourcesManager.getResource("assets/logo.png"),
-            shader: resourcesManager.getResource("assets/shader.wgsl"),
+            material: resourcesManager.getResource("assets/material.material"),
         }),
         new Velocity({ x: 0.001, y: 0.001 })]);
 

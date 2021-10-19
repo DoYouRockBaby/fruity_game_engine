@@ -37,7 +37,7 @@ pub type ServiceReference<T> = Arc<RwLock<Box<T>>>;
 
 /// A reference over a resource
 #[derive(Debug)]
-pub struct ResourceReference<T: Resource>(Option<Arc<T>>);
+pub struct ResourceReference<T: Resource>(pub Option<Arc<T>>);
 
 impl<T: Resource> Clone for ResourceReference<T> {
     fn clone(&self) -> Self {

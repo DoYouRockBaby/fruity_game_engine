@@ -8,3 +8,4 @@
   - id: 1
     visibility: fragment
     type: sampler
+- path: "assets/material.material"
