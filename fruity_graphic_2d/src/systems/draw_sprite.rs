@@ -7,7 +7,7 @@ use fruity_ecs::entity_type;
 use fruity_ecs::service::service_guard::ServiceReadGuard;
 use fruity_ecs::service::service_manager::ServiceManager;
 use std::sync::Arc;
-use std::sync::RwLock;
+use std::sync::RwLock;use std::ops::Deref;
 
 pub fn draw_sprite(
     position: &Position,
@@ -15,14 +15,16 @@ pub fn draw_sprite(
     sprite: &Sprite,
     graphics_2d_manager: ServiceReadGuard<Graphics2dManager>,
 ) {
-    //println!("System1 speak: {:#?} {}", component1, service1.value());
+    let texture = sprite.texture.as_ref().unwrap();
+    let texture = texture.deref();
+    graphics_2d_manager.draw_texture(texture.deref(), position.x, position.y, size.width, size.height)
 }
 
 pub fn draw_sprite_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
     let service_manager = service_manager.read().unwrap();
     let entity_manager = service_manager.read::<EntityManager>();
 
-    entity_manager.for_each_mut(
+    entity_manager.for_each(
         entity_type!["Position", "Size", "Sprite"],
         |mut components| {
             let position = match components.next() {

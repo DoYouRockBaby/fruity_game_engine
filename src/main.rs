@@ -16,7 +16,11 @@ use fruity_ecs::resource::resources_manager::ResourcesManager;
 use fruity_ecs::system::system_manager::SystemManager;
 use fruity_ecs::world::World;
 use fruity_ecs::*;
-use fruity_graphic::initialize as fruity_graphic;
+use fruity_graphic::initialize as initialize_graphic;
+use fruity_graphic_2d::components::position::Position;
+use fruity_graphic_2d::components::size::Size;
+use fruity_graphic_2d::components::sprite::Sprite;
+use fruity_graphic_2d::initialize as initialize_graphic_2d;
 use fruity_introspect::*;
 use fruity_javascript_scripting::initialize as initialize_javascript;
 use fruity_javascript_scripting::javascript_engine::JavascriptEngine;
@@ -45,7 +49,8 @@ fn main() {
     let world = World::new();
     initialize_ecs(&world);
     initialize_windows(&world);
-    fruity_graphic(&world);
+    initialize_graphic(&world);
+    initialize_graphic_2d(&world);
 
     // Initialize component
     {
@@ -65,50 +70,6 @@ fn main() {
     initialize_javascript(&world);
 
     {
-        let service_manager = world.service_manager.read().unwrap();
-        let mut entity_manager = service_manager.write::<EntityManager>();
-
-        let component1 = Component1 {
-            float1: 3.14,
-            // str1: "je suis une string 1".to_string(),
-            int1: 12,
-        };
-
-        let component2 = Component2 { float1: 3.14 };
-
-        let component3 = Component1 {
-            float1: 3.14,
-            // str1: "je suis une string 2".to_string(),
-            int1: 34,
-        };
-        let component4 = Component1 {
-            float1: 3.14,
-            // str1: "je suis une string 3".to_string(),
-            int1: 53,
-        };
-
-        let component5 = Component2 { float1: 2.14 };
-        let component6 = Component1 {
-            float1: 3.14,
-            // str1: "je suis une string 4".to_string(),
-            int1: 43,
-        };
-
-        let component7 = Component2 { float1: 5.14 };
-
-        let _entity_id_1 =
-            entity_manager.create(entity!(Box::new(component1), Box::new(component2)));
-        let _entity_id_2 = entity_manager.create(entity!(Box::new(component3)));
-        let entity_id_3 =
-            entity_manager.create(entity!(Box::new(component4), Box::new(component5)));
-        let _entity_id_4 =
-            entity_manager.create(entity!(Box::new(component6), Box::new(component7)));
-
-        entity_manager.remove(entity_id_3);
-        entity_manager.remove(EntityId(0));
-    }
-
-    {
         let mut service_manager = world.service_manager.write().unwrap();
         service_manager.register::<Service1>("service1", Service1::new());
     }
@@ -117,14 +78,6 @@ fn main() {
         let service_manager = world.service_manager.read().unwrap();
         let mut system_manager = service_manager.write::<SystemManager>();
         system_manager.add_system(system1_untyped);
-    }
-
-    // Prepare windows
-    {
-        let service_manager = world.service_manager.read().unwrap();
-        let windows_manager = service_manager.read::<WindowsManager>();
-
-        windows_manager.run();
     }
 
     // Initialize resources
@@ -142,6 +95,24 @@ fn main() {
                 ResourceLoaderParams::new(),
             )
             .unwrap();
+    }
+
+    {
+        let service_manager = world.service_manager.read().unwrap();
+        let mut entity_manager = service_manager.write::<EntityManager>();
+        let resources_manager = service_manager.read::<ResourcesManager>();
+
+        entity_manager.create(entity!(
+            Box::new(Position { x: 10.0, y: 10.0 }),
+            Box::new(Size {
+                width: 10.0,
+                height: 10.0
+            }),
+            Box::new(Sprite {
+                texture: resources_manager
+                    .get_resource(ResourceIdentifier("assets/logo.png".to_string()))
+            })
+        ));
     }
 
     {

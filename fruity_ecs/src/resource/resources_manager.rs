@@ -3,6 +3,7 @@ use crate::resource::error::AddResourceLoaderError;
 use crate::resource::error::LoadResourceError;
 use crate::resource::error::RemoveResourceError;
 use crate::resource::resource::Resource;
+use crate::serialize::serialized::ResourceReference;
 use crate::serialize::serialized::Serialized;
 use crate::service::service::Service;
 use crate::service::utils::cast_service;
@@ -13,7 +14,6 @@ use fruity_any::*;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
-use std::any::Any;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::Debug;
@@ -76,17 +76,17 @@ impl ResourcesManager {
     pub fn get_resource<T: Resource>(
         &self,
         identifier: ResourceIdentifier,
-    ) -> Option<Arc<dyn Any>> {
+    ) -> ResourceReference<T> {
         match self
             .resources
             .get(&identifier)
             .map(|resource| resource.clone())
         {
             Some(resource) => match resource.as_any_arc_send_sync().downcast::<T>() {
-                Ok(resource) => Some(resource),
-                Err(_) => None,
+                Ok(resource) => ResourceReference::from_resource(resource),
+                Err(_) => ResourceReference::new(),
             },
-            None => None,
+            None => ResourceReference::new(),
         }
     }
 
