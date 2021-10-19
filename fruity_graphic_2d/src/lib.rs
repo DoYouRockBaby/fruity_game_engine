@@ -8,6 +8,7 @@ use fruity_ecs::world::World;
 
 pub mod components;
 pub mod graphics_2d_manager;
+pub mod systems;
 
 /// Initialize this extension
 pub fn initialize(world: &World) {

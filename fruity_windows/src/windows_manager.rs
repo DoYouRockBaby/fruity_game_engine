@@ -10,7 +10,6 @@ use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use fruity_observer::Signal;
 use std::fmt::Debug;
-use std::ops::DerefMut;
 use std::sync::Arc;
 use std::sync::RwLock;
 use winit::dpi::LogicalSize;
@@ -28,7 +27,8 @@ pub struct WindowsManager {
     window: RwLock<Option<Arc<RwLock<Window>>>>,
     pub on_windows_creation: Signal<()>,
     pub on_starting_event_loop: Signal<()>,
-    pub on_draw: Signal<()>,
+    pub on_start_update: Signal<()>,
+    pub on_end_update: Signal<()>,
     pub on_resize: Signal<(usize, usize)>,
 }
 
@@ -51,7 +51,8 @@ impl WindowsManager {
             window: RwLock::new(None),
             on_windows_creation: Signal::new(),
             on_starting_event_loop: Signal::new(),
-            on_draw: Signal::new(),
+            on_start_update: Signal::new(),
+            on_end_update: Signal::new(),
             on_resize: Signal::new(),
         }
     }
@@ -82,7 +83,8 @@ impl WindowsManager {
         let event_stack = self.event_stack.clone();
         self.on_starting_event_loop.notify(());
 
-        let on_draw = self.on_draw.clone();
+        let on_start_update = self.on_start_update.clone();
+        let on_end_update = self.on_end_update.clone();
         let on_resize = self.on_resize.clone();
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Wait;
@@ -125,12 +127,15 @@ impl WindowsManager {
                 }
             }
 
+            // Start updating
+            on_start_update.notify(());
+
             // Run the systems
             let system_manager_writer = system_manager.write().unwrap();
             system_manager_writer.run();
 
-            // Draw
-            on_draw.notify(());
+            // End the update
+            on_end_update.notify(());
         });
     }
 

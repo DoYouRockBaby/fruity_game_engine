@@ -1,15 +1,14 @@
 use fruity_any::*;
 use fruity_ecs::resource::resource::Resource;
-use image::DynamicImage;
 
 #[derive(Debug, FruityAnySyncSend)]
 pub struct TextureResource {
-    image: DynamicImage,
+    pub texture: wgpu::Texture,
 }
 
 impl TextureResource {
-    pub fn new(image: DynamicImage) -> TextureResource {
-        TextureResource { image }
+    pub fn new(texture: wgpu::Texture) -> TextureResource {
+        TextureResource { texture }
     }
 }
 

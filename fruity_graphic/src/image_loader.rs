@@ -1,4 +1,5 @@
 use crate::image_resource::ImageResource;
+use crate::texture_resource::TextureResource;
 use crate::GraphicsManager;
 use fruity_ecs::resource::resources_manager::ResourceIdentifier;
 use fruity_ecs::resource::resources_manager::ResourceLoaderParams;
@@ -52,7 +53,7 @@ pub fn image_loader(
             depth_or_array_layers: 1,
         };
 
-        let diffuse_texture = device.create_texture(&wgpu::TextureDescriptor {
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
             // All textures are stored as 3D, we represent our 2D texture
             // by setting depth to 1.
             size: texture_size,
@@ -64,7 +65,16 @@ pub fn image_loader(
             // TEXTURE_BINDING tells wgpu that we want to use this texture in shaders
             // COPY_DST means that we want to copy data to this texture
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            label: Some("diffuse_texture"),
+            label: Some("texture"),
         });
+
+        // Store the resource if it's a simple image
+        let resource = TextureResource::new(texture);
+        if let Err(_) = resources_manager.add_resource(identifier.clone(), resource) {
+            log::error!(
+                "Couldn't add a resource cause the identifier \"{}\" already exists",
+                &identifier.0
+            );
+        }
     }
 }
