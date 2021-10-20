@@ -88,9 +88,9 @@ impl WindowsManager {
         let on_resize = self.on_resize.clone();
 
         // Run the begin systems before everything
-        let system_manager_writer = self.system_manager.write().unwrap();
-        system_manager_writer.run_begin();
-        std::mem::drop(system_manager_writer);
+        let system_manager_reader = self.system_manager.read().unwrap();
+        system_manager_reader.run_begin();
+        std::mem::drop(system_manager_reader);
 
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Wait;
@@ -137,8 +137,8 @@ impl WindowsManager {
             on_start_update.notify(());
 
             // Run the systems
-            let system_manager_writer = system_manager.write().unwrap();
-            system_manager_writer.run();
+            let system_manager_reader = system_manager.read().unwrap();
+            system_manager_reader.run();
 
             // End the update
             on_end_update.notify(());

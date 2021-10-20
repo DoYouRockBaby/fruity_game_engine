@@ -4,8 +4,6 @@ use crate::entity::archetype::Archetype;
 use crate::entity::entity::Entity;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
-use crate::entity::entity::Iter as EntityIter;
-use crate::entity::entity::IterMut as EntityIterMut;
 use crate::entity::entity_rwlock::EntityRwLock;
 use crate::serialize::serialized::Serialized;
 use crate::service::service::Service;
@@ -19,7 +17,6 @@ use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use fruity_observer::Signal;
-use rayon::prelude::*;
 use std::any::Any;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -101,73 +98,6 @@ impl EntityManager {
         this.iter_entities(entity_identifier.clone())
             .filter_map(move |entity| entity.iter_components(&entity_identifier.clone()).ok())
             .flatten()
-    }
-
-    /// Iterate over all entities with a specific archetype type
-    /// Use every entity that contains the provided entity type
-    ///
-    /// # Arguments
-    /// * `entity_identifier` - The entity type identifier
-    /// * `callback` - The callback that will be called for every entity
-    ///
-    pub fn for_each_entity<F: Fn(EntityRwLock) + Sync + Send>(
-        &self,
-        entity_identifier: EntityTypeIdentifier,
-        callback: F,
-    ) {
-        self.iter_entities(entity_identifier)
-            .par_bridge()
-            .for_each(move |entity| {
-                callback(entity.clone());
-            });
-    }
-
-    /// Iterate over all entities with a specific archetype type
-    /// Use every entity that contains the provided entity type
-    /// Also map components to the order of provided entity type
-    /// identifier
-    ///
-    /// # Arguments
-    /// * `entity_identifier` - The entity type identifier
-    ///
-    pub fn for_each<F: Fn(EntityIter) + Sync + Send>(
-        &self,
-        entity_identifier: EntityTypeIdentifier,
-        callback: F,
-    ) {
-        self.iter_entities(entity_identifier.clone())
-            .par_bridge()
-            .for_each(move |entity| {
-                entity
-                    .read()
-                    .unwrap()
-                    .iter_component_tuple(&entity_identifier)
-                    .for_each(|components| callback(components));
-            });
-    }
-
-    /// Iterate over all entities with a specific archetype type with mutability
-    /// Use every entity that contains the provided entity type
-    /// Also map components to the order of provided entity type
-    /// identifier
-    ///
-    /// # Arguments
-    /// * `entity_identifier` - The entity type identifier
-    ///
-    pub fn for_each_mut<F: Fn(EntityIterMut) + Sync + Send>(
-        &self,
-        entity_identifier: EntityTypeIdentifier,
-        callback: F,
-    ) {
-        self.iter_entities(entity_identifier.clone())
-            .par_bridge()
-            .for_each(move |entity| {
-                entity
-                    .write()
-                    .unwrap()
-                    .iter_mut_component_tuple(&entity_identifier)
-                    .for_each(|components| callback(components));
-            });
     }
 
     /// Add a new entity in the storage

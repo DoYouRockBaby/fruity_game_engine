@@ -84,15 +84,20 @@ pub struct Entity {
 
 impl Entity {
     /// Returns a Entity
-    pub fn new(components: Vec<Box<dyn Component>>) -> Entity {
+    pub fn new(mut components: Vec<Box<dyn Component>>) -> Entity {
         let mut entity = Entity {
             entry_infos: Vec::new(),
             buffer: Vec::new(),
         };
 
+        // Sort to store in a more efficient way
+        components.sort_by(|a, b| a.get_component_type().cmp(&b.get_component_type()));
+
         for component in components {
             entity.push(component);
         }
+
+        let entity = entity;
 
         entity
     }
@@ -125,11 +130,10 @@ impl Entity {
 
     /// Returns the entity type identifier of the entity
     pub fn get_type_identifier(&self) -> EntityTypeIdentifier {
-        let mut identifier = self
+        let identifier = self
             .iter()
             .map(|component| component.get_component_type())
             .collect::<Vec<_>>();
-        identifier.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
         EntityTypeIdentifier(identifier)
     }
@@ -184,55 +188,6 @@ impl Entity {
         }
     }
 
-    /// Iterate over all the component that share the same type
-    pub fn iter_typed<T: Component>(&self) -> impl Iterator<Item = &T> {
-        self.iter()
-            .filter_map(|component| component.as_any_ref().downcast_ref::<T>())
-    }
-
-    /// Iterate over all the component that share the same type with mutability
-    pub fn iter_typed_mut<T: Component>(&mut self) -> impl Iterator<Item = &mut T> {
-        self.iter_mut()
-            .filter_map(|component| component.as_any_mut().downcast_mut::<T>())
-    }
-
-    /// Iterate over specified components of the entity
-    ///
-    /// Cause an entity can contain multiple component of the same type, can returns multiple component list
-    ///
-    /// Return abstractions of the components as [’Component’]
-    ///
-    /// # Arguments
-    /// * `type_identifiers` - The identifier list of the components, components will be returned with the same order
-    ///
-    pub fn untyped_iter_over_types(&self, target_identifier: Vec<String>) -> OverTypesIter {
-        let intern_identifier = self.get_type_identifier();
-        let types_list = target_identifier
-            .into_iter()
-            .map(|type_identifier| {
-                intern_identifier
-                    .0
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(index, component_type)| {
-                        if *component_type == type_identifier {
-                            Some(index)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect::<VecDeque<_>>()
-            })
-            .multi_cartesian_product()
-            .map(|vec| VecDeque::from(vec))
-            .collect::<VecDeque<_>>();
-
-        OverTypesIter {
-            entity: self,
-            types_list,
-        }
-    }
-
     /// Get a collection of component indexes
     /// Cause an entity can contain multiple component of the same type, can returns multiple component index list
     /// All components are mapped to the provided component identifiers in the same order
@@ -265,87 +220,6 @@ impl Entity {
             })
             .multi_cartesian_product()
             .map(|vec| Vec::from(vec))
-    }
-
-    /// Iterate over specified components of the entity
-    ///
-    /// Cause an entity can contain multiple component of the same type, can returns multiple component list
-    ///
-    /// Return abstractions of the components as [’Component’]
-    ///
-    /// # Arguments
-    /// * `type_identifiers` - The identifier list of the components, components will be returned with the same order
-    ///
-    pub fn iter_component_tuple(&self, target_identifier: &EntityTypeIdentifier) -> OverTypesIter {
-        let intern_identifier = self.get_type_identifier();
-        let types_list = target_identifier
-            .clone()
-            .0
-            .into_iter()
-            .map(|type_identifier| {
-                intern_identifier
-                    .0
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(index, component_type)| {
-                        if *component_type == type_identifier {
-                            Some(index)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect::<VecDeque<_>>()
-            })
-            .multi_cartesian_product()
-            .map(|vec| VecDeque::from(vec))
-            .collect::<VecDeque<_>>();
-
-        OverTypesIter {
-            entity: self,
-            types_list,
-        }
-    }
-
-    /// Iterate over specified components of the entity with mutability
-    ///
-    /// Cause an entity can contain multiple component of the same type, can returns multiple component list
-    ///
-    /// Return abstractions of the components as [’Component’]
-    ///
-    /// # Arguments
-    /// * `type_identifiers` - The identifier list of the components, components will be returned with the same order
-    ///
-    pub fn iter_mut_component_tuple(
-        &mut self,
-        target_identifier: &EntityTypeIdentifier,
-    ) -> OverTypesIterMut {
-        let intern_identifier = self.get_type_identifier();
-        let types_list = target_identifier
-            .0
-            .clone()
-            .into_iter()
-            .map(|type_identifier| {
-                intern_identifier
-                    .0
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(index, component_type)| {
-                        if *component_type == type_identifier {
-                            Some(index)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect::<VecDeque<_>>()
-            })
-            .multi_cartesian_product()
-            .map(|vec| VecDeque::from(vec))
-            .collect::<VecDeque<_>>();
-
-        OverTypesIterMut {
-            entity: self,
-            types_list,
-        }
     }
 
     /// Return the components count stored in the entity
@@ -384,57 +258,6 @@ impl<'s> Iterator for IterMut<'s> {
         let entity = unsafe { &mut *(self.entity as *mut _) } as &mut Entity;
         match self.indexes.pop_front() {
             Some(index) => entity.get_mut(index),
-            None => None,
-        }
-    }
-}
-
-/// An iterator over all the component of an entity
-pub struct OverTypesIter<'s> {
-    entity: &'s Entity,
-    types_list: VecDeque<VecDeque<usize>>,
-}
-
-/// An iterator over specified components of the entity
-///
-/// Cause an entity can contain multiple component of the same type, can returns multiple component list
-///
-/// Return abstractions of the components as [’Component’]
-///
-impl<'s> Iterator for OverTypesIter<'s> {
-    type Item = Iter<'s>;
-
-    fn next(&mut self) -> Option<Iter<'s>> {
-        match self.types_list.pop_front() {
-            Some(type_indexes) => Some(Iter {
-                entity: self.entity,
-                indexes: type_indexes,
-            }),
-            None => None,
-        }
-    }
-}
-
-/// An iterator over specified components of the entity with mutability
-///
-/// Cause an entity can contain multiple component of the same type, can returns multiple component list
-///
-/// Return abstractions of the components as [’Component’]
-///
-pub struct OverTypesIterMut<'s> {
-    entity: &'s mut Entity,
-    types_list: VecDeque<VecDeque<usize>>,
-}
-
-impl<'s> Iterator for OverTypesIterMut<'s> {
-    type Item = IterMut<'s>;
-
-    fn next(&mut self) -> Option<IterMut<'s>> {
-        match self.types_list.pop_front() {
-            Some(type_indexes) => Some(IterMut {
-                entity: unsafe { &mut *(self.entity as *mut _) },
-                indexes: type_indexes,
-            }),
             None => None,
         }
     }

@@ -42,10 +42,20 @@ systemManager.addBeginSystem(() => {
         new Velocity({ x: 0.001, y: 0.001 }),
     ]);
 
-    /*entityManager.create([
-        new Position({ x: 0.75, y: 0.75 }),
-        new Size({ width: 0.8, height: 0.8 }),
-        new Sprite({ texture: resources_manager.get_resource("assets/logo.png") })]);*/
+    entityManager.create([
+        new Position({ x: -0.25, y: 0.25 }),
+        new Size({ width: 0.3, height: 0.3 }),
+        new Sprite({
+            texture: resourcesManager.getResource("assets/logo.png"),
+            material: resourcesManager.getResource("assets/material.material"),
+        }),
+    ]);
+
+    entityManager.create([
+        new Position({ x: 0, y: 0 }),
+        new Size({ width: 5, height: 5 }),
+        new Camera({}),
+    ]);
 });
 
 systemManager.addSystem(() => {

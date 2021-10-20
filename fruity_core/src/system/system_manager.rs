@@ -20,8 +20,8 @@ type System = dyn Fn(Arc<RwLock<ServiceManager>>) + Sync + Send + 'static;
 
 /// A system pool, see [‘SystemManager‘] for more informations
 pub struct SystemPool {
-    /// Is the pool enabled, if it's not, it will not be launched when calling [‘SystemManager‘]::run
-    enabled: bool,
+    /// Is the pool ignored, if it's not, it will not be launched when calling [‘SystemManager‘]::run
+    ignore_once: RwLock<bool>,
 
     /// Systems of the pool
     systems: Vec<Box<System>>,
@@ -86,7 +86,7 @@ impl<'s> SystemManager {
             self.system_pools.insert(
                 pool_index,
                 SystemPool {
-                    enabled: true,
+                    ignore_once: RwLock::new(false),
                     systems,
                 },
             );
@@ -114,7 +114,7 @@ impl<'s> SystemManager {
             self.begin_system_pools.insert(
                 pool_index,
                 SystemPool {
-                    enabled: true,
+                    ignore_once: RwLock::new(false),
                     systems,
                 },
             );
@@ -142,7 +142,7 @@ impl<'s> SystemManager {
             self.end_system_pools.insert(
                 pool_index,
                 SystemPool {
-                    enabled: true,
+                    ignore_once: RwLock::new(false),
                     systems,
                 },
             );
@@ -166,38 +166,62 @@ impl<'s> SystemManager {
 
     /// Run all the stored systems
     pub fn run(&self) {
-        self.iter_system_pools()
-            .filter(|pool| pool.enabled)
-            .for_each(|pool| {
+        let service_manager = self.service_manager.clone();
+        self.iter_system_pools().for_each(|pool| {
+            let pool_ignore_reader = pool.ignore_once.read().unwrap();
+            let pool_ignore = pool_ignore_reader.clone();
+            std::mem::drop(pool_ignore_reader);
+
+            if !pool_ignore {
                 pool.systems
                     .iter()
                     .par_bridge()
-                    .for_each(|system| system(self.service_manager.clone()))
-            });
+                    .for_each(|system| system(service_manager.clone()));
+            } else {
+                let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
+                *pool_ignore_writer = false;
+            }
+        });
     }
 
     /// Run all the stored begin systems
     pub fn run_begin(&self) {
-        self.iter_begin_system_pools()
-            .filter(|pool| pool.enabled)
-            .for_each(|pool| {
+        let service_manager = self.service_manager.clone();
+        self.iter_begin_system_pools().for_each(|pool| {
+            let pool_ignore_reader = pool.ignore_once.read().unwrap();
+            let pool_ignore = pool_ignore_reader.clone();
+            std::mem::drop(pool_ignore_reader);
+
+            if !pool_ignore {
                 pool.systems
                     .iter()
                     .par_bridge()
-                    .for_each(|system| system(self.service_manager.clone()))
-            });
+                    .for_each(|system| system(service_manager.clone()));
+            } else {
+                let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
+                *pool_ignore_writer = false;
+            }
+        });
     }
 
     /// Run all the stored end systems
     pub fn run_end(&self) {
-        self.iter_end_system_pools()
-            .filter(|pool| pool.enabled)
-            .for_each(|pool| {
+        let service_manager = self.service_manager.clone();
+        self.iter_end_system_pools().for_each(|pool| {
+            let pool_ignore_reader = pool.ignore_once.read().unwrap();
+            let pool_ignore = pool_ignore_reader.clone();
+            std::mem::drop(pool_ignore_reader);
+
+            if !pool_ignore {
                 pool.systems
                     .iter()
                     .par_bridge()
-                    .for_each(|system| system(self.service_manager.clone()))
-            });
+                    .for_each(|system| system(service_manager.clone()));
+            } else {
+                let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
+                *pool_ignore_writer = false;
+            }
+        });
     }
 
     /// Run all the stored systems
@@ -206,7 +230,7 @@ impl<'s> SystemManager {
             pool.systems
                 .iter()
                 .par_bridge()
-                .for_each(|system| system(self.service_manager.clone()))
+                .for_each(|system| system(self.service_manager.clone()));
         }
     }
 
@@ -216,7 +240,7 @@ impl<'s> SystemManager {
             pool.systems
                 .iter()
                 .par_bridge()
-                .for_each(|system| system(self.service_manager.clone()))
+                .for_each(|system| system(self.service_manager.clone()));
         }
     }
 
@@ -226,112 +250,43 @@ impl<'s> SystemManager {
             pool.systems
                 .iter()
                 .par_bridge()
-                .for_each(|system| system(self.service_manager.clone()))
+                .for_each(|system| system(self.service_manager.clone()));
         }
     }
 
-    /// Enable a pool
+    /// Ignore a pool once
     ///
     /// # Arguments
     /// * `index` - The pool index
     ///
-    pub fn enable_pool(&mut self, index: &usize) {
-        if let Some(pool) = self.system_pools.get_mut(index) {
-            pool.enabled = true;
-        }
-    }
-
-    /// Enable a begin pool
-    ///
-    /// # Arguments
-    /// * `index` - The pool index
-    ///
-    pub fn enable_begin_pool(&mut self, index: &usize) {
-        if let Some(pool) = self.begin_system_pools.get_mut(index) {
-            pool.enabled = true;
-        }
-    }
-
-    /// Enable an end pool
-    ///
-    /// # Arguments
-    /// * `index` - The pool index
-    ///
-    pub fn enable_end_pool(&mut self, index: &usize) {
-        if let Some(pool) = self.end_system_pools.get_mut(index) {
-            pool.enabled = true;
-        }
-    }
-
-    /// Disable a pool
-    ///
-    /// # Arguments
-    /// * `index` - The pool index
-    ///
-    pub fn disable_pool(&mut self, index: &usize) {
-        if let Some(pool) = self.system_pools.get_mut(index) {
-            pool.enabled = false;
-        }
-    }
-
-    /// Disable a begin pool
-    ///
-    /// # Arguments
-    /// * `index` - The pool index
-    ///
-    pub fn disable_begin_pool(&mut self, index: &usize) {
-        if let Some(pool) = self.begin_system_pools.get_mut(index) {
-            pool.enabled = false;
-        }
-    }
-
-    /// Disable an end pool
-    ///
-    /// # Arguments
-    /// * `index` - The pool index
-    ///
-    pub fn disable_end_pool(&mut self, index: &usize) {
-        if let Some(pool) = self.end_system_pools.get_mut(index) {
-            pool.enabled = false;
-        }
-    }
-
-    /// Check if a pool is enabled
-    ///
-    /// # Arguments
-    /// * `index` - The pool index
-    ///
-    pub fn is_pool_enabled(&self, index: &usize) -> bool {
+    pub fn ignore_pool_once(&self, index: &usize) {
         if let Some(pool) = self.system_pools.get(index) {
-            pool.enabled
-        } else {
-            false
+            let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
+            *pool_ignore_writer = true;
         }
     }
 
-    /// Check if a begin pool is enabled
+    /// Ignore a begin pool once
     ///
     /// # Arguments
     /// * `index` - The pool index
     ///
-    pub fn is_begin_pool_enabled(&self, index: &usize) -> bool {
-        if let Some(pool) = self.system_pools.get(index) {
-            pool.enabled
-        } else {
-            false
+    pub fn ignore_begin_pool_once(&self, index: &usize) {
+        if let Some(pool) = self.begin_system_pools.get(index) {
+            let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
+            *pool_ignore_writer = true;
         }
     }
 
-    /// Check if an end pool is enabled
+    /// Ignore an end pool once
     ///
     /// # Arguments
     /// * `index` - The pool index
     ///
-    pub fn is_end_pool_enabled(&self, index: &usize) -> bool {
-        if let Some(pool) = self.system_pools.get(index) {
-            pool.enabled
-        } else {
-            false
+    pub fn ignore_end_pool_once(&self, index: &usize) {
+        if let Some(pool) = self.end_system_pools.get(index) {
+            let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
+            *pool_ignore_writer = true;
         }
     }
 }

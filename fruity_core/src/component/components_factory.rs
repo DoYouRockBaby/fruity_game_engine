@@ -67,8 +67,7 @@ impl ComponentsFactory {
 
     /// Iterate over all component factories
     pub fn iter(&self) -> impl Iterator<Item = (&String, &fn() -> Box<dyn Component>)> {
-        let test = self.factories.iter();
-        test
+        self.factories.iter()
     }
 }
 

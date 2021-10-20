@@ -23,6 +23,31 @@ impl Graphics2dManager {
         Graphics2dManager { graphics_manager }
     }
 
+    pub fn start_rendering(&self) {
+        let graphics_manager = self.graphics_manager.read().unwrap();
+
+        let rendering_view = graphics_manager.get_rendering_view().unwrap();
+        let mut encoder = graphics_manager.get_encoder().unwrap().write().unwrap();
+
+        encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("Render Pass"),
+            color_attachments: &[wgpu::RenderPassColorAttachment {
+                view: rendering_view,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color {
+                        r: 0.1,
+                        g: 0.2,
+                        b: 0.3,
+                        a: 1.0,
+                    }),
+                    store: true,
+                },
+            }],
+            depth_stencil_attachment: None,
+        });
+    }
+
     pub fn draw_square(&self, x: f32, y: f32, w: f32, h: f32, material: &MaterialResource) {
         let graphics_manager = self.graphics_manager.read().unwrap();
 
@@ -72,12 +97,7 @@ impl Graphics2dManager {
                     view: rendering_view,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
-                        }),
+                        load: wgpu::LoadOp::Load,
                         store: true,
                     },
                 }],
