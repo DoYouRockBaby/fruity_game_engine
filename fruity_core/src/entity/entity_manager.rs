@@ -38,10 +38,10 @@ pub struct EntityManager {
     service_manager: Arc<RwLock<ServiceManager>>,
 
     /// Signal propagated when a new entity is inserted into the collection
-    pub on_entity_created: Signal<EntityId>,
+    pub on_entity_created: Signal<(EntityId, EntityRwLock)>,
 
     /// Signal propagated when a new entity is removed from the collection
-    pub on_entity_removed: Signal<EntityRwLock>,
+    pub on_entity_removed: Signal<(EntityId, EntityRwLock)>,
 }
 
 impl EntityManager {
@@ -185,16 +185,16 @@ impl EntityManager {
         match self.archetype_mut_by_identifier(entity_identifier) {
             Some(archetype) => {
                 archetype.add(entity_id, entity);
-                self.on_entity_created.notify(entity_id);
-                entity_id
             }
             None => {
                 let archetype = Archetype::new(entity_id, entity);
                 self.archetypes.push(archetype);
-                self.on_entity_created.notify(entity_id);
-                entity_id
             }
         }
+
+        self.on_entity_created
+            .notify((entity_id, self.get(entity_id).unwrap().clone()));
+        entity_id
     }
 
     /// Remove an entity based on its id
@@ -213,7 +213,7 @@ impl EntityManager {
                     },
                 })
         {
-            self.on_entity_removed.notify(entity);
+            self.on_entity_removed.notify((entity_id, entity));
         } else {
             log::error!(
                 "Trying to delete an unregistered entity with entity id {:?}",
