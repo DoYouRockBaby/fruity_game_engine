@@ -78,4 +78,24 @@ impl<'s> ArgumentCaster<'s> {
             }),
         }
     }
+
+    /// Cast a serialized optional argument from an argument list
+    ///
+    /// # Generic Arguments
+    /// * `T` - The type to cast
+    ///
+    pub fn cast_next_optional<T: TryFrom<Serialized>>(&mut self) -> Option<T> {
+        match self.iter.next() {
+            Some((index, arg)) => {
+                self.last_index = index + 1;
+                T::try_from(arg)
+                    .map_err(|_| IntrospectError::IncorrectArgument {
+                        method: self.method.to_string(),
+                        arg_index: index,
+                    })
+                    .ok()
+            }
+            None => None,
+        }
+    }
 }

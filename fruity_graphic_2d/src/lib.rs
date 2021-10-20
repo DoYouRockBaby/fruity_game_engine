@@ -42,5 +42,5 @@ pub fn initialize(world: &World) {
     });
 
     let mut system_manager = service_manager.write::<SystemManager>();
-    system_manager.add_system(draw_sprite_untyped);
+    system_manager.add_system(draw_sprite_untyped, None);
 }

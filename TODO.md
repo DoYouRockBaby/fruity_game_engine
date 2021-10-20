@@ -13,3 +13,4 @@
 [ ] Find a better way to store SerializedComponent, to have something more effective on read (bincode ?)
 [ ] Maybe separate base services/component and Introspect implementation
 [ ] Abstract everything (espescialy javascript and render)
+[ ] Mettre un signal sur touts les fields de tous les components ?
