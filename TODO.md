@@ -14,3 +14,4 @@
 [ ] Maybe separate base services/component and Introspect implementation
 [ ] Abstract everything (espescialy javascript and render)
 [ ] Wrap all the fields of every components into a signal ?
+[ ] Allow javascript to play with signals

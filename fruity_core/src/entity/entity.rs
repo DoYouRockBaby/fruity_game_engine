@@ -125,11 +125,13 @@ impl Entity {
 
     /// Returns the entity type identifier of the entity
     pub fn get_type_identifier(&self) -> EntityTypeIdentifier {
-        EntityTypeIdentifier(
-            self.iter()
-                .map(|component| component.get_component_type())
-                .collect(),
-        )
+        let mut identifier = self
+            .iter()
+            .map(|component| component.get_component_type())
+            .collect::<Vec<_>>();
+        identifier.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+        EntityTypeIdentifier(identifier)
     }
 
     /// Get a component from the entity

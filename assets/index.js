@@ -39,12 +39,13 @@ systemManager.addBeginSystem(() => {
             texture: resourcesManager.getResource("assets/logo.png"),
             material: resourcesManager.getResource("assets/material.material"),
         }),
-        new Velocity({ x: 0.001, y: 0.001 })]);
+        new Velocity({ x: 0.001, y: 0.001 }),
+    ]);
 
-    entityManager.create([
+    /*entityManager.create([
         new Position({ x: 0.75, y: 0.75 }),
         new Size({ width: 0.8, height: 0.8 }),
-        new Sprite({ texture: resources_manager.get_resource("assets/logo.png") })]);
+        new Sprite({ texture: resources_manager.get_resource("assets/logo.png") })]);*/
 });
 
 systemManager.addSystem(() => {

@@ -23,7 +23,7 @@ impl Graphics2dManager {
         Graphics2dManager { graphics_manager }
     }
 
-    pub fn draw_texture(&self, x: f32, y: f32, w: f32, h: f32, material: &MaterialResource) {
+    pub fn draw_square(&self, x: f32, y: f32, w: f32, h: f32, material: &MaterialResource) {
         let graphics_manager = self.graphics_manager.read().unwrap();
 
         let device = graphics_manager.get_device().unwrap();
