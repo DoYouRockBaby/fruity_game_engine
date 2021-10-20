@@ -1,5 +1,5 @@
 use fruity_any::*;
-use fruity_ecs::resource::resource::Resource;
+use fruity_core::resource::resource::Resource;
 use image::GenericImageView;
 use std::num::NonZeroU32;
 

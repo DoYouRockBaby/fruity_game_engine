@@ -1,7 +1,7 @@
 use fruity_any::*;
-use fruity_ecs::serialize::serialized::Serialized;
-use fruity_ecs::service::service::Service;
-use fruity_ecs::world::World;
+use fruity_core::serialize::serialized::Serialized;
+use fruity_core::service::service::Service;
+use fruity_core::world::World;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodInfo;
 use fruity_windows::windows_manager::WindowsManager;

@@ -1,8 +1,8 @@
 use fruity_any::*;
-use fruity_ecs::serialize::serialized::Serialized;
-use fruity_ecs::service::service::Service;
-use fruity_ecs::service::service_rwlock::ServiceRwLock;
-use fruity_ecs::world::World;
+use fruity_core::serialize::serialized::Serialized;
+use fruity_core::service::service::Service;
+use fruity_core::service::service_rwlock::ServiceRwLock;
+use fruity_core::world::World;
 use fruity_graphic::graphics_manager::GraphicsManager;
 use fruity_graphic::resources::material_resource::MaterialResource;
 use fruity_graphic::resources::material_resource::Vertex;

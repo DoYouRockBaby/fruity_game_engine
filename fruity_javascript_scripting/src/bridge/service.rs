@@ -1,6 +1,6 @@
 use crate::js_value::object::JsObject;
 use crate::JsRuntime;
-use fruity_ecs::service::service_manager::ServiceManager;
+use fruity_core::service::service_manager::ServiceManager;
 use std::sync::Arc;
 use std::sync::RwLock;
 

@@ -2,10 +2,10 @@ use crate::Graphics2dManager;
 use crate::Position;
 use crate::Size;
 use crate::Sprite;
-use fruity_ecs::entity::entity_manager::EntityManager;
-use fruity_ecs::entity_type;
-use fruity_ecs::service::service_guard::ServiceReadGuard;
-use fruity_ecs::service::service_manager::ServiceManager;
+use fruity_core::entity::entity_manager::EntityManager;
+use fruity_core::entity_type;
+use fruity_core::service::service_guard::ServiceReadGuard;
+use fruity_core::service::service_manager::ServiceManager;
 use std::sync::Arc;
 use std::sync::RwLock;use std::ops::Deref;
 

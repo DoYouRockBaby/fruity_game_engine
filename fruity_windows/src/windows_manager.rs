@@ -1,10 +1,10 @@
 use fruity_any::*;
-use fruity_ecs::serialize::serialized::Serialized;
-use fruity_ecs::service::service::Service;
-use fruity_ecs::service::service_rwlock::ServiceRwLock;
-use fruity_ecs::service::utils::cast_service;
-use fruity_ecs::service::utils::ArgumentCaster;
-use fruity_ecs::system::system_manager::SystemManager;
+use fruity_core::serialize::serialized::Serialized;
+use fruity_core::service::service::Service;
+use fruity_core::service::service_rwlock::ServiceRwLock;
+use fruity_core::service::utils::cast_service;
+use fruity_core::service::utils::ArgumentCaster;
+use fruity_core::system::system_manager::SystemManager;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;

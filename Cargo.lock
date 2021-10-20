@@ -678,12 +678,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "fruity_ecs"
+name = "fruity_core"
 version = "0.1.0"
 dependencies = [
  "fruity_any",
  "fruity_collections",
- "fruity_ecs_derive",
+ "fruity_core_derive",
  "fruity_introspect",
  "itertools",
  "log",
@@ -692,7 +692,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fruity_ecs_derive"
+name = "fruity_core_derive"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",
@@ -706,7 +706,7 @@ version = "0.1.0"
 dependencies = [
  "fruity_any",
  "fruity_collections",
- "fruity_ecs",
+ "fruity_core",
  "fruity_graphic",
  "fruity_graphic_2d",
  "fruity_introspect",
@@ -724,7 +724,7 @@ version = "0.1.0"
 dependencies = [
  "bytemuck",
  "fruity_any",
- "fruity_ecs",
+ "fruity_core",
  "fruity_introspect",
  "fruity_observer",
  "fruity_windows",
@@ -743,7 +743,7 @@ dependencies = [
  "bytemuck",
  "fruity_any",
  "fruity_collections",
- "fruity_ecs",
+ "fruity_core",
  "fruity_graphic",
  "fruity_introspect",
  "fruity_observer",
@@ -778,7 +778,7 @@ version = "0.1.0"
 dependencies = [
  "convert_case",
  "fruity_any",
- "fruity_ecs",
+ "fruity_core",
  "fruity_introspect",
  "lazy_static",
  "log",
@@ -796,7 +796,7 @@ name = "fruity_windows"
 version = "0.1.0"
 dependencies = [
  "fruity_any",
- "fruity_ecs",
+ "fruity_core",
  "fruity_introspect",
  "fruity_observer",
  "winit",

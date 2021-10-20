@@ -1,6 +1,6 @@
 use crate::windows_manager::WindowsManager;
-use fruity_ecs::system::system_manager::SystemManager;
-use fruity_ecs::world::World;
+use fruity_core::system::system_manager::SystemManager;
+use fruity_core::world::World;
 
 pub mod windows_manager;
 

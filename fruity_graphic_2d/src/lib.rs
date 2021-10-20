@@ -4,10 +4,10 @@ use crate::components::size::Size;
 use crate::components::sprite::Sprite;
 use crate::graphics_2d_manager::Graphics2dManager;
 use crate::systems::draw_sprite::draw_sprite_untyped;
-use fruity_ecs::component::components_factory::ComponentsFactory;
-use fruity_ecs::serialize::serialized::ResourceReference;
-use fruity_ecs::system::system_manager::SystemManager;
-use fruity_ecs::world::World;
+use fruity_core::component::components_factory::ComponentsFactory;
+use fruity_core::serialize::serialized::ResourceReference;
+use fruity_core::system::system_manager::SystemManager;
+use fruity_core::world::World;
 
 pub mod components;
 pub mod graphics_2d_manager;

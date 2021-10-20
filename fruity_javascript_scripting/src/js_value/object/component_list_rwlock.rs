@@ -2,8 +2,8 @@ use crate::js_value::utils::get_intern_value_from_v8_object;
 use crate::js_value::utils::inject_serialized_into_v8_return_value;
 use crate::serialize::deserialize::deserialize_v8;
 use crate::JsObject;
-use fruity_ecs::component::component_list_rwlock::ComponentListRwLock;
-use fruity_ecs::serialize::serialized::Serialized;
+use fruity_core::component::component_list_rwlock::ComponentListRwLock;
+use fruity_core::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 use std::convert::TryFrom;
 

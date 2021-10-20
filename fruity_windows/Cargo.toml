@@ -7,6 +7,6 @@ resolver = "2"
 [dependencies]
 winit = "0.25.0"
 fruity_any = { path = "../fruity_any" }
-fruity_ecs = { path = "../fruity_ecs" }
+fruity_core = { path = "../fruity_core" }
 fruity_introspect = { path = "../fruity_introspect" }
 fruity_observer = { path = "../fruity_observer" }

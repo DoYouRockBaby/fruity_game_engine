@@ -4,8 +4,8 @@ use crate::javascript_engine::JavascriptEngine;
 use crate::js_value::object::JsObject;
 use crate::resources::script_loader::script_loader;
 use crate::runtime::JsRuntime;
-use fruity_ecs::resource::resources_manager::ResourcesManager;
-use fruity_ecs::world::World;
+use fruity_core::resource::resources_manager::ResourcesManager;
+use fruity_core::world::World;
 
 mod bridge;
 pub mod error;

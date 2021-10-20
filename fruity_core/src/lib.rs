@@ -19,7 +19,7 @@ use crate::settings::settings_loader;
 use crate::system::system_manager::SystemManager;
 use crate::world::World;
 
-pub use fruity_ecs_derive::Component;
+pub use fruity_core_derive::Component;
 
 /// All related with components
 pub mod component;
@@ -49,7 +49,7 @@ pub mod world;
 #[macro_export]
 macro_rules! entity {
     ($($component:expr),*) => {
-        fruity_ecs::entity::entity::Entity::new(vec![$ ($component),*])
+        fruity_core::entity::entity::Entity::new(vec![$ ($component),*])
     };
 }
 
@@ -57,7 +57,7 @@ macro_rules! entity {
 #[macro_export]
 macro_rules! entity_type {
     ($($component:expr),*) => {
-        fruity_ecs::entity::entity::EntityTypeIdentifier(vec![$ ($component.to_string()),*])
+        fruity_core::entity::entity::EntityTypeIdentifier(vec![$ ($component.to_string()),*])
     };
 }
 

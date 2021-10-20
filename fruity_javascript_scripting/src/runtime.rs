@@ -8,7 +8,7 @@ use crate::module_map::ModuleInfos;
 use crate::module_map::ModuleMap;
 use crate::normalize_path::normalize_path;
 use crate::serialize::serialize::serialize_v8;
-use fruity_ecs::serialize::serialized::Serialized;
+use fruity_core::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 use std::cell::RefCell;
 use std::path::Path;

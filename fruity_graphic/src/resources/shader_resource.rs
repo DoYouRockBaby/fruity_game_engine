@@ -1,10 +1,10 @@
 use crate::GraphicsManager;
 use fruity_any::*;
-use fruity_ecs::resource::resource::Resource;
-use fruity_ecs::resource::resources_manager::ResourceIdentifier;
-use fruity_ecs::resource::resources_manager::ResourceLoaderParams;
-use fruity_ecs::resource::resources_manager::ResourcesManager;
-use fruity_ecs::service::service_manager::ServiceManager;
+use fruity_core::resource::resource::Resource;
+use fruity_core::resource::resources_manager::ResourceIdentifier;
+use fruity_core::resource::resources_manager::ResourceLoaderParams;
+use fruity_core::resource::resources_manager::ResourcesManager;
+use fruity_core::service::service_manager::ServiceManager;
 use std::io::Read;
 use std::sync::Arc;
 use std::sync::RwLock;

@@ -2,8 +2,8 @@ use crate::graphics_manager::GraphicsManager;
 use crate::resources::image_resource::image_loader;
 use crate::resources::material_resource::material_loader;
 use crate::resources::shader_resource::shader_loader;
-use fruity_ecs::resource::resources_manager::ResourcesManager;
-use fruity_ecs::world::World;
+use fruity_core::resource::resources_manager::ResourcesManager;
+use fruity_core::world::World;
 
 pub mod graphics_manager;
 pub mod resources;

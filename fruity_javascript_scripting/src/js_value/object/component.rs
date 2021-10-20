@@ -4,7 +4,7 @@ use crate::js_value::utils::get_intern_value_from_v8_object_mut;
 use crate::js_value::utils::inject_serialized_into_v8_return_value;
 use crate::serialize::deserialize::deserialize_v8;
 use crate::JsObject;
-use fruity_ecs::component::component::Component;
+use fruity_core::component::component::Component;
 use rusty_v8 as v8;
 
 impl JsObject {

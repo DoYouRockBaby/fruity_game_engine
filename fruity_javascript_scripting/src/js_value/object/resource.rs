@@ -1,7 +1,7 @@
 use crate::js_value::utils::check_object_intern_identifier;
 use crate::js_value::utils::get_intern_value_from_v8_object;
 use crate::JsObject;
-use fruity_ecs::resource::resource::Resource;
+use fruity_core::resource::resource::Resource;
 use rusty_v8 as v8;
 use std::sync::Arc;
 

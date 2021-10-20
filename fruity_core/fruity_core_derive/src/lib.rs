@@ -8,7 +8,7 @@ pub fn derive_component(input: TokenStream) -> TokenStream {
     let struct_name = ident.to_string();
 
     let output = quote! {
-        impl fruity_ecs::component::component::Component for #ident {
+        impl fruity_core::component::component::Component for #ident {
             fn get_component_type(&self) -> String {
                 #struct_name.to_string()
             }
@@ -17,7 +17,7 @@ pub fn derive_component(input: TokenStream) -> TokenStream {
                 std::mem::size_of::<Self>()
             }
 
-            fn duplicate(&self) -> Box<dyn fruity_ecs::component::component::Component> {
+            fn duplicate(&self) -> Box<dyn fruity_core::component::component::Component> {
                 Box::new(self.clone())
             }
 
@@ -32,14 +32,14 @@ pub fn derive_component(input: TokenStream) -> TokenStream {
                 fruity_collections::slice::copy(buffer, encoded);
             }
 
-            fn get_decoder(&self) -> fruity_ecs::component::component::ComponentDecoder {
+            fn get_decoder(&self) -> fruity_core::component::component::ComponentDecoder {
                 |data| {
                     let (_head, body, _tail) = unsafe { data.align_to::<Self>() };
                     &body[0]
                 }
             }
 
-            fn get_decoder_mut(&self) -> fruity_ecs::component::component::ComponentDecoderMut {
+            fn get_decoder_mut(&self) -> fruity_core::component::component::ComponentDecoderMut {
                 |data| {
                     let (_head, body, _tail) = unsafe { data.align_to_mut::<Self>() };
                     &mut body[0]

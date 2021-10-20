@@ -1,8 +1,8 @@
 use crate::js_value::utils::get_intern_value_from_v8_object;
 use crate::js_value::utils::inject_serialized_into_v8_return_value;
 use crate::JsObject;
-use fruity_ecs::entity::entity_rwlock::EntityRwLock;
-use fruity_ecs::serialize::serialized::Serialized;
+use fruity_core::entity::entity_rwlock::EntityRwLock;
+use fruity_core::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 
 impl JsObject {

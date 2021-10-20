@@ -1,11 +1,11 @@
 use crate::js_value::utils::inject_serialized_into_v8_return_value;
 use crate::serialize::deserialize::deserialize_v8;
 use crate::JsRuntime;
-use fruity_ecs::component::components_factory::ComponentsFactory;
-use fruity_ecs::serialize::serialized::AnyServiceReference;
-use fruity_ecs::serialize::serialized::ObjectFields;
-use fruity_ecs::serialize::serialized::Serialized;
-use fruity_ecs::service::service_manager::ServiceManager;
+use fruity_core::component::components_factory::ComponentsFactory;
+use fruity_core::serialize::serialized::AnyServiceReference;
+use fruity_core::serialize::serialized::ObjectFields;
+use fruity_core::serialize::serialized::Serialized;
+use fruity_core::service::service_manager::ServiceManager;
 use rusty_v8 as v8;
 use std::collections::HashMap;
 use std::convert::TryFrom;

@@ -44,19 +44,19 @@ pub fn derive_introspect_fields(input: TokenStream) -> TokenStream {
                 let type_as_string = ty.to_string();
 
                 quote! {
-                    fruity_introspect::FieldInfo::<fruity_ecs::serialize::serialized::Serialized> {
+                    fruity_introspect::FieldInfo::<fruity_core::serialize::serialized::Serialized> {
                         name: #name_as_string.to_string(),
                         ty: #type_as_string.to_string(),
-                        getter: std::sync::Arc::new(|this| fruity_ecs::serialize::serialize::serialize_any(&this.downcast_ref::<#ident>().unwrap().#name).unwrap()),
+                        getter: std::sync::Arc::new(|this| fruity_core::serialize::serialize::serialize_any(&this.downcast_ref::<#ident>().unwrap().#name).unwrap()),
                         setter: std::sync::Arc::new(|this, value| {
                             fn convert<
-                                T: std::convert::TryFrom<fruity_ecs::serialize::serialized::Serialized>,
+                                T: std::convert::TryFrom<fruity_core::serialize::serialized::Serialized>,
                             >(
-                                value: fruity_ecs::serialize::serialized::Serialized,
+                                value: fruity_core::serialize::serialized::Serialized,
                             ) -> Result<
                                 T,
                                 <T as std::convert::TryFrom<
-                                    fruity_ecs::serialize::serialized::Serialized,
+                                    fruity_core::serialize::serialized::Serialized,
                                 >>::Error,
                             > {
                                 T::try_from(value)
@@ -82,7 +82,7 @@ pub fn derive_introspect_fields(input: TokenStream) -> TokenStream {
             });
 
             quote! {
-                fn get_field_infos(&self) -> Vec<fruity_introspect::FieldInfo<fruity_ecs::serialize::serialized::Serialized>> {
+                fn get_field_infos(&self) -> Vec<fruity_introspect::FieldInfo<fruity_core::serialize::serialized::Serialized>> {
                     vec![
                         #(#recurse_infos)*
                     ]
@@ -94,7 +94,7 @@ pub fn derive_introspect_fields(input: TokenStream) -> TokenStream {
     };
 
     let output = quote! {
-        impl fruity_introspect::IntrospectFields<fruity_ecs::serialize::serialized::Serialized> for #ident {
+        impl fruity_introspect::IntrospectFields<fruity_core::serialize::serialized::Serialized> for #ident {
             #body
         }
     };

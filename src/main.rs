@@ -1,7 +1,7 @@
 extern crate pretty_env_logger;
 
-use fruity_ecs::initialize as initialize_ecs;
-use fruity_ecs::world::World;
+use fruity_core::initialize as initialize_ecs;
+use fruity_core::world::World;
 use fruity_graphic::initialize as initialize_graphic;
 use fruity_graphic_2d::initialize as initialize_graphic_2d;
 use fruity_javascript_scripting::initialize as initialize_javascript;

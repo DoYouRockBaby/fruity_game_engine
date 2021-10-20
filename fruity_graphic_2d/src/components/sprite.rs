@@ -1,6 +1,6 @@
 use fruity_any::*;
-use fruity_ecs::serialize::serialized::ResourceReference;
-use fruity_ecs::*;
+use fruity_core::serialize::serialized::ResourceReference;
+use fruity_core::*;
 use fruity_graphic::resources::material_resource::MaterialResource;
 use fruity_introspect::*;
 

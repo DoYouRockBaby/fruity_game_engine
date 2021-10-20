@@ -1,5 +1,5 @@
 [package]
-name = "fruity_ecs_derive"
+name = "fruity_core_derive"
 version = "0.1.0"
 edition = "2018"
 resolver = "2"
