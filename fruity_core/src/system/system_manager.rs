@@ -18,6 +18,15 @@ use std::sync::RwLock;
 
 type System = dyn Fn(Arc<RwLock<ServiceManager>>) + Sync + Send + 'static;
 
+/// A system pool, see [‘SystemManager‘] for more informations
+pub struct SystemPool {
+    /// Is the pool enabled, if it's not, it will not be launched when calling [‘SystemManager‘]::run
+    enabled: bool,
+
+    /// Systems of the pool
+    systems: Vec<Box<System>>,
+}
+
 /// A systems collection
 ///
 /// There is three type of systems:
@@ -27,13 +36,15 @@ type System = dyn Fn(Arc<RwLock<ServiceManager>>) + Sync + Send + 'static;
 ///
 /// There is a pool system, when you add a system, you can provide a pool, every systems of the same pool will be executed in parallel
 /// Try to use it realy rarely, cause parallel execution is realy usefull
-/// Pools from 0 to 10 and from 100 to 110 are reservec by the engine, you should avoid to create pool outside this range
+/// Pools from 0 to 10 and from 90 to 100 are reservec by the engine, you should avoid to create pool outside this range
+/// Pool 97 is for camera
+/// Pool 98 is for drawing
 ///
 #[derive(FruityAnySyncSend)]
 pub struct SystemManager {
-    system_pools: HashMap<usize, Vec<Box<System>>>,
-    begin_system_pools: HashMap<usize, Vec<Box<System>>>,
-    end_system_pools: HashMap<usize, Vec<Box<System>>>,
+    system_pools: HashMap<usize, SystemPool>,
+    begin_system_pools: HashMap<usize, SystemPool>,
+    end_system_pools: HashMap<usize, SystemPool>,
     service_manager: Arc<RwLock<ServiceManager>>,
 }
 
@@ -68,11 +79,17 @@ impl<'s> SystemManager {
         let pool_index = pool_index.unwrap_or(50);
 
         if let Some(pool) = self.system_pools.get_mut(&pool_index) {
-            pool.push(Box::new(system))
+            pool.systems.push(Box::new(system))
         } else {
             // If the pool not exists, we create it
-            let pool = vec![Box::new(system) as Box<System>];
-            self.system_pools.insert(pool_index, pool);
+            let systems = vec![Box::new(system) as Box<System>];
+            self.system_pools.insert(
+                pool_index,
+                SystemPool {
+                    enabled: true,
+                    systems,
+                },
+            );
         };
     }
 
@@ -90,11 +107,17 @@ impl<'s> SystemManager {
         let pool_index = pool_index.unwrap_or(50);
 
         if let Some(pool) = self.begin_system_pools.get_mut(&pool_index) {
-            pool.push(Box::new(system))
+            pool.systems.push(Box::new(system))
         } else {
             // If the pool not exists, we create it
-            let pool = vec![Box::new(system) as Box<System>];
-            self.begin_system_pools.insert(pool_index, pool);
+            let systems = vec![Box::new(system) as Box<System>];
+            self.begin_system_pools.insert(
+                pool_index,
+                SystemPool {
+                    enabled: true,
+                    systems,
+                },
+            );
         };
     }
 
@@ -112,54 +135,204 @@ impl<'s> SystemManager {
         let pool_index = pool_index.unwrap_or(50);
 
         if let Some(pool) = self.end_system_pools.get_mut(&pool_index) {
-            pool.push(Box::new(system))
+            pool.systems.push(Box::new(system))
         } else {
             // If the pool not exists, we create it
-            let pool = vec![Box::new(system) as Box<System>];
-            self.end_system_pools.insert(pool_index, pool);
+            let systems = vec![Box::new(system) as Box<System>];
+            self.end_system_pools.insert(
+                pool_index,
+                SystemPool {
+                    enabled: true,
+                    systems,
+                },
+            );
         };
     }
 
     /// Iter over all the systems pools
-    fn iter_system_pools(&self) -> impl Iterator<Item = &Vec<Box<System>>> {
+    fn iter_system_pools(&self) -> impl Iterator<Item = &SystemPool> {
         self.system_pools.iter().map(|pool| pool.1)
     }
 
     /// Iter over all the begin systems pools
-    fn iter_begin_system_pools(&self) -> impl Iterator<Item = &Vec<Box<System>>> {
+    fn iter_begin_system_pools(&self) -> impl Iterator<Item = &SystemPool> {
         self.begin_system_pools.iter().map(|pool| pool.1)
     }
 
     /// Iter over all the end systems pools
-    fn iter_end_system_pools(&self) -> impl Iterator<Item = &Vec<Box<System>>> {
+    fn iter_end_system_pools(&self) -> impl Iterator<Item = &SystemPool> {
         self.end_system_pools.iter().map(|pool| pool.1)
     }
 
     /// Run all the stored systems
     pub fn run(&self) {
-        self.iter_system_pools().for_each(|pool| {
-            pool.iter()
-                .par_bridge()
-                .for_each(|system| system(self.service_manager.clone()))
-        });
+        self.iter_system_pools()
+            .filter(|pool| pool.enabled)
+            .for_each(|pool| {
+                pool.systems
+                    .iter()
+                    .par_bridge()
+                    .for_each(|system| system(self.service_manager.clone()))
+            });
     }
 
     /// Run all the stored begin systems
     pub fn run_begin(&self) {
-        self.iter_begin_system_pools().for_each(|pool| {
-            pool.iter()
-                .par_bridge()
-                .for_each(|system| system(self.service_manager.clone()))
-        });
+        self.iter_begin_system_pools()
+            .filter(|pool| pool.enabled)
+            .for_each(|pool| {
+                pool.systems
+                    .iter()
+                    .par_bridge()
+                    .for_each(|system| system(self.service_manager.clone()))
+            });
     }
 
     /// Run all the stored end systems
     pub fn run_end(&self) {
-        self.iter_end_system_pools().for_each(|pool| {
-            pool.iter()
+        self.iter_end_system_pools()
+            .filter(|pool| pool.enabled)
+            .for_each(|pool| {
+                pool.systems
+                    .iter()
+                    .par_bridge()
+                    .for_each(|system| system(self.service_manager.clone()))
+            });
+    }
+
+    /// Run all the stored systems
+    pub fn run_pool(&self, index: &usize) {
+        if let Some(pool) = self.system_pools.get(index) {
+            pool.systems
+                .iter()
                 .par_bridge()
                 .for_each(|system| system(self.service_manager.clone()))
-        });
+        }
+    }
+
+    /// Run all the stored begin systems
+    pub fn run_pool_begin(&self, index: &usize) {
+        if let Some(pool) = self.begin_system_pools.get(index) {
+            pool.systems
+                .iter()
+                .par_bridge()
+                .for_each(|system| system(self.service_manager.clone()))
+        }
+    }
+
+    /// Run all the stored end systems
+    pub fn run_poll_end(&self, index: &usize) {
+        if let Some(pool) = self.end_system_pools.get(index) {
+            pool.systems
+                .iter()
+                .par_bridge()
+                .for_each(|system| system(self.service_manager.clone()))
+        }
+    }
+
+    /// Enable a pool
+    ///
+    /// # Arguments
+    /// * `index` - The pool index
+    ///
+    pub fn enable_pool(&mut self, index: &usize) {
+        if let Some(pool) = self.system_pools.get_mut(index) {
+            pool.enabled = true;
+        }
+    }
+
+    /// Enable a begin pool
+    ///
+    /// # Arguments
+    /// * `index` - The pool index
+    ///
+    pub fn enable_begin_pool(&mut self, index: &usize) {
+        if let Some(pool) = self.begin_system_pools.get_mut(index) {
+            pool.enabled = true;
+        }
+    }
+
+    /// Enable an end pool
+    ///
+    /// # Arguments
+    /// * `index` - The pool index
+    ///
+    pub fn enable_end_pool(&mut self, index: &usize) {
+        if let Some(pool) = self.end_system_pools.get_mut(index) {
+            pool.enabled = true;
+        }
+    }
+
+    /// Disable a pool
+    ///
+    /// # Arguments
+    /// * `index` - The pool index
+    ///
+    pub fn disable_pool(&mut self, index: &usize) {
+        if let Some(pool) = self.system_pools.get_mut(index) {
+            pool.enabled = false;
+        }
+    }
+
+    /// Disable a begin pool
+    ///
+    /// # Arguments
+    /// * `index` - The pool index
+    ///
+    pub fn disable_begin_pool(&mut self, index: &usize) {
+        if let Some(pool) = self.begin_system_pools.get_mut(index) {
+            pool.enabled = false;
+        }
+    }
+
+    /// Disable an end pool
+    ///
+    /// # Arguments
+    /// * `index` - The pool index
+    ///
+    pub fn disable_end_pool(&mut self, index: &usize) {
+        if let Some(pool) = self.end_system_pools.get_mut(index) {
+            pool.enabled = false;
+        }
+    }
+
+    /// Check if a pool is enabled
+    ///
+    /// # Arguments
+    /// * `index` - The pool index
+    ///
+    pub fn is_pool_enabled(&self, index: &usize) -> bool {
+        if let Some(pool) = self.system_pools.get(index) {
+            pool.enabled
+        } else {
+            false
+        }
+    }
+
+    /// Check if a begin pool is enabled
+    ///
+    /// # Arguments
+    /// * `index` - The pool index
+    ///
+    pub fn is_begin_pool_enabled(&self, index: &usize) -> bool {
+        if let Some(pool) = self.system_pools.get(index) {
+            pool.enabled
+        } else {
+            false
+        }
+    }
+
+    /// Check if an end pool is enabled
+    ///
+    /// # Arguments
+    /// * `index` - The pool index
+    ///
+    pub fn is_end_pool_enabled(&self, index: &usize) -> bool {
+        if let Some(pool) = self.system_pools.get(index) {
+            pool.enabled
+        } else {
+            false
+        }
     }
 }
 
