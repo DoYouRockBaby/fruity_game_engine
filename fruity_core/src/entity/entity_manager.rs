@@ -18,6 +18,7 @@ use fruity_any::*;
 use fruity_introspect::IntrospectMethods;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
+use fruity_observer::Signal;
 use rayon::prelude::*;
 use std::any::Any;
 use std::sync::Arc;
@@ -35,6 +36,12 @@ pub struct EntityManager {
     id_incrementer: u64,
     archetypes: Vec<Archetype>,
     service_manager: Arc<RwLock<ServiceManager>>,
+
+    /// Signal propagated when a new entity is inserted into the collection
+    pub on_entity_created: Signal<EntityId>,
+
+    /// Signal propagated when a new entity is removed from the collection
+    pub on_entity_removed: Signal<EntityRwLock>,
 }
 
 impl EntityManager {
@@ -44,6 +51,8 @@ impl EntityManager {
             id_incrementer: 0,
             archetypes: Vec::new(),
             service_manager: world.service_manager.clone(),
+            on_entity_created: Signal::new(),
+            on_entity_removed: Signal::new(),
         }
     }
 
@@ -176,11 +185,13 @@ impl EntityManager {
         match self.archetype_mut_by_identifier(entity_identifier) {
             Some(archetype) => {
                 archetype.add(entity_id, entity);
+                self.on_entity_created.notify(entity_id);
                 entity_id
             }
             None => {
                 let archetype = Archetype::new(entity_id, entity);
                 self.archetypes.push(archetype);
+                self.on_entity_created.notify(entity_id);
                 entity_id
             }
         }
@@ -192,16 +203,18 @@ impl EntityManager {
     /// * `entity_id` - The entity id
     ///
     pub fn remove(&mut self, entity_id: EntityId) {
-        if !self
-            .archetypes
-            .iter_mut()
-            .any(|archetype| match archetype.remove(entity_id) {
-                Ok(()) => true,
-                Err(err) => match err {
-                    RemoveEntityError::NotFound => false,
-                },
-            })
+        if let Some(entity) =
+            self.archetypes
+                .iter_mut()
+                .find_map(|archetype| match archetype.remove(entity_id) {
+                    Ok(entity) => Some(entity),
+                    Err(err) => match err {
+                        RemoveEntityError::NotFound => None,
+                    },
+                })
         {
+            self.on_entity_removed.notify(entity);
+        } else {
             log::error!(
                 "Trying to delete an unregistered entity with entity id {:?}",
                 entity_id

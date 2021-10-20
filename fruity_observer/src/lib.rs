@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -41,5 +42,11 @@ impl<T> Signal<T> {
             .observers
             .iter()
             .for_each(|(_, observer)| observer(&event));
+    }
+}
+
+impl<T: Debug> Debug for Signal<T> {
+    fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        Ok(())
     }
 }

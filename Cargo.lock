@@ -685,6 +685,7 @@ dependencies = [
  "fruity_collections",
  "fruity_core_derive",
  "fruity_introspect",
+ "fruity_observer",
  "itertools",
  "log",
  "rayon",

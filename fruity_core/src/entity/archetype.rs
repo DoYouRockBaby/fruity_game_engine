@@ -99,24 +99,28 @@ impl Archetype {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn remove(&mut self, entity_id: EntityId) -> Result<(), RemoveEntityError> {
-        // Find the entity index in the entity array
-        let index = match self.index_map.remove(&entity_id) {
-            Some(index) => Ok(index),
-            None => Err(RemoveEntityError::NotFound),
-        }?;
+    pub fn remove(&mut self, entity_id: EntityId) -> Result<EntityRwLock, RemoveEntityError> {
+        if let Some(entity_rwlock) = self.get(entity_id) {
+            let entity_rwlock = entity_rwlock.clone();
 
-        // Remove old stored entity
-        self.entities.remove(index);
+            // Find the entity index in the entity array
+            let index = match self.index_map.remove(&entity_id) {
+                Some(index) => Ok(index),
+                None => Err(RemoveEntityError::NotFound),
+            }?;
+            // Remove old stored entity
+            self.entities.remove(index);
+            // Gap all existing indexes
+            self.index_map.iter_mut().for_each(|index_2| {
+                if *index_2.1 > index {
+                    *index_2.1 -= 1;
+                }
+            });
 
-        // Gap all existing indexes
-        self.index_map.iter_mut().for_each(|index_2| {
-            if *index_2.1 > index {
-                *index_2.1 -= 1;
-            }
-        });
-
-        Ok(())
+            Ok(entity_rwlock)
+        } else {
+            Err(RemoveEntityError::NotFound)
+        }
     }
 }
 
