@@ -132,7 +132,7 @@ pub fn deserialize_v8<'a>(
             fields.insert(property.0.clone(), property.1.clone());
         });
 
-        return Some(Serialized::Object { class_name, fields });
+        return Some(Serialized::SerializedObject { class_name, fields });
     }
 
     None

@@ -32,7 +32,7 @@ pub fn configure_components(runtime: &mut JsRuntime, service_manager: Arc<RwLock
             Serialized::String(key.clone()),
         );
 
-        let data = Serialized::Object {
+        let data = Serialized::SerializedObject {
             class_name: "unknown".to_string(),
             fields: data_fields,
         };

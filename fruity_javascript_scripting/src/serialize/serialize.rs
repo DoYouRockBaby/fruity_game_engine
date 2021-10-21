@@ -36,7 +36,7 @@ pub fn serialize_v8<'a>(
 
             Some(v8::Array::new_with_elements(scope, &elements).into())
         }
-        Serialized::Object { fields, .. } => {
+        Serialized::SerializedObject { fields, .. } => {
             let v8_object = v8::Object::new(scope);
 
             fields.iter().for_each(|(key, value)| {

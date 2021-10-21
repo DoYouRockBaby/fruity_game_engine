@@ -50,7 +50,7 @@ impl ComponentsFactory {
         let mut component = factory();
         let component_fields = component.get_field_infos();
 
-        if let Serialized::Object { fields, .. } = serialized {
+        if let Serialized::SerializedObject { fields, .. } = serialized {
             fields.into_iter().for_each(|(key, value)| {
                 let field_info = component_fields
                     .iter()

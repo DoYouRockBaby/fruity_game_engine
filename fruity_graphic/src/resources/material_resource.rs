@@ -241,7 +241,7 @@ pub fn material_loader(
     } else {
         return;
     };
-    let params = if let Serialized::Object { fields, .. } = params {
+    let params = if let Serialized::SerializedObject { fields, .. } = params {
         ResourceLoaderParams(fields)
     } else {
         return;

@@ -24,7 +24,7 @@ impl SerializedComponent {
 
 impl Component for SerializedComponent {
     fn get_component_type(&self) -> String {
-        if let Serialized::Object { class_name, .. } = &self.serialized {
+        if let Serialized::SerializedObject { class_name, .. } = &self.serialized {
             class_name.clone()
         } else {
             "unknown".to_string()
@@ -67,7 +67,7 @@ impl Component for SerializedComponent {
 
 impl IntrospectFields<Serialized> for SerializedComponent {
     fn get_field_infos(&self) -> Vec<FieldInfo<Serialized>> {
-        if let Serialized::Object { fields, .. } = &self.serialized {
+        if let Serialized::SerializedObject { fields, .. } = &self.serialized {
             fields
                 .iter()
                 .map(|(key, _field)| {
@@ -79,7 +79,7 @@ impl IntrospectFields<Serialized> for SerializedComponent {
                         ty: "".to_string(),
                         getter: Arc::new(move |this| {
                             let this = this.downcast_ref::<SerializedComponent>().unwrap();
-                            if let Serialized::Object { fields, .. } = &this.serialized {
+                            if let Serialized::SerializedObject { fields, .. } = &this.serialized {
                                 return fields.get(&key1).unwrap().clone();
                             } else {
                                 panic!("A getter try to access an inexistant property in serialized component, should never be reached");
@@ -87,7 +87,7 @@ impl IntrospectFields<Serialized> for SerializedComponent {
                         }),
                         setter: Arc::new(move |this, value| {
                             let this = this.downcast_mut::<SerializedComponent>().unwrap();
-                            if let Serialized::Object { fields, .. } = &mut this.serialized {
+                            if let Serialized::SerializedObject { fields, .. } = &mut this.serialized {
                                 fields.insert(key2.clone(), value);
                             } else {
                                 panic!("A setter try to access an inexistant property in serialized component, should never be reached");

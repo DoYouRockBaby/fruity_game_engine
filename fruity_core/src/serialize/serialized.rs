@@ -112,7 +112,7 @@ pub enum Serialized {
     Array(Vec<Serialized>),
 
     /// Array of values
-    Object {
+    SerializedObject {
         /// The object class name
         class_name: String,
 
@@ -221,7 +221,7 @@ impl TryFrom<Serialized> for ObjectFields {
 
     fn try_from(value: Serialized) -> Result<Self, Self::Error> {
         match value {
-            Serialized::Object { fields, .. } => Ok(fields),
+            Serialized::SerializedObject { fields, .. } => Ok(fields),
             _ => Err(format!("Couldn't convert {:?} to field hashmap", value)),
         }
     }
@@ -232,7 +232,7 @@ impl TryFrom<Serialized> for Box<dyn Component> {
 
     fn try_from(value: Serialized) -> Result<Self, Self::Error> {
         match value {
-            Serialized::Object { .. } => Ok(Box::new(SerializedComponent::new(value))),
+            Serialized::SerializedObject { .. } => Ok(Box::new(SerializedComponent::new(value))),
             Serialized::Component(component) => Ok(component.duplicate()),
             _ => Err(format!("Couldn't convert {:?} to field hashmap", value)),
         }
@@ -310,7 +310,7 @@ impl TryFrom<Serialized> for ResourceLoaderParams {
 
     fn try_from(value: Serialized) -> Result<Self, Self::Error> {
         match value {
-            Serialized::Object { fields, .. } => Ok(ResourceLoaderParams(fields)),
+            Serialized::SerializedObject { fields, .. } => Ok(ResourceLoaderParams(fields)),
             _ => Err(format!("Couldn't convert {:?} to callback", value)),
         }
     }

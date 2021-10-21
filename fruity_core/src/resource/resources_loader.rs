@@ -45,7 +45,7 @@ fn load_resource_from_settings(
 ) -> Option<()> {
     // Parse settings
     let resource_settings = build_settings_serialized_from_yaml(yaml)?;
-    let fields = if let Serialized::Object { fields, .. } = resource_settings {
+    let fields = if let Serialized::SerializedObject { fields, .. } = resource_settings {
         fields
     } else {
         return None;

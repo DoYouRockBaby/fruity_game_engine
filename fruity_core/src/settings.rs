@@ -89,7 +89,7 @@ pub fn build_settings_serialized_from_yaml(yaml: &Yaml) -> Option<Serialized> {
                 }
             }
 
-            Some(Serialized::Object {
+            Some(Serialized::SerializedObject {
                 class_name: "unknown".to_string(),
                 fields,
             })
