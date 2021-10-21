@@ -11,20 +11,6 @@ pub struct TextureResource {
 }
 
 impl TextureResource {
-    fn new(
-        texture: wgpu::Texture,
-        view: wgpu::TextureView,
-        sampler: wgpu::Sampler,
-    ) -> TextureResource {
-        TextureResource {
-            texture,
-            view,
-            sampler,
-        }
-    }
-}
-
-impl TextureResource {
     pub fn from_image(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
