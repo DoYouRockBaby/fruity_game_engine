@@ -1,7 +1,18 @@
+# ROADMAP
+
+[ ] Make serialized able to be extended in modules (put it into introspect, make intropect better ...)
+[ ] Find a better way to store SerializedComponent, to have something more effective on read
+[ ] Split fruity_core
+[ ] Add a "field changed" signal on every entities
+[ ] Allow javascript to play with signals
+[ ] Achieve entity hierarchy
+
+# LESS PRIORITY
+
 [ ] Tests for fruity_collections
 [ ] Tests for javascript
 [ ] Tests for fruity_core
-[ ] Rust doc for fruity_javascript_scripting
+[ ] Rust doc everywhere
 [ ] Remove as many unwrap as possible (ecs and javascript)
 [ ] A lot of unsafe code were created to avoid lifetime issue in ecs, remove as many as possible
 [ ] There should be some memory leak in component storage (in Entity) and entity storage (in EncodableVec)
@@ -10,8 +21,4 @@
 [ ] Fix javascript services
 [ ] Make javascript able to import modules via package.json
 [ ] Test and make microjob library compatible with javascript
-[ ] Find a better way to store SerializedComponent, to have something more effective on read (bincode ?)
-[ ] Maybe separate base services/component and Introspect implementation
 [ ] Abstract everything (espescialy javascript and render)
-[ ] Wrap all the fields of every components into a signal ?
-[ ] Allow javascript to play with signals

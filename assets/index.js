@@ -52,9 +52,10 @@ systemManager.addBeginSystem(() => {
     ]);
 
     entityManager.create([
-        new Position({ x: 0, y: 0 }),
-        new Size({ width: 5, height: 5 }),
+        new Position({ x: -1, y: -1 }),
+        new Size({ width: 2, height: 2 }),
         new Camera({}),
+        new Velocity({ x: 0.001, y: 0.000 }),
     ]);
 });
 

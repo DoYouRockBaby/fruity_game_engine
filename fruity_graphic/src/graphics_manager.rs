@@ -1,3 +1,4 @@
+use crate::math::Matrix4;
 use fruity_any::*;
 use fruity_core::serialize::serialized::Serialized;
 use fruity_core::service::service::Service;
@@ -9,7 +10,12 @@ use std::fmt::Debug;
 use std::ops::Deref;
 use std::sync::Arc;
 use std::sync::RwLock;
+use wgpu::util::DeviceExt;
 use winit::window::Window;
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct CameraUniform(pub [[f32; 4]; 4]);
 
 #[derive(Debug)]
 pub struct State {
@@ -18,6 +24,8 @@ pub struct State {
     pub queue: wgpu::Queue,
     pub config: wgpu::SurfaceConfiguration,
     pub rendering_view: wgpu::TextureView,
+    pub camera_buffer: wgpu::Buffer,
+    pub camera_bind_group_layout: wgpu::BindGroupLayout,
 }
 
 #[derive(Debug, FruityAnySyncSend)]
@@ -124,6 +132,9 @@ impl GraphicsManager {
                 .texture
                 .create_view(&wgpu::TextureViewDescriptor::default());
 
+            // Create camera bind group
+            let (camera_buffer, camera_bind_group_layout) = Self::initialize_camera(&device);
+
             // Update state
             self.state = Some(State {
                 surface,
@@ -131,6 +142,8 @@ impl GraphicsManager {
                 queue,
                 config,
                 rendering_view,
+                camera_buffer,
+                camera_bind_group_layout,
             });
         };
 
@@ -212,8 +225,55 @@ impl GraphicsManager {
         self.state.as_ref().map(|state| &state.rendering_view)
     }
 
+    pub fn get_camera_buffer(&self) -> Option<&wgpu::Buffer> {
+        self.state.as_ref().map(|state| &state.camera_buffer)
+    }
+
+    pub fn get_camera_bind_group_layout(&self) -> Option<&wgpu::BindGroupLayout> {
+        self.state
+            .as_ref()
+            .map(|state| &state.camera_bind_group_layout)
+    }
+
     pub fn get_encoder(&self) -> Option<&RwLock<wgpu::CommandEncoder>> {
         self.current_encoder.as_ref()
+    }
+
+    pub fn update_camera(&mut self, view_proj: Matrix4) {
+        let camera_uniform = CameraUniform(view_proj.into());
+        let state = self.state.as_mut().unwrap();
+        state.queue.write_buffer(
+            &state.camera_buffer,
+            0,
+            bytemuck::cast_slice(&[camera_uniform]),
+        );
+    }
+
+    fn initialize_camera(device: &wgpu::Device) -> (wgpu::Buffer, wgpu::BindGroupLayout) {
+        let camera_uniform = CameraUniform(Matrix4::identity().into());
+
+        let camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Camera Buffer"),
+            contents: bytemuck::cast_slice(&[camera_uniform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let camera_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+                label: Some("camera_bind_group_layout"),
+            });
+
+        (camera_buffer, camera_bind_group_layout)
     }
 }
 

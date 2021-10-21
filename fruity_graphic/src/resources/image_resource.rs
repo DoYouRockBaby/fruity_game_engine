@@ -18,7 +18,7 @@ pub struct ImageResource {
 }
 
 impl ImageResource {
-    pub fn new(buffer: &[u8]) -> ImageResource {
+    fn from_buffer(buffer: &[u8]) -> ImageResource {
         let image = load_from_memory(&buffer).unwrap();
         ImageResource { image }
     }
@@ -44,7 +44,7 @@ pub fn image_loader(
 
     if load_type != "texture" {
         // Store the resource if it's a simple image
-        let resource = ImageResource::new(&buffer);
+        let resource = ImageResource::from_buffer(&buffer);
         if let Err(_) = resources_manager.add_resource(identifier.clone(), resource) {
             log::error!(
                 "Couldn't add a resource cause the identifier \"{}\" already exists",

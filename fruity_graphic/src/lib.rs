@@ -6,6 +6,7 @@ use fruity_core::resource::resources_manager::ResourcesManager;
 use fruity_core::world::World;
 
 pub mod graphics_manager;
+pub mod math;
 pub mod resources;
 
 /// Initialize this extension

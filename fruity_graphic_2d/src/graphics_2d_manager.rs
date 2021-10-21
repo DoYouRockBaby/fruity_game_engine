@@ -4,6 +4,7 @@ use fruity_core::service::service::Service;
 use fruity_core::service::service_rwlock::ServiceRwLock;
 use fruity_core::world::World;
 use fruity_graphic::graphics_manager::GraphicsManager;
+use fruity_graphic::math::Matrix4;
 use fruity_graphic::resources::material_resource::MaterialResource;
 use fruity_graphic::resources::material_resource::Vertex;
 use fruity_introspect::IntrospectMethods;
@@ -23,12 +24,16 @@ impl Graphics2dManager {
         Graphics2dManager { graphics_manager }
     }
 
-    pub fn start_rendering(&self) {
-        let graphics_manager = self.graphics_manager.read().unwrap();
+    pub fn start_rendering(&self, view_proj: Matrix4) {
+        let mut graphics_manager = self.graphics_manager.write().unwrap();
+
+        // Create the camera buffer for the camera transform
+        graphics_manager.update_camera(view_proj);
 
         let rendering_view = graphics_manager.get_rendering_view().unwrap();
         let mut encoder = graphics_manager.get_encoder().unwrap().write().unwrap();
 
+        // Display the background
         encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Render Pass"),
             color_attachments: &[wgpu::RenderPassColorAttachment {
@@ -106,7 +111,9 @@ impl Graphics2dManager {
         };
 
         render_pass.set_pipeline(&material.render_pipeline);
-        render_pass.set_bind_group(0, &material.bind_group, &[]);
+        material.bind_groups.iter().for_each(|(index, bind_group)| {
+            render_pass.set_bind_group(*index, &bind_group, &[]);
+        });
         render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
         render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
         render_pass.draw_indexed(0..num_indices, 0, 0..1);

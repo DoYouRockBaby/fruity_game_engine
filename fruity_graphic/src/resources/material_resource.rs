@@ -7,6 +7,7 @@ use fruity_core::resource::resources_manager::ResourceIdentifier;
 use fruity_core::resource::resources_manager::ResourceLoaderParams;
 use fruity_core::resource::resources_manager::ResourcesManager;
 use fruity_core::serialize::serialized::Serialized;
+use fruity_core::service::service_guard::ServiceReadGuard;
 use fruity_core::service::service_manager::ServiceManager;
 use fruity_core::settings::build_settings_serialized_from_yaml;
 use std::io::Read;
@@ -36,7 +37,7 @@ impl Vertex {
                 wgpu::VertexAttribute {
                     offset: mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
                     shader_location: 1,
-                    format: wgpu::VertexFormat::Float32x2, // NEW!
+                    format: wgpu::VertexFormat::Float32x2,
                 },
             ],
         }
@@ -46,52 +47,120 @@ impl Vertex {
 #[derive(Debug, FruityAnySyncSend)]
 pub struct MaterialResource {
     pub shader: Arc<ShaderResource>,
-    pub bind_group: wgpu::BindGroup,
+    pub bind_groups: Vec<(u32, wgpu::BindGroup)>,
     pub render_pipeline: wgpu::RenderPipeline,
 }
 
-pub struct MaterialBinding<'s> {
-    id: u32,
-    ty: MaterialBindingType<'s>,
+struct MaterialParams {
+    shader: Arc<ShaderResource>,
+    binding_groups: Vec<MaterialParamsBindingGroup>,
 }
 
-pub enum MaterialBindingType<'s> {
-    Texture { texture: &'s TextureResource },
-    Sampler { texture: &'s TextureResource },
+struct MaterialParamsBindingGroup {
+    index: u32,
+    ty: MaterialParamsBindingGroupType,
+}
+
+struct MaterialParamsBinding {
+    index: u32,
+    ty: MaterialParamsBindingType,
+}
+
+enum MaterialParamsBindingType {
+    Texture { texture: Arc<TextureResource> },
+    Sampler { texture: Arc<TextureResource> },
+}
+
+enum MaterialParamsBindingGroupType {
+    Camera,
+    Custom(Vec<MaterialParamsBinding>),
 }
 
 impl MaterialResource {
-    pub fn new(
-        device: &wgpu::Device,
+    fn new(
         label: &str,
-        shader: Arc<ShaderResource>,
-        bindings: Vec<MaterialBinding>,
-        surface_config: &wgpu::SurfaceConfiguration,
+        material_params: MaterialParams,
+        graphics_manager: ServiceReadGuard<GraphicsManager>,
     ) -> MaterialResource {
-        // Create the bind group
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &shader.bind_group_layout,
-            entries: &bindings
-                .into_iter()
-                .map(|binding| match binding.ty {
-                    MaterialBindingType::Texture { texture } => wgpu::BindGroupEntry {
-                        binding: binding.id,
-                        resource: wgpu::BindingResource::TextureView(&texture.view),
-                    },
-                    MaterialBindingType::Sampler { texture } => wgpu::BindGroupEntry {
-                        binding: binding.id,
-                        resource: wgpu::BindingResource::Sampler(&texture.sampler),
-                    },
-                })
-                .collect::<Vec<_>>(),
-            label: Some(label),
-        });
+        let surface_config = graphics_manager.get_config().unwrap();
+        let device = graphics_manager.get_device().unwrap();
+        let shader = material_params.shader.clone();
+
+        // Create the bind groups
+        let bind_groups = material_params
+            .binding_groups
+            .into_iter()
+            .map(|binding_group| {
+                let bind_group = match binding_group.ty {
+                    MaterialParamsBindingGroupType::Camera => {
+                        let bind_group_layout =
+                            graphics_manager.get_camera_bind_group_layout().unwrap();
+                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            layout: &graphics_manager.get_camera_bind_group_layout().unwrap(),
+                            entries: &[wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: graphics_manager
+                                    .get_camera_buffer()
+                                    .unwrap()
+                                    .as_entire_binding(),
+                            }],
+                            label: Some("camera_bind_group"),
+                        });
+
+                        (bind_group, bind_group_layout)
+                    }
+                    MaterialParamsBindingGroupType::Custom(bindings) => {
+                        let bind_group_layout = &shader.bind_group_layout;
+                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            layout: &shader.bind_group_layout,
+                            entries: &bindings
+                                .into_iter()
+                                .map(|binding| match binding.ty {
+                                    MaterialParamsBindingType::Texture { texture } => {
+                                        // TODO: Find a way to remove it
+                                        let texture = Arc::as_ptr(&texture);
+                                        let texture = unsafe { &*texture };
+
+                                        wgpu::BindGroupEntry {
+                                            binding: binding.index,
+                                            resource: wgpu::BindingResource::TextureView(
+                                                &texture.view,
+                                            ),
+                                        }
+                                    }
+                                    MaterialParamsBindingType::Sampler { texture } => {
+                                        // TODO: Find a way to remove it
+                                        let texture = Arc::as_ptr(&texture);
+                                        let texture = unsafe { &*texture };
+
+                                        wgpu::BindGroupEntry {
+                                            binding: binding.index,
+                                            resource: wgpu::BindingResource::Sampler(
+                                                &texture.sampler,
+                                            ),
+                                        }
+                                    }
+                                })
+                                .collect::<Vec<_>>(),
+                            label: Some(label),
+                        });
+
+                        (bind_group, bind_group_layout)
+                    }
+                };
+
+                (binding_group.index, bind_group)
+            })
+            .collect::<Vec<_>>();
 
         // Create the render pipeline
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some(label),
-                bind_group_layouts: &[&shader.bind_group_layout],
+                bind_group_layouts: &bind_groups
+                    .iter()
+                    .map(|bind_group| bind_group.1 .1)
+                    .collect::<Vec<_>>(),
                 push_constant_ranges: &[],
             });
 
@@ -99,12 +168,12 @@ impl MaterialResource {
             label: Some(label),
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
-                module: &shader.shader,
+                module: &material_params.shader.shader,
                 entry_point: "main",
                 buffers: &[Vertex::desc()],
             },
             fragment: Some(wgpu::FragmentState {
-                module: &shader.shader,
+                module: &material_params.shader.shader,
                 entry_point: "main",
                 targets: &[wgpu::ColorTargetState {
                     format: surface_config.format,
@@ -136,8 +205,11 @@ impl MaterialResource {
         });
 
         MaterialResource {
-            shader,
-            bind_group,
+            shader: material_params.shader,
+            bind_groups: bind_groups
+                .into_iter()
+                .map(|bind_group| (bind_group.0, bind_group.1 .0))
+                .collect(),
             render_pipeline,
         }
     }
@@ -155,8 +227,6 @@ pub fn material_loader(
     // Get the graphic manager state
     let service_manager = service_manager.read().unwrap();
     let graphics_manager = service_manager.read::<GraphicsManager>();
-    let device = graphics_manager.get_device().unwrap();
-    let surface_config = graphics_manager.get_config().unwrap();
 
     // read the whole file
     let mut buffer = String::new();
@@ -178,57 +248,15 @@ pub fn material_loader(
     };
 
     // Parse settings
-    let shader_identifier = params.get::<String>("shader", String::default());
-    let shader =
-        resources_manager.get_resource::<ShaderResource>(ResourceIdentifier(shader_identifier));
-    let shader = if let Some(shader) = shader.0 {
-        shader
-    } else {
-        return;
-    };
-
-    let bindings = params.get::<Vec<ResourceLoaderParams>>("bindings", Vec::new());
-    let bindings = bindings
-        .iter()
-        .filter_map(|params| {
-            match &params.get::<String>("type", String::default()) as &str {
-                "texture" => {
-                    let texture_identifier = params.get::<String>("texture", String::default());
-                    let texture = resources_manager
-                        .get_resource::<TextureResource>(ResourceIdentifier(texture_identifier));
-
-                    if let Some(texture) = texture.0 {
-                        let texture = Arc::as_ptr(&texture);
-                        let texture = unsafe { &*texture };
-                        Some(MaterialBindingType::Texture { texture })
-                    } else {
-                        None
-                    }
-                }
-                "sampler" => {
-                    let texture_identifier = params.get::<String>("texture", String::default());
-                    let texture = resources_manager
-                        .get_resource::<TextureResource>(ResourceIdentifier(texture_identifier));
-
-                    if let Some(texture) = texture.0 {
-                        let texture = Arc::as_ptr(&texture);
-                        let texture = unsafe { &*texture };
-                        Some(MaterialBindingType::Sampler { texture })
-                    } else {
-                        None
-                    }
-                }
-                _ => None,
-            }
-            .map(|ty| MaterialBinding {
-                id: params.get::<u32>("id", 0),
-                ty,
-            })
-        })
-        .collect::<Vec<_>>();
+    let material_settings =
+        if let Some(material_settings) = build_material_params(resources_manager, &params) {
+            material_settings
+        } else {
+            return;
+        };
 
     // Build the resource
-    let resource = MaterialResource::new(device, &identifier.0, shader, bindings, surface_config);
+    let resource = MaterialResource::new(&identifier.0, material_settings, graphics_manager);
 
     // Store the resource
     if let Err(_) = resources_manager.add_resource(identifier.clone(), resource) {
@@ -238,4 +266,94 @@ pub fn material_loader(
         );
         return;
     }
+}
+
+fn build_material_params(
+    resources_manager: &ResourcesManager,
+    params: &ResourceLoaderParams,
+) -> Option<MaterialParams> {
+    let shader_identifier = params.get::<String>("shader", String::default());
+    let shader =
+        resources_manager.get_resource::<ShaderResource>(ResourceIdentifier(shader_identifier));
+    let shader = if let Some(shader) = shader.0 {
+        shader
+    } else {
+        return None;
+    };
+
+    let binding_groups = params.get::<Vec<ResourceLoaderParams>>("binding_groups", Vec::new());
+    let binding_groups = binding_groups
+        .iter()
+        .filter_map(|params| build_material_bind_group_params(resources_manager, params))
+        .collect::<Vec<_>>();
+
+    Some(MaterialParams {
+        shader,
+        binding_groups,
+    })
+}
+
+fn build_material_bind_group_params(
+    resources_manager: &ResourcesManager,
+    params: &ResourceLoaderParams,
+) -> Option<MaterialParamsBindingGroup> {
+    match &params.get::<String>("type", String::default()) as &str {
+        "camera" => {
+            let index = params.get::<u32>("index", 0);
+
+            Some(MaterialParamsBindingGroup {
+                index,
+                ty: MaterialParamsBindingGroupType::Camera,
+            })
+        }
+        "custom" => {
+            let index = params.get::<u32>("index", 0);
+            let bindings = params.get::<Vec<ResourceLoaderParams>>("bindings", Vec::new());
+            let bindings = bindings
+                .iter()
+                .filter_map(|params| build_material_bind_params(resources_manager, params))
+                .collect::<Vec<_>>();
+
+            Some(MaterialParamsBindingGroup {
+                index,
+                ty: MaterialParamsBindingGroupType::Custom(bindings),
+            })
+        }
+        _ => None,
+    }
+}
+
+fn build_material_bind_params(
+    resources_manager: &ResourcesManager,
+    params: &ResourceLoaderParams,
+) -> Option<MaterialParamsBinding> {
+    match &params.get::<String>("type", String::default()) as &str {
+        "texture" => {
+            let texture_identifier = params.get::<String>("texture", String::default());
+            let texture = resources_manager
+                .get_resource::<TextureResource>(ResourceIdentifier(texture_identifier));
+
+            if let Some(texture) = texture.0 {
+                Some(MaterialParamsBindingType::Texture { texture })
+            } else {
+                None
+            }
+        }
+        "sampler" => {
+            let texture_identifier = params.get::<String>("texture", String::default());
+            let texture = resources_manager
+                .get_resource::<TextureResource>(ResourceIdentifier(texture_identifier));
+
+            if let Some(texture) = texture.0 {
+                Some(MaterialParamsBindingType::Sampler { texture })
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+    .map(|ty| MaterialParamsBinding {
+        index: params.get::<u32>("index", 0),
+        ty,
+    })
 }

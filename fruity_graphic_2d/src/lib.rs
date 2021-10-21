@@ -37,8 +37,8 @@ pub fn initialize(world: &World) {
     });
     components_factory.add("Camera", || {
         Box::new(Camera {
-            near: 0.1,
-            far: 100.0,
+            near: -1.0,
+            far: 1.0,
         })
     });
 

@@ -11,7 +11,7 @@ pub struct TextureResource {
 }
 
 impl TextureResource {
-    pub fn new(
+    fn new(
         texture: wgpu::Texture,
         view: wgpu::TextureView,
         sampler: wgpu::Sampler,
@@ -25,16 +25,6 @@ impl TextureResource {
 }
 
 impl TextureResource {
-    pub fn from_bytes(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        bytes: &[u8],
-        label: &str,
-    ) -> Result<TextureResource, String> {
-        let img = image::load_from_memory(bytes).map_err(|err| err.to_string())?;
-        Self::from_image(device, queue, &img, Some(label))
-    }
-
     pub fn from_image(
         device: &wgpu::Device,
         queue: &wgpu::Queue,

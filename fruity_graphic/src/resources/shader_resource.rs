@@ -32,7 +32,7 @@ pub struct ShaderBinding {
 }
 
 impl ShaderResource {
-    pub fn new(
+    fn new(
         device: &wgpu::Device,
         buffer: &str,
         label: &str,

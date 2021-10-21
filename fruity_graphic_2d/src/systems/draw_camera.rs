@@ -1,3 +1,4 @@
+use fruity_graphic::math::Matrix4;
 use fruity_core::system::system_manager::SystemManager;
 use crate::Graphics2dManager;
 use crate::Position;
@@ -12,13 +13,15 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 pub fn draw_camera(
-    _position: &Position,
-    _size: &Size,
-    _camera: &Camera,
-    graphics_2d_manager: ServiceReadGuard<Graphics2dManager>,
+    position: &Position,
+    size: &Size,
+    camera: &Camera,
+     graphics_2d_manager: ServiceReadGuard<Graphics2dManager>,
     system_manager: ServiceReadGuard<SystemManager>,
 ) {
-    graphics_2d_manager.start_rendering();
+    let view_proj = Matrix4::from_rect(position.x, position.x + size.width, position.y, position.y + size.height, camera.near, camera.far);
+    graphics_2d_manager.start_rendering(view_proj);
+    std::mem::drop(graphics_2d_manager);
 
     // Render the draw system pool and avoir the normal system treatment
     system_manager.ignore_pool_once(&98);

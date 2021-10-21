@@ -1,8 +1,13 @@
 shader: "assets/shader.wgsl"
-bindings:
-- type: texture
-  id: 0
-  texture: "assets/logo.png"
-- type: sampler
-  id: 1
-  texture: "assets/logo.png"
+binding_groups:
+- type: custom
+  index: 0
+  bindings:
+  - type: texture
+    index: 0
+    texture: "assets/logo.png"
+  - type: sampler
+    index: 1
+    texture: "assets/logo.png"
+- type: camera
+  index: 1

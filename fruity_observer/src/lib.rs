@@ -1,14 +1,34 @@
-use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::sync::Mutex;
+
+#[macro_use]
+extern crate lazy_static;
+
+struct IdGenerator {
+    incrementer: usize,
+}
+
+impl IdGenerator {
+    pub fn new() -> IdGenerator {
+        IdGenerator { incrementer: 0 }
+    }
+
+    pub fn generate_id(&mut self) -> usize {
+        self.incrementer += 1;
+        self.incrementer
+    }
+}
+
+lazy_static! {
+    static ref ID_GENERATOR: Mutex<IdGenerator> = Mutex::new(IdGenerator::new());
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SignalIdentifier(usize);
 
 struct InternSignal<T> {
-    incrementer: usize,
-    observers: HashMap<SignalIdentifier, Box<dyn Fn(&T) + Sync + Send>>,
+    observers: Vec<(SignalIdentifier, Box<dyn Fn(&T) + Sync + Send>)>,
 }
 
 #[derive(Clone)]
@@ -20,8 +40,7 @@ impl<T> Signal<T> {
     pub fn new() -> Signal<T> {
         Signal {
             inter: Arc::new(Mutex::new(InternSignal {
-                incrementer: 0,
-                observers: HashMap::new(),
+                observers: Vec::new(),
             })),
         }
     }
@@ -29,9 +48,9 @@ impl<T> Signal<T> {
     pub fn add_observer<F: Fn(&T) + Sync + Send + 'static>(&self, observer: F) -> SignalIdentifier {
         let mut inter = self.inter.lock().unwrap();
 
-        let identifier = SignalIdentifier(inter.incrementer);
-        inter.observers.insert(identifier, Box::new(observer));
-        inter.incrementer += 1;
+        let mut id_generator = ID_GENERATOR.lock().unwrap();
+        let identifier = SignalIdentifier(id_generator.generate_id());
+        inter.observers.push((identifier, Box::new(observer)));
 
         identifier
     }
