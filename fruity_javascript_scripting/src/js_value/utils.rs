@@ -2,7 +2,7 @@ use crate::javascript_engine::CallbackIdentifier;
 use crate::serialize::serialize::serialize_v8;
 use convert_case::Case;
 use convert_case::Casing;
-use fruity_core::serialize::serialized::Serialized;
+use fruity_introspect::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 use std::any::Any;
 use std::convert::TryFrom;

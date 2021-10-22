@@ -3,8 +3,6 @@ use crate::resource::error::AddResourceLoaderError;
 use crate::resource::error::LoadResourceError;
 use crate::resource::error::RemoveResourceError;
 use crate::resource::resource::Resource;
-use crate::serialize::serialized::ResourceReference;
-use crate::serialize::serialized::Serialized;
 use crate::service::service::Service;
 use crate::service::utils::cast_service;
 use crate::service::utils::cast_service_mut;
@@ -12,7 +10,9 @@ use crate::service::utils::ArgumentCaster;
 use crate::ServiceManager;
 use crate::World;
 use fruity_any::*;
-use fruity_introspect::IntrospectMethods;
+use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::FieldInfo;
+use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use std::collections::HashMap;
@@ -41,7 +41,7 @@ pub type ResourceLoader = fn(
 );
 
 /// The resource manager
-#[derive(FruityAnySyncSend)]
+#[derive(FruityAny)]
 pub struct ResourcesManager {
     resources: HashMap<ResourceIdentifier, Arc<dyn Resource>>,
     resource_loaders: HashMap<String, ResourceLoader>,
@@ -75,20 +75,17 @@ impl ResourcesManager {
     /// # Generic Arguments
     /// * `T` - The resource type
     ///
-    pub fn get_resource<T: Resource>(
-        &self,
-        identifier: ResourceIdentifier,
-    ) -> ResourceReference<T> {
+    pub fn get_resource<T: Resource>(&self, identifier: ResourceIdentifier) -> Option<Arc<T>> {
         match self
             .resources
             .get(&identifier)
             .map(|resource| resource.clone())
         {
-            Some(resource) => match resource.as_any_arc_send_sync().downcast::<T>() {
-                Ok(resource) => ResourceReference::from_resource(resource),
-                Err(_) => ResourceReference::new(),
+            Some(resource) => match resource.as_any_arc().downcast::<T>() {
+                Ok(resource) => Some(resource),
+                Err(_) => None,
             },
-            None => ResourceReference::new(),
+            None => None,
         }
     }
 
@@ -223,8 +220,8 @@ impl ResourcesManager {
     }
 }
 
-impl IntrospectMethods<Serialized> for ResourcesManager {
-    fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
+impl IntrospectObject for ResourcesManager {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![
             MethodInfo {
                 name: "get_resource".to_string(),
@@ -236,7 +233,7 @@ impl IntrospectMethods<Serialized> for ResourcesManager {
 
                     let result = this.get_untyped_resource(ResourceIdentifier(arg1));
 
-                    Ok(result.map(|result| Serialized::Resource(result)))
+                    Ok(result.map(|result| Serialized::NativeObject(result.as_introspect_arc())))
                 })),
             },
             MethodInfo {
@@ -253,6 +250,14 @@ impl IntrospectMethods<Serialized> for ResourcesManager {
                 })),
             },
         ]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+
+    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
+        self
     }
 }
 
@@ -271,10 +276,21 @@ impl ResourceLoaderParams {
     /// # Generic Arguments
     /// * `T` - The type to cast the value
     ///
-    pub fn get<T: TryFrom<Serialized>>(&self, key: &str, default: T) -> T {
+    pub fn get<T: TryFrom<Serialized> + ?Sized>(&self, key: &str, default: T) -> T {
         match self.0.get(key) {
             Some(value) => T::try_from(value.clone()).unwrap_or(default),
             None => default,
+        }
+    }
+}
+
+impl TryFrom<Serialized> for ResourceLoaderParams {
+    type Error = String;
+
+    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::SerializedObject { fields, .. } => Ok(ResourceLoaderParams(fields)),
+            _ => Err(format!("Couldn't convert {:?} to callback", value)),
         }
     }
 }

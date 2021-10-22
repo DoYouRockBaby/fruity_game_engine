@@ -36,9 +36,6 @@ pub mod service;
 /// Provides a collection for settings
 pub mod settings;
 
-/// Provides structure to pass object between the rust ecosystem and the scripting system
-pub mod serialize;
-
 /// Provides collection for systems
 pub mod system;
 

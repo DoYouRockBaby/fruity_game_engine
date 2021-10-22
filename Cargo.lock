@@ -781,18 +781,8 @@ name = "fruity_introspect"
 version = "0.1.0"
 dependencies = [
  "fruity_any",
- "fruity_introspect_derive",
  "log",
  "serde",
-]
-
-[[package]]
-name = "fruity_introspect_derive"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]

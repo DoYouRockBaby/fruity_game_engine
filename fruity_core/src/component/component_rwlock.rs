@@ -1,7 +1,13 @@
 use crate::component::component_guard::ComponentReadGuard;
 use crate::component::component_guard::ComponentWriteGuard;
 use crate::entity::entity::Entity;
+use crate::entity::entity_rwlock::EntityRwLock;
 use fruity_any::*;
+use fruity_introspect::FieldInfo;
+use fruity_introspect::IntrospectObject;
+use fruity_introspect::MethodInfo;
+use fruity_introspect::SetterCaller;
+use std::any::Any;
 use std::sync::Arc;
 use std::sync::PoisonError;
 use std::sync::RwLock;
@@ -11,7 +17,7 @@ use std::sync::RwLockWriteGuard;
 /// A read write locker for a component instance
 #[derive(Debug, Clone, FruityAny)]
 pub struct ComponentRwLock {
-    entity: Arc<RwLock<Entity>>,
+    entity: Arc<EntityRwLock>,
     component_index: usize,
 }
 
@@ -21,7 +27,7 @@ impl ComponentRwLock {
     /// # Arguments
     /// * `inner_guard` - The typed [`RwLockReadGuard`]
     ///
-    pub fn new(entity: Arc<RwLock<Entity>>, component_index: usize) -> ComponentRwLock {
+    pub fn new(entity: Arc<EntityRwLock>, component_index: usize) -> ComponentRwLock {
         ComponentRwLock {
             entity,
             component_index,
@@ -70,5 +76,58 @@ impl ComponentRwLock {
             Arc::new(RwLock::new(guard)),
             self.component_index,
         ))
+    }
+}
+
+impl IntrospectObject for ComponentRwLock {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        let component = self.read().unwrap();
+        component
+            .get_field_infos()
+            .into_iter()
+            .map(|field_info| {
+                let getter = field_info.getter.clone();
+                let setter = field_info.setter.clone();
+
+                FieldInfo {
+                    name: field_info.name,
+                    getter: Arc::new(move |this| {
+                        let this = unsafe { &*(this as *const _) } as &dyn Any;
+                        let this = this.downcast_ref::<ComponentRwLock>().unwrap();
+                        let reader = this.read().unwrap();
+
+                        getter(reader.as_any_ref())
+                    }),
+                    setter: match setter {
+                        SetterCaller::Const(call) => {
+                            SetterCaller::Const(Arc::new(move |this, args| {
+                                let this = unsafe { &*(this as *const _) } as &dyn Any;
+                                let this = this.downcast_ref::<ComponentRwLock>().unwrap();
+                                let reader = this.read().unwrap();
+
+                                call(reader.as_any_ref(), args)
+                            }))
+                        }
+                        SetterCaller::Mut(call) => {
+                            SetterCaller::Const(Arc::new(move |this, args| {
+                                let this = unsafe { &*(this as *const _) } as &dyn Any;
+                                let this = this.downcast_ref::<ComponentRwLock>().unwrap();
+                                let mut writer = this.write().unwrap();
+
+                                call(writer.as_any_mut(), args)
+                            }))
+                        }
+                    },
+                }
+            })
+            .collect::<Vec<_>>()
+    }
+
+    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
+        self
     }
 }

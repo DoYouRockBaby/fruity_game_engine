@@ -1,9 +1,13 @@
 use fruity_any::*;
 use fruity_core::resource::resource::Resource;
+use fruity_introspect::FieldInfo;
+use fruity_introspect::IntrospectObject;
+use fruity_introspect::MethodInfo;
 use image::GenericImageView;
 use std::num::NonZeroU32;
+use std::sync::Arc;
 
-#[derive(Debug, FruityAnySyncSend)]
+#[derive(Debug, FruityAny)]
 pub struct TextureResource {
     pub texture: wgpu::Texture,
     pub view: wgpu::TextureView,
@@ -72,3 +76,17 @@ impl TextureResource {
 }
 
 impl Resource for TextureResource {}
+
+impl IntrospectObject for TextureResource {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+
+    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
+        self
+    }
+}

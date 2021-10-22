@@ -1,10 +1,9 @@
-use crate::js_value::object::component::deserialize_v8_component;
-use crate::js_value::object::resource::deserialize_v8_resource;
-use crate::js_value::object::service::deserialize_v8_service;
+use crate::js_value::object::introspect_object::deserialize_v8_introspect_object;
 use crate::js_value::utils::store_callback;
 use crate::JavascriptEngine;
-use fruity_core::serialize::serialized::Serialized;
+use fruity_any::FruityAny;
 use fruity_core::service::service_manager::ServiceManager;
+use fruity_introspect::serialize::serialized::Serialized;
 use fruity_introspect::IntrospectError;
 use rusty_v8 as v8;
 use std::collections::HashMap;
@@ -57,10 +56,15 @@ pub fn deserialize_v8<'a>(
         let v8_function = v8::Local::<v8::Function>::try_from(v8_value).unwrap();
         let callback_identifier = store_callback(scope, v8_function);
 
-        let callback = move |service_manager: Arc<RwLock<ServiceManager>>,
+        let callback = move |service_manager: Arc<dyn FruityAny>,
                              args: Vec<Serialized>|
               -> Result<Option<Serialized>, IntrospectError> {
             // Get scope
+            let service_manager = service_manager
+                .as_any_arc()
+                .downcast::<RwLock<ServiceManager>>()
+                .unwrap();
+
             let service_manager = service_manager.read().unwrap();
             let javascript_engine = service_manager.read::<JavascriptEngine>();
             javascript_engine.run_callback(callback_identifier, args);
@@ -71,16 +75,8 @@ pub fn deserialize_v8<'a>(
         return Some(Serialized::Callback(Arc::new(callback)));
     }
 
-    if let Some(component) = deserialize_v8_component(scope, v8_value) {
-        return Some(Serialized::Component(component));
-    }
-
-    if let Some(service) = deserialize_v8_service(scope, v8_value) {
-        return Some(Serialized::Service(service));
-    }
-
-    if let Some(resource) = deserialize_v8_resource(scope, v8_value) {
-        return Some(Serialized::Resource(resource));
+    if let Some(introspect_object) = deserialize_v8_introspect_object(scope, v8_value) {
+        return Some(Serialized::NativeObject(introspect_object));
     }
 
     if v8_value.is_object() {

@@ -5,6 +5,7 @@ use itertools::Itertools;
 use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::hash::Hash;
+use std::sync::Arc;
 
 /// An identifier to an entity type, is composed be the identifier of the contained components
 #[derive(Debug, Clone)]
@@ -84,7 +85,7 @@ pub struct Entity {
 
 impl Entity {
     /// Returns a Entity
-    pub fn new(mut components: Vec<Box<dyn Component>>) -> Entity {
+    pub fn new(mut components: Vec<Arc<Box<dyn Component>>>) -> Entity {
         let mut entity = Entity {
             entry_infos: Vec::new(),
             buffer: Vec::new(),
@@ -102,7 +103,7 @@ impl Entity {
         entity
     }
 
-    fn push(&mut self, component: Box<dyn Component>) {
+    fn push(&mut self, component: Arc<Box<dyn Component>>) {
         // Store informations about where the object is stored
         let encode_size = component.encode_size();
         let object_buffer_start = self.buffer.len();

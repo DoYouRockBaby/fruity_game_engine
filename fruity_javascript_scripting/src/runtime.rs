@@ -8,7 +8,7 @@ use crate::module_map::ModuleInfos;
 use crate::module_map::ModuleMap;
 use crate::normalize_path::normalize_path;
 use crate::serialize::serialize::serialize_v8;
-use fruity_core::serialize::serialized::Serialized;
+use fruity_introspect::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 use std::cell::RefCell;
 use std::path::Path;
@@ -159,6 +159,7 @@ impl JsRuntime {
         .iter()
         .filter_map(|arg| serialize_v8(&mut scope, arg))
         .collect::<Vec<_>>();
+
       let global = context.global(&mut scope);
       let recv: v8::Local<v8::Value> = global.into();
 

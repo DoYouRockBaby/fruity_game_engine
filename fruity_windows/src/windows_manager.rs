@@ -1,11 +1,12 @@
 use fruity_any::*;
-use fruity_core::serialize::serialized::Serialized;
 use fruity_core::service::service::Service;
 use fruity_core::service::service_rwlock::ServiceRwLock;
 use fruity_core::service::utils::cast_service;
 use fruity_core::service::utils::ArgumentCaster;
 use fruity_core::system::system_manager::SystemManager;
-use fruity_introspect::IntrospectMethods;
+use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::FieldInfo;
+use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use fruity_observer::Signal;
@@ -20,7 +21,7 @@ use winit::event_loop::EventLoop;
 use winit::window::Window;
 use winit::window::WindowBuilder;
 
-#[derive(FruityAnySyncSend)]
+#[derive(FruityAny)]
 pub struct WindowsManager {
     system_manager: ServiceRwLock<SystemManager>,
     event_stack: Arc<RwLock<Vec<FruityWindowsEvent>>>,
@@ -91,6 +92,17 @@ impl WindowsManager {
         let system_manager_reader = self.system_manager.read().unwrap();
         system_manager_reader.run_begin();
         std::mem::drop(system_manager_reader);
+
+        // For tests
+        {
+            let system_manager_reader = self.system_manager.read().unwrap();
+            system_manager_reader.run();
+            /*system_manager_reader.run();
+            system_manager_reader.run();
+            system_manager_reader.run();*/
+            std::mem::drop(system_manager_reader);
+            return;
+        }
 
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Wait;
@@ -194,8 +206,8 @@ impl WindowsManager {
     }
 }
 
-impl IntrospectMethods<Serialized> for WindowsManager {
-    fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
+impl IntrospectObject for WindowsManager {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![
             MethodInfo {
                 name: "run".to_string(),
@@ -263,6 +275,14 @@ impl IntrospectMethods<Serialized> for WindowsManager {
                 })),
             },
         ]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+
+    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
+        self
     }
 }
 

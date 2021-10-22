@@ -83,7 +83,10 @@ impl EncodableVec {
     /// # Arguments
     /// * `new_object` - The object that will be stored
     ///
-    pub fn push(&mut self, new_object: Box<dyn Encodable>) {
+    pub fn push<T>(&mut self, new_object: T)
+    where
+        T: Encodable,
+    {
         // Store informations about where the object is stored
         let encode_size = new_object.encode_size();
         let object_buffer_start = self.buffer.len();

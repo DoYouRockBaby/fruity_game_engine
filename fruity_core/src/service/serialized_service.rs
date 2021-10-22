@@ -1,16 +1,17 @@
-use crate::serialize::serialized::Serialized;
 use crate::service::service::Service;
 use crate::service::utils::cast_service_mut;
 use crate::ServiceManager;
 use fruity_any::*;
-use fruity_introspect::IntrospectMethods;
+use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::FieldInfo;
+use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use std::sync::Arc;
 use std::sync::RwLock;
 
 /// A wrapper for services that come from scripting languages as serialized
-#[derive(Debug, FruityAnySyncSend)]
+#[derive(Debug, FruityAny)]
 pub struct SerializedService {
     service_manager: Arc<RwLock<ServiceManager>>,
     serialized: Serialized,
@@ -29,8 +30,8 @@ impl SerializedService {
     }
 }
 
-impl IntrospectMethods<Serialized> for SerializedService {
-    fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
+impl IntrospectObject for SerializedService {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
         let this = self.clone();
 
         if let Serialized::SerializedObject { fields, .. } = &this.serialized {
@@ -55,6 +56,14 @@ impl IntrospectMethods<Serialized> for SerializedService {
         } else {
             vec![]
         }
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+
+    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
+        self
     }
 }
 

@@ -1,10 +1,12 @@
+use fruity_introspect::SetterCaller;
+use fruity_introspect::MethodInfo;
 use crate::component::component::Component;
 use crate::component::component::ComponentDecoder;
 use crate::component::component::ComponentDecoderMut;
-use crate::serialize::serialized::Serialized;
-use fruity_any::*;
+use fruity_introspect::serialize::serialized::Serialized;
+use fruity_any::FruityAny;
 use fruity_introspect::FieldInfo;
-use fruity_introspect::IntrospectFields;
+use fruity_introspect::IntrospectObject;
 use std::sync::Arc;
 
 /// A wrapper for components that come from scripting languages as serialized
@@ -65,8 +67,12 @@ impl Component for SerializedComponent {
     }
 }
 
-impl IntrospectFields<Serialized> for SerializedComponent {
-    fn get_field_infos(&self) -> Vec<FieldInfo<Serialized>> {
+impl IntrospectObject for SerializedComponent {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
         if let Serialized::SerializedObject { fields, .. } = &self.serialized {
             fields
                 .iter()
@@ -74,9 +80,8 @@ impl IntrospectFields<Serialized> for SerializedComponent {
                     let key1 = key.clone();
                     let key2 = key.clone();
                     
-                    FieldInfo::<Serialized> {
+                    FieldInfo {
                         name: key.clone(),
-                        ty: "".to_string(),
                         getter: Arc::new(move |this| {
                             let this = this.downcast_ref::<SerializedComponent>().unwrap();
                             if let Serialized::SerializedObject { fields, .. } = &this.serialized {
@@ -85,19 +90,25 @@ impl IntrospectFields<Serialized> for SerializedComponent {
                                 panic!("A getter try to access an inexistant property in serialized component, should never be reached");
                             }
                         }),
-                        setter: Arc::new(move |this, value| {
+                        setter: SetterCaller::Mut(Arc::new(move |this, value| {
                             let this = this.downcast_mut::<SerializedComponent>().unwrap();
                             if let Serialized::SerializedObject { fields, .. } = &mut this.serialized {
                                 fields.insert(key2.clone(), value);
                             } else {
                                 panic!("A setter try to access an inexistant property in serialized component, should never be reached");
                             }
-                        }),
+                        })),
                     }
                 })
                 .collect::<Vec<_>>()
         } else {
             vec![]
         }
+    }
+
+    fn as_introspect_arc(
+        self: Arc<Self>,
+    ) -> Arc<dyn IntrospectObject> {
+        self
     }
 }

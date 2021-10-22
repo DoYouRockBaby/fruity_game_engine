@@ -3,12 +3,14 @@ use crate::configure_services;
 use crate::error::log_js_error;
 use crate::JsRuntime;
 use fruity_any::*;
-use fruity_core::serialize::serialized::Serialized;
 use fruity_core::service::service::Service;
 use fruity_core::world::World;
-use fruity_introspect::IntrospectMethods;
+use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::FieldInfo;
+use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
 use std::sync::mpsc;
+use std::sync::Arc;
 use std::thread;
 
 #[derive(Clone, Copy)]
@@ -30,7 +32,7 @@ pub(crate) enum RuntimeEvent {
     },
 }
 
-#[derive(Debug, FruityAnySyncSend)]
+#[derive(Debug, FruityAny)]
 pub struct JavascriptEngine {
     channel_sender: mpsc::SyncSender<RuntimeEvent>,
 }
@@ -137,9 +139,17 @@ impl JavascriptEngine {
     }
 }
 
-impl IntrospectMethods<Serialized> for JavascriptEngine {
-    fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
+impl IntrospectObject for JavascriptEngine {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+
+    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
+        self
     }
 }
 

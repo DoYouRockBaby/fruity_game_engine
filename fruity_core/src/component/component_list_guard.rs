@@ -1,9 +1,8 @@
-use crate::entity::entity::Entity;
+use crate::entity::entity_guard::EntityReadGuard;
+use crate::entity::entity_guard::EntityWriteGuard;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::sync::RwLockReadGuard;
-use std::sync::RwLockWriteGuard;
 
 /// RAII structure used to release the shared read access of a lock when dropped.
 ///
@@ -13,7 +12,7 @@ use std::sync::RwLockWriteGuard;
 ///
 #[derive(Clone)]
 pub struct ComponentListReadGuard<'s> {
-    guard: Arc<RwLock<RwLockReadGuard<'s, Entity>>>,
+    guard: Arc<RwLock<EntityReadGuard<'s>>>,
     component_indexes: Vec<usize>,
 }
 
@@ -24,7 +23,7 @@ impl<'s> ComponentListReadGuard<'s> {
     /// * `inner_guard` - The typed [`RwLockReadGuard`]
     ///
     pub(crate) fn new(
-        guard: Arc<RwLock<RwLockReadGuard<'s, Entity>>>,
+        guard: Arc<RwLock<EntityReadGuard<'s>>>,
         component_indexes: Vec<usize>,
     ) -> ComponentListReadGuard<'s> {
         ComponentListReadGuard {
@@ -51,7 +50,7 @@ impl<'s> Debug for ComponentListReadGuard<'s> {
 ///
 #[derive(Clone)]
 pub struct ComponentListWriteGuard<'s> {
-    guard: Arc<RwLock<RwLockWriteGuard<'s, Entity>>>,
+    guard: Arc<RwLock<EntityWriteGuard<'s>>>,
     component_indexes: Vec<usize>,
 }
 
@@ -62,7 +61,7 @@ impl<'s> ComponentListWriteGuard<'s> {
     /// * `inner_guard` - The typed [`RwLockWriteGuard`]
     ///
     pub(crate) fn new(
-        guard: Arc<RwLock<RwLockWriteGuard<'s, Entity>>>,
+        guard: Arc<RwLock<EntityWriteGuard<'s>>>,
         component_indexes: Vec<usize>,
     ) -> ComponentListWriteGuard<'s> {
         ComponentListWriteGuard {

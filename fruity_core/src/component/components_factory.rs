@@ -1,18 +1,20 @@
 use crate::component::component::Component;
-use crate::serialize::serialized::Serialized;
 use crate::service::service::Service;
 use crate::service::utils::cast_service;
 use crate::service::utils::ArgumentCaster;
 use fruity_any::*;
-use fruity_introspect::IntrospectMethods;
+use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::FieldInfo;
+use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
+use fruity_introspect::SetterCaller;
 use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Provides a factory for the component types
 /// This will be used by the scripting language to expose component creation
-#[derive(Debug, FruityAnySyncSend)]
+#[derive(Debug, FruityAny)]
 pub struct ComponentsFactory {
     factories: HashMap<String, fn() -> Box<dyn Component>>,
 }
@@ -57,7 +59,14 @@ impl ComponentsFactory {
                     .find(|field_info| field_info.name == *key);
 
                 if let Some(field_info) = field_info {
-                    (field_info.setter)(component.as_any_mut(), value);
+                    match &field_info.setter {
+                        SetterCaller::Const(call) => {
+                            call(component.as_any_ref(), value);
+                        }
+                        SetterCaller::Mut(call) => {
+                            call(component.as_any_mut(), value);
+                        }
+                    }
                 }
             })
         };
@@ -71,8 +80,8 @@ impl ComponentsFactory {
     }
 }
 
-impl IntrospectMethods<Serialized> for ComponentsFactory {
-    fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
+impl IntrospectObject for ComponentsFactory {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![MethodInfo {
             name: "instantiate".to_string(),
             call: MethodCaller::Const(Arc::new(move |this, args| {
@@ -84,12 +93,23 @@ impl IntrospectMethods<Serialized> for ComponentsFactory {
 
                 let component = this.instantiate(&arg1, arg2);
                 if let Some(component) = component {
-                    Ok(Some(Serialized::Component(component)))
+                    let component = Arc::<dyn Component>::from(component);
+                    Ok(Some(Serialized::NativeObject(
+                        component.as_introspect_arc(),
+                    )))
                 } else {
                     Ok(None)
                 }
             })),
         }]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+
+    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
+        self
     }
 }
 

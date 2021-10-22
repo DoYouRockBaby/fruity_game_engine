@@ -10,7 +10,7 @@ use std::sync::RwLockWriteGuard;
 
 /// A read write locker for an service instance
 #[derive(Debug)]
-pub struct ServiceRwLock<T: Service> {
+pub struct ServiceRwLock<T: Service + ?Sized> {
     service: Arc<RwLock<Box<dyn Service>>>,
     _phantom: PhantomData<T>,
 }

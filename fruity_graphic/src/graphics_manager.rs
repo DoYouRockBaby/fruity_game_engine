@@ -1,9 +1,9 @@
 use crate::math::Matrix4;
 use fruity_any::*;
-use fruity_core::serialize::serialized::Serialized;
 use fruity_core::service::service::Service;
 use fruity_core::world::World;
-use fruity_introspect::IntrospectMethods;
+use fruity_introspect::FieldInfo;
+use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
 use fruity_windows::windows_manager::WindowsManager;
 use std::fmt::Debug;
@@ -28,7 +28,7 @@ pub struct State {
     pub camera_bind_group_layout: wgpu::BindGroupLayout,
 }
 
-#[derive(Debug, FruityAnySyncSend)]
+#[derive(Debug, FruityAny)]
 pub struct GraphicsManager {
     state: Option<State>,
     current_output: Option<wgpu::SurfaceTexture>,
@@ -277,20 +277,17 @@ impl GraphicsManager {
     }
 }
 
-impl IntrospectMethods<Serialized> for GraphicsManager {
-    fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
-        vec![
-            /*MethodInfo {
-                name: "run".to_string(),
-                args: vec![],
-                return_type: None,
-                call: MethodCaller::Const(Arc::new(|this, _args| {
-                    let this = cast_service::<WindowsManager>(this);
-                    this.run();
-                    Ok(None)
-                })),
-            },*/
-        ]
+impl IntrospectObject for GraphicsManager {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+
+    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
+        self
     }
 }
 

@@ -2,22 +2,16 @@ use crate::js_value::function::JsFunction;
 use crate::js_value::utils::format_function_name_from_rust_to_js;
 use crate::js_value::value::JsValue;
 use core::ffi::c_void;
-use fruity_any::*;
-use fruity_core::serialize::serialized::Serialized;
+use fruity_introspect::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 use std::any::Any;
 use std::fmt::Debug;
 
-pub mod component;
-pub mod component_list_rwlock;
-pub mod component_rwlock;
-pub mod entity;
+pub mod introspect_object;
 pub mod iterator;
-pub mod resource;
-pub mod service;
 pub mod service_manager;
 
-#[derive(Debug, FruityAny)]
+#[derive(Debug)]
 pub struct JsObject {
     v8_value: v8::Global<v8::Object>,
 }

@@ -1,10 +1,13 @@
 use crate::resource::resource::Resource;
 use crate::resource::resources_manager::ResourceIdentifier;
 use crate::resource::resources_manager::ResourceLoaderParams;
-use crate::serialize::serialized::Serialized;
 use crate::ResourcesManager;
 use crate::ServiceManager;
 use fruity_any::*;
+use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::FieldInfo;
+use fruity_introspect::IntrospectObject;
+use fruity_introspect::MethodInfo;
 use std::collections::HashMap;
 use std::io::Read;
 use std::sync::Arc;
@@ -13,7 +16,7 @@ use yaml_rust::Yaml;
 use yaml_rust::YamlLoader;
 
 /// Settings collection
-#[derive(Debug, Clone, FruityAnySyncSend)]
+#[derive(Debug, Clone, FruityAny)]
 pub struct Settings {
     serialized: Serialized,
 }
@@ -26,6 +29,20 @@ impl Settings {
 }
 
 impl Resource for Settings {}
+
+impl IntrospectObject for Settings {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+
+    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
+        self
+    }
+}
 
 /// The loader for settings files
 pub fn settings_loader(

@@ -6,7 +6,6 @@ use crate::graphics_2d_manager::Graphics2dManager;
 use crate::systems::draw_camera::draw_camera_untyped;
 use crate::systems::draw_sprite::draw_sprite_untyped;
 use fruity_core::component::components_factory::ComponentsFactory;
-use fruity_core::serialize::serialized::ResourceReference;
 use fruity_core::system::system_manager::SystemManager;
 use fruity_core::world::World;
 
@@ -30,11 +29,7 @@ pub fn initialize(world: &World) {
             height: 0.0,
         })
     });
-    components_factory.add("Sprite", || {
-        Box::new(Sprite {
-            material: ResourceReference::new(),
-        })
-    });
+    components_factory.add("Sprite", || Box::new(Sprite { material: None }));
     components_factory.add("Camera", || {
         Box::new(Camera {
             near: -1.0,

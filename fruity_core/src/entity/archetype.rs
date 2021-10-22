@@ -4,8 +4,10 @@ use crate::entity::entity::EntityTypeIdentifier;
 use crate::entity::entity_manager::RemoveEntityError;
 use crate::entity::entity_rwlock::EntityRwLock;
 use fruity_collections::encodable_vec::EncodableVec;
+use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 /// A collection of entities that share the same component structure
 pub struct Archetype {
@@ -45,7 +47,7 @@ impl Archetype {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn get(&self, entity_id: EntityId) -> Option<&EntityRwLock> {
+    pub fn get(&self, entity_id: EntityId) -> Option<Arc<EntityRwLock>> {
         let index = match self.index_map.get(&entity_id) {
             Some(index) => index,
             None => return None,
@@ -59,15 +61,16 @@ impl Archetype {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn get_by_index(&self, index: usize) -> Option<&EntityRwLock> {
+    pub fn get_by_index(&self, index: usize) -> Option<Arc<EntityRwLock>> {
         let entities = unsafe { &*(&self.entities as *const _) } as &EncodableVec;
         let entity = match entities.get(index) {
             Some(entity) => entity,
             None => return None,
         };
 
-        match entity.as_any_ref().downcast_ref::<EntityRwLock>() {
-            Some(entity) => Some(entity),
+        let entity = &entity as &dyn Any;
+        match entity.downcast_ref::<Arc<EntityRwLock>>() {
+            Some(entity) => Some(entity.clone()),
             None => None,
         }
     }
@@ -91,7 +94,7 @@ impl Archetype {
     ///
     pub fn add(&mut self, entity_id: EntityId, entity: Entity) {
         self.index_map.insert(entity_id, self.entities.len());
-        self.entities.push(Box::new(EntityRwLock::new(entity)));
+        self.entities.push(Arc::new(EntityRwLock::new(entity)));
     }
 
     /// Remove an entity based on its id
@@ -99,7 +102,7 @@ impl Archetype {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn remove(&mut self, entity_id: EntityId) -> Result<EntityRwLock, RemoveEntityError> {
+    pub fn remove(&mut self, entity_id: EntityId) -> Result<Arc<EntityRwLock>, RemoveEntityError> {
         if let Some(entity_rwlock) = self.get(entity_id) {
             let entity_rwlock = entity_rwlock.clone();
 
@@ -134,9 +137,9 @@ pub struct Iter<'s> {
 }
 
 impl<'s> Iterator for Iter<'s> {
-    type Item = &'s EntityRwLock;
+    type Item = Arc<EntityRwLock>;
 
-    fn next(&mut self) -> Option<&'s EntityRwLock> {
+    fn next(&mut self) -> Option<Arc<EntityRwLock>> {
         let result = self.archetype.get_by_index(self.current_index);
         self.current_index += 1;
 

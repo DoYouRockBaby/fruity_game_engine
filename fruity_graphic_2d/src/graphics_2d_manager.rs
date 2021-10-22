@@ -1,5 +1,4 @@
 use fruity_any::*;
-use fruity_core::serialize::serialized::Serialized;
 use fruity_core::service::service::Service;
 use fruity_core::service::service_rwlock::ServiceRwLock;
 use fruity_core::world::World;
@@ -7,11 +6,13 @@ use fruity_graphic::graphics_manager::GraphicsManager;
 use fruity_graphic::math::Matrix4;
 use fruity_graphic::resources::material_resource::MaterialResource;
 use fruity_graphic::resources::material_resource::Vertex;
-use fruity_introspect::IntrospectMethods;
+use fruity_introspect::FieldInfo;
+use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
+use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
-#[derive(Debug, FruityAnySyncSend)]
+#[derive(Debug, FruityAny)]
 pub struct Graphics2dManager {
     graphics_manager: ServiceRwLock<GraphicsManager>,
 }
@@ -120,9 +121,17 @@ impl Graphics2dManager {
     }
 }
 
-impl IntrospectMethods<Serialized> for Graphics2dManager {
-    fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
+impl IntrospectObject for Graphics2dManager {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+
+    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
+        self
     }
 }
 

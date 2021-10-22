@@ -1,11 +1,13 @@
 use crate::js_value::utils::inject_serialized_into_v8_return_value;
 use crate::serialize::deserialize::deserialize_v8;
 use crate::JsRuntime;
+use fruity_core::component::component::Component;
 use fruity_core::component::components_factory::ComponentsFactory;
-use fruity_core::serialize::serialized::AnyServiceReference;
-use fruity_core::serialize::serialized::ObjectFields;
-use fruity_core::serialize::serialized::Serialized;
+use fruity_core::service::service::Service;
 use fruity_core::service::service_manager::ServiceManager;
+use fruity_introspect::serialize::serialized::ObjectFields;
+use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::IntrospectObject;
 use rusty_v8 as v8;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -22,9 +24,13 @@ pub fn configure_components(runtime: &mut JsRuntime, service_manager: Arc<RwLock
 
     components_factory_reader.iter().for_each(|(key, ..)| {
         let mut data_fields = HashMap::new();
+
+        let components_factory = components_factory.inner_arc();
+        let components_factory = components_factory.as_introspect_arc();
+
         data_fields.insert(
             "components_factory".to_string(),
-            Serialized::Service(components_factory.inner_arc()),
+            Serialized::NativeObject(components_factory),
         );
 
         data_fields.insert(
@@ -48,12 +54,16 @@ pub fn configure_components(runtime: &mut JsRuntime, service_manager: Arc<RwLock
                 let data_fields = ObjectFields::try_from(data).unwrap();
 
                 // Get the components factory
-                let components_factory = AnyServiceReference::try_from(
+                let components_factory = Arc::<dyn IntrospectObject>::try_from(
                     data_fields.get("components_factory").unwrap().clone(),
                 )
                 .unwrap();
-                let components_factory = components_factory.read().unwrap();
 
+                let components_factory = components_factory.as_any_arc();
+                let components_factory = components_factory
+                    .downcast::<RwLock<Box<dyn Service>>>()
+                    .unwrap();
+                let components_factory = components_factory.read().unwrap();
                 let components_factory = components_factory
                     .as_any_ref()
                     .downcast_ref::<ComponentsFactory>()
@@ -84,9 +94,12 @@ pub fn configure_components(runtime: &mut JsRuntime, service_manager: Arc<RwLock
 
                 // Return the result
                 if let Some(result) = result {
+                    let result = Arc::new(result);
+                    let result = result.as_introspect_arc();
+
                     inject_serialized_into_v8_return_value(
                         scope,
-                        &Serialized::Component(result),
+                        &Serialized::NativeObject(result),
                         &mut return_value,
                     );
                 }

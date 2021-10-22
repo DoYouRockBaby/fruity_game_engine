@@ -9,7 +9,7 @@ use fruity_core::entity_type;
 use fruity_core::service::service_guard::ServiceReadGuard;
 use fruity_core::service::service_manager::ServiceManager;
 use rayon::prelude::*;
-use std::sync::Arc;
+use std::sync::Arc;use std::ops::Deref;
 use std::sync::RwLock;
 
 pub fn draw_camera(
@@ -31,6 +31,8 @@ pub fn draw_camera(
 pub fn draw_camera_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
     let service_manager = service_manager.read().unwrap();
     let entity_manager = service_manager.read::<EntityManager>();
+
+    //println!("{:#?}", entity_manager.deref());
 
     entity_manager.iter_components(
         entity_type!["Position", "Size", "Camera"],

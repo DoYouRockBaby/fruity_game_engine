@@ -4,11 +4,18 @@ use crate::entity::entity::EntityComponentInfo;
 use crate::entity::entity::EntityTypeIdentifier;
 use crate::entity::entity_guard::EntityReadGuard;
 use crate::entity::entity_guard::EntityWriteGuard;
+use crate::service::utils::cast_service;
 use fruity_any::*;
 use fruity_collections::encodable::Decoder;
 use fruity_collections::encodable::DecoderMut;
 use fruity_collections::encodable::Encodable;
 use fruity_collections::slice::copy;
+use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::FieldInfo;
+use fruity_introspect::IntrospectObject;
+use fruity_introspect::MethodCaller;
+use fruity_introspect::MethodInfo;
+use std::any::Any;
 use std::any::TypeId;
 use std::sync::Arc;
 use std::sync::PoisonError;
@@ -17,9 +24,9 @@ use std::sync::RwLockReadGuard;
 use std::sync::RwLockWriteGuard;
 
 /// A read write locker for an entity instance
-#[derive(Debug, Clone, FruityAny)]
+#[derive(Debug, FruityAny)]
 pub struct EntityRwLock {
-    entity: Arc<RwLock<Entity>>,
+    entity: RwLock<Entity>,
 }
 
 impl EntityRwLock {
@@ -30,7 +37,7 @@ impl EntityRwLock {
     ///
     pub fn new(entity: Entity) -> EntityRwLock {
         EntityRwLock {
-            entity: Arc::new(RwLock::new(entity)),
+            entity: RwLock::new(entity),
         }
     }
 
@@ -78,12 +85,12 @@ impl EntityRwLock {
     /// * `type_identifiers` - The identifier list of the components, components will be returned with the same order
     ///
     pub fn iter_components(
-        &self,
+        self: Arc<Self>,
         target_identifier: &EntityTypeIdentifier,
     ) -> Result<impl Iterator<Item = ComponentListRwLock>, PoisonError<RwLockReadGuard<Entity>>>
     {
-        let entity = self.entity.clone();
-        let guard = self.entity.read()?;
+        let entity = self.clone();
+        let guard = self.read().unwrap();
 
         Ok(guard
             .iter_component_indexes(target_identifier)
@@ -106,7 +113,7 @@ impl Encodable for EntityRwLock {
             + reader.buffer.len()
     }
 
-    fn encode(self: Box<Self>, buffer: &mut [u8]) {
+    fn encode(&self, buffer: &mut [u8]) {
         {
             let reader = self.read().unwrap();
 
@@ -232,5 +239,30 @@ impl Encodable for EntityRwLock {
 
             entity_rwlock
         }
+    }
+}
+
+impl IntrospectObject for EntityRwLock {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![MethodInfo {
+            name: "len".to_string(),
+            call: MethodCaller::Const(Arc::new(move |this, _args| {
+                let this = unsafe { &*(this as *const _) } as &dyn Any;
+                let this = cast_service::<EntityRwLock>(this);
+                let this = this.read().unwrap();
+
+                let result = this.len();
+
+                Ok(Some(Serialized::USize(result)))
+            })),
+        }]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+
+    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
+        self
     }
 }

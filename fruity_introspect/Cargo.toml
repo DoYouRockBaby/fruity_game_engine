@@ -8,4 +8,3 @@ resolver = "2"
 log = "0.4.14"
 serde = "1.0.130"
 fruity_any = { path = "../fruity_any" }
-fruity_introspect_derive = { path = "fruity_introspect_derive" }

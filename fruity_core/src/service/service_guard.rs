@@ -12,7 +12,7 @@ use std::sync::RwLockWriteGuard;
 ///
 /// [`read`]: ServiceManager::read
 ///
-pub struct ServiceReadGuard<'s, T: Service> {
+pub struct ServiceReadGuard<'s, T: Service + ?Sized> {
     guard: RwLockReadGuard<'s, Box<dyn Service>>,
     _phantom: PhantomData<T>,
 }
@@ -35,12 +35,7 @@ impl<'s, T: Service> Deref for ServiceReadGuard<'s, T> {
     type Target = T;
 
     fn deref(&self) -> &<Self as Deref>::Target {
-        self.guard
-            .deref()
-            .as_ref()
-            .as_any_ref()
-            .downcast_ref::<T>()
-            .unwrap()
+        self.guard.deref().as_any_ref().downcast_ref::<T>().unwrap()
     }
 }
 
@@ -59,7 +54,7 @@ impl<'s, T: Service> Debug for ServiceReadGuard<'s, T> {
 ///
 /// [`write`]: ServiceManager::write
 ///
-pub struct ServiceWriteGuard<'s, T: Service> {
+pub struct ServiceWriteGuard<'s, T: Service + ?Sized> {
     guard: RwLockWriteGuard<'s, Box<dyn Service>>,
     _phantom: PhantomData<T>,
 }
@@ -82,12 +77,7 @@ impl<'s, T: Service> Deref for ServiceWriteGuard<'s, T> {
     type Target = T;
 
     fn deref(&self) -> &<Self as Deref>::Target {
-        self.guard
-            .deref()
-            .as_ref()
-            .as_any_ref()
-            .downcast_ref::<T>()
-            .unwrap()
+        self.guard.deref().as_any_ref().downcast_ref::<T>().unwrap()
     }
 }
 
@@ -95,7 +85,6 @@ impl<'s, T: Service> DerefMut for ServiceWriteGuard<'s, T> {
     fn deref_mut(&mut self) -> &mut <Self as std::ops::Deref>::Target {
         self.guard
             .deref_mut()
-            .as_mut()
             .as_any_mut()
             .downcast_mut::<T>()
             .unwrap()

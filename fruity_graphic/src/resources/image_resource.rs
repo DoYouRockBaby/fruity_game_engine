@@ -6,13 +6,16 @@ use fruity_core::resource::resources_manager::ResourceIdentifier;
 use fruity_core::resource::resources_manager::ResourceLoaderParams;
 use fruity_core::resource::resources_manager::ResourcesManager;
 use fruity_core::service::service_manager::ServiceManager;
+use fruity_introspect::FieldInfo;
+use fruity_introspect::IntrospectObject;
+use fruity_introspect::MethodInfo;
 use image::load_from_memory;
 use image::DynamicImage;
 use std::io::Read;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-#[derive(Debug, FruityAnySyncSend)]
+#[derive(Debug, FruityAny)]
 pub struct ImageResource {
     image: DynamicImage,
 }
@@ -78,5 +81,19 @@ pub fn image_loader(
                 &identifier.0
             );
         }
+    }
+}
+
+impl IntrospectObject for ImageResource {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+
+    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
+        self
     }
 }

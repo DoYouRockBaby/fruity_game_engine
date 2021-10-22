@@ -1,4 +1,4 @@
-use crate::serialize::serialized::Serialized;
+use fruity_introspect::serialize::serialized::Serialized;
 use fruity_introspect::IntrospectError;
 use std::any::Any;
 use std::convert::TryFrom;
@@ -62,7 +62,7 @@ impl<'s> ArgumentCaster<'s> {
     /// # Generic Arguments
     /// * `T` - The type to cast
     ///
-    pub fn cast_next<T: TryFrom<Serialized>>(&mut self) -> Result<T, IntrospectError> {
+    pub fn cast_next<T: TryFrom<Serialized> + ?Sized>(&mut self) -> Result<T, IntrospectError> {
         match self.iter.next() {
             Some((index, arg)) => {
                 self.last_index = index + 1;
@@ -84,7 +84,7 @@ impl<'s> ArgumentCaster<'s> {
     /// # Generic Arguments
     /// * `T` - The type to cast
     ///
-    pub fn cast_next_optional<T: TryFrom<Serialized>>(&mut self) -> Option<T> {
+    pub fn cast_next_optional<T: TryFrom<Serialized> + ?Sized>(&mut self) -> Option<T> {
         match self.iter.next() {
             Some((index, arg)) => {
                 self.last_index = index + 1;

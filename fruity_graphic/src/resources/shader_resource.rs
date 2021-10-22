@@ -5,11 +5,14 @@ use fruity_core::resource::resources_manager::ResourceIdentifier;
 use fruity_core::resource::resources_manager::ResourceLoaderParams;
 use fruity_core::resource::resources_manager::ResourcesManager;
 use fruity_core::service::service_manager::ServiceManager;
+use fruity_introspect::FieldInfo;
+use fruity_introspect::IntrospectObject;
+use fruity_introspect::MethodInfo;
 use std::io::Read;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-#[derive(Debug, FruityAnySyncSend)]
+#[derive(Debug, FruityAny)]
 pub struct ShaderResource {
     pub shader: wgpu::ShaderModule,
     pub bind_group_layout: wgpu::BindGroupLayout,
@@ -128,5 +131,19 @@ pub fn shader_loader(
             &identifier.0
         );
         return;
+    }
+}
+
+impl IntrospectObject for ShaderResource {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+
+    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
+        self
     }
 }

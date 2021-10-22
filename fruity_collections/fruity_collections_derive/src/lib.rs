@@ -16,7 +16,7 @@ pub fn derive_encodable_vec_object(input: TokenStream) -> TokenStream {
                 std::mem::size_of::<Self>()
             }
 
-            fn encode(self: Box<Self>, buffer: &mut [u8]) {
+            fn encode(&self, buffer: &mut [u8]) {
                 let mut result = unsafe {
                     std::slice::from_raw_parts(
                         (&*self as *const Self) as *const u8,

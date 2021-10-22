@@ -1,6 +1,4 @@
-use crate::serialize::serialized::Serialized;
-use fruity_any::FruityAny;
-use fruity_introspect::IntrospectFields;
+use fruity_introspect::IntrospectObject;
 use std::fmt::Debug;
 
 /// A function to decode an object from byte array to an any reference
@@ -10,7 +8,7 @@ pub type ComponentDecoder = fn(buffer: &[u8]) -> &dyn Component;
 pub type ComponentDecoderMut = fn(buffer: &mut [u8]) -> &mut dyn Component;
 
 /// An abstraction over a component, should be implemented for every component
-pub trait Component: IntrospectFields<Serialized> + Debug + Send + Sync + FruityAny {
+pub trait Component: IntrospectObject + Debug {
     /// Return the component type identifier
     fn get_component_type(&self) -> String;
 

@@ -6,10 +6,13 @@ use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resources_manager::ResourceIdentifier;
 use fruity_core::resource::resources_manager::ResourceLoaderParams;
 use fruity_core::resource::resources_manager::ResourcesManager;
-use fruity_core::serialize::serialized::Serialized;
 use fruity_core::service::service_guard::ServiceReadGuard;
 use fruity_core::service::service_manager::ServiceManager;
 use fruity_core::settings::build_settings_serialized_from_yaml;
+use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::FieldInfo;
+use fruity_introspect::IntrospectObject;
+use fruity_introspect::MethodInfo;
 use std::io::Read;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -44,7 +47,7 @@ impl Vertex {
     }
 }
 
-#[derive(Debug, FruityAnySyncSend)]
+#[derive(Debug, FruityAny)]
 pub struct MaterialResource {
     pub shader: Arc<ShaderResource>,
     pub bind_groups: Vec<(u32, wgpu::BindGroup)>,
@@ -275,7 +278,7 @@ fn build_material_params(
     let shader_identifier = params.get::<String>("shader", String::default());
     let shader =
         resources_manager.get_resource::<ShaderResource>(ResourceIdentifier(shader_identifier));
-    let shader = if let Some(shader) = shader.0 {
+    let shader = if let Some(shader) = shader {
         shader
     } else {
         return None;
@@ -333,7 +336,7 @@ fn build_material_bind_params(
             let texture = resources_manager
                 .get_resource::<TextureResource>(ResourceIdentifier(texture_identifier));
 
-            if let Some(texture) = texture.0 {
+            if let Some(texture) = texture {
                 Some(MaterialParamsBindingType::Texture { texture })
             } else {
                 None
@@ -344,7 +347,7 @@ fn build_material_bind_params(
             let texture = resources_manager
                 .get_resource::<TextureResource>(ResourceIdentifier(texture_identifier));
 
-            if let Some(texture) = texture.0 {
+            if let Some(texture) = texture {
                 Some(MaterialParamsBindingType::Sampler { texture })
             } else {
                 None
@@ -356,4 +359,18 @@ fn build_material_bind_params(
         index: params.get::<u32>("index", 0),
         ty,
     })
+}
+
+impl IntrospectObject for MaterialResource {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+
+    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
+        self
+    }
 }

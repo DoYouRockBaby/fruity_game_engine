@@ -1,9 +1,9 @@
 use crate::resource::resources_manager::ResourceIdentifier;
 use crate::resource::resources_manager::ResourceLoaderParams;
-use crate::serialize::serialized::Serialized;
 use crate::settings::build_settings_serialized_from_yaml;
 use crate::ResourcesManager;
 use crate::ServiceManager;
+use fruity_introspect::serialize::serialized::Serialized;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;

@@ -1,6 +1,6 @@
 use crate::js_value::value::JsValue;
 use crate::JsObject;
-use fruity_core::serialize::serialized::Serialized;
+use fruity_introspect::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 
 pub fn serialize_v8<'a>(
@@ -24,10 +24,6 @@ pub fn serialize_v8<'a>(
         Serialized::F64(value) => Some(v8::Number::new(scope, *value).into()),
         Serialized::Bool(value) => Some(v8::Boolean::new(scope, *value).into()),
         Serialized::String(value) => Some(v8::String::new(scope, value).unwrap().into()),
-        Serialized::Service(value) => {
-            let mut object = JsObject::from_service(scope, value.clone());
-            Some(object.as_v8(scope).into())
-        }
         Serialized::Array(value) => {
             let elements = value
                 .iter()
@@ -36,6 +32,11 @@ pub fn serialize_v8<'a>(
 
             Some(v8::Array::new_with_elements(scope, &elements).into())
         }
+        Serialized::Iterator(value) => {
+            let mut object = JsObject::from_iterator(scope, value.clone());
+            Some(object.as_v8(scope).into())
+        }
+        Serialized::Callback(_) => None,
         Serialized::SerializedObject { fields, .. } => {
             let v8_object = v8::Object::new(scope);
 
@@ -48,29 +49,8 @@ pub fn serialize_v8<'a>(
 
             Some(v8_object.into())
         }
-        Serialized::Iterator(value) => {
-            let mut object = JsObject::from_iterator(scope, value.clone());
-            Some(object.as_v8(scope).into())
-        }
-        Serialized::Callback(_) => None,
-        Serialized::Entity(value) => {
-            let mut object = JsObject::from_entity(scope, value.clone());
-            Some(object.as_v8(scope).into())
-        }
-        Serialized::Component(value) => {
-            let mut object = JsObject::from_component(scope, value.clone());
-            Some(object.as_v8(scope).into())
-        }
-        Serialized::ComponentRwLock(value) => {
-            let mut object = JsObject::from_component_rwlock(scope, value.clone());
-            Some(object.as_v8(scope).into())
-        }
-        Serialized::ComponentListRwLock(value) => {
-            let mut object = JsObject::from_component_list_rwlock(scope, value.clone());
-            Some(object.as_v8(scope).into())
-        }
-        Serialized::Resource(value) => {
-            let mut object = JsObject::from_resource(scope, value.clone());
+        Serialized::NativeObject(value) => {
+            let mut object = JsObject::from_introspect_object(scope, value.clone());
             Some(object.as_v8(scope).into())
         }
     }

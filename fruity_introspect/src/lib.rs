@@ -5,11 +5,17 @@
 //! Implements traits and macros to make a structure abe to list it's field and to get/set it with any
 //!
 
+use crate::serialize::serialized::Serialized;
 use fruity_any::FruityAny;
-pub use fruity_introspect_derive::IntrospectFields;
 use std::any::Any;
 use std::fmt::Debug;
+use std::ops::Deref;
+use std::ops::DerefMut;
 use std::sync::Arc;
+use std::sync::RwLock;
+
+/// Provides structure to pass object between the rust ecosystem and the scripting system
+pub mod serialize;
 
 #[derive(Debug, Clone)]
 /// Informations about a field of an introspect object
@@ -67,25 +73,28 @@ pub fn log_introspect_error(err: &IntrospectError) {
     }
 }
 
-/// Informations about a field of an introspect object
-///
-/// # Arguments
-/// * `T` - The type of the object used to provide parameters and function result
-///
+/// A setter caller
 #[derive(Clone)]
-pub struct FieldInfo<T> {
+pub enum SetterCaller {
+    /// Without mutability
+    Const(Arc<dyn Fn(&dyn Any, Serialized)>),
+
+    /// With mutability
+    Mut(Arc<dyn Fn(&mut dyn Any, Serialized)>),
+}
+
+/// Informations about a field of an introspect object
+#[derive(Clone)]
+pub struct FieldInfo {
     /// The name of the field
     pub name: String,
-
-    /// The type of the field
-    pub ty: String,
 
     /// Function to get one of the entry field value as Any
     ///
     /// # Arguments
     /// * `property` - The field name
     ///
-    pub getter: Arc<dyn Fn(&dyn Any) -> T>,
+    pub getter: Arc<dyn Fn(&dyn Any) -> Serialized>,
 
     /// Function to set one of the entry field
     ///
@@ -93,59 +102,186 @@ pub struct FieldInfo<T> {
     /// * `property` - The field name
     /// * `value` - The new field value as Any
     ///
-    pub setter: Arc<dyn Fn(&mut dyn Any, T)>,
-}
-
-/// Trait to implement static introspection to an object
-///
-/// # Arguments
-/// * `T` - The type of the object used to provide parameters and function result
-///
-pub trait IntrospectFields<T> {
-    /// Get a list of fields with many informations
-    fn get_field_infos(&self) -> Vec<FieldInfo<T>>;
+    pub setter: SetterCaller,
 }
 
 /// A method caller
-///
-/// # Arguments
-/// * `T` - The type of the object used to provide parameters and function result
-///
 #[derive(Clone)]
-pub enum MethodCaller<T> {
+pub enum MethodCaller {
     /// Without mutability
-    Const(Arc<dyn Fn(&dyn Any, Vec<T>) -> Result<Option<T>, IntrospectError>>),
+    Const(Arc<dyn Fn(&dyn Any, Vec<Serialized>) -> Result<Option<Serialized>, IntrospectError>>),
 
     /// With mutability
-    Mut(Arc<dyn Fn(&mut dyn Any, Vec<T>) -> Result<Option<T>, IntrospectError>>),
+    Mut(Arc<dyn Fn(&mut dyn Any, Vec<Serialized>) -> Result<Option<Serialized>, IntrospectError>>),
 }
 
 /// Informations about a field of an introspect object
-///
-/// # Arguments
-/// * `T` - The type of the object used to provide parameters and function result
-///
 #[derive(Clone)]
-pub struct MethodInfo<T> {
+pub struct MethodInfo {
     /// The name of the method
     pub name: String,
 
     /// Call for the method with any field
-    pub call: MethodCaller<T>,
+    pub call: MethodCaller,
 }
 
 /// Trait to implement static introspection to an object
-///
-/// # Arguments
-/// * `T` - The type of the object used to provide parameters and function result
-///
-pub trait IntrospectMethods<T>: FruityAny + Debug {
+pub trait IntrospectObject: Debug + FruityAny {
     /// Get a list of fields with many informations
-    fn get_method_infos(&self) -> Vec<MethodInfo<T>>;
+    fn get_field_infos(&self) -> Vec<FieldInfo>;
+
+    /// Get a list of fields with many informations
+    fn get_method_infos(&self) -> Vec<MethodInfo>;
+
+    /// Return self as an IntrospectObject arc
+    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject>;
 }
 
-impl<T, U: IntrospectMethods<T>> IntrospectMethods<T> for Box<U> {
-    fn get_method_infos(&self) -> Vec<MethodInfo<T>> {
-        self.as_ref().get_method_infos()
+impl<T: IntrospectObject + ?Sized> IntrospectObject for Box<T> {
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        self.as_ref()
+            .get_field_infos()
+            .into_iter()
+            .map(|field_info| {
+                let getter = field_info.getter.clone();
+                let setter = field_info.setter.clone();
+
+                FieldInfo {
+                    name: field_info.name,
+                    getter: Arc::new(move |this| {
+                        let this = unsafe { &*(this as *const _) } as &dyn Any;
+                        let this = this.downcast_ref::<Box<T>>().unwrap();
+
+                        getter(this.as_ref().as_any_ref())
+                    }),
+                    setter: match setter {
+                        SetterCaller::Const(call) => {
+                            SetterCaller::Const(Arc::new(move |this, args| {
+                                let this = unsafe { &*(this as *const _) } as &dyn Any;
+                                let this = this.downcast_ref::<Box<T>>().unwrap();
+
+                                call(this.as_ref().as_any_ref(), args)
+                            }))
+                        }
+                        SetterCaller::Mut(call) => {
+                            SetterCaller::Mut(Arc::new(move |this, args| {
+                                let this = unsafe { &mut *(this as *mut _) } as &mut dyn Any;
+                                let this = this.downcast_mut::<Box<T>>().unwrap();
+
+                                call(this.as_mut().as_any_mut(), args)
+                            }))
+                        }
+                    },
+                }
+            })
+            .collect::<Vec<_>>()
+    }
+
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        self.as_ref()
+            .get_method_infos()
+            .into_iter()
+            .map(|method_info| MethodInfo {
+                name: method_info.name,
+                call: match method_info.call {
+                    MethodCaller::Const(call) => {
+                        MethodCaller::Const(Arc::new(move |this, args| {
+                            let this = unsafe { &*(this as *const _) } as &dyn Any;
+                            let this = this.downcast_ref::<Box<T>>().unwrap();
+
+                            call(this.as_ref().as_any_ref(), args)
+                        }))
+                    }
+                    MethodCaller::Mut(call) => MethodCaller::Mut(Arc::new(move |this, args| {
+                        let this = unsafe { &mut *(this as *mut _) } as &mut dyn Any;
+                        let this = this.downcast_mut::<Box<T>>().unwrap();
+
+                        call(this.as_mut().as_any_mut(), args)
+                    })),
+                },
+            })
+            .collect::<Vec<_>>()
+    }
+
+    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
+        self
+    }
+}
+
+impl<T: IntrospectObject> IntrospectObject for RwLock<T> {
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        let reader = self.read().unwrap();
+        reader
+            .get_field_infos()
+            .into_iter()
+            .map(|field_info| {
+                let getter = field_info.getter.clone();
+                let setter = field_info.setter.clone();
+
+                FieldInfo {
+                    name: field_info.name,
+                    getter: Arc::new(move |this| {
+                        let this = unsafe { &*(this as *const _) } as &dyn Any;
+                        let this = this.downcast_ref::<RwLock<T>>().unwrap();
+                        let reader = this.read().unwrap();
+
+                        getter(&reader)
+                    }),
+                    setter: match setter {
+                        SetterCaller::Const(call) => {
+                            SetterCaller::Const(Arc::new(move |this, args| {
+                                let this = unsafe { &*(this as *const _) } as &dyn Any;
+                                let this = this.downcast_ref::<RwLock<T>>().unwrap();
+                                let reader = this.read().unwrap();
+
+                                call(reader.deref(), args)
+                            }))
+                        }
+                        SetterCaller::Mut(call) => {
+                            SetterCaller::Const(Arc::new(move |this, args| {
+                                let this = unsafe { &*(this as *const _) } as &dyn Any;
+                                let this = this.downcast_ref::<RwLock<T>>().unwrap();
+                                let mut writer = this.write().unwrap();
+
+                                call(writer.deref_mut(), args)
+                            }))
+                        }
+                    },
+                }
+            })
+            .collect::<Vec<_>>()
+    }
+
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        let reader = self.read().unwrap();
+        reader
+            .get_method_infos()
+            .into_iter()
+            .map(|method_info| MethodInfo {
+                name: method_info.name,
+                call: match method_info.call {
+                    MethodCaller::Const(call) => {
+                        MethodCaller::Const(Arc::new(move |this, args| {
+                            let this = unsafe { &*(this as *const _) } as &dyn Any;
+                            let this = this.downcast_ref::<RwLock<T>>().unwrap();
+                            let reader = this.read().unwrap();
+
+                            call(reader.deref(), args)
+                        }))
+                    }
+                    MethodCaller::Mut(call) => MethodCaller::Const(Arc::new(move |this, args| {
+                        let this = unsafe { &*(this as *const _) } as &dyn Any;
+                        let this = this.downcast_ref::<RwLock<T>>().unwrap();
+                        let mut writer = this.write().unwrap();
+
+                        call(writer.deref_mut(), args)
+                    })),
+                },
+            })
+            .collect::<Vec<_>>()
+    }
+
+    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
+        self
     }
 }

@@ -1,5 +1,3 @@
-use crate::serialize::serialized::Callback;
-use crate::serialize::serialized::Serialized;
 use crate::service::service::Service;
 use crate::service::service_manager::ServiceManager;
 use crate::service::utils::cast_service_mut;
@@ -7,7 +5,9 @@ use crate::service::utils::ArgumentCaster;
 use crate::World;
 use fruity_any::*;
 use fruity_introspect::log_introspect_error;
-use fruity_introspect::IntrospectMethods;
+use fruity_introspect::serialize::serialized::Callback;
+use fruity_introspect::FieldInfo;
+use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use rayon::prelude::*;
@@ -40,7 +40,7 @@ pub struct SystemPool {
 /// Pool 97 is for camera
 /// Pool 98 is for drawing
 ///
-#[derive(FruityAnySyncSend)]
+#[derive(FruityAny)]
 pub struct SystemManager {
     system_pools: HashMap<usize, SystemPool>,
     begin_system_pools: HashMap<usize, SystemPool>,
@@ -291,8 +291,8 @@ impl<'s> SystemManager {
     }
 }
 
-impl IntrospectMethods<Serialized> for SystemManager {
-    fn get_method_infos(&self) -> Vec<MethodInfo<Serialized>> {
+impl IntrospectObject for SystemManager {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![
             MethodInfo {
                 name: "add_system".to_string(),
@@ -319,6 +319,16 @@ impl IntrospectMethods<Serialized> for SystemManager {
             MethodInfo {
                 name: "add_begin_system".to_string(),
                 call: MethodCaller::Mut(Arc::new(|this, args| {
+                    let test1 = this.type_id();
+                    let test2 = std::any::TypeId::of::<Box<SystemManager>>();
+                    let test3 = std::any::TypeId::of::<RwLock<SystemManager>>();
+                    let test4 = std::any::TypeId::of::<RwLock<Box<SystemManager>>>();
+                    let test5 = std::any::TypeId::of::<Arc<RwLock<Box<SystemManager>>>>();
+                    let test6 = std::any::TypeId::of::<Box<dyn Service>>();
+                    let test7 = std::any::TypeId::of::<RwLock<dyn Service>>();
+                    let test8 = std::any::TypeId::of::<RwLock<Box<dyn Service>>>();
+                    let test9 = std::any::TypeId::of::<Arc<RwLock<Box<dyn Service>>>>();
+
                     let this = cast_service_mut::<SystemManager>(this);
 
                     let mut caster = ArgumentCaster::new("add_begin_system", args);
@@ -361,6 +371,14 @@ impl IntrospectMethods<Serialized> for SystemManager {
                 })),
             },
         ]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+
+    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
+        self
     }
 }
 
