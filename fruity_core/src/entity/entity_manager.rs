@@ -1,10 +1,11 @@
+use crate::component::component::AnyComponent;
 use crate::component::component::Component;
 use crate::component::component_list_rwlock::ComponentListRwLock;
+use crate::entity::archetype::rwlock::EntityRwLock;
 use crate::entity::archetype::Archetype;
-use crate::entity::entity::Entity;
+use crate::entity::entity::get_type_identifier;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
-use crate::entity::entity_rwlock::EntityRwLock;
 use crate::service::service::Service;
 use crate::service::utils::cast_service;
 use crate::service::utils::cast_service_mut;
@@ -36,10 +37,10 @@ pub struct EntityManager {
     service_manager: Arc<RwLock<ServiceManager>>,
 
     /// Signal propagated when a new entity is inserted into the collection
-    pub on_entity_created: Signal<(EntityId, Arc<EntityRwLock>)>,
+    pub on_entity_created: Signal<(EntityId, EntityRwLock)>,
 
     /// Signal propagated when a new entity is removed from the collection
-    pub on_entity_removed: Signal<(EntityId, Arc<EntityRwLock>)>,
+    pub on_entity_removed: Signal<(EntityId, EntityRwLock)>,
 }
 
 impl EntityManager {
@@ -59,7 +60,7 @@ impl EntityManager {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn get(&self, entity_id: EntityId) -> Option<Arc<EntityRwLock>> {
+    pub fn get(&self, entity_id: EntityId) -> Option<EntityRwLock> {
         self.archetypes
             .iter()
             .find_map(|archetype| archetype.get(entity_id))
@@ -74,7 +75,7 @@ impl EntityManager {
     pub fn iter_entities(
         &self,
         entity_identifier: EntityTypeIdentifier,
-    ) -> impl Iterator<Item = Arc<EntityRwLock>> {
+    ) -> impl Iterator<Item = EntityRwLock> {
         let archetypes = unsafe { &*(&self.archetypes as *const _) } as &Vec<Archetype>;
         archetypes
             .iter()
@@ -97,11 +98,10 @@ impl EntityManager {
     ) -> impl Iterator<Item = ComponentListRwLock> {
         let this = unsafe { &*(self as *const _) } as &EntityManager;
         this.iter_entities(entity_identifier.clone())
-            .filter_map(move |entity| {
+            .map(move |entity| {
                 entity
-                    .clone()
                     .iter_components(&entity_identifier.clone())
-                    .ok()
+                    .collect::<Vec<_>>()
             })
             .flatten()
     }
@@ -113,17 +113,17 @@ impl EntityManager {
     /// # Arguments
     /// * `entity` - The entity that will be added
     ///
-    pub fn create(&mut self, entity: Entity) -> EntityId {
+    pub fn create(&mut self, components: Vec<AnyComponent>) -> EntityId {
         self.id_incrementer += 1;
         let entity_id = EntityId(self.id_incrementer);
-        let entity_identifier = entity.get_type_identifier();
+        let entity_identifier = get_type_identifier(&components);
 
         match self.archetype_mut_by_identifier(entity_identifier) {
             Some(archetype) => {
-                archetype.add(entity_id, entity);
+                archetype.add(entity_id, components);
             }
             None => {
-                let archetype = Archetype::new(entity_id, entity);
+                let archetype = Archetype::new(entity_id, components);
                 self.archetypes.push(archetype);
             }
         }
@@ -188,8 +188,8 @@ impl IntrospectObject for EntityManager {
                     let this = cast_service_mut::<EntityManager>(this);
 
                     let mut caster = ArgumentCaster::new("create", args);
-                    let arg1 = caster.cast_next::<Vec<Arc<Box<dyn Component>>>>()?;
-                    this.create(Entity::new(arg1));
+                    let arg1 = caster.cast_next::<Vec<AnyComponent>>()?;
+                    this.create(arg1);
 
                     Ok(None)
                 })),
@@ -205,7 +205,7 @@ impl IntrospectObject for EntityManager {
 
                     let iterator = this
                         .iter_entities(EntityTypeIdentifier(arg1))
-                        .map(|entity| Serialized::NativeObject(entity));
+                        .map(|entity| Serialized::NativeObject(Box::new(entity)));
 
                     Ok(Some(Serialized::Iterator(Arc::new(RwLock::new(iterator)))))
                 })),
@@ -220,7 +220,7 @@ impl IntrospectObject for EntityManager {
 
                     let iterator = this
                         .iter_components(EntityTypeIdentifier(arg1))
-                        .map(|components| Serialized::NativeObject(Arc::new(components)));
+                        .map(|component| Serialized::NativeObject(Box::new(component)));
 
                     Ok(Some(Serialized::Iterator(Arc::new(RwLock::new(iterator)))))
                 })),
@@ -230,10 +230,6 @@ impl IntrospectObject for EntityManager {
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![]
-    }
-
-    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
-        self
     }
 }
 

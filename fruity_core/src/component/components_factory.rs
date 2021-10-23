@@ -1,4 +1,4 @@
-use crate::component::component::Component;
+use crate::component::component::AnyComponent;
 use crate::service::service::Service;
 use crate::service::utils::cast_service;
 use crate::service::utils::ArgumentCaster;
@@ -16,7 +16,7 @@ use std::sync::Arc;
 /// This will be used by the scripting language to expose component creation
 #[derive(Debug, FruityAny)]
 pub struct ComponentsFactory {
-    factories: HashMap<String, fn() -> Box<dyn Component>>,
+    factories: HashMap<String, fn() -> AnyComponent>,
 }
 
 impl ComponentsFactory {
@@ -33,7 +33,7 @@ impl ComponentsFactory {
     /// * `component_type` - The component type identifier
     /// * `entity` - The factory,  return a new default instance of the component
     ///
-    pub fn add(&mut self, component_type: &str, factory: fn() -> Box<dyn Component>) {
+    pub fn add(&mut self, component_type: &str, factory: fn() -> AnyComponent) {
         self.factories.insert(component_type.to_string(), factory);
     }
 
@@ -47,7 +47,7 @@ impl ComponentsFactory {
         &self,
         component_type: &str,
         serialized: Serialized,
-    ) -> Option<Box<dyn Component>> {
+    ) -> Option<AnyComponent> {
         let factory = self.factories.get(component_type)?;
         let mut component = factory();
         let component_fields = component.get_field_infos();
@@ -75,7 +75,7 @@ impl ComponentsFactory {
     }
 
     /// Iterate over all component factories
-    pub fn iter(&self) -> impl Iterator<Item = (&String, &fn() -> Box<dyn Component>)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &fn() -> AnyComponent)> {
         self.factories.iter()
     }
 }
@@ -93,10 +93,7 @@ impl IntrospectObject for ComponentsFactory {
 
                 let component = this.instantiate(&arg1, arg2);
                 if let Some(component) = component {
-                    let component = Arc::<dyn Component>::from(component);
-                    Ok(Some(Serialized::NativeObject(
-                        component.as_introspect_arc(),
-                    )))
+                    Ok(Some(Serialized::NativeObject(Box::new(component))))
                 } else {
                     Ok(None)
                 }
@@ -106,10 +103,6 @@ impl IntrospectObject for ComponentsFactory {
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![]
-    }
-
-    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
-        self
     }
 }
 

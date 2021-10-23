@@ -8,7 +8,7 @@ pub fn derive_fruity_any(input: TokenStream) -> TokenStream {
 
     let output = quote! {
         impl fruity_any::FruityAny for #ident {
-            fn as_any_ref(&self) -> &std::any::Any {
+            fn as_any_ref(&self) -> &dyn std::any::Any {
                 self
             }
 

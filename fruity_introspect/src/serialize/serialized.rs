@@ -19,7 +19,6 @@ pub type Callback = Arc<
 pub type ObjectFields = HashMap<String, Serialized>;
 
 /// A serialized value
-#[derive(Clone)]
 pub enum Serialized {
     /// i8 value
     I8(i8),
@@ -92,7 +91,7 @@ pub enum Serialized {
     },
 
     /// An object created by rust
-    NativeObject(Arc<dyn IntrospectObject>),
+    NativeObject(Box<dyn IntrospectObject>),
 }
 
 macro_rules! impl_numeric_from_serialized {
@@ -192,39 +191,13 @@ impl TryFrom<Serialized> for ObjectFields {
     }
 }
 
-impl TryFrom<Serialized> for Arc<dyn IntrospectObject> {
+impl TryFrom<Serialized> for Box<dyn IntrospectObject> {
     type Error = String;
 
     fn try_from(value: Serialized) -> Result<Self, Self::Error> {
         match value {
             Serialized::NativeObject(value) => Ok(value),
             _ => Err(format!("Couldn't convert {:?} to native object", value)),
-        }
-    }
-}
-
-impl<T: IntrospectObject> TryFrom<Serialized> for Option<Arc<T>> {
-    type Error = String;
-
-    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
-        let introspect_object = Arc::<dyn IntrospectObject>::try_from(value.clone())?;
-
-        match introspect_object.as_any_arc().downcast::<T>() {
-            Ok(value) => Ok(Some(value)),
-            Err(_) => Err(format!("Couldn't convert {:?} to native object", value)),
-        }
-    }
-}
-
-impl<T: IntrospectObject + ?Sized> TryFrom<Serialized> for Arc<Box<T>> {
-    type Error = String;
-
-    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
-        let introspect_object = Arc::<dyn IntrospectObject>::try_from(value.clone())?;
-
-        match introspect_object.as_any_arc().downcast::<Box<T>>() {
-            Ok(value) => Ok(value),
-            Err(_) => Err(format!("Couldn't convert {:?} to native object", value)),
         }
     }
 }

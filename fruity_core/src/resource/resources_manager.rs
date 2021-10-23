@@ -7,6 +7,7 @@ use crate::service::service::Service;
 use crate::service::utils::cast_service;
 use crate::service::utils::cast_service_mut;
 use crate::service::utils::ArgumentCaster;
+use crate::settings::Settings;
 use crate::ServiceManager;
 use crate::World;
 use fruity_any::*;
@@ -16,29 +17,24 @@ use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use std::collections::HashMap;
-use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::fs::File;
 use std::io::Read;
 use std::sync::Arc;
 use std::sync::RwLock;
 
+/// A a function that is used to load a resource
+pub type ResourceLoader = fn(
+    &mut ResourcesManager,
+    ResourceIdentifier,
+    &mut dyn Read,
+    Settings,
+    Arc<RwLock<ServiceManager>>,
+);
+
 /// A unique resource identifier
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ResourceIdentifier(pub String);
-
-/// A unique resource identifier
-#[derive(Debug, Clone)]
-pub struct ResourceLoaderParams(pub HashMap<String, Serialized>);
-
-/// A resource loader, it is a function that is intended to parse a resource and add some resource in the resource manager
-pub type ResourceLoader = fn(
-    resources_manager: &mut ResourcesManager,
-    identifier: ResourceIdentifier,
-    reader: &mut dyn Read,
-    params: ResourceLoaderParams,
-    service_manager: Arc<RwLock<ServiceManager>>,
-);
 
 /// The resource manager
 #[derive(FruityAny)]
@@ -124,14 +120,14 @@ impl ResourcesManager {
         identifier: ResourceIdentifier,
         resource_type: &str,
         reader: &mut dyn Read,
-        params: ResourceLoaderParams,
+        settings: Settings,
     ) -> Result<(), LoadResourceError> {
         if let Some(resource_loader) = self.resource_loaders.get(resource_type) {
             resource_loader(
                 self,
                 identifier,
                 reader,
-                params,
+                settings,
                 self.service_manager.clone(),
             );
             Ok(())
@@ -155,7 +151,7 @@ impl ResourcesManager {
             ResourceIdentifier(path.to_string()),
             "resource_settings",
             &mut file,
-            ResourceLoaderParams::new(),
+            Settings::new(),
         )?;
 
         Ok(())
@@ -233,7 +229,7 @@ impl IntrospectObject for ResourcesManager {
 
                     let result = this.get_untyped_resource(ResourceIdentifier(arg1));
 
-                    Ok(result.map(|result| Serialized::NativeObject(result.as_introspect_arc())))
+                    Ok(result.map(|result| Serialized::NativeObject(Box::new(result))))
                 })),
             },
             MethodInfo {
@@ -254,44 +250,6 @@ impl IntrospectObject for ResourcesManager {
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![]
-    }
-
-    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
-        self
-    }
-}
-
-impl ResourceLoaderParams {
-    /// Returns a ResourceLoaderParams
-    pub fn new() -> ResourceLoaderParams {
-        ResourceLoaderParams(HashMap::new())
-    }
-
-    /// Get a field into the params
-    ///
-    /// # Arguments
-    /// * `key` - The field identifier
-    /// * `default` - The default value, if not found or couldn't serialize
-    ///
-    /// # Generic Arguments
-    /// * `T` - The type to cast the value
-    ///
-    pub fn get<T: TryFrom<Serialized> + ?Sized>(&self, key: &str, default: T) -> T {
-        match self.0.get(key) {
-            Some(value) => T::try_from(value.clone()).unwrap_or(default),
-            None => default,
-        }
-    }
-}
-
-impl TryFrom<Serialized> for ResourceLoaderParams {
-    type Error = String;
-
-    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
-        match value {
-            Serialized::SerializedObject { fields, .. } => Ok(ResourceLoaderParams(fields)),
-            _ => Err(format!("Couldn't convert {:?} to callback", value)),
-        }
     }
 }
 

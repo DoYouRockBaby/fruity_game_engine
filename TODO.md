@@ -9,7 +9,6 @@
 
 # LESS PRIORITY
 
-[ ] Tests for fruity_collections
 [ ] Tests for javascript
 [ ] Tests for fruity_core
 [ ] Rust doc everywhere

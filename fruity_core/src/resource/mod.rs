@@ -8,4 +8,4 @@ pub mod resource;
 pub mod resources_manager;
 
 /// A resource loader that load other resources from a resource settings file
-pub mod resources_loader;
+pub mod load_resources;

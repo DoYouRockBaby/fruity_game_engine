@@ -680,28 +680,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "fruity_collections"
-version = "0.1.0"
-dependencies = [
- "fruity_any",
- "fruity_collections_derive",
-]
-
-[[package]]
-name = "fruity_collections_derive"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "fruity_core"
 version = "0.1.0"
 dependencies = [
  "fruity_any",
- "fruity_collections",
  "fruity_core_derive",
  "fruity_introspect",
  "fruity_observer",
@@ -725,7 +707,6 @@ name = "fruity_game_engine"
 version = "0.1.0"
 dependencies = [
  "fruity_any",
- "fruity_collections",
  "fruity_core",
  "fruity_graphic",
  "fruity_graphic_2d",
@@ -764,7 +745,6 @@ dependencies = [
  "bytemuck",
  "cgmath",
  "fruity_any",
- "fruity_collections",
  "fruity_core",
  "fruity_graphic",
  "fruity_introspect",

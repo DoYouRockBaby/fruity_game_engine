@@ -49,7 +49,7 @@ fn derive_component_trait(input: TokenStream) -> TokenStream {
                     )
                 };
 
-                fruity_collections::slice::copy(buffer, encoded);
+                fruity_core::utils::slice::copy(buffer, encoded);
             }
 
             fn get_decoder(&self) -> fruity_core::component::component::ComponentDecoder {

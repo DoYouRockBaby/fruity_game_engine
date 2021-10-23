@@ -1,3 +1,4 @@
+use crate::utils::slice::copy;
 use fruity_introspect::SetterCaller;
 use fruity_introspect::MethodInfo;
 use crate::component::component::Component;
@@ -10,7 +11,7 @@ use fruity_introspect::IntrospectObject;
 use std::sync::Arc;
 
 /// A wrapper for components that come from scripting languages as serialized
-#[derive(Debug, Clone, FruityAny)]
+#[derive(Debug, FruityAny)]
 pub struct SerializedComponent {
     serialized: Serialized,
 }
@@ -37,10 +38,6 @@ impl Component for SerializedComponent {
         std::mem::size_of::<Self>()
     }
 
-    fn duplicate(&self) -> Box<dyn Component> {
-        Box::new(self.clone())
-    }
-
     fn encode(&self, buffer: &mut [u8]) {
         let encoded = unsafe {
             std::slice::from_raw_parts(
@@ -49,7 +46,7 @@ impl Component for SerializedComponent {
             )
         };
 
-        fruity_collections::slice::copy(buffer, encoded);
+        copy(buffer, encoded);
     }
 
     fn get_decoder(&self) -> ComponentDecoder {
@@ -84,8 +81,8 @@ impl IntrospectObject for SerializedComponent {
                         name: key.clone(),
                         getter: Arc::new(move |this| {
                             let this = this.downcast_ref::<SerializedComponent>().unwrap();
-                            if let Serialized::SerializedObject { fields, .. } = &this.serialized {
-                                return fields.get(&key1).unwrap().clone();
+                            if let Serialized::SerializedObject { fields, .. } = this.serialized {
+                                return fields.remove(&key1).unwrap();
                             } else {
                                 panic!("A getter try to access an inexistant property in serialized component, should never be reached");
                             }
@@ -104,11 +101,5 @@ impl IntrospectObject for SerializedComponent {
         } else {
             vec![]
         }
-    }
-
-    fn as_introspect_arc(
-        self: Arc<Self>,
-    ) -> Arc<dyn IntrospectObject> {
-        self
     }
 }

@@ -1,9 +1,0 @@
-[package]
-name = "fruity_collections"
-version = "0.1.0"
-edition = "2018"
-resolver = "2"
-
-[dependencies]
-fruity_any = { path = "../fruity_any" }
-fruity_collections_derive = { path = "fruity_collections_derive" }

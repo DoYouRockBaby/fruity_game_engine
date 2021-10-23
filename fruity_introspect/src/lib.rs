@@ -132,9 +132,6 @@ pub trait IntrospectObject: Debug + FruityAny {
 
     /// Get a list of fields with many informations
     fn get_method_infos(&self) -> Vec<MethodInfo>;
-
-    /// Return self as an IntrospectObject arc
-    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject>;
 }
 
 impl<T: IntrospectObject + ?Sized> IntrospectObject for Box<T> {
@@ -202,9 +199,64 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Box<T> {
             })
             .collect::<Vec<_>>()
     }
+}
 
-    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
-        self
+impl<T: IntrospectObject + ?Sized> IntrospectObject for Arc<T> {
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        self.as_ref()
+            .get_field_infos()
+            .into_iter()
+            .map(|field_info| {
+                let getter = field_info.getter.clone();
+                let setter = field_info.setter.clone();
+
+                FieldInfo {
+                    name: field_info.name,
+                    getter: Arc::new(move |this| {
+                        let this = unsafe { &*(this as *const _) } as &dyn Any;
+                        let this = this.downcast_ref::<Arc<T>>().unwrap();
+
+                        getter(this.as_ref().as_any_ref())
+                    }),
+                    setter: match setter {
+                        SetterCaller::Const(call) => {
+                            SetterCaller::Const(Arc::new(move |this, args| {
+                                let this = unsafe { &*(this as *const _) } as &dyn Any;
+                                let this = this.downcast_ref::<Arc<T>>().unwrap();
+
+                                call(this.as_ref().as_any_ref(), args)
+                            }))
+                        }
+                        SetterCaller::Mut(_) => {
+                            panic!("Cannot call a mutable function from an arc, should be wrap into a lock");
+                        }
+                    },
+                }
+            })
+            .collect::<Vec<_>>()
+    }
+
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        self.as_ref()
+            .get_method_infos()
+            .into_iter()
+            .map(|method_info| MethodInfo {
+                name: method_info.name,
+                call: match method_info.call {
+                    MethodCaller::Const(call) => {
+                        MethodCaller::Const(Arc::new(move |this, args| {
+                            let this = unsafe { &*(this as *const _) } as &dyn Any;
+                            let this = this.downcast_ref::<Arc<T>>().unwrap();
+
+                            call(this.as_ref().as_any_ref(), args)
+                        }))
+                    }
+                    MethodCaller::Mut(_) => {
+                        panic!("Cannot call a mutable function from an arc, should be wrap into a lock");
+                    },
+                },
+            })
+            .collect::<Vec<_>>()
     }
 }
 
@@ -279,9 +331,5 @@ impl<T: IntrospectObject> IntrospectObject for RwLock<T> {
                 },
             })
             .collect::<Vec<_>>()
-    }
-
-    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
-        self
     }
 }

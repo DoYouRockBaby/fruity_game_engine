@@ -12,7 +12,7 @@
 
 use crate::component::components_factory::ComponentsFactory;
 use crate::entity::entity_manager::EntityManager;
-use crate::resource::resources_loader::resources_loader;
+use crate::resource::load_resources::load_resources;
 use crate::resource::resources_manager::ResourcesManager;
 use crate::service::service_manager::ServiceManager;
 use crate::settings::settings_loader;
@@ -38,6 +38,9 @@ pub mod settings;
 
 /// Provides collection for systems
 pub mod system;
+
+/// Provides some utils for the game engine
+pub mod utils;
 
 /// Provides a main object for the game engine
 pub mod world;
@@ -68,7 +71,7 @@ pub fn initialize(world: &World) {
 
     let mut resources_manager = service_manager.write::<ResourcesManager>();
     resources_manager
-        .add_resource_loader("resource_settings", resources_loader)
+        .add_resource_loader("resource_settings", load_resources)
         .unwrap();
     resources_manager
         .add_resource_loader("yaml", settings_loader)

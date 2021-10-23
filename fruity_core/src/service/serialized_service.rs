@@ -61,10 +61,6 @@ impl IntrospectObject for SerializedService {
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![]
     }
-
-    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
-        self
-    }
 }
 
 impl Service for SerializedService {}
