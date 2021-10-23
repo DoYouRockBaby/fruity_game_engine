@@ -81,8 +81,10 @@ impl IntrospectObject for SerializedComponent {
                         name: key.clone(),
                         getter: Arc::new(move |this| {
                             let this = this.downcast_ref::<SerializedComponent>().unwrap();
-                            if let Serialized::SerializedObject { fields, .. } = this.serialized {
-                                return fields.remove(&key1).unwrap();
+                            if let Serialized::SerializedObject { fields, .. } = &this.serialized {
+                                // TODO: Find a way to fix that, the problem is that now, serialized is not clonable
+                                return Serialized::Bool(true);
+                                //return fields.get(&key1).unwrap();
                             } else {
                                 panic!("A getter try to access an inexistant property in serialized component, should never be reached");
                             }

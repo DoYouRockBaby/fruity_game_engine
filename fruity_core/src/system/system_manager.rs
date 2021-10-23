@@ -319,16 +319,6 @@ impl IntrospectObject for SystemManager {
             MethodInfo {
                 name: "add_begin_system".to_string(),
                 call: MethodCaller::Mut(Arc::new(|this, args| {
-                    let test1 = this.type_id();
-                    let test2 = std::any::TypeId::of::<Box<SystemManager>>();
-                    let test3 = std::any::TypeId::of::<RwLock<SystemManager>>();
-                    let test4 = std::any::TypeId::of::<RwLock<Box<SystemManager>>>();
-                    let test5 = std::any::TypeId::of::<Arc<RwLock<Box<SystemManager>>>>();
-                    let test6 = std::any::TypeId::of::<Box<dyn Service>>();
-                    let test7 = std::any::TypeId::of::<RwLock<dyn Service>>();
-                    let test8 = std::any::TypeId::of::<RwLock<Box<dyn Service>>>();
-                    let test9 = std::any::TypeId::of::<Arc<RwLock<Box<dyn Service>>>>();
-
                     let this = cast_service_mut::<SystemManager>(this);
 
                     let mut caster = ArgumentCaster::new("add_begin_system", args);

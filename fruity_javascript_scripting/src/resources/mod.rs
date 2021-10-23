@@ -1,1 +1,1 @@
-pub mod script_loader;
+pub mod load_js_script;

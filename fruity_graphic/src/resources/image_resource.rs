@@ -3,9 +3,9 @@ use crate::GraphicsManager;
 use fruity_any::*;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resources_manager::ResourceIdentifier;
-use fruity_core::resource::resources_manager::ResourceLoaderParams;
 use fruity_core::resource::resources_manager::ResourcesManager;
 use fruity_core::service::service_manager::ServiceManager;
+use fruity_core::settings::Settings;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
@@ -29,14 +29,14 @@ impl ImageResource {
 
 impl Resource for ImageResource {}
 
-pub fn image_loader(
+pub fn load_image(
     resources_manager: &mut ResourcesManager,
     identifier: ResourceIdentifier,
     reader: &mut dyn Read,
-    params: ResourceLoaderParams,
+    settings: Settings,
     service_manager: Arc<RwLock<ServiceManager>>,
 ) {
-    let load_type = params.get::<String>("type", "image".to_string());
+    let load_type = settings.get::<String>("type", "image".to_string());
 
     // read the whole file
     let mut buffer = Vec::new();
@@ -91,9 +91,5 @@ impl IntrospectObject for ImageResource {
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![]
-    }
-
-    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
-        self
     }
 }

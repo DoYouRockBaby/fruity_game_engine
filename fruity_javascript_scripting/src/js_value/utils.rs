@@ -17,6 +17,16 @@ pub fn get_intern_value_from_v8_object<'a, T: Any>(
     unsafe { internal_object.as_ref() }
 }
 
+pub fn get_into_intern_value_from_v8_object<'a, T: Any>(
+    scope: &mut v8::HandleScope,
+    v8_object: v8::Local<'a, v8::Object>,
+) -> Option<&'a T> {
+    let this = v8_object.get_internal_field(scope, 0)?;
+    let internal_field = unsafe { v8::Local::<v8::External>::cast(this) };
+    let internal_object = internal_field.value() as *const T;
+    unsafe { internal_object.as_ref() }
+}
+
 pub fn get_intern_value_from_v8_object_mut<'a, T: Any>(
     scope: &mut v8::HandleScope,
     v8_object: v8::Local<'a, v8::Object>,

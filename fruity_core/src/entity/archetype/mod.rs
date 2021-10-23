@@ -95,7 +95,7 @@ impl Archetype {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn get(&self, entity_id: EntityId) -> Option<EntityRwLock> {
+    pub fn get(&self, entity_id: EntityId) -> Option<&EntityRwLock> {
         self.index_map
             .get(&entity_id)
             .map(|index| self.get_by_index(*index))
@@ -106,8 +106,11 @@ impl Archetype {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn get_by_index(&self, index: usize) -> EntityRwLock {
-        EntityRwLock::new(self, index)
+    pub fn get_by_index(&self, index: usize) -> &EntityRwLock {
+        let buffer_end = index + size_of::<EntityRwLock>();
+        let entity_lock_buffer = &self.buffer[index..buffer_end];
+        let (_head, body, _tail) = unsafe { entity_lock_buffer.align_to::<EntityRwLock>() };
+        &body[0]
     }
 
     /// Iterate over all entities of the archetype
@@ -129,10 +132,11 @@ impl Archetype {
     ///
     pub fn add(&mut self, entity_id: EntityId, components: Vec<AnyComponent>) {
         // Store informations about where the object is stored
-        let mut entity_buffer = Vec::<u8>::with_capacity(self.entity_size);
+        let entity_index = self.entity_size;
+        let mut entity_buffer = Vec::<u8>::with_capacity(entity_index);
 
         // Store the rwlock
-        let rwlock = EntityRwLock::new(self, self.buffer.len());
+        let rwlock = EntityRwLock::new(self);
         let encoded_rwlock = unsafe {
             std::slice::from_raw_parts(
                 (&*&rwlock as *const EntityRwLock) as *const u8,
@@ -142,6 +146,7 @@ impl Archetype {
         copy(&mut entity_buffer, encoded_rwlock);
 
         // Store the component decoding infos
+        let mut relative_index = 0;
         let decoding_infos_buffer_index = size_of::<EntityLockCell>();
         for (index, component) in components.iter().enumerate() {
             let buffer_index =
@@ -150,11 +155,13 @@ impl Archetype {
             let infos_buffer = &mut entity_buffer[buffer_index..buffer_end];
 
             let decoding_infos = ComponentDecodingInfos {
-                relative_index: decoding_infos_buffer_index,
+                relative_index,
                 size: component.encode_size(),
                 decoder: component.get_decoder(),
                 decoder_mut: component.get_decoder_mut(),
             };
+
+            relative_index += component.encode_size();
 
             let encoded_infos = unsafe {
                 std::slice::from_raw_parts(
@@ -166,7 +173,7 @@ impl Archetype {
         }
 
         // Encode every components into the buffer
-        let component_buffer_index =
+        let mut component_buffer_index =
             size_of::<EntityLockCell>() + components.len() * size_of::<ComponentDecodingInfos>();
         for component in components.iter() {
             let buffer_index = component_buffer_index;
@@ -176,6 +183,9 @@ impl Archetype {
 
             component_buffer_index += component.encode_size();
         }
+
+        // Store the id of the entity
+        self.index_map.insert(entity_id, entity_index);
     }
 
     /// Remove an entity based on its id
@@ -183,7 +193,7 @@ impl Archetype {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn remove(&mut self, entity_id: EntityId) -> Result<EntityRwLock, RemoveEntityError> {
+    pub fn remove(&mut self, _entity_id: EntityId) -> Result<EntityRwLock, RemoveEntityError> {
         /*if let Some(entity_rwlock) = self.get(entity_id) {
             let entity_rwlock = entity_rwlock.clone();
 
@@ -220,9 +230,9 @@ pub struct Iter<'s> {
 }
 
 impl<'s> Iterator for Iter<'s> {
-    type Item = EntityRwLock;
+    type Item = &'s EntityRwLock;
 
-    fn next(&mut self) -> Option<EntityRwLock> {
+    fn next(&mut self) -> Option<&'s EntityRwLock> {
         if self.current_index < self.archetype.buffer.len() {
             let result = self.archetype.get_by_index(self.current_index);
             self.current_index += self.archetype.entity_size;

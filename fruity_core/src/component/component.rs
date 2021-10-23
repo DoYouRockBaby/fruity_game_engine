@@ -45,6 +45,14 @@ pub struct AnyComponent {
     component: Box<dyn Component>,
 }
 
+impl AnyComponent {
+    pub fn new(component: impl Component) -> AnyComponent {
+        AnyComponent {
+            component: Box::new(component),
+        }
+    }
+}
+
 impl Deref for AnyComponent {
     type Target = dyn Component;
 
@@ -67,7 +75,7 @@ impl TryFrom<Serialized> for AnyComponent {
             Serialized::NativeObject(value) => {
                 match value.as_any_box().downcast::<AnyComponent>() {
                     Ok(value) => Ok(*value),
-                    Err(_) => Err(format!("Couldn't convert {:?} to native object", value)),
+                    Err(_) => Err(format!("Couldn't convert An AnyComponent to native object")),
                 }
             }
             _ => Err(format!("Couldn't convert {:?} to native object", value)),

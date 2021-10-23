@@ -9,7 +9,7 @@ use fruity_core::entity_type;
 use fruity_core::service::service_guard::ServiceReadGuard;
 use fruity_core::service::service_manager::ServiceManager;
 use rayon::prelude::*;
-use std::sync::Arc;use std::ops::Deref;
+use std::sync::Arc;
 use std::sync::RwLock;
 
 pub fn draw_camera(
@@ -46,7 +46,7 @@ pub fn draw_camera_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
                 }
             };
 
-            let position = position.read().unwrap();
+            let position = position.read();
             let position = match position.as_any_ref().downcast_ref::<Position>() {
                 Some(component) => component,
                 None => {
@@ -66,7 +66,7 @@ pub fn draw_camera_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
                 }
             };
 
-            let size = size.read().unwrap();
+            let size = size.read();
             let size = match size.as_any_ref().downcast_ref::<Size>() {
                 Some(component) => component,
                 None => {
@@ -86,7 +86,7 @@ pub fn draw_camera_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
                 }
             };
 
-            let camera = camera.read().unwrap();
+            let camera = camera.read();
             let camera = match camera.as_any_ref().downcast_ref::<Camera>() {
                 Some(component) => component,
                 None => {

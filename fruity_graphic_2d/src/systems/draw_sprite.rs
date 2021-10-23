@@ -36,7 +36,7 @@ pub fn draw_sprite_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
                 }
             };
 
-            let position = position.read().unwrap();
+            let position = position.read();
             let position = match position.as_any_ref().downcast_ref::<Position>() {
                 Some(component) => component,
                 None => {
@@ -56,7 +56,7 @@ pub fn draw_sprite_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
                 }
             };
 
-            let size = size.read().unwrap();
+            let size = size.read();
             let size = match size.as_any_ref().downcast_ref::<Size>() {
                 Some(component) => component,
                 None => {
@@ -76,7 +76,7 @@ pub fn draw_sprite_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
                 }
             };
 
-            let sprite = sprite.read().unwrap();
+            let sprite = sprite.read();
             let sprite = match sprite.as_any_ref().downcast_ref::<Sprite>() {
                 Some(component) => component,
                 None => {

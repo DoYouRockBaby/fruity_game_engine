@@ -1,39 +1,53 @@
-use crate::component::component_list_guard::ComponentListReadGuard;
 use crate::component::component_list_guard::ComponentListWriteGuard;
+use crate::component::component_list_rwlock::ComponentListRwLock;
 use crate::entity::archetype::Archetype;
 use crate::entity::archetype::Component;
 use crate::entity::archetype::ComponentDecodingInfos;
-use crate::entity::archetype::EntityLockCell;
+use crate::service::utils::cast_service;
+use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::FieldInfo;
+use fruity_introspect::IntrospectObject;
+use fruity_introspect::MethodCaller;
+use fruity_introspect::MethodInfo;
+use std::any::Any;
+use std::ops::DerefMut;
+use std::sync::Arc;
+// use crate::entity::archetype::EntityLockCell;
 use crate::entity::archetype::EntityTypeIdentifier;
+use fruity_any::*;
 use itertools::Itertools;
 use std::fmt::Debug;
 use std::fmt::Formatter;
 use std::mem::size_of;
 use std::ops::Deref;
 use std::sync::atomic::AtomicPtr;
+use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
+#[derive(FruityAny)]
 pub struct EntityRwLock {
-    archetype: AtomicPtr<Archetype>,
-    buffer_index: usize,
+    archetype_ptr: AtomicPtr<Archetype>,
+    // If it's a writer that handle the lock, the reader_count is maximal cause we cannot create more
+    // Otherwise, this is incremented by one per reader added
+    reader_count: AtomicUsize,
 }
 
 impl EntityRwLock {
-    pub(crate) fn new(archetype: &Archetype, buffer_index: usize) -> EntityRwLock {
+    pub fn new(archetype: &mut Archetype) -> EntityRwLock {
         EntityRwLock {
-            archetype: AtomicPtr::new(archetype as *const _ as *mut Archetype),
-            buffer_index,
+            archetype_ptr: AtomicPtr::new(archetype as *mut Archetype),
+            reader_count: AtomicUsize::new(0),
         }
     }
 
     pub fn read(&self) -> EntityReadGuard {
-        let archetype = &*self.archetype.load(Ordering::SeqCst);
-        EntityReadGuard::new(archetype, self.buffer_index)
+        let archetype = unsafe { &*self.archetype_ptr.load(Ordering::SeqCst) };
+        EntityReadGuard::new(archetype, self)
     }
 
     pub fn write(&self) -> EntityWriteGuard {
-        let archetype = &*self.archetype.load(Ordering::SeqCst);
-        EntityWriteGuard::new(archetype, self.buffer_index)
+        let archetype = unsafe { &*self.archetype_ptr.load(Ordering::SeqCst) };
+        EntityWriteGuard::new(archetype, self)
     }
 }
 
@@ -45,21 +59,20 @@ impl Debug for EntityRwLock {
 }
 
 pub struct EntityReadGuard<'a> {
-    entity_lock: &'a EntityLockCell,
+    entity_lock: &'a EntityRwLock,
     components: Vec<&'a dyn Component>,
 }
 
 impl<'a> EntityReadGuard<'a> {
-    pub(crate) fn new(archetype: &Archetype, buffer_index: usize) -> EntityReadGuard {
+    pub(crate) fn new(archetype: &Archetype, entity_lock: &'a EntityRwLock) -> EntityReadGuard<'a> {
         // Wait that every write locker is done
-        let entity_lock = get_lock_in_archetype(archetype as &Archetype, buffer_index);
         while entity_lock.reader_count.load(Ordering::SeqCst) == usize::MAX {}
 
         // Poison the entity cell in the archetype
         entity_lock.reader_count.fetch_add(1, Ordering::SeqCst);
 
         // Build the component ref vector
-        let components = Self::build_component_ref_vector(archetype, buffer_index);
+        let components = Self::build_component_ref_vector(archetype, entity_lock);
 
         EntityReadGuard {
             entity_lock,
@@ -67,29 +80,26 @@ impl<'a> EntityReadGuard<'a> {
         }
     }
 
-    fn build_component_ref_vector(
+    fn build_component_ref_vector<'b>(
         archetype: &Archetype,
-        buffer_index: usize,
-    ) -> Vec<&dyn Component> {
-        // Get component decoding infos
-        let component_decoding_infos =
-            get_component_decoding_infos_in_archetype(archetype, buffer_index);
+        rwlock: &'b EntityRwLock,
+    ) -> Vec<&'b dyn Component> {
+        let (_, component_infos_buffer, components_buffer) =
+            get_entry_buffers_mut(archetype, rwlock);
 
-        // Get the buffer for all the components
-        let all_components_buffer_index = buffer_index
-            + size_of::<EntityLockCell>()
-            + archetype.components_per_entity * size_of::<ComponentDecodingInfos>();
-        let all_components_buffer = &archetype.buffer[all_components_buffer_index..];
+        // Get component decoding infos
+        let component_decoding_infos = get_component_decoding_infos(component_infos_buffer);
 
         // Deserialize every components
         let components = component_decoding_infos
             .iter()
-            .map(|decoding_info| {
-                let component_buffer_index =
-                    all_components_buffer_index + decoding_info.relative_index;
+            .map(move |decoding_info| {
+                let components_buffer = unsafe { &*(components_buffer as *const _) } as &[u8];
+
+                let component_buffer_index = decoding_info.relative_index;
                 let component_buffer_end = component_buffer_index + decoding_info.size;
                 let component_buffer =
-                    &archetype.buffer[component_buffer_index..component_buffer_end];
+                    &components_buffer[component_buffer_index..component_buffer_end];
 
                 (decoding_info.decoder)(component_buffer)
             })
@@ -121,21 +131,23 @@ impl<'a> Debug for EntityReadGuard<'a> {
 }
 
 pub struct EntityWriteGuard<'a> {
-    entity_lock: &'a EntityLockCell,
+    entity_lock: &'a EntityRwLock,
     components: Vec<&'a mut dyn Component>,
 }
 
 impl<'a> EntityWriteGuard<'a> {
-    pub(crate) fn new(archetype: &Archetype, buffer_index: usize) -> EntityWriteGuard {
+    pub(crate) fn new(
+        archetype: &Archetype,
+        entity_lock: &'a EntityRwLock,
+    ) -> EntityWriteGuard<'a> {
         // Wait that every write locker is done
-        let entity_lock = get_lock_in_archetype(archetype, buffer_index);
         while entity_lock.reader_count.load(Ordering::SeqCst) == 0 {}
 
         // Poison the entity cell in the archetype
         entity_lock.reader_count.store(usize::MAX, Ordering::SeqCst);
 
         // Build the component ref vector
-        let components = Self::build_component_ref_vector(archetype, buffer_index);
+        let components = Self::build_component_ref_vector(archetype, entity_lock);
 
         EntityWriteGuard {
             entity_lock,
@@ -143,29 +155,27 @@ impl<'a> EntityWriteGuard<'a> {
         }
     }
 
-    fn build_component_ref_vector(
+    fn build_component_ref_vector<'b>(
         archetype: &Archetype,
-        buffer_index: usize,
-    ) -> Vec<&mut dyn Component> {
-        // Get component decoding infos
-        let component_decoding_infos =
-            get_component_decoding_infos_in_archetype(archetype, buffer_index);
+        rwlock: &'a EntityRwLock,
+    ) -> Vec<&'a mut dyn Component> {
+        let (_, component_infos_buffer, components_buffer) =
+            get_entry_buffers_mut(archetype, rwlock);
 
-        // Get the buffer for all the components
-        let all_components_buffer_index = buffer_index
-            + size_of::<EntityLockCell>()
-            + archetype.components_per_entity * size_of::<ComponentDecodingInfos>();
-        let all_components_buffer = &archetype.buffer[all_components_buffer_index..];
+        // Get component decoding infos
+        let component_decoding_infos = get_component_decoding_infos(component_infos_buffer);
 
         // Deserialize every components
         let components = component_decoding_infos
-            .iter()
+            .into_iter()
             .map(|decoding_info| {
-                let component_buffer_index =
-                    all_components_buffer_index + decoding_info.relative_index;
+                let components_buffer =
+                    unsafe { &mut *(components_buffer as *mut _) } as &mut [u8];
+
+                let component_buffer_index = decoding_info.relative_index;
                 let component_buffer_end = component_buffer_index + decoding_info.size;
                 let component_buffer =
-                    &mut archetype.buffer[component_buffer_index..component_buffer_end];
+                    &mut components_buffer[component_buffer_index..component_buffer_end];
 
                 (decoding_info.decoder_mut)(component_buffer)
             })
@@ -183,6 +193,12 @@ impl<'a> Deref for EntityWriteGuard<'a> {
     }
 }
 
+impl<'s> DerefMut for EntityWriteGuard<'s> {
+    fn deref_mut(&mut self) -> &mut <Self as Deref>::Target {
+        &mut self.components
+    }
+}
+
 impl<'a> Debug for EntityWriteGuard<'a> {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         self.deref().fmt(formatter)
@@ -196,28 +212,6 @@ impl<'a> Drop for EntityWriteGuard<'a> {
     }
 }
 
-// Get the lock cell for an entity in the archetype
-fn get_lock_in_archetype(archetype: &Archetype, buffer_index: usize) -> &EntityLockCell {
-    let buffer_end = buffer_index + size_of::<EntityLockCell>();
-    let entity_lock_buffer = &archetype.buffer[buffer_index..buffer_end];
-    let (_head, body, _tail) = unsafe { entity_lock_buffer.align_to::<EntityLockCell>() };
-    &body[0]
-}
-
-// Get the components decoding infos for an entity in the archetype
-fn get_component_decoding_infos_in_archetype(
-    archetype: &Archetype,
-    buffer_index: usize,
-) -> &[ComponentDecodingInfos] {
-    let components_decoding_infos_buffer_index = buffer_index + size_of::<EntityLockCell>();
-    let components_decoding_infos_buffer_end = buffer_index + archetype.entity_size;
-    let components_decoding_infos_buffer = &archetype.buffer
-        [components_decoding_infos_buffer_index..components_decoding_infos_buffer_end];
-    let (_head, body, _tail) =
-        unsafe { components_decoding_infos_buffer.align_to::<ComponentDecodingInfos>() };
-    body
-}
-
 impl EntityRwLock {
     /// Get collections of components list reader
     /// Cause an entity can contain multiple component of the same type, can returns multiple readers
@@ -229,8 +223,8 @@ impl EntityRwLock {
     pub fn iter_components(
         &self,
         target_identifier: &EntityTypeIdentifier,
-    ) -> impl Iterator<Item = ComponentListReadGuard> {
-        let archetype = &*self.archetype.load(Ordering::SeqCst);
+    ) -> impl Iterator<Item = ComponentListRwLock> {
+        let archetype = unsafe { &*self.archetype_ptr.load(Ordering::SeqCst) };
         let intern_identifier = archetype.get_type_identifier();
 
         // Get a collection of indexes, this contains the component indexes ordered
@@ -256,9 +250,8 @@ impl EntityRwLock {
             .multi_cartesian_product()
             .map(|vec| Vec::from(vec));
 
-        component_indexes.map(move |component_indexes| {
-            ComponentListReadGuard::new(self.read(), component_indexes.clone())
-        })
+        component_indexes
+            .map(move |component_indexes| ComponentListRwLock::new(self, component_indexes.clone()))
     }
 
     /// Get collections of components list writer
@@ -268,11 +261,11 @@ impl EntityRwLock {
     /// # Arguments
     /// * `type_identifiers` - The identifier list of the components, components will be returned with the same order
     ///
-    pub fn iter_components_mut(
+    pub fn write_components(
         &self,
         target_identifier: &EntityTypeIdentifier,
     ) -> impl Iterator<Item = ComponentListWriteGuard> {
-        let archetype = &*self.archetype.load(Ordering::SeqCst);
+        let archetype = unsafe { &*self.archetype_ptr.load(Ordering::SeqCst) };
         let intern_identifier = archetype.get_type_identifier();
 
         // Get a collection of indexes, this contains the component indexes ordered
@@ -302,4 +295,78 @@ impl EntityRwLock {
             ComponentListWriteGuard::new(self.write(), component_indexes.clone())
         })
     }
+}
+
+impl IntrospectObject for EntityRwLock {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![MethodInfo {
+            name: "len".to_string(),
+            call: MethodCaller::Const(Arc::new(move |this, _args| {
+                let this = unsafe { &*(this as *const _) } as &dyn Any;
+                let this = cast_service::<EntityRwLock>(this);
+                let this = this.read();
+
+                let result = this.len();
+
+                Ok(Some(Serialized::USize(result)))
+            })),
+        }]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+}
+
+// Get the entry buffer and split it
+// Split the entity buffer into three other ones, one for the lock, one
+// for the encoding infos and one for the component datas
+fn get_entry_buffers<'a>(
+    archetype: &Archetype,
+    rwlock: &'a EntityRwLock,
+) -> (&'a [u8], &'a [u8], &'a [u8]) {
+    // Get the whole entity buffer
+    let components_per_entity = archetype.components_per_entity;
+    let entity_size = archetype.entity_size;
+    let entity_buffer = unsafe {
+        std::slice::from_raw_parts((&*rwlock as *const EntityRwLock) as *const u8, entity_size)
+    };
+
+    // Split the entity buffer into three other one
+    let (rwlock_buffer, rest) = entity_buffer.split_at(size_of::<EntityRwLock>());
+    let (component_infos_buffer, components_buffer) =
+        rest.split_at(components_per_entity * size_of::<ComponentDecodingInfos>());
+
+    (rwlock_buffer, component_infos_buffer, components_buffer)
+}
+
+// Get the entry buffer with mutability and split it
+// Split the entity buffer into three other ones, one for the lock, one
+// for the encoding infos and one for the component datas
+fn get_entry_buffers_mut<'a>(
+    archetype: &Archetype,
+    rwlock: &'a EntityRwLock,
+) -> (&'a mut [u8], &'a mut [u8], &'a mut [u8]) {
+    // Get the whole entity buffer
+    let components_per_entity = archetype.components_per_entity;
+    let entity_size = archetype.entity_size;
+    let entity_buffer = unsafe {
+        std::slice::from_raw_parts_mut(
+            (&*rwlock as *const EntityRwLock as *mut EntityRwLock) as *mut u8,
+            entity_size,
+        )
+    };
+
+    // Split the entity buffer into three other one
+    let (rwlock_buffer, rest) = entity_buffer.split_at_mut(size_of::<EntityRwLock>());
+    let (component_infos_buffer, components_buffer) =
+        rest.split_at_mut(components_per_entity * size_of::<ComponentDecodingInfos>());
+
+    (rwlock_buffer, component_infos_buffer, components_buffer)
+}
+
+// Get the components decoding infos for an entity in the archetype
+fn get_component_decoding_infos(entity_bufer: &[u8]) -> &[ComponentDecodingInfos] {
+    let (_head, body, _tail) = unsafe { entity_bufer.align_to::<ComponentDecodingInfos>() };
+    body
 }

@@ -1,20 +1,14 @@
 use crate::resource::resource::Resource;
-use crate::resource::resources_manager::ResourceIdentifier;
-use crate::ResourcesManager;
-use crate::ServiceManager;
 use fruity_any::*;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
 use std::collections::HashMap;
-use std::io::Read;
-use std::sync::Arc;
-use std::sync::RwLock;
+use std::convert::TryFrom;
 use yaml_rust::Yaml;
-use yaml_rust::YamlLoader;
 
 /// Settings collection
-#[derive(Debug, FruityAny)]
+#[derive(Debug, Clone, FruityAny)]
 pub enum Settings {
     /// i64 value
     I64(i64),
@@ -36,8 +30,28 @@ pub enum Settings {
 }
 
 impl Settings {
+    /// Returns a Settings
     pub fn new() -> Settings {
         Settings::Object(HashMap::new())
+    }
+
+    /// Get a field into the params
+    ///
+    /// # Arguments
+    /// * `key` - The field identifier
+    /// * `default` - The default value, if not found or couldn't serialize
+    ///
+    /// # Generic Arguments
+    /// * `T` - The type to cast the value
+    ///
+    pub fn get<T: TryFrom<Settings> + ?Sized>(&self, key: &str, default: T) -> T {
+        match self {
+            Settings::Object(fields) => match fields.get(key) {
+                Some(value) => T::try_from(value.clone()).unwrap_or(default),
+                None => default,
+            },
+            _ => default,
+        }
     }
 }
 
@@ -53,38 +67,6 @@ impl IntrospectObject for Settings {
     }
 }
 
-/// The loader for settings files
-pub fn settings_loader(
-    resources_manager: &mut ResourcesManager,
-    identifier: ResourceIdentifier,
-    reader: &mut dyn Read,
-    _settings: Settings,
-    _service_manager: Arc<RwLock<ServiceManager>>,
-) {
-    // read the whole file
-    let mut buffer = String::new();
-    if let Err(err) = reader.read_to_string(&mut buffer) {
-        log::error!("{}", err.to_string());
-        return;
-    }
-
-    // Load the yaml
-    let docs = YamlLoader::load_from_str(&buffer).unwrap();
-
-    // Build the settings
-    let settings = build_settings_from_yaml(&docs[0]);
-    if let Some(settings) = settings {
-        // Store the resource
-        if let Err(_) = resources_manager.add_resource(identifier.clone(), settings) {
-            log::error!(
-                "Couldn't add a resource cause the identifier \"{}\" already exists",
-                &identifier.0
-            );
-            return;
-        }
-    }
-}
-
 /// Build a Settings by reading a yaml document
 pub fn build_settings_from_yaml(yaml: &Yaml) -> Option<Settings> {
     match yaml {
@@ -96,20 +78,20 @@ pub fn build_settings_from_yaml(yaml: &Yaml) -> Option<Settings> {
         Yaml::String(value) => Some(Settings::String(value.clone())),
         Yaml::Boolean(value) => Some(Settings::Bool(*value)),
         Yaml::Array(array) => {
-            let serialized_array = array
+            let Settings_array = array
                 .iter()
                 .filter_map(|elem| build_settings_from_yaml(elem))
                 .collect::<Vec<_>>();
 
-            Some(Settings::Array(serialized_array))
+            Some(Settings::Array(Settings_array))
         }
         Yaml::Hash(hashmap) => {
             let mut fields = HashMap::new();
 
             for (key, value) in hashmap {
                 if let Yaml::String(key) = key {
-                    if let Some(serialized) = build_settings_from_yaml(value) {
-                        fields.insert(key.clone(), serialized);
+                    if let Some(Settings) = build_settings_from_yaml(value) {
+                        fields.insert(key.clone(), Settings);
                     }
                 }
             }
@@ -119,5 +101,70 @@ pub fn build_settings_from_yaml(yaml: &Yaml) -> Option<Settings> {
         Yaml::Alias(_) => None,
         Yaml::Null => None,
         Yaml::BadValue => None,
+    }
+}
+
+macro_rules! impl_numeric_from_settings {
+    ( $type:ident ) => {
+        impl TryFrom<Settings> for $type {
+            type Error = String;
+
+            fn try_from(value: Settings) -> Result<Self, Self::Error> {
+                match value {
+                    Settings::I64(value) => Ok(value as $type),
+                    Settings::F64(value) => Ok(value as $type),
+                    _ => Err(format!("Couldn't convert {:?} to {}", value, "$type")),
+                }
+            }
+        }
+    };
+}
+
+impl_numeric_from_settings!(i8);
+impl_numeric_from_settings!(i16);
+impl_numeric_from_settings!(i32);
+impl_numeric_from_settings!(i64);
+impl_numeric_from_settings!(isize);
+impl_numeric_from_settings!(u8);
+impl_numeric_from_settings!(u16);
+impl_numeric_from_settings!(u32);
+impl_numeric_from_settings!(u64);
+impl_numeric_from_settings!(usize);
+impl_numeric_from_settings!(f32);
+impl_numeric_from_settings!(f64);
+
+impl TryFrom<Settings> for bool {
+    type Error = String;
+
+    fn try_from(value: Settings) -> Result<Self, Self::Error> {
+        match value {
+            Settings::Bool(value) => Ok(value),
+            _ => Err(format!("Couldn't convert {:?} to bool", value)),
+        }
+    }
+}
+
+impl TryFrom<Settings> for String {
+    type Error = String;
+
+    fn try_from(value: Settings) -> Result<Self, Self::Error> {
+        match value {
+            Settings::String(value) => Ok(value),
+            _ => Err(format!("Couldn't convert {:?} to bool", value)),
+        }
+    }
+}
+
+impl<T: TryFrom<Settings> + ?Sized> TryFrom<Settings> for Vec<T> {
+    type Error = String;
+
+    fn try_from(value: Settings) -> Result<Self, Self::Error> {
+        match value {
+            Settings::Array(value) => Ok(value
+                .into_iter()
+                .filter_map(|elem| T::try_from(elem).ok())
+                .collect()),
+            _ => Err(format!("Couldn't convert {:?} to array", value)),
+        }
     }
 }

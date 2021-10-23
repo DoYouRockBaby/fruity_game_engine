@@ -1,5 +1,4 @@
 use crate::component::component::AnyComponent;
-use crate::component::component::Component;
 use crate::component::component_list_rwlock::ComponentListRwLock;
 use crate::entity::archetype::rwlock::EntityRwLock;
 use crate::entity::archetype::Archetype;
@@ -60,7 +59,7 @@ impl EntityManager {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn get(&self, entity_id: EntityId) -> Option<EntityRwLock> {
+    pub fn get(&self, entity_id: EntityId) -> Option<&EntityRwLock> {
         self.archetypes
             .iter()
             .find_map(|archetype| archetype.get(entity_id))
@@ -75,7 +74,7 @@ impl EntityManager {
     pub fn iter_entities(
         &self,
         entity_identifier: EntityTypeIdentifier,
-    ) -> impl Iterator<Item = EntityRwLock> {
+    ) -> impl Iterator<Item = &EntityRwLock> {
         let archetypes = unsafe { &*(&self.archetypes as *const _) } as &Vec<Archetype>;
         archetypes
             .iter()
@@ -195,27 +194,28 @@ impl IntrospectObject for EntityManager {
                 })),
             },
             MethodInfo {
-                name: "iter_entities".to_string(),
+                name: "iter_components".to_string(),
                 call: MethodCaller::Const(Arc::new(move |this, args| {
                     let this = unsafe { &*(this as *const _) } as &dyn Any;
                     let this = cast_service::<EntityManager>(this);
 
-                    let mut caster = ArgumentCaster::new("iter_entities", args);
+                    let mut caster = ArgumentCaster::new("iter_components", args);
                     let arg1 = caster.cast_next::<Vec<String>>()?;
 
                     let iterator = this
-                        .iter_entities(EntityTypeIdentifier(arg1))
-                        .map(|entity| Serialized::NativeObject(Box::new(entity)));
+                        .iter_components(EntityTypeIdentifier(arg1))
+                        .map(|component| Serialized::NativeObject(Box::new(component)));
 
                     Ok(Some(Serialized::Iterator(Arc::new(RwLock::new(iterator)))))
                 })),
             },
             MethodInfo {
-                name: "iter_components".to_string(),
+                name: "iter_components_mut".to_string(),
                 call: MethodCaller::Const(Arc::new(move |this, args| {
+                    let this = unsafe { &*(this as *const _) } as &dyn Any;
                     let this = cast_service::<EntityManager>(this);
 
-                    let mut caster = ArgumentCaster::new("iter_components", args);
+                    let mut caster = ArgumentCaster::new("iter_components_mut", args);
                     let arg1 = caster.cast_next::<Vec<String>>()?;
 
                     let iterator = this

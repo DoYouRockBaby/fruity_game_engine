@@ -5,6 +5,7 @@ use crate::components::sprite::Sprite;
 use crate::graphics_2d_manager::Graphics2dManager;
 use crate::systems::draw_camera::draw_camera_untyped;
 use crate::systems::draw_sprite::draw_sprite_untyped;
+use fruity_core::component::component::AnyComponent;
 use fruity_core::component::components_factory::ComponentsFactory;
 use fruity_core::system::system_manager::SystemManager;
 use fruity_core::world::World;
@@ -22,16 +23,18 @@ pub fn initialize(world: &World) {
 
     let mut components_factory = service_manager.write::<ComponentsFactory>();
 
-    components_factory.add("Position", || Box::new(Position { x: 0.0, y: 0.0 }));
+    components_factory.add("Position", || {
+        AnyComponent::new(Position { x: 0.0, y: 0.0 })
+    });
     components_factory.add("Size", || {
-        Box::new(Size {
+        AnyComponent::new(Size {
             width: 0.0,
             height: 0.0,
         })
     });
-    components_factory.add("Sprite", || Box::new(Sprite { material: None }));
+    components_factory.add("Sprite", || AnyComponent::new(Sprite { material: None }));
     components_factory.add("Camera", || {
-        Box::new(Camera {
+        AnyComponent::new(Camera {
             near: -1.0,
             far: 1.0,
         })

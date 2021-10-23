@@ -2,7 +2,7 @@ use crate::bridge::components::configure_components;
 use crate::bridge::service::configure_services;
 use crate::javascript_engine::JavascriptEngine;
 use crate::js_value::object::JsObject;
-use crate::resources::script_loader::script_loader;
+use crate::resources::load_js_script::load_js_script;
 use crate::runtime::JsRuntime;
 use fruity_core::resource::resources_manager::ResourcesManager;
 use fruity_core::world::World;
@@ -27,6 +27,6 @@ pub fn initialize(world: &World) {
 
     let mut resources_manager = service_manager.write::<ResourcesManager>();
     resources_manager
-        .add_resource_loader("js", script_loader)
+        .add_resource_loader("js", load_js_script)
         .unwrap();
 }

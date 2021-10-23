@@ -87,7 +87,7 @@ impl<'s> Deref for ComponentWriteGuard<'s> {
 }
 
 impl<'s> DerefMut for ComponentWriteGuard<'s> {
-    fn deref_mut(&mut self) -> &mut <Self as std::ops::Deref>::Target {
+    fn deref_mut(&mut self) -> &mut <Self as Deref>::Target {
         *self.guard.get_mut(self.component_index).unwrap()
     }
 }

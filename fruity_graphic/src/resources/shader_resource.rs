@@ -2,9 +2,9 @@ use crate::GraphicsManager;
 use fruity_any::*;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resources_manager::ResourceIdentifier;
-use fruity_core::resource::resources_manager::ResourceLoaderParams;
 use fruity_core::resource::resources_manager::ResourcesManager;
 use fruity_core::service::service_manager::ServiceManager;
+use fruity_core::settings::Settings;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
@@ -83,11 +83,11 @@ impl ShaderResource {
 
 impl Resource for ShaderResource {}
 
-pub fn shader_loader(
+pub fn load_shader(
     resources_manager: &mut ResourcesManager,
     identifier: ResourceIdentifier,
     reader: &mut dyn Read,
-    params: ResourceLoaderParams,
+    settings: Settings,
     service_manager: Arc<RwLock<ServiceManager>>,
 ) {
     // Get the graphic manager state
@@ -103,7 +103,7 @@ pub fn shader_loader(
     }
 
     // Parse settings
-    let bindings = params.get::<Vec<ResourceLoaderParams>>("bindings", Vec::new());
+    let bindings = settings.get::<Vec<Settings>>("bindings", Vec::new());
     let bindings = bindings
         .iter()
         .map(|params| ShaderBinding {
@@ -141,9 +141,5 @@ impl IntrospectObject for ShaderResource {
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![]
-    }
-
-    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
-        self
     }
 }

@@ -37,10 +37,6 @@ fn derive_component_trait(input: TokenStream) -> TokenStream {
                 std::mem::size_of::<Self>()
             }
 
-            fn duplicate(&self) -> Box<dyn fruity_core::component::component::Component> {
-                Box::new(self.clone())
-            }
-
             fn encode(&self, buffer: &mut [u8]) {
                 let encoded = unsafe {
                     std::slice::from_raw_parts(
@@ -166,10 +162,6 @@ fn derive_introspect_object_trait(input: TokenStream)  -> TokenStream {
 
             fn get_method_infos(&self) -> Vec<fruity_introspect::MethodInfo> {
                 vec![]
-            }
-        
-            fn as_introspect_arc(self: std::sync::Arc<Self>) -> std::sync::Arc<(dyn fruity_introspect::IntrospectObject)> {
-                self
             }
         }
     };

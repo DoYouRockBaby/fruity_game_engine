@@ -5,7 +5,6 @@ use crate::JsObject;
 use fruity_core::service::serialized_service::SerializedService;
 use fruity_core::service::service_manager::ServiceManager;
 use fruity_introspect::serialize::serialized::Serialized;
-use fruity_introspect::IntrospectObject;
 use rusty_v8 as v8;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -68,12 +67,9 @@ fn service_manager_get_callback(
 
         // Call the function
         let service_manager = service_manager.read().unwrap();
-        let result = service_manager.get_by_name(&name).map(|result| {
-            let result = result.as_introspect_arc();
-            let result = result as Arc<dyn IntrospectObject>;
-
-            Serialized::NativeObject(result)
-        });
+        let result = service_manager
+            .get_by_name(&name)
+            .map(|result| Serialized::NativeObject(Box::new(result)));
 
         // Return the result
         inject_option_serialized_into_v8_return_value(scope, &result, &mut return_value);

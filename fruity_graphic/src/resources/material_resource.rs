@@ -4,12 +4,11 @@ use crate::GraphicsManager;
 use fruity_any::*;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resources_manager::ResourceIdentifier;
-use fruity_core::resource::resources_manager::ResourceLoaderParams;
 use fruity_core::resource::resources_manager::ResourcesManager;
 use fruity_core::service::service_guard::ServiceReadGuard;
 use fruity_core::service::service_manager::ServiceManager;
-use fruity_core::settings::build_settings_serialized_from_yaml;
-use fruity_introspect::serialize::serialized::Serialized;
+use fruity_core::settings::build_settings_from_yaml;
+use fruity_core::settings::Settings;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
@@ -220,11 +219,11 @@ impl MaterialResource {
 
 impl Resource for MaterialResource {}
 
-pub fn material_loader(
+pub fn load_material(
     resources_manager: &mut ResourcesManager,
     identifier: ResourceIdentifier,
     reader: &mut dyn Read,
-    _params: ResourceLoaderParams,
+    _settings: Settings,
     service_manager: Arc<RwLock<ServiceManager>>,
 ) {
     // Get the graphic manager state
@@ -239,20 +238,15 @@ pub fn material_loader(
     }
     let docs = YamlLoader::load_from_str(&buffer).unwrap();
     let root = &docs[0];
-    let params = if let Some(params) = build_settings_serialized_from_yaml(root) {
-        params
-    } else {
-        return;
-    };
-    let params = if let Serialized::SerializedObject { fields, .. } = params {
-        ResourceLoaderParams(fields)
+    let settings = if let Some(settings) = build_settings_from_yaml(root) {
+        settings
     } else {
         return;
     };
 
     // Parse settings
     let material_settings =
-        if let Some(material_settings) = build_material_params(resources_manager, &params) {
+        if let Some(material_settings) = build_material_params(resources_manager, &settings) {
             material_settings
         } else {
             return;
@@ -273,9 +267,9 @@ pub fn material_loader(
 
 fn build_material_params(
     resources_manager: &ResourcesManager,
-    params: &ResourceLoaderParams,
+    settings: &Settings,
 ) -> Option<MaterialParams> {
-    let shader_identifier = params.get::<String>("shader", String::default());
+    let shader_identifier = settings.get::<String>("shader", String::default());
     let shader =
         resources_manager.get_resource::<ShaderResource>(ResourceIdentifier(shader_identifier));
     let shader = if let Some(shader) = shader {
@@ -284,7 +278,7 @@ fn build_material_params(
         return None;
     };
 
-    let binding_groups = params.get::<Vec<ResourceLoaderParams>>("binding_groups", Vec::new());
+    let binding_groups = settings.get::<Vec<Settings>>("binding_groups", Vec::new());
     let binding_groups = binding_groups
         .iter()
         .filter_map(|params| build_material_bind_group_params(resources_manager, params))
@@ -298,11 +292,11 @@ fn build_material_params(
 
 fn build_material_bind_group_params(
     resources_manager: &ResourcesManager,
-    params: &ResourceLoaderParams,
+    settings: &Settings,
 ) -> Option<MaterialParamsBindingGroup> {
-    match &params.get::<String>("type", String::default()) as &str {
+    match &settings.get::<String>("type", String::default()) as &str {
         "camera" => {
-            let index = params.get::<u32>("index", 0);
+            let index = settings.get::<u32>("index", 0);
 
             Some(MaterialParamsBindingGroup {
                 index,
@@ -310,8 +304,8 @@ fn build_material_bind_group_params(
             })
         }
         "custom" => {
-            let index = params.get::<u32>("index", 0);
-            let bindings = params.get::<Vec<ResourceLoaderParams>>("bindings", Vec::new());
+            let index = settings.get::<u32>("index", 0);
+            let bindings = settings.get::<Vec<Settings>>("bindings", Vec::new());
             let bindings = bindings
                 .iter()
                 .filter_map(|params| build_material_bind_params(resources_manager, params))
@@ -328,7 +322,7 @@ fn build_material_bind_group_params(
 
 fn build_material_bind_params(
     resources_manager: &ResourcesManager,
-    params: &ResourceLoaderParams,
+    params: &Settings,
 ) -> Option<MaterialParamsBinding> {
     match &params.get::<String>("type", String::default()) as &str {
         "texture" => {
@@ -368,9 +362,5 @@ impl IntrospectObject for MaterialResource {
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![]
-    }
-
-    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
-        self
     }
 }

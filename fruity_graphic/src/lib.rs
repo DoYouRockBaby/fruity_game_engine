@@ -1,7 +1,7 @@
 use crate::graphics_manager::GraphicsManager;
-use crate::resources::image_resource::image_loader;
-use crate::resources::material_resource::material_loader;
-use crate::resources::shader_resource::shader_loader;
+use crate::resources::image_resource::load_image;
+use crate::resources::material_resource::load_material;
+use crate::resources::shader_resource::load_shader;
 use fruity_core::resource::resources_manager::ResourcesManager;
 use fruity_core::world::World;
 
@@ -18,30 +18,30 @@ pub fn initialize(world: &World) {
 
     let mut resources_manager = service_manager.write::<ResourcesManager>();
     resources_manager
-        .add_resource_loader("png", image_loader)
+        .add_resource_loader("png", load_image)
         .unwrap();
     resources_manager
-        .add_resource_loader("jpeg", image_loader)
+        .add_resource_loader("jpeg", load_image)
         .unwrap();
     resources_manager
-        .add_resource_loader("jpg", image_loader)
+        .add_resource_loader("jpg", load_image)
         .unwrap();
     resources_manager
-        .add_resource_loader("gif", image_loader)
+        .add_resource_loader("gif", load_image)
         .unwrap();
     resources_manager
-        .add_resource_loader("bmp", image_loader)
+        .add_resource_loader("bmp", load_image)
         .unwrap();
     resources_manager
-        .add_resource_loader("ico", image_loader)
+        .add_resource_loader("ico", load_image)
         .unwrap();
     resources_manager
-        .add_resource_loader("tiff", image_loader)
+        .add_resource_loader("tiff", load_image)
         .unwrap();
     resources_manager
-        .add_resource_loader("wgsl", shader_loader)
+        .add_resource_loader("wgsl", load_shader)
         .unwrap();
     resources_manager
-        .add_resource_loader("material", material_loader)
+        .add_resource_loader("material", load_material)
         .unwrap();
 }

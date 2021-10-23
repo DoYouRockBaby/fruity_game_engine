@@ -5,7 +5,6 @@ use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
 use image::GenericImageView;
 use std::num::NonZeroU32;
-use std::sync::Arc;
 
 #[derive(Debug, FruityAny)]
 pub struct TextureResource {
@@ -84,9 +83,5 @@ impl IntrospectObject for TextureResource {
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![]
-    }
-
-    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
-        self
     }
 }

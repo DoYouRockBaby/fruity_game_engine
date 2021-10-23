@@ -9,7 +9,6 @@ use fruity_graphic::resources::material_resource::Vertex;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
-use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
 #[derive(Debug, FruityAny)]
@@ -128,10 +127,6 @@ impl IntrospectObject for Graphics2dManager {
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![]
-    }
-
-    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
-        self
     }
 }
 

@@ -15,7 +15,6 @@ use crate::entity::entity_manager::EntityManager;
 use crate::resource::load_resources::load_resources;
 use crate::resource::resources_manager::ResourcesManager;
 use crate::service::service_manager::ServiceManager;
-use crate::settings::settings_loader;
 use crate::system::system_manager::SystemManager;
 use crate::world::World;
 
@@ -72,8 +71,5 @@ pub fn initialize(world: &World) {
     let mut resources_manager = service_manager.write::<ResourcesManager>();
     resources_manager
         .add_resource_loader("resource_settings", load_resources)
-        .unwrap();
-    resources_manager
-        .add_resource_loader("yaml", settings_loader)
         .unwrap();
 }
