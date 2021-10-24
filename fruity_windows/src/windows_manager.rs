@@ -25,6 +25,7 @@ use winit::window::WindowBuilder;
 pub struct WindowsManager {
     system_manager: ServiceRwLock<SystemManager>,
     event_stack: Arc<RwLock<Vec<FruityWindowsEvent>>>,
+    // TODO: Try to find a way to store it better
     window: RwLock<Option<Arc<RwLock<Window>>>>,
     pub on_windows_creation: Signal<()>,
     pub on_starting_event_loop: Signal<()>,

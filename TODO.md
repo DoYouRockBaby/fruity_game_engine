@@ -4,7 +4,7 @@
 [X] Make serialized able to be extended in modules (put it into introspect, make intropect better ...)
 [ ] Add a "field changed" signal on every entities
 [ ] Allow javascript to play with signals
-[ ] Achieve entity hierarchy
+[ ] Implement entity hierarchy
 
 # LESS PRIORITY
 
@@ -14,7 +14,7 @@
 [ ] Remove as many unwrap as possible (ecs and javascript)
 [X] A lot of unsafe code were created to avoid lifetime issue in ecs, remove as many as possible
 [ ] Find a better way to store SerializedComponent, to have something more effective on read
-[ ] There should be some memory leak in component storage (in Entity) and entity storage (in Archetype)
+[ ] There should be some memory leak in archetype
 [X] Javascript module is highly unsafe cause i force to put a one thread runtime into a multi thread host
 [ ] Implement web workers in js
 [ ] Fix javascript services
