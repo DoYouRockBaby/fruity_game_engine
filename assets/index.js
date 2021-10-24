@@ -67,7 +67,6 @@ systemManager.addSystem(() => {
         .forEach(components => {
             components.get(0).x += components.get(1).x;
             components.get(0).y += components.get(1).y;
-            console.log("ENTITIY UPDATED", components.get(0).x, components.get(0).y);
         });
 
     console.log("ENTITIES UPDATED");

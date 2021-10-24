@@ -118,7 +118,7 @@ impl EntityManager {
         let entity_id = EntityId(self.id_incrementer);
         let entity_identifier = get_type_identifier(&components);
 
-        match self.archetype_mut_by_identifier(entity_identifier) {
+        match self.archetype_by_identifier(entity_identifier) {
             Some(archetype) => {
                 archetype.add(entity_id, components);
             }
@@ -158,22 +158,12 @@ impl EntityManager {
         }
     }
 
-    #[allow(dead_code)]
     fn archetype_by_identifier(
         &self,
         entity_identifier: EntityTypeIdentifier,
     ) -> Option<&Archetype> {
         self.archetypes
             .iter()
-            .find(|archetype| *archetype.get_type_identifier() == entity_identifier)
-    }
-
-    fn archetype_mut_by_identifier(
-        &mut self,
-        entity_identifier: EntityTypeIdentifier,
-    ) -> Option<&mut Archetype> {
-        self.archetypes
-            .iter_mut()
             .find(|archetype| *archetype.get_type_identifier() == entity_identifier)
     }
 }

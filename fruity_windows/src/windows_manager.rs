@@ -94,15 +94,12 @@ impl WindowsManager {
         std::mem::drop(system_manager_reader);
 
         // For tests
-        {
+        /*{
             let system_manager_reader = self.system_manager.read().unwrap();
             system_manager_reader.run();
-            /*system_manager_reader.run();
-            system_manager_reader.run();
-            system_manager_reader.run();*/
             std::mem::drop(system_manager_reader);
             return;
-        }
+        }*/
 
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Wait;

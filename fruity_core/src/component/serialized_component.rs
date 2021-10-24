@@ -1,37 +1,33 @@
-use crate::utils::slice::copy;
-use fruity_introspect::SetterCaller;
-use fruity_introspect::MethodInfo;
 use crate::component::component::Component;
 use crate::component::component::ComponentDecoder;
 use crate::component::component::ComponentDecoderMut;
-use fruity_introspect::serialize::serialized::Serialized;
+use crate::utils::slice::copy;
 use fruity_any::FruityAny;
+use fruity_introspect::serialize::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
+use fruity_introspect::MethodInfo;
+use fruity_introspect::SetterCaller;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 /// A wrapper for components that come from scripting languages as serialized
 #[derive(Debug, FruityAny)]
 pub struct SerializedComponent {
-    serialized: Serialized,
+    class_name: String,
+    fields: HashMap<String, Serialized>,
 }
 
 impl SerializedComponent {
     /// Returns a SerializedComponent
-    pub fn new(serialized: Serialized) -> SerializedComponent {
-        SerializedComponent {
-            serialized
-        }
+    pub fn new(class_name: String, fields: HashMap<String, Serialized>) -> SerializedComponent {
+        SerializedComponent { class_name, fields }
     }
 }
 
 impl Component for SerializedComponent {
     fn get_component_type(&self) -> String {
-        if let Serialized::SerializedObject { class_name, .. } = &self.serialized {
-            class_name.clone()
-        } else {
-            "unknown".to_string()
-        }
+        self.class_name.clone()
     }
 
     fn encode_size(&self) -> usize {
@@ -70,36 +66,24 @@ impl IntrospectObject for SerializedComponent {
     }
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
-        if let Serialized::SerializedObject { fields, .. } = &self.serialized {
-            fields
-                .iter()
-                .map(|(key, _field)| {
-                    let key1 = key.clone();
-                    let key2 = key.clone();
-                    
-                    FieldInfo {
-                        name: key.clone(),
-                        getter: Arc::new(move |this| {
-                            let this = this.downcast_ref::<SerializedComponent>().unwrap();
-                            if let Serialized::SerializedObject { fields, .. } = &this.serialized {
-                                return fields.get(&key1).unwrap().clone();
-                            } else {
-                                panic!("A getter try to access an inexistant property in serialized component, should never be reached");
-                            }
-                        }),
-                        setter: SetterCaller::Mut(Arc::new(move |this, value| {
-                            let this = this.downcast_mut::<SerializedComponent>().unwrap();
-                            if let Serialized::SerializedObject { fields, .. } = &mut this.serialized {
-                                fields.insert(key2.clone(), value);
-                            } else {
-                                panic!("A setter try to access an inexistant property in serialized component, should never be reached");
-                            }
-                        })),
-                    }
-                })
-                .collect::<Vec<_>>()
-        } else {
-            vec![]
-        }
+        self.fields
+            .iter()
+            .map(|(key, _field)| {
+                let key1 = key.clone();
+                let key2 = key.clone();
+
+                FieldInfo {
+                    name: key.clone(),
+                    getter: Arc::new(move |this| {
+                        let this = this.downcast_ref::<SerializedComponent>().unwrap();
+                        this.fields.get(&key1).unwrap().clone()
+                    }),
+                    setter: SetterCaller::Mut(Arc::new(move |this, value| {
+                        let this = this.downcast_mut::<SerializedComponent>().unwrap();
+                        this.fields.insert(key2.clone(), value);
+                    })),
+                }
+            })
+            .collect::<Vec<_>>()
     }
 }

@@ -1,3 +1,4 @@
+use crate::component::serialized_component::SerializedComponent;
 use fruity_any::*;
 use fruity_introspect::serializable_object::SerializableObject;
 use fruity_introspect::serialize::serialized::Serialized;
@@ -74,6 +75,10 @@ impl TryFrom<Serialized> for AnyComponent {
                     Ok(value) => Ok(*value),
                     Err(_) => Err(format!("Couldn't convert An AnyComponent to native object")),
                 }
+            }
+            Serialized::SerializedObject { class_name, fields } => {
+                let serialized_component = SerializedComponent::new(class_name, fields);
+                Ok(AnyComponent::new(serialized_component))
             }
             _ => Err(format!("Couldn't convert {:?} to native object", value)),
         }
