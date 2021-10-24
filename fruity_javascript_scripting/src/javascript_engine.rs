@@ -10,7 +10,6 @@ use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
 use std::sync::mpsc;
-use std::sync::Arc;
 use std::thread;
 
 #[derive(Clone, Copy)]
@@ -146,10 +145,6 @@ impl IntrospectObject for JavascriptEngine {
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![]
-    }
-
-    fn as_introspect_arc(self: Arc<Self>) -> Arc<dyn IntrospectObject> {
-        self
     }
 }
 

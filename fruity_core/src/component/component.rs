@@ -1,4 +1,5 @@
 use fruity_any::*;
+use fruity_introspect::serializable_object::SerializableObject;
 use fruity_introspect::serialize::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
@@ -9,8 +10,8 @@ use std::any::Any;
 use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::ops::Deref;
-use std::ops::DerefMut;
 use std::sync::Arc;
+use std::sync::RwLock;
 
 /// A function to decode an object from byte array to an any reference
 pub type ComponentDecoder = fn(buffer: &[u8]) -> &dyn Component;
@@ -40,30 +41,26 @@ pub trait Component: IntrospectObject + Debug {
     fn get_decoder_mut(&self) -> ComponentDecoderMut;
 }
 
-#[derive(FruityAny, Debug)]
+/// An container for a component without knowing the instancied type
+#[derive(FruityAny, Clone, Debug)]
 pub struct AnyComponent {
-    component: Box<dyn Component>,
+    component: Arc<RwLock<dyn Component>>,
 }
 
 impl AnyComponent {
+    /// Returns an AnyComponent
     pub fn new(component: impl Component) -> AnyComponent {
         AnyComponent {
-            component: Box::new(component),
+            component: Arc::new(RwLock::new(component)),
         }
     }
 }
 
 impl Deref for AnyComponent {
-    type Target = dyn Component;
+    type Target = RwLock<dyn Component>;
 
     fn deref(&self) -> &<Self as std::ops::Deref>::Target {
-        self.component.deref()
-    }
-}
-
-impl DerefMut for AnyComponent {
-    fn deref_mut(&mut self) -> &mut <Self as std::ops::Deref>::Target {
-        self.component.deref_mut()
+        &self.component
     }
 }
 
@@ -85,7 +82,8 @@ impl TryFrom<Serialized> for AnyComponent {
 
 impl IntrospectObject for AnyComponent {
     fn get_field_infos(&self) -> Vec<FieldInfo> {
-        self.deref()
+        let reader = self.read().unwrap();
+        reader
             .get_field_infos()
             .into_iter()
             .map(|field_info| {
@@ -97,24 +95,27 @@ impl IntrospectObject for AnyComponent {
                     getter: Arc::new(move |this| {
                         let this = unsafe { &*(this as *const _) } as &dyn Any;
                         let this = this.downcast_ref::<AnyComponent>().unwrap();
+                        let reader = this.read().unwrap();
 
-                        getter(this.deref().as_any_ref())
+                        getter(reader.as_any_ref())
                     }),
                     setter: match setter {
                         SetterCaller::Const(call) => {
                             SetterCaller::Const(Arc::new(move |this, args| {
                                 let this = unsafe { &*(this as *const _) } as &dyn Any;
                                 let this = this.downcast_ref::<AnyComponent>().unwrap();
+                                let reader = this.read().unwrap();
 
-                                call(this.deref().as_any_ref(), args)
+                                call(reader.as_any_ref(), args)
                             }))
                         }
                         SetterCaller::Mut(call) => {
                             SetterCaller::Mut(Arc::new(move |this, args| {
                                 let this = unsafe { &mut *(this as *mut _) } as &mut dyn Any;
                                 let this = this.downcast_mut::<AnyComponent>().unwrap();
+                                let mut writer = this.write().unwrap();
 
-                                call(this.deref_mut().as_any_mut(), args)
+                                call(writer.as_any_mut(), args)
                             }))
                         }
                     },
@@ -124,7 +125,8 @@ impl IntrospectObject for AnyComponent {
     }
 
     fn get_method_infos(&self) -> Vec<MethodInfo> {
-        self.deref()
+        let reader = self.read().unwrap();
+        reader
             .get_method_infos()
             .into_iter()
             .map(|method_info| MethodInfo {
@@ -134,18 +136,26 @@ impl IntrospectObject for AnyComponent {
                         MethodCaller::Const(Arc::new(move |this, args| {
                             let this = unsafe { &*(this as *const _) } as &dyn Any;
                             let this = this.downcast_ref::<AnyComponent>().unwrap();
+                            let reader = this.read().unwrap();
 
-                            call(this.deref().as_any_ref(), args)
+                            call(reader.as_any_ref(), args)
                         }))
                     }
                     MethodCaller::Mut(call) => MethodCaller::Mut(Arc::new(move |this, args| {
                         let this = unsafe { &mut *(this as *mut _) } as &mut dyn Any;
                         let this = this.downcast_mut::<AnyComponent>().unwrap();
+                        let mut writer = this.write().unwrap();
 
-                        call(this.deref_mut().as_any_mut(), args)
+                        call(writer.as_any_mut(), args)
                     })),
                 },
             })
             .collect::<Vec<_>>()
+    }
+}
+
+impl SerializableObject for AnyComponent {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
     }
 }

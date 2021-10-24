@@ -1,6 +1,8 @@
 use crate::component::component_guard::ComponentReadGuard;
 use crate::component::component_guard::ComponentWriteGuard;
-use crate::entity::archetype::rwlock::EntityRwLock;
+use crate::entity::archetype::rwlock::EntityRwLockWeak;
+use fruity_any::*;
+use fruity_introspect::serializable_object::SerializableObject;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
@@ -9,19 +11,19 @@ use std::any::Any;
 use std::sync::Arc;
 
 /// A read write locker for a component instance
-#[derive(Debug)]
-pub struct ComponentRwLock<'s> {
-    entity: &'s EntityRwLock,
+#[derive(Debug, Clone, FruityAny)]
+pub struct ComponentRwLock {
+    entity: EntityRwLockWeak,
     component_index: usize,
 }
 
-impl<'s> ComponentRwLock<'s> {
+impl ComponentRwLock {
     /// Returns an RwLockReadGuard which is unlocked.
     ///
     /// # Arguments
     /// * `inner_guard` - The typed [`RwLockReadGuard`]
     ///
-    pub fn new(entity: &EntityRwLock, component_index: usize) -> ComponentRwLock {
+    pub fn new(entity: EntityRwLockWeak, component_index: usize) -> ComponentRwLock {
         ComponentRwLock {
             entity,
             component_index,
@@ -63,25 +65,7 @@ impl<'s> ComponentRwLock<'s> {
     }
 }
 
-impl fruity_any::FruityAny for ComponentRwLock<'static> {
-    fn as_any_ref(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    fn as_any_box(self: Box<Self>) -> Box<dyn std::any::Any> {
-        self
-    }
-
-    fn as_any_arc(self: std::sync::Arc<Self>) -> std::sync::Arc<dyn std::any::Any + Send + Sync> {
-        self
-    }
-}
-
-impl IntrospectObject for ComponentRwLock<'static> {
+impl IntrospectObject for ComponentRwLock {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }
@@ -127,5 +111,11 @@ impl IntrospectObject for ComponentRwLock<'static> {
                 }
             })
             .collect::<Vec<_>>()
+    }
+}
+
+impl SerializableObject for ComponentRwLock {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
     }
 }

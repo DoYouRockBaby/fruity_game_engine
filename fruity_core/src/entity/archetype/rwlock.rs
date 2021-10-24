@@ -1,50 +1,66 @@
-use crate::component::component_list_guard::ComponentListWriteGuard;
 use crate::component::component_list_rwlock::ComponentListRwLock;
 use crate::entity::archetype::Archetype;
 use crate::entity::archetype::Component;
 use crate::entity::archetype::ComponentDecodingInfos;
+use crate::entity::archetype::EntityTypeIdentifier;
 use crate::service::utils::cast_service;
+use fruity_any::*;
 use fruity_introspect::serialize::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
-use std::any::Any;
-use std::ops::DerefMut;
-use std::sync::Arc;
-// use crate::entity::archetype::EntityLockCell;
-use crate::entity::archetype::EntityTypeIdentifier;
-use fruity_any::*;
 use itertools::Itertools;
+use std::any::Any;
 use std::fmt::Debug;
 use std::fmt::Formatter;
 use std::mem::size_of;
 use std::ops::Deref;
+use std::ops::DerefMut;
 use std::sync::atomic::AtomicPtr;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
+/// This is an rwlock for an entity, is intended to be used by archetype
+/// Extern users are not supposed to have access to that
 #[derive(FruityAny)]
 pub struct EntityRwLock {
     archetype_ptr: AtomicPtr<Archetype>,
     // If it's a writer that handle the lock, the reader_count is maximal cause we cannot create more
     // Otherwise, this is incremented by one per reader added
     reader_count: AtomicUsize,
+    arc_count: AtomicUsize,
 }
 
 impl EntityRwLock {
+    /// Returns a EntityRwLock
     pub fn new(archetype: &mut Archetype) -> EntityRwLock {
+        let test = AtomicPtr::new(archetype as *mut Archetype);
+
         EntityRwLock {
-            archetype_ptr: AtomicPtr::new(archetype as *mut Archetype),
+            archetype_ptr: test,
             reader_count: AtomicUsize::new(0),
+            arc_count: AtomicUsize::new(0),
         }
     }
 
+    /// This create a new RwLock weak, it will be used by the extern user to access datas
+    pub(crate) fn create_new_weak(&self) -> EntityRwLockWeak {
+        self.arc_count.fetch_add(1, Ordering::SeqCst);
+
+        EntityRwLockWeak {
+            entity_rwlock_ptr: AtomicPtr::new(self as *const _ as *mut EntityRwLock),
+        }
+    }
+
+    /// Create a read guard over the entity RwLock
     pub fn read(&self) -> EntityReadGuard {
         let archetype = unsafe { &*self.archetype_ptr.load(Ordering::SeqCst) };
         EntityReadGuard::new(archetype, self)
     }
 
+    /// Create a write guard over the entity RwLock
     pub fn write(&self) -> EntityWriteGuard {
         let archetype = unsafe { &*self.archetype_ptr.load(Ordering::SeqCst) };
         EntityWriteGuard::new(archetype, self)
@@ -58,6 +74,83 @@ impl Debug for EntityRwLock {
     }
 }
 
+/// A weak over an entity RwLock, this is the handle that will be used by the extern user to access datas
+/// This can be clone and works like an Arc but over a reference that it don't own and have access to the
+/// reference RwLock functionalities
+#[derive(FruityAny, Debug)]
+pub struct EntityRwLockWeak {
+    entity_rwlock_ptr: AtomicPtr<EntityRwLock>,
+}
+
+impl EntityRwLockWeak {
+    /// Get collections of components list reader
+    /// Cause an entity can contain multiple component of the same type, can returns multiple readers
+    /// All components are mapped to the provided component identifiers in the same order
+    ///
+    /// # Arguments
+    /// * `type_identifiers` - The identifier list of the components, components will be returned with the same order
+    ///
+    pub fn iter_components(
+        &self,
+        target_identifier: &EntityTypeIdentifier,
+    ) -> impl Iterator<Item = ComponentListRwLock> {
+        let archetype = unsafe { &*self.archetype_ptr.load(Ordering::SeqCst) };
+        let intern_identifier = archetype.get_type_identifier();
+
+        // Get a collection of indexes, this contains the component indexes ordered
+        // in the same order of the given identifier
+        let component_indexes = target_identifier
+            .clone()
+            .0
+            .into_iter()
+            .map(|type_identifier| {
+                intern_identifier
+                    .0
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, component_type)| {
+                        if *component_type == type_identifier {
+                            Some(index)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .multi_cartesian_product()
+            .map(|vec| Vec::from(vec));
+
+        let weak = self.clone();
+        component_indexes.map(move |component_indexes| {
+            ComponentListRwLock::new(weak.clone(), component_indexes.clone())
+        })
+    }
+}
+
+impl Drop for EntityRwLockWeak {
+    fn drop(&mut self) {
+        // Decrement the lock weak counter
+        let entity_rwlock = unsafe { &*self.entity_rwlock_ptr.load(Ordering::SeqCst) };
+        entity_rwlock.arc_count.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+impl Clone for EntityRwLockWeak {
+    fn clone(&self) -> Self {
+        let entity_rwlock = unsafe { &*self.entity_rwlock_ptr.load(Ordering::SeqCst) };
+        entity_rwlock.create_new_weak()
+    }
+}
+
+impl Deref for EntityRwLockWeak {
+    type Target = EntityRwLock;
+
+    fn deref(&self) -> &<Self as std::ops::Deref>::Target {
+        unsafe { &*self.entity_rwlock_ptr.load(Ordering::SeqCst) }
+    }
+}
+
+/// An entity guard that can be used to access an entity without mutability
 pub struct EntityReadGuard<'a> {
     entity_lock: &'a EntityRwLock,
     components: Vec<&'a dyn Component>,
@@ -84,8 +177,7 @@ impl<'a> EntityReadGuard<'a> {
         archetype: &Archetype,
         rwlock: &'b EntityRwLock,
     ) -> Vec<&'b dyn Component> {
-        let (_, component_infos_buffer, components_buffer) =
-            get_entry_buffers_mut(archetype, rwlock);
+        let (_, component_infos_buffer, components_buffer) = get_entry_buffers(archetype, rwlock);
 
         // Get component decoding infos
         let component_decoding_infos = get_component_decoding_infos(component_infos_buffer);
@@ -130,6 +222,7 @@ impl<'a> Debug for EntityReadGuard<'a> {
     }
 }
 
+/// An entity guard that can be used to access an entity with mutability
 pub struct EntityWriteGuard<'a> {
     entity_lock: &'a EntityRwLock,
     components: Vec<&'a mut dyn Component>,
@@ -209,91 +302,6 @@ impl<'a> Drop for EntityWriteGuard<'a> {
     fn drop(&mut self) {
         // Decrement the lock guard counter
         self.entity_lock.reader_count.store(0, Ordering::SeqCst);
-    }
-}
-
-impl EntityRwLock {
-    /// Get collections of components list reader
-    /// Cause an entity can contain multiple component of the same type, can returns multiple readers
-    /// All components are mapped to the provided component identifiers in the same order
-    ///
-    /// # Arguments
-    /// * `type_identifiers` - The identifier list of the components, components will be returned with the same order
-    ///
-    pub fn iter_components(
-        &self,
-        target_identifier: &EntityTypeIdentifier,
-    ) -> impl Iterator<Item = ComponentListRwLock> {
-        let archetype = unsafe { &*self.archetype_ptr.load(Ordering::SeqCst) };
-        let intern_identifier = archetype.get_type_identifier();
-
-        // Get a collection of indexes, this contains the component indexes ordered
-        // in the same order of the given identifier
-        let component_indexes = target_identifier
-            .clone()
-            .0
-            .into_iter()
-            .map(|type_identifier| {
-                intern_identifier
-                    .0
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(index, component_type)| {
-                        if *component_type == type_identifier {
-                            Some(index)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .multi_cartesian_product()
-            .map(|vec| Vec::from(vec));
-
-        component_indexes
-            .map(move |component_indexes| ComponentListRwLock::new(self, component_indexes.clone()))
-    }
-
-    /// Get collections of components list writer
-    /// Cause an entity can contain multiple component of the same type, can returns multiple writers
-    /// All components are mapped to the provided component identifiers in the same order
-    ///
-    /// # Arguments
-    /// * `type_identifiers` - The identifier list of the components, components will be returned with the same order
-    ///
-    pub fn write_components(
-        &self,
-        target_identifier: &EntityTypeIdentifier,
-    ) -> impl Iterator<Item = ComponentListWriteGuard> {
-        let archetype = unsafe { &*self.archetype_ptr.load(Ordering::SeqCst) };
-        let intern_identifier = archetype.get_type_identifier();
-
-        // Get a collection of indexes, this contains the component indexes ordered
-        // in the same order of the given identifier
-        let component_indexes = target_identifier
-            .clone()
-            .0
-            .into_iter()
-            .map(|type_identifier| {
-                intern_identifier
-                    .0
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(index, component_type)| {
-                        if *component_type == type_identifier {
-                            Some(index)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .multi_cartesian_product()
-            .map(|vec| Vec::from(vec));
-
-        component_indexes.map(move |component_indexes| {
-            ComponentListWriteGuard::new(self.write(), component_indexes.clone())
-        })
     }
 }
 

@@ -76,7 +76,7 @@ pub fn deserialize_v8<'a>(
     }
 
     if let Some(introspect_object) = deserialize_v8_introspect_object(scope, v8_value) {
-        return Some(Serialized::NativeObject(Box::new(introspect_object)));
+        return Some(Serialized::NativeObject(introspect_object));
     }
 
     if v8_value.is_object() {

@@ -1,9 +1,11 @@
 use crate::component::component_list_guard::ComponentListReadGuard;
 use crate::component::component_list_guard::ComponentListWriteGuard;
 use crate::component::component_rwlock::ComponentRwLock;
-use crate::entity::archetype::rwlock::EntityRwLock;
+use crate::entity::archetype::rwlock::EntityRwLockWeak;
 use crate::service::utils::cast_service;
 use crate::service::utils::ArgumentCaster;
+use fruity_any::*;
+use fruity_introspect::serializable_object::SerializableObject;
 use fruity_introspect::serialize::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
@@ -13,19 +15,19 @@ use std::any::Any;
 use std::sync::Arc;
 
 /// A read write locker for a component list instance
-#[derive(Debug)]
-pub struct ComponentListRwLock<'s> {
-    entity: &'s EntityRwLock,
+#[derive(Debug, Clone, FruityAny)]
+pub struct ComponentListRwLock {
+    entity: EntityRwLockWeak,
     component_indexes: Vec<usize>,
 }
 
-impl<'s> ComponentListRwLock<'s> {
+impl ComponentListRwLock {
     /// Returns an RwLockReadGuard which is unlocked.
     ///
     /// # Arguments
     /// * `inner_guard` - The typed [`RwLockReadGuard`]
     ///
-    pub fn new(entity: &EntityRwLock, component_indexes: Vec<usize>) -> ComponentListRwLock {
+    pub fn new(entity: EntityRwLockWeak, component_indexes: Vec<usize>) -> ComponentListRwLock {
         ComponentListRwLock {
             entity,
             component_indexes,
@@ -83,25 +85,7 @@ impl<'s> ComponentListRwLock<'s> {
     }
 }
 
-impl fruity_any::FruityAny for ComponentListRwLock<'static> {
-    fn as_any_ref(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    fn as_any_box(self: Box<Self>) -> Box<dyn std::any::Any> {
-        self
-    }
-
-    fn as_any_arc(self: std::sync::Arc<Self>) -> std::sync::Arc<dyn std::any::Any + Send + Sync> {
-        self
-    }
-}
-
-impl IntrospectObject for ComponentListRwLock<'static> {
+impl IntrospectObject for ComponentListRwLock {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![MethodInfo {
             name: "get".to_string(),
@@ -121,5 +105,11 @@ impl IntrospectObject for ComponentListRwLock<'static> {
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![]
+    }
+}
+
+impl SerializableObject for ComponentListRwLock {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
     }
 }

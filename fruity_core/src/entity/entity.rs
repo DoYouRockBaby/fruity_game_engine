@@ -64,10 +64,14 @@ impl Hash for EntityId {
     }
 }
 
+/// Get the entity type identifier from a list of components
 pub fn get_type_identifier(components: &[AnyComponent]) -> EntityTypeIdentifier {
     let identifier = components
         .iter()
-        .map(|component| component.get_component_type())
+        .map(|component| {
+            let reader = component.read().unwrap();
+            reader.get_component_type()
+        })
         .collect::<Vec<_>>();
 
     EntityTypeIdentifier(identifier)

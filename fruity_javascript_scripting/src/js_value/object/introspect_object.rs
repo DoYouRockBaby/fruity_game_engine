@@ -7,20 +7,19 @@ use crate::js_value::utils::inject_serialized_into_v8_return_value;
 use crate::serialize::deserialize::deserialize_v8;
 use crate::JsObject;
 use fruity_introspect::log_introspect_error;
+use fruity_introspect::serializable_object::SerializableObject;
 use fruity_introspect::serialize::serialized::Serialized;
-use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::SetterCaller;
 use rusty_v8 as v8;
-use std::sync::Arc;
 
 impl JsObject {
     pub fn from_introspect_object(
         scope: &mut v8::HandleScope,
-        introspect_object: Arc<dyn IntrospectObject>,
+        introspect_object: Box<dyn SerializableObject>,
     ) -> JsObject {
         let mut object =
-            JsObject::from_intern_value(scope, "IntrospectObject", introspect_object.clone());
+            JsObject::from_intern_value(scope, "SerializableObject", introspect_object.clone());
 
         let method_infos = introspect_object.get_method_infos();
         let field_infos = introspect_object.get_field_infos();
@@ -50,7 +49,7 @@ fn method_callback(
 ) {
     // Get this as an introspect object
     let intern_value =
-        get_intern_value_from_v8_object::<Arc<dyn IntrospectObject>>(scope, args.this());
+        get_intern_value_from_v8_object::<Box<dyn SerializableObject>>(scope, args.this());
 
     if let Some(introspect_object) = intern_value {
         // Extract the current method info
@@ -87,7 +86,7 @@ fn method_callback(
                 }
             }
             MethodCaller::Mut(_call) => {
-                // Mutable methods are handled by impl<T: IntrospectObject> IntrospectObject for RwLock<T>
+                // Mutable methods are handled by impl<T: SerializableObject> SerializableObject for RwLock<T>
                 // This should not be reached, if it's happen, it means that you try yo access with mutability
                 // something that is not protected by a lock
                 None
@@ -107,7 +106,7 @@ fn getter_callback(
 ) {
     // Get this as an introspect object
     let intern_value =
-        get_intern_value_from_v8_object::<Arc<dyn IntrospectObject>>(scope, args.this());
+        get_intern_value_from_v8_object::<Box<dyn SerializableObject>>(scope, args.this());
 
     if let Some(introspect_object) = intern_value {
         // Extract the current field info
@@ -138,7 +137,7 @@ fn setter_callback(
 ) {
     // Get this as an introspect object
     let intern_value =
-        get_intern_value_from_v8_object_mut::<Arc<dyn IntrospectObject>>(scope, args.this());
+        get_intern_value_from_v8_object_mut::<Box<dyn SerializableObject>>(scope, args.this());
 
     if let Some(introspect_object) = intern_value {
         // Extract the current field info
@@ -162,7 +161,7 @@ fn setter_callback(
                 call(introspect_object.as_any_ref(), deserialized_arg);
             }
             SetterCaller::Mut(_call) => {
-                // Mutable methods are handled by impl<T: IntrospectObject> IntrospectObject for RwLock<T>
+                // Mutable methods are handled by impl<T: SerializableObject> SerializableObject for RwLock<T>
                 // This should not be reached, if it's happen, it means that you try yo access with mutability
                 // something that is not protected by a lock
             }
@@ -173,10 +172,10 @@ fn setter_callback(
 pub fn deserialize_v8_introspect_object(
     scope: &mut v8::HandleScope,
     v8_value: v8::Local<v8::Value>,
-) -> Option<Arc<dyn IntrospectObject>> {
-    let v8_object = check_object_intern_identifier(scope, v8_value, "IntrospectObject")?;
+) -> Option<Box<dyn SerializableObject>> {
+    let v8_object = check_object_intern_identifier(scope, v8_value, "SerializableObject")?;
     let intern_value =
-        get_intern_value_from_v8_object::<Arc<dyn IntrospectObject>>(scope, v8_object)?;
+        get_intern_value_from_v8_object::<Box<dyn SerializableObject>>(scope, v8_object)?;
 
     Some(intern_value.clone())
 }

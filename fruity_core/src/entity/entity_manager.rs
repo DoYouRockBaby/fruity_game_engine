@@ -1,6 +1,7 @@
 use crate::component::component::AnyComponent;
 use crate::component::component_list_rwlock::ComponentListRwLock;
 use crate::entity::archetype::rwlock::EntityRwLock;
+use crate::entity::archetype::rwlock::EntityRwLockWeak;
 use crate::entity::archetype::Archetype;
 use crate::entity::entity::get_type_identifier;
 use crate::entity::entity::EntityId;
@@ -59,7 +60,7 @@ impl EntityManager {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn get(&self, entity_id: EntityId) -> Option<&EntityRwLock> {
+    pub fn get(&self, entity_id: EntityId) -> Option<EntityRwLockWeak> {
         self.archetypes
             .iter()
             .find_map(|archetype| archetype.get(entity_id))
@@ -74,7 +75,7 @@ impl EntityManager {
     pub fn iter_entities(
         &self,
         entity_identifier: EntityTypeIdentifier,
-    ) -> impl Iterator<Item = &EntityRwLock> {
+    ) -> impl Iterator<Item = EntityRwLockWeak> {
         let archetypes = unsafe { &*(&self.archetypes as *const _) } as &Vec<Archetype>;
         archetypes
             .iter()

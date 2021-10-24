@@ -78,20 +78,20 @@ pub fn build_settings_from_yaml(yaml: &Yaml) -> Option<Settings> {
         Yaml::String(value) => Some(Settings::String(value.clone())),
         Yaml::Boolean(value) => Some(Settings::Bool(*value)),
         Yaml::Array(array) => {
-            let Settings_array = array
+            let settings_array = array
                 .iter()
                 .filter_map(|elem| build_settings_from_yaml(elem))
                 .collect::<Vec<_>>();
 
-            Some(Settings::Array(Settings_array))
+            Some(Settings::Array(settings_array))
         }
         Yaml::Hash(hashmap) => {
             let mut fields = HashMap::new();
 
             for (key, value) in hashmap {
                 if let Yaml::String(key) = key {
-                    if let Some(Settings) = build_settings_from_yaml(value) {
-                        fields.insert(key.clone(), Settings);
+                    if let Some(settings) = build_settings_from_yaml(value) {
+                        fields.insert(key.clone(), settings);
                     }
                 }
             }

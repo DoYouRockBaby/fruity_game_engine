@@ -14,6 +14,9 @@ use std::ops::DerefMut;
 use std::sync::Arc;
 use std::sync::RwLock;
 
+/// Provides trait to implement a self duplication for an introspect object that can be stored in [’Serialized’]
+pub mod serializable_object;
+
 /// Provides structure to pass object between the rust ecosystem and the scripting system
 pub mod serialize;
 

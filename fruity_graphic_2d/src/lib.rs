@@ -7,6 +7,7 @@ use crate::systems::draw_camera::draw_camera_untyped;
 use crate::systems::draw_sprite::draw_sprite_untyped;
 use fruity_core::component::component::AnyComponent;
 use fruity_core::component::components_factory::ComponentsFactory;
+use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::system::system_manager::SystemManager;
 use fruity_core::world::World;
 
@@ -32,7 +33,11 @@ pub fn initialize(world: &World) {
             height: 0.0,
         })
     });
-    components_factory.add("Sprite", || AnyComponent::new(Sprite { material: None }));
+    components_factory.add("Sprite", || {
+        AnyComponent::new(Sprite {
+            material: ResourceReference::new(),
+        })
+    });
     components_factory.add("Camera", || {
         AnyComponent::new(Camera {
             near: -1.0,

@@ -6,7 +6,6 @@ use fruity_core::service::service::Service;
 use fruity_core::service::service_manager::ServiceManager;
 use fruity_introspect::serialize::serialized::ObjectFields;
 use fruity_introspect::serialize::serialized::Serialized;
-use fruity_introspect::IntrospectObject;
 use rusty_v8 as v8;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -52,15 +51,11 @@ pub fn configure_components(runtime: &mut JsRuntime, service_manager: Arc<RwLock
                 let data_fields = ObjectFields::try_from(data).unwrap();
 
                 // Get the components factory
-                let components_factory = Arc::<dyn IntrospectObject>::try_from(
+                let components_factory = Arc::<RwLock<Box<dyn Service>>>::try_from(
                     data_fields.get("components_factory").unwrap().clone(),
                 )
                 .unwrap();
 
-                let components_factory = components_factory.as_any_arc();
-                let components_factory = components_factory
-                    .downcast::<RwLock<Box<dyn Service>>>()
-                    .unwrap();
                 let components_factory = components_factory.read().unwrap();
                 let components_factory = components_factory
                     .as_any_ref()
