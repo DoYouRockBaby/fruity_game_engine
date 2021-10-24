@@ -23,18 +23,6 @@ impl JsValue for JsString {
         let v8_value = v8::Local::new(scope, &self.v8_value);
         v8_value.into()
     }
-
-    fn as_any(&self) -> &dyn Any {
-        self as &dyn Any
-    }
-
-    fn as_mut_any(&mut self) -> &mut dyn Any {
-        self as &mut dyn Any
-    }
-
-    fn as_boxed_any(self: Box<Self>) -> Box<dyn Any> {
-        self as Box<dyn Any>
-    }
 }
 
 impl Debug for JsString {

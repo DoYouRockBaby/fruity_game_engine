@@ -1,7 +1,7 @@
 use crate::resource::resource::Resource;
 use fruity_any::FruityAny;
 use fruity_introspect::serializable_object::SerializableObject;
-use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
@@ -55,6 +55,7 @@ impl<T: Resource> SerializableObject for ResourceReference<T> {
     }
 }
 
+// TODO: Improve the macro to handle the generics
 impl<T: Resource> FruityAny for ResourceReference<T> {
     fn as_any_ref(&self) -> &dyn std::any::Any {
         self
@@ -88,6 +89,15 @@ impl<T: Resource> TryFrom<Serialized> for ResourceReference<T> {
                 }
             }
             _ => Err(format!("Couldn't convert {:?} to native object", value)),
+        }
+    }
+}
+
+impl<T: Resource> Into<Serialized> for ResourceReference<T> {
+    fn into(self) -> Serialized {
+        match self.0 {
+            Some(value) => Serialized::NativeObject(Box::new(value.clone())),
+            None => Serialized::Null,
         }
     }
 }

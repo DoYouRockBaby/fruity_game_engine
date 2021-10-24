@@ -11,7 +11,7 @@ use crate::settings::Settings;
 use crate::ServiceManager;
 use crate::World;
 use fruity_any::*;
-use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;

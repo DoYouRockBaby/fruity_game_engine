@@ -3,7 +3,7 @@ use crate::service::service::Service;
 use crate::service::utils::cast_service;
 use crate::service::utils::ArgumentCaster;
 use fruity_any::*;
-use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;

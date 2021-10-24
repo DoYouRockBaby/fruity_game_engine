@@ -4,7 +4,7 @@ use crate::serialize::deserialize::deserialize_v8;
 use crate::JsObject;
 use fruity_core::service::serialized_service::SerializedService;
 use fruity_core::service::service_manager::ServiceManager;
-use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::serialized::Serialized;
 use rusty_v8 as v8;
 use std::sync::Arc;
 use std::sync::RwLock;

@@ -1,13 +1,12 @@
 use crate::component::serialized_component::SerializedComponent;
 use fruity_any::*;
 use fruity_introspect::serializable_object::SerializableObject;
-use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use fruity_introspect::SetterCaller;
-use std::any::Any;
 use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::ops::Deref;

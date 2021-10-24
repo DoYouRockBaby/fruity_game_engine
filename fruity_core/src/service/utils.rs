@@ -1,4 +1,4 @@
-use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::serialized::Serialized;
 use fruity_introspect::IntrospectError;
 use std::any::Any;
 use std::convert::TryFrom;

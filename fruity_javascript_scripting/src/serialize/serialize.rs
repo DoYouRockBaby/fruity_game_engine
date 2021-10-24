@@ -1,6 +1,6 @@
 use crate::js_value::value::JsValue;
 use crate::JsObject;
-use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::serialized::Serialized;
 use rusty_v8 as v8;
 
 pub fn serialize_v8<'a>(
@@ -32,6 +32,7 @@ pub fn serialize_v8<'a>(
 
             Some(v8::Array::new_with_elements(scope, &elements).into())
         }
+        Serialized::Null => Some(v8::undefined(scope).into()),
         Serialized::Iterator(value) => {
             let mut object = JsObject::from_iterator(scope, value.clone());
             Some(object.as_v8(scope).into())

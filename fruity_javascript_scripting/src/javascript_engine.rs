@@ -5,7 +5,7 @@ use crate::JsRuntime;
 use fruity_any::*;
 use fruity_core::service::service::Service;
 use fruity_core::world::World;
-use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;

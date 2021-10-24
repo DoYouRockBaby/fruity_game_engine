@@ -5,7 +5,7 @@
 //! Implements traits and macros to make a structure abe to list it's field and to get/set it with any
 //!
 
-use crate::serialize::serialized::Serialized;
+use crate::serialized::Serialized;
 use fruity_any::FruityAny;
 use std::any::Any;
 use std::fmt::Debug;
@@ -18,7 +18,7 @@ use std::sync::RwLock;
 pub mod serializable_object;
 
 /// Provides structure to pass object between the rust ecosystem and the scripting system
-pub mod serialize;
+pub mod serialized;
 
 #[derive(Debug, Clone)]
 /// Informations about a field of an introspect object

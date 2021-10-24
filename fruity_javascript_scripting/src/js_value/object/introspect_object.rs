@@ -8,7 +8,7 @@ use crate::serialize::deserialize::deserialize_v8;
 use crate::JsObject;
 use fruity_introspect::log_introspect_error;
 use fruity_introspect::serializable_object::SerializableObject;
-use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::serialized::Serialized;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::SetterCaller;
 use rusty_v8 as v8;

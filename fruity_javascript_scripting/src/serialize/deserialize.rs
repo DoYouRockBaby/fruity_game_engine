@@ -3,7 +3,7 @@ use crate::js_value::utils::store_callback;
 use crate::JavascriptEngine;
 use fruity_any::FruityAny;
 use fruity_core::service::service_manager::ServiceManager;
-use fruity_introspect::serialize::serialized::Serialized;
+use fruity_introspect::serialized::Serialized;
 use fruity_introspect::IntrospectError;
 use rusty_v8 as v8;
 use std::collections::HashMap;

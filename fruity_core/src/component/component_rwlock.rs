@@ -7,7 +7,6 @@ use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
 use fruity_introspect::SetterCaller;
-use std::any::Any;
 use std::sync::Arc;
 
 /// A read write locker for a component instance

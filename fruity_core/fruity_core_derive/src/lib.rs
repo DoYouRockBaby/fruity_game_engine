@@ -111,16 +111,16 @@ pub fn derive_introspect_object_trait(input: TokenStream)  -> TokenStream {
                 quote! {
                     fruity_introspect::FieldInfo {
                         name: #name_as_string.to_string(),
-                        getter: std::sync::Arc::new(|this| fruity_introspect::serialize::serialize::serialize_any(&this.downcast_ref::<#ident>().unwrap().#name).unwrap()),
+                        getter: std::sync::Arc::new(|this| this.downcast_ref::<#ident>().unwrap().#name.clone().into()),
                         setter: fruity_introspect::SetterCaller::Mut(std::sync::Arc::new(|this, value| {
                             fn convert<
-                                T: std::convert::TryFrom<fruity_introspect::serialize::serialized::Serialized>,
+                                T: std::convert::TryFrom<fruity_introspect::serialized::Serialized>,
                             >(
-                                value: fruity_introspect::serialize::serialized::Serialized,
+                                value: fruity_introspect::serialized::Serialized,
                             ) -> Result<
                                 T,
                                 <T as std::convert::TryFrom<
-                                    fruity_introspect::serialize::serialized::Serialized,
+                                    fruity_introspect::serialized::Serialized,
                                 >>::Error,
                             > {
                                 T::try_from(value)

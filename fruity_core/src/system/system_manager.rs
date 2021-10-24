@@ -5,7 +5,7 @@ use crate::service::utils::ArgumentCaster;
 use crate::World;
 use fruity_any::*;
 use fruity_introspect::log_introspect_error;
-use fruity_introspect::serialize::serialized::Callback;
+use fruity_introspect::serialized::Callback;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
