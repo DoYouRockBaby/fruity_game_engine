@@ -32,7 +32,7 @@ pub fn serialize_v8<'a>(
 
             Some(v8::Array::new_with_elements(scope, &elements).into())
         }
-        Serialized::Null => Some(v8::undefined(scope).into()),
+        Serialized::Null => Some(v8::null(scope).into()),
         Serialized::Iterator(value) => {
             let mut object = JsObject::from_iterator(scope, value.clone());
             Some(object.as_v8(scope).into())

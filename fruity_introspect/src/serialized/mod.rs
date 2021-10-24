@@ -80,6 +80,9 @@ pub enum Serialized {
     /// Array of values
     Array(Vec<Serialized>),
 
+    /// A null value, correspond to [’Option::None’]
+    Null,
+
     /// Iterator over values
     Iterator(Arc<RwLock<dyn Iterator<Item = Serialized> + Send + Sync>>),
 
@@ -107,9 +110,6 @@ pub enum Serialized {
 
     /// An object created by rust
     NativeObject(Box<dyn SerializableObject>),
-
-    /// A null value, correspond to [’Option::None’]
-    Null,
 }
 
 impl<T: TryFrom<Serialized> + ?Sized> TryFrom<Serialized> for Vec<T> {

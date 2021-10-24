@@ -131,5 +131,9 @@ pub fn deserialize_v8<'a>(
         return Some(Serialized::SerializedObject { class_name, fields });
     }
 
+    if v8_value.is_null() {
+        return Some(Serialized::Null);
+    }
+
     None
 }
