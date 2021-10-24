@@ -1,7 +1,7 @@
 # ROADMAP
 
-[ ] Make serialized able to be extended in modules (put it into introspect, make intropect better ...)
-[ ] Find a better way to store SerializedComponent, to have something more effective on read
+[X] Make the archetype able to store datas without referencing for performances
+[X] Make serialized able to be extended in modules (put it into introspect, make intropect better ...)
 [ ] Split fruity_core
 [ ] Add a "field changed" signal on every entities
 [ ] Allow javascript to play with signals
@@ -9,12 +9,12 @@
 
 # LESS PRIORITY
 
-[ ] Tests for javascript
-[ ] Tests for fruity_core
+[ ] Tests everywhere
 [ ] Rust doc everywhere
 [ ] Remove as many unwrap as possible (ecs and javascript)
 [ ] A lot of unsafe code were created to avoid lifetime issue in ecs, remove as many as possible
-[ ] There should be some memory leak in component storage (in Entity) and entity storage (in EncodableVec)
+[ ] Find a better way to store SerializedComponent, to have something more effective on read
+[ ] There should be some memory leak in component storage (in Entity) and entity storage (in Archetype)
 [X] Javascript module is highly unsafe cause i force to put a one thread runtime into a multi thread host
 [ ] Implement web workers in js
 [ ] Fix javascript services
