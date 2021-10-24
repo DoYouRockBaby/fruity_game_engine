@@ -190,8 +190,6 @@ impl<'a> EntityReadGuard<'a> {
         let components = component_decoding_infos
             .iter()
             .map(move |decoding_info| {
-                let components_buffer = unsafe { &*(components_buffer as *const _) } as &[u8];
-
                 let component_buffer_index = decoding_info.relative_index;
                 let component_buffer_end = component_buffer_index + decoding_info.size;
                 let component_buffer =
@@ -314,7 +312,6 @@ impl IntrospectObject for EntityRwLock {
         vec![MethodInfo {
             name: "len".to_string(),
             call: MethodCaller::Const(Arc::new(move |this, _args| {
-                let this = unsafe { &*(this as *const _) } as &dyn Any;
                 let this = cast_service::<EntityRwLock>(this);
                 let this = this.read();
 

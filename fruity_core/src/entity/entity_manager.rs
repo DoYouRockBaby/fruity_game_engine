@@ -174,7 +174,6 @@ impl IntrospectObject for EntityManager {
             MethodInfo {
                 name: "create".to_string(),
                 call: MethodCaller::Mut(Arc::new(move |this, args| {
-                    let this = unsafe { &mut *(this as *mut _) } as &mut dyn Any;
                     let this = cast_service_mut::<EntityManager>(this);
 
                     let mut caster = ArgumentCaster::new("create", args);
@@ -187,7 +186,6 @@ impl IntrospectObject for EntityManager {
             MethodInfo {
                 name: "iter_components".to_string(),
                 call: MethodCaller::Const(Arc::new(move |this, args| {
-                    let this = unsafe { &*(this as *const _) } as &dyn Any;
                     let this = cast_service::<EntityManager>(this);
 
                     let mut caster = ArgumentCaster::new("iter_components", args);
@@ -203,7 +201,6 @@ impl IntrospectObject for EntityManager {
             MethodInfo {
                 name: "iter_components_mut".to_string(),
                 call: MethodCaller::Const(Arc::new(move |this, args| {
-                    let this = unsafe { &*(this as *const _) } as &dyn Any;
                     let this = cast_service::<EntityManager>(this);
 
                     let mut caster = ArgumentCaster::new("iter_components_mut", args);

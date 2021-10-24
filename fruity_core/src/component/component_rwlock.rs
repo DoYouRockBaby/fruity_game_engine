@@ -82,7 +82,6 @@ impl IntrospectObject for ComponentRwLock {
                 FieldInfo {
                     name: field_info.name,
                     getter: Arc::new(move |this| {
-                        let this = unsafe { &*(this as *const _) } as &dyn Any;
                         let this = this.downcast_ref::<ComponentRwLock>().unwrap();
                         let reader = this.read();
 
@@ -91,7 +90,6 @@ impl IntrospectObject for ComponentRwLock {
                     setter: match setter {
                         SetterCaller::Const(call) => {
                             SetterCaller::Const(Arc::new(move |this, args| {
-                                let this = unsafe { &*(this as *const _) } as &dyn Any;
                                 let this = this.downcast_ref::<ComponentRwLock>().unwrap();
                                 let reader = this.read();
 
@@ -100,7 +98,6 @@ impl IntrospectObject for ComponentRwLock {
                         }
                         SetterCaller::Mut(call) => {
                             SetterCaller::Const(Arc::new(move |this, args| {
-                                let this = unsafe { &*(this as *const _) } as &dyn Any;
                                 let this = this.downcast_ref::<ComponentRwLock>().unwrap();
                                 let mut writer = this.write();
 

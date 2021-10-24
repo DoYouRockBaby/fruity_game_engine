@@ -149,7 +149,6 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Box<T> {
                 FieldInfo {
                     name: field_info.name,
                     getter: Arc::new(move |this| {
-                        let this = unsafe { &*(this as *const _) } as &dyn Any;
                         let this = this.downcast_ref::<Box<T>>().unwrap();
 
                         getter(this.as_ref().as_any_ref())
@@ -157,7 +156,6 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Box<T> {
                     setter: match setter {
                         SetterCaller::Const(call) => {
                             SetterCaller::Const(Arc::new(move |this, args| {
-                                let this = unsafe { &*(this as *const _) } as &dyn Any;
                                 let this = this.downcast_ref::<Box<T>>().unwrap();
 
                                 call(this.as_ref().as_any_ref(), args)
@@ -165,7 +163,6 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Box<T> {
                         }
                         SetterCaller::Mut(call) => {
                             SetterCaller::Mut(Arc::new(move |this, args| {
-                                let this = unsafe { &mut *(this as *mut _) } as &mut dyn Any;
                                 let this = this.downcast_mut::<Box<T>>().unwrap();
 
                                 call(this.as_mut().as_any_mut(), args)
@@ -186,14 +183,12 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Box<T> {
                 call: match method_info.call {
                     MethodCaller::Const(call) => {
                         MethodCaller::Const(Arc::new(move |this, args| {
-                            let this = unsafe { &*(this as *const _) } as &dyn Any;
                             let this = this.downcast_ref::<Box<T>>().unwrap();
 
                             call(this.as_ref().as_any_ref(), args)
                         }))
                     }
                     MethodCaller::Mut(call) => MethodCaller::Mut(Arc::new(move |this, args| {
-                        let this = unsafe { &mut *(this as *mut _) } as &mut dyn Any;
                         let this = this.downcast_mut::<Box<T>>().unwrap();
 
                         call(this.as_mut().as_any_mut(), args)
@@ -216,7 +211,6 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Arc<T> {
                 FieldInfo {
                     name: field_info.name,
                     getter: Arc::new(move |this| {
-                        let this = unsafe { &*(this as *const _) } as &dyn Any;
                         let this = this.downcast_ref::<Arc<T>>().unwrap();
 
                         getter(this.as_ref().as_any_ref())
@@ -224,7 +218,6 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Arc<T> {
                     setter: match setter {
                         SetterCaller::Const(call) => {
                             SetterCaller::Const(Arc::new(move |this, args| {
-                                let this = unsafe { &*(this as *const _) } as &dyn Any;
                                 let this = this.downcast_ref::<Arc<T>>().unwrap();
 
                                 call(this.as_ref().as_any_ref(), args)
@@ -248,7 +241,6 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Arc<T> {
                 call: match method_info.call {
                     MethodCaller::Const(call) => {
                         MethodCaller::Const(Arc::new(move |this, args| {
-                            let this = unsafe { &*(this as *const _) } as &dyn Any;
                             let this = this.downcast_ref::<Arc<T>>().unwrap();
 
                             call(this.as_ref().as_any_ref(), args)
@@ -276,16 +268,14 @@ impl<T: IntrospectObject> IntrospectObject for RwLock<T> {
                 FieldInfo {
                     name: field_info.name,
                     getter: Arc::new(move |this| {
-                        let this = unsafe { &*(this as *const _) } as &dyn Any;
                         let this = this.downcast_ref::<RwLock<T>>().unwrap();
                         let reader = this.read().unwrap();
 
-                        getter(&reader)
+                        getter(reader.deref())
                     }),
                     setter: match setter {
                         SetterCaller::Const(call) => {
                             SetterCaller::Const(Arc::new(move |this, args| {
-                                let this = unsafe { &*(this as *const _) } as &dyn Any;
                                 let this = this.downcast_ref::<RwLock<T>>().unwrap();
                                 let reader = this.read().unwrap();
 
@@ -294,7 +284,6 @@ impl<T: IntrospectObject> IntrospectObject for RwLock<T> {
                         }
                         SetterCaller::Mut(call) => {
                             SetterCaller::Const(Arc::new(move |this, args| {
-                                let this = unsafe { &*(this as *const _) } as &dyn Any;
                                 let this = this.downcast_ref::<RwLock<T>>().unwrap();
                                 let mut writer = this.write().unwrap();
 
@@ -317,7 +306,6 @@ impl<T: IntrospectObject> IntrospectObject for RwLock<T> {
                 call: match method_info.call {
                     MethodCaller::Const(call) => {
                         MethodCaller::Const(Arc::new(move |this, args| {
-                            let this = unsafe { &*(this as *const _) } as &dyn Any;
                             let this = this.downcast_ref::<RwLock<T>>().unwrap();
                             let reader = this.read().unwrap();
 
@@ -325,7 +313,6 @@ impl<T: IntrospectObject> IntrospectObject for RwLock<T> {
                         }))
                     }
                     MethodCaller::Mut(call) => MethodCaller::Const(Arc::new(move |this, args| {
-                        let this = unsafe { &*(this as *const _) } as &dyn Any;
                         let this = this.downcast_ref::<RwLock<T>>().unwrap();
                         let mut writer = this.write().unwrap();
 

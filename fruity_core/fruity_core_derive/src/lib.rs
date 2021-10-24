@@ -67,7 +67,8 @@ fn derive_component_trait(input: TokenStream) -> TokenStream {
     output.into()
 }
 
-fn derive_introspect_object_trait(input: TokenStream)  -> TokenStream {
+#[proc_macro_derive(IntrospectObject)]
+pub fn derive_introspect_object_trait(input: TokenStream)  -> TokenStream {
     let DeriveInput { ident, data, .. } = parse_macro_input!(input);
 
     let body = match data {

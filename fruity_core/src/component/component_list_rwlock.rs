@@ -90,7 +90,6 @@ impl IntrospectObject for ComponentListRwLock {
         vec![MethodInfo {
             name: "get".to_string(),
             call: MethodCaller::Const(Arc::new(move |this, args| {
-                let this = unsafe { &*(this as *const _) } as &dyn Any;
                 let this = cast_service::<ComponentListRwLock>(this);
 
                 let mut caster = ArgumentCaster::new("get", args);
