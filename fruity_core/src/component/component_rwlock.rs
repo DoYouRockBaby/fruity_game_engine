@@ -1,6 +1,6 @@
 use crate::component::component_guard::ComponentReadGuard;
 use crate::component::component_guard::ComponentWriteGuard;
-use crate::entity::archetype::rwlock::EntityRwLockWeak;
+use crate::entity::archetype::rwlock::EntitySharedRwLock;
 use fruity_any::*;
 use fruity_introspect::serializable_object::SerializableObject;
 use fruity_introspect::FieldInfo;
@@ -12,7 +12,7 @@ use std::sync::Arc;
 /// A read write locker for a component instance
 #[derive(Debug, Clone, FruityAny)]
 pub struct ComponentRwLock {
-    entity: EntityRwLockWeak,
+    entity: EntitySharedRwLock,
     component_index: usize,
 }
 
@@ -22,7 +22,7 @@ impl ComponentRwLock {
     /// # Arguments
     /// * `inner_guard` - The typed [`RwLockReadGuard`]
     ///
-    pub fn new(entity: EntityRwLockWeak, component_index: usize) -> ComponentRwLock {
+    pub fn new(entity: EntitySharedRwLock, component_index: usize) -> ComponentRwLock {
         ComponentRwLock {
             entity,
             component_index,

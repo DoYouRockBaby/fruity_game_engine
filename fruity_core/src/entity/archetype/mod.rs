@@ -1,8 +1,9 @@
 use crate::component::component::AnyComponent;
 use crate::component::component::Component;
+use crate::entity::archetype::encode_entity::entity_size;
+use crate::entity::archetype::inner_archetype::EntityCellHead;
 use crate::entity::archetype::inner_archetype::InnerArchetype;
-use crate::entity::archetype::rwlock::EntityRwLock;
-use crate::entity::archetype::rwlock::EntityRwLockWeak;
+use crate::entity::archetype::rwlock::EntitySharedRwLock;
 use crate::entity::entity::get_type_identifier;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
@@ -13,6 +14,9 @@ use std::sync::RwLock;
 
 /// Implements an the archetype logic
 pub mod inner_archetype;
+
+/// Utils to encode and decode entity
+pub mod encode_entity;
 
 /// Provides a threadsafe lock for entities
 pub mod rwlock;
@@ -39,24 +43,17 @@ impl Archetype {
 
         let components_per_entity = components.len();
 
-        let all_components_size: usize = components
-            .iter()
-            .map(|component| {
-                let reader = component.read().unwrap();
-                reader.encode_size()
-            })
-            .sum();
+        let entity_size: usize = entity_size(&components);
 
         // Build the inner archetype that implement all the logic
-        let inner_archetype = InnerArchetype::new(
-            identifier.clone(),
-            components_per_entity,
-            all_components_size,
-        );
+        let inner_archetype =
+            InnerArchetype::new(identifier.clone(), components_per_entity, entity_size);
         let inner_archetype = Arc::new(RwLock::new(inner_archetype));
 
         // Create the first entity
-        InnerArchetype::add(&inner_archetype, entity_id, components);
+        let mut writer = inner_archetype.write().unwrap();
+        writer.add(entity_id, components);
+        std::mem::drop(writer);
 
         Archetype {
             identifier,
@@ -74,9 +71,9 @@ impl Archetype {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn get(&self, entity_id: EntityId) -> Option<EntityRwLockWeak> {
+    pub fn get(&self, entity_id: EntityId) -> Option<EntitySharedRwLock> {
         let inner_archetype = self.inner_archetype.read().unwrap();
-        inner_archetype.get(entity_id)
+        inner_archetype.get(self.inner_archetype.clone(), entity_id)
     }
 
     /// Get a locked entity by first component index
@@ -84,9 +81,9 @@ impl Archetype {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn get_by_index(&self, index: usize) -> EntityRwLockWeak {
+    pub fn get_by_index(&self, index: usize) -> EntitySharedRwLock {
         let inner_archetype = self.inner_archetype.read().unwrap();
-        inner_archetype.get_by_index(index)
+        inner_archetype.get_by_index(self.inner_archetype.clone(), index)
     }
 
     /// Iterate over all entities of the archetype
@@ -107,7 +104,8 @@ impl Archetype {
     /// * `T` - The type of the new entity
     ///
     pub fn add(&self, entity_id: EntityId, components: Vec<AnyComponent>) {
-        InnerArchetype::add(&self.inner_archetype, entity_id, components)
+        let mut writer = self.inner_archetype.write().unwrap();
+        writer.add(entity_id, components);
     }
 
     /// Remove an entity based on its id
@@ -115,7 +113,7 @@ impl Archetype {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn remove(&self, entity_id: EntityId) -> Result<EntityRwLock, RemoveEntityError> {
+    pub fn remove(&self, entity_id: EntityId) -> Result<EntityCellHead, RemoveEntityError> {
         let mut inner_archetype = self.inner_archetype.write().unwrap();
         inner_archetype.remove(entity_id)
     }
@@ -131,12 +129,12 @@ pub struct Iter {
 }
 
 impl Iterator for Iter {
-    type Item = EntityRwLockWeak;
+    type Item = EntitySharedRwLock;
 
-    fn next(&mut self) -> Option<EntityRwLockWeak> {
+    fn next(&mut self) -> Option<EntitySharedRwLock> {
         let reader = self.inner_archetype.read().unwrap();
         if self.current_index < reader.buffer.len() {
-            let result = reader.get_by_index(self.current_index);
+            let result = reader.get_by_index(self.inner_archetype.clone(), self.current_index);
             self.current_index += reader.entity_size;
 
             Some(result)

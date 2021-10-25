@@ -1,6 +1,6 @@
 use crate::component::component::AnyComponent;
 use crate::component::component_list_rwlock::ComponentListRwLock;
-use crate::entity::archetype::rwlock::EntityRwLockWeak;
+use crate::entity::archetype::rwlock::EntitySharedRwLock;
 use crate::entity::archetype::Archetype;
 use crate::entity::entity::get_type_identifier;
 use crate::entity::entity::EntityId;
@@ -35,7 +35,7 @@ pub struct EntityManager {
     service_manager: Arc<RwLock<ServiceManager>>,
 
     /// Signal propagated when a new entity is inserted into the collection
-    pub on_entity_created: Signal<EntityRwLockWeak>,
+    pub on_entity_created: Signal<EntitySharedRwLock>,
 
     /// Signal propagated when a new entity is removed from the collection
     pub on_entity_removed: Signal<EntityId>,
@@ -58,7 +58,7 @@ impl EntityManager {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn get(&self, entity_id: EntityId) -> Option<EntityRwLockWeak> {
+    pub fn get(&self, entity_id: EntityId) -> Option<EntitySharedRwLock> {
         self.archetypes
             .iter()
             .find_map(|archetype| archetype.get(entity_id))
@@ -73,7 +73,7 @@ impl EntityManager {
     pub fn iter_entities(
         &self,
         entity_identifier: EntityTypeIdentifier,
-    ) -> impl Iterator<Item = EntityRwLockWeak> {
+    ) -> impl Iterator<Item = EntitySharedRwLock> {
         let archetypes = unsafe { &*(&self.archetypes as *const _) } as &Vec<Archetype>;
         archetypes
             .iter()

@@ -1,5 +1,7 @@
 use crate::component::component_list_rwlock::ComponentListRwLock;
-use crate::entity::archetype::inner_archetype::ComponentDecodingInfos;
+use crate::entity::archetype::encode_entity::decode_components;
+use crate::entity::archetype::encode_entity::decode_components_mut;
+use crate::entity::archetype::encode_entity::decode_entity_head;
 use crate::entity::archetype::inner_archetype::InnerArchetype;
 use crate::entity::archetype::Component;
 use crate::entity::archetype::EntityTypeIdentifier;
@@ -14,74 +16,44 @@ use fruity_introspect::MethodInfo;
 use itertools::Itertools;
 use std::fmt::Debug;
 use std::fmt::Formatter;
-use std::mem::size_of;
 use std::ops::Deref;
 use std::ops::DerefMut;
-use std::sync::atomic::AtomicPtr;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::RwLock;
+use std::sync::RwLockReadGuard;
+use std::sync::RwLockWriteGuard;
 
-/// This is an rwlock for an entity, is intended to be used by inner_archetype
-/// Extern users are not supposed to have access to that
-#[derive(FruityAny)]
-pub struct EntityRwLock {
+/// A weak over an entity RwLock, this is the handle that will be used by the extern user to access datas
+/// This can be clone and works like an Arc but over a reference that it don't own and have access to the
+/// reference RwLock functionalities
+#[derive(FruityAny, Clone)]
+pub struct EntitySharedRwLock {
     inner_archetype: Arc<RwLock<InnerArchetype>>,
-    // If it's a writer that handle the lock, the reader_count is maximal cause we cannot create more
-    // Otherwise, this is incremented by one per reader added
-    reader_count: AtomicUsize,
-    arc_count: AtomicUsize,
+    buffer_index: usize,
 }
 
-impl EntityRwLock {
-    /// Returns a EntityRwLock
-    pub(crate) fn new(inner_archetype: Arc<RwLock<InnerArchetype>>) -> EntityRwLock {
-        EntityRwLock {
+impl EntitySharedRwLock {
+    /// Returns an EntitySharedRwLock
+    pub(crate) fn new(
+        inner_archetype: Arc<RwLock<InnerArchetype>>,
+        buffer_index: usize,
+    ) -> EntitySharedRwLock {
+        EntitySharedRwLock {
             inner_archetype,
-            reader_count: AtomicUsize::new(0),
-            arc_count: AtomicUsize::new(0),
-        }
-    }
-
-    /// This create a new RwLock weak, it will be used by the extern user to access datas
-    pub(crate) fn create_new_weak(&self) -> EntityRwLockWeak {
-        self.arc_count.fetch_add(1, Ordering::SeqCst);
-
-        EntityRwLockWeak {
-            entity_rwlock_ptr: AtomicPtr::new(self as *const _ as *mut EntityRwLock),
+            buffer_index,
         }
     }
 
     /// Create a read guard over the entity RwLock
     pub fn read(&self) -> EntityReadGuard {
-        let inner_archetype = self.inner_archetype.read().unwrap();
-        EntityReadGuard::new(&inner_archetype, self)
+        EntityReadGuard::new(&self.inner_archetype, self.buffer_index)
     }
 
     /// Create a write guard over the entity RwLock
     pub fn write(&self) -> EntityWriteGuard {
-        let inner_archetype = self.inner_archetype.read().unwrap();
-        EntityWriteGuard::new(&inner_archetype, self)
+        EntityWriteGuard::new(&self.inner_archetype, self.buffer_index)
     }
-}
 
-impl Debug for EntityRwLock {
-    fn fmt(&self, formatter: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        let reader = self.read();
-        reader.fmt(formatter)
-    }
-}
-
-/// A weak over an entity RwLock, this is the handle that will be used by the extern user to access datas
-/// This can be clone and works like an Arc but over a reference that it don't own and have access to the
-/// reference RwLock functionalities
-#[derive(FruityAny, Debug)]
-pub struct EntityRwLockWeak {
-    entity_rwlock_ptr: AtomicPtr<EntityRwLock>,
-}
-
-impl EntityRwLockWeak {
     /// Get collections of components list reader
     /// Cause an entity can contain multiple component of the same type, can returns multiple readers
     /// All components are mapped to the provided component identifiers in the same order
@@ -127,79 +99,38 @@ impl EntityRwLockWeak {
     }
 }
 
-impl Drop for EntityRwLockWeak {
-    fn drop(&mut self) {
-        // Decrement the lock weak counter
-        let entity_rwlock = unsafe { &*self.entity_rwlock_ptr.load(Ordering::SeqCst) };
-        entity_rwlock.arc_count.fetch_sub(1, Ordering::SeqCst);
-    }
-}
-
-impl Clone for EntityRwLockWeak {
-    fn clone(&self) -> Self {
-        let entity_rwlock = unsafe { &*self.entity_rwlock_ptr.load(Ordering::SeqCst) };
-        entity_rwlock.create_new_weak()
-    }
-}
-
-impl Deref for EntityRwLockWeak {
-    type Target = EntityRwLock;
-
-    fn deref(&self) -> &<Self as std::ops::Deref>::Target {
-        unsafe { &*self.entity_rwlock_ptr.load(Ordering::SeqCst) }
+impl Debug for EntitySharedRwLock {
+    fn fmt(&self, formater: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        let reader = self.read();
+        reader.deref().fmt(formater)
     }
 }
 
 /// An entity guard that can be used to access an entity without mutability
 pub struct EntityReadGuard<'a> {
-    entity_lock: &'a EntityRwLock,
     components: Vec<&'a dyn Component>,
+    _archetype_reader: RwLockReadGuard<'a, InnerArchetype>,
+    _entity_reader: RwLockReadGuard<'a, ()>,
 }
 
 impl<'a> EntityReadGuard<'a> {
     pub(crate) fn new(
-        inner_archetype: &InnerArchetype,
-        entity_lock: &'a EntityRwLock,
+        inner_archetype: &'a Arc<RwLock<InnerArchetype>>,
+        buffer_index: usize,
     ) -> EntityReadGuard<'a> {
-        // Wait that every write locker is done
-        while entity_lock.reader_count.load(Ordering::SeqCst) == usize::MAX {}
+        let archetype_reader = inner_archetype.read().unwrap();
 
-        // Poison the entity cell in the inner_archetype
-        entity_lock.reader_count.fetch_add(1, Ordering::SeqCst);
+        // TODO: Try a way to remove that (ignore the fact that archetype reader is local)
+        let archetype_ref = unsafe { &*(&archetype_reader as *const _) } as &InnerArchetype;
 
-        // Build the component ref vector
-        let components = Self::build_component_ref_vector(inner_archetype, entity_lock);
+        let entity_head = decode_entity_head(archetype_ref, buffer_index);
+        let components = decode_components(archetype_ref, entity_head);
 
         EntityReadGuard {
-            entity_lock,
             components,
+            _archetype_reader: archetype_reader,
+            _entity_reader: entity_head.lock.read().unwrap(),
         }
-    }
-
-    fn build_component_ref_vector<'b>(
-        inner_archetype: &InnerArchetype,
-        rwlock: &'b EntityRwLock,
-    ) -> Vec<&'b dyn Component> {
-        let (_, component_infos_buffer, components_buffer) =
-            get_entry_buffers(inner_archetype, rwlock);
-
-        // Get component decoding infos
-        let component_decoding_infos = get_component_decoding_infos(component_infos_buffer);
-
-        // Deserialize every components
-        let components = component_decoding_infos
-            .iter()
-            .map(move |decoding_info| {
-                let component_buffer_index = decoding_info.relative_index;
-                let component_buffer_end = component_buffer_index + decoding_info.size;
-                let component_buffer =
-                    &components_buffer[component_buffer_index..component_buffer_end];
-
-                (decoding_info.decoder)(component_buffer)
-            })
-            .collect::<Vec<_>>();
-
-        components
     }
 }
 
@@ -211,13 +142,6 @@ impl<'a> Deref for EntityReadGuard<'a> {
     }
 }
 
-impl<'a> Drop for EntityReadGuard<'a> {
-    fn drop(&mut self) {
-        // Decrement the lock guard counter
-        self.entity_lock.reader_count.fetch_sub(1, Ordering::SeqCst);
-    }
-}
-
 impl<'a> Debug for EntityReadGuard<'a> {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         self.deref().fmt(formatter)
@@ -226,57 +150,29 @@ impl<'a> Debug for EntityReadGuard<'a> {
 
 /// An entity guard that can be used to access an entity with mutability
 pub struct EntityWriteGuard<'a> {
-    entity_lock: &'a EntityRwLock,
     components: Vec<&'a mut dyn Component>,
+    _archetype_reader: RwLockReadGuard<'a, InnerArchetype>,
+    _entity_writer: RwLockWriteGuard<'a, ()>,
 }
 
 impl<'a> EntityWriteGuard<'a> {
     pub(crate) fn new(
-        inner_archetype: &InnerArchetype,
-        entity_lock: &'a EntityRwLock,
+        inner_archetype: &'a Arc<RwLock<InnerArchetype>>,
+        buffer_index: usize,
     ) -> EntityWriteGuard<'a> {
-        // Wait that every write locker is done
-        while entity_lock.reader_count.load(Ordering::SeqCst) > 0 {}
+        let archetype_reader = inner_archetype.read().unwrap();
 
-        // Poison the entity cell in the inner_archetype
-        entity_lock.reader_count.store(usize::MAX, Ordering::SeqCst);
+        // TODO: Try a way to remove that (ignore the fact that archetype reader is local)
+        let archetype_ref = unsafe { &*(&archetype_reader as *const _) } as &InnerArchetype;
 
-        // Build the component ref vector
-        let components = Self::build_component_ref_vector(inner_archetype, entity_lock);
+        let entity_head = decode_entity_head(archetype_ref, buffer_index);
+        let components = decode_components_mut(archetype_ref, entity_head);
 
         EntityWriteGuard {
-            entity_lock,
             components,
+            _archetype_reader: archetype_reader,
+            _entity_writer: entity_head.lock.write().unwrap(),
         }
-    }
-
-    fn build_component_ref_vector<'b>(
-        inner_archetype: &InnerArchetype,
-        rwlock: &'a EntityRwLock,
-    ) -> Vec<&'a mut dyn Component> {
-        let (_, component_infos_buffer, components_buffer) =
-            get_entry_buffers_mut(inner_archetype, rwlock);
-
-        // Get component decoding infos
-        let component_decoding_infos = get_component_decoding_infos(component_infos_buffer);
-
-        // Deserialize every components
-        let components = component_decoding_infos
-            .into_iter()
-            .map(|decoding_info| {
-                let components_buffer =
-                    unsafe { &mut *(components_buffer as *mut _) } as &mut [u8];
-
-                let component_buffer_index = decoding_info.relative_index;
-                let component_buffer_end = component_buffer_index + decoding_info.size;
-                let component_buffer =
-                    &mut components_buffer[component_buffer_index..component_buffer_end];
-
-                (decoding_info.decoder_mut)(component_buffer)
-            })
-            .collect::<Vec<_>>();
-
-        components
     }
 }
 
@@ -300,72 +196,12 @@ impl<'a> Debug for EntityWriteGuard<'a> {
     }
 }
 
-impl<'a> Drop for EntityWriteGuard<'a> {
-    fn drop(&mut self) {
-        // Decrement the lock guard counter
-        self.entity_lock.reader_count.store(0, Ordering::SeqCst);
-    }
-}
-
-// Get the entry buffer and split it
-// Split the entity buffer into three other ones, one for the lock, one
-// for the encoding infos and one for the component datas
-fn get_entry_buffers<'a>(
-    inner_archetype: &InnerArchetype,
-    rwlock: &'a EntityRwLock,
-) -> (&'a [u8], &'a [u8], &'a [u8]) {
-    // Get the whole entity buffer
-    let components_per_entity = inner_archetype.components_per_entity;
-    let entity_size = inner_archetype.entity_size;
-    let entity_buffer = unsafe {
-        std::slice::from_raw_parts((&*rwlock as *const EntityRwLock) as *const u8, entity_size)
-    };
-
-    // Split the entity buffer into three other one
-    let (rwlock_buffer, rest) = entity_buffer.split_at(size_of::<EntityRwLock>());
-    let (component_infos_buffer, components_buffer) =
-        rest.split_at(components_per_entity * size_of::<ComponentDecodingInfos>());
-
-    (rwlock_buffer, component_infos_buffer, components_buffer)
-}
-
-// Get the entry buffer with mutability and split it
-// Split the entity buffer into three other ones, one for the lock, one
-// for the encoding infos and one for the component datas
-fn get_entry_buffers_mut<'a>(
-    inner_archetype: &InnerArchetype,
-    rwlock: &'a EntityRwLock,
-) -> (&'a mut [u8], &'a mut [u8], &'a mut [u8]) {
-    // Get the whole entity buffer
-    let components_per_entity = inner_archetype.components_per_entity;
-    let entity_size = inner_archetype.entity_size;
-    let entity_buffer = unsafe {
-        std::slice::from_raw_parts_mut(
-            (&*rwlock as *const EntityRwLock as *mut EntityRwLock) as *mut u8,
-            entity_size,
-        )
-    };
-
-    // Split the entity buffer into three other one
-    let (rwlock_buffer, rest) = entity_buffer.split_at_mut(size_of::<EntityRwLock>());
-    let (component_infos_buffer, components_buffer) =
-        rest.split_at_mut(components_per_entity * size_of::<ComponentDecodingInfos>());
-
-    (rwlock_buffer, component_infos_buffer, components_buffer)
-}
-
-// Get the components decoding infos for an entity in the inner_archetype
-fn get_component_decoding_infos(entity_bufer: &[u8]) -> &[ComponentDecodingInfos] {
-    let (_head, body, _tail) = unsafe { entity_bufer.align_to::<ComponentDecodingInfos>() };
-    body
-}
-
-impl IntrospectObject for EntityRwLockWeak {
+impl IntrospectObject for EntitySharedRwLock {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![MethodInfo {
             name: "len".to_string(),
             call: MethodCaller::Const(Arc::new(move |this, _args| {
-                let this = cast_service::<EntityRwLockWeak>(this);
+                let this = cast_service::<EntitySharedRwLock>(this);
                 let this = this.read();
 
                 let result = this.len();
@@ -380,13 +216,13 @@ impl IntrospectObject for EntityRwLockWeak {
     }
 }
 
-impl SerializableObject for EntityRwLockWeak {
+impl SerializableObject for EntitySharedRwLock {
     fn duplicate(&self) -> Box<dyn SerializableObject> {
         Box::new(self.clone())
     }
 }
 
-impl Into<Serialized> for EntityRwLockWeak {
+impl Into<Serialized> for EntitySharedRwLock {
     fn into(self) -> Serialized {
         Serialized::NativeObject(Box::new(self.clone()))
     }
