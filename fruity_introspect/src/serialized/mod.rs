@@ -12,6 +12,9 @@ pub mod impl_primitives;
 /// Implementation of serialized conversions for containers (like Vec, Box ...)
 pub mod impl_containers;
 
+/// Implementation of serialized conversions for tuples
+pub mod impl_tuples;
+
 use crate::serializable_object::SerializableObject;
 use crate::IntrospectError;
 use fruity_any::FruityAny;

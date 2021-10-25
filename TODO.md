@@ -2,8 +2,8 @@
 
 [X] Make the archetype able to store datas without referencing for performances
 [X] Make serialized able to be extended in modules (put it into introspect, make intropect better ...)
-[ ] Add a "field changed" signal on every entities
 [ ] Allow javascript to play with signals
+[ ] Add a "field changed" signal on every entities
 [ ] Implement entity hierarchy
 
 # LESS PRIORITY

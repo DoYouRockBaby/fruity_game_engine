@@ -16,4 +16,3 @@ fruity_any = { path = "../fruity_any" }
 fruity_core = { path = "../fruity_core" }
 fruity_graphic = { path = "../fruity_graphic" }
 fruity_introspect = { path = "../fruity_introspect" }
-fruity_observer = { path = "../fruity_observer" }

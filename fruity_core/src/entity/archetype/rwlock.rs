@@ -5,6 +5,7 @@ use crate::entity::archetype::Component;
 use crate::entity::archetype::EntityTypeIdentifier;
 use crate::service::utils::cast_service;
 use fruity_any::*;
+use fruity_introspect::serializable_object::SerializableObject;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
@@ -306,26 +307,6 @@ impl<'a> Drop for EntityWriteGuard<'a> {
     }
 }
 
-impl IntrospectObject for EntityRwLock {
-    fn get_method_infos(&self) -> Vec<MethodInfo> {
-        vec![MethodInfo {
-            name: "len".to_string(),
-            call: MethodCaller::Const(Arc::new(move |this, _args| {
-                let this = cast_service::<EntityRwLock>(this);
-                let this = this.read();
-
-                let result = this.len();
-
-                Ok(Some(Serialized::USize(result)))
-            })),
-        }]
-    }
-
-    fn get_field_infos(&self) -> Vec<FieldInfo> {
-        vec![]
-    }
-}
-
 // Get the entry buffer and split it
 // Split the entity buffer into three other ones, one for the lock, one
 // for the encoding infos and one for the component datas
@@ -377,4 +358,36 @@ fn get_entry_buffers_mut<'a>(
 fn get_component_decoding_infos(entity_bufer: &[u8]) -> &[ComponentDecodingInfos] {
     let (_head, body, _tail) = unsafe { entity_bufer.align_to::<ComponentDecodingInfos>() };
     body
+}
+
+impl IntrospectObject for EntityRwLockWeak {
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![MethodInfo {
+            name: "len".to_string(),
+            call: MethodCaller::Const(Arc::new(move |this, _args| {
+                let this = cast_service::<EntityRwLockWeak>(this);
+                let this = this.read();
+
+                let result = this.len();
+
+                Ok(Some(Serialized::USize(result)))
+            })),
+        }]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+}
+
+impl SerializableObject for EntityRwLockWeak {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
+    }
+}
+
+impl Into<Serialized> for EntityRwLockWeak {
+    fn into(self) -> Serialized {
+        Serialized::NativeObject(Box::new(self.clone()))
+    }
 }

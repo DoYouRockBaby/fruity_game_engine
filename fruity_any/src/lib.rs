@@ -7,6 +7,7 @@
 pub use fruity_any_derive::FruityAny;
 use std::any::Any;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::RwLock;
 
 /// The any trait
@@ -43,6 +44,24 @@ impl<T: FruityAny + ?Sized> FruityAny for Box<T> {
 }
 
 impl<T: FruityAny + ?Sized> FruityAny for Arc<T> {
+    fn as_any_ref(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn as_any_box(self: Box<Self>) -> Box<dyn Any> {
+        self
+    }
+
+    fn as_any_arc(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
+        self
+    }
+}
+
+impl<T: FruityAny> FruityAny for Mutex<T> {
     fn as_any_ref(&self) -> &dyn Any {
         self
     }

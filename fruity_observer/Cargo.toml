@@ -1,8 +1,0 @@
-[package]
-name = "fruity_observer"
-version = "0.1.0"
-edition = "2018"
-resolver = "2"
-
-[dependencies]
-lazy_static = "1.4"

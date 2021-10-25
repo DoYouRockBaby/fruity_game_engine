@@ -44,25 +44,7 @@ impl EntityTypeIdentifier {
 }
 
 /// An identifier for an entity
-#[derive(Debug, Copy, Clone)]
-pub struct EntityId(pub u64);
-
-impl PartialEq for EntityId {
-    fn eq(&self, other: &EntityId) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl Eq for EntityId {}
-
-impl Hash for EntityId {
-    fn hash<H>(&self, state: &mut H)
-    where
-        H: std::hash::Hasher,
-    {
-        self.0.hash(state)
-    }
-}
+pub type EntityId = u64;
 
 /// Get the entity type identifier from a list of components
 pub fn get_type_identifier(components: &[AnyComponent]) -> EntityTypeIdentifier {

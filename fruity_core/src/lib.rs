@@ -20,6 +20,9 @@ use crate::world::World;
 
 pub use fruity_core_derive::Component;
 
+#[macro_use]
+extern crate lazy_static;
+
 /// All related with components
 pub mod component;
 
@@ -31,6 +34,9 @@ pub mod resource;
 
 /// Provides a collection for services
 pub mod service;
+
+/// An observer pattern
+pub mod signal;
 
 /// Provides a collection for settings
 pub mod settings;

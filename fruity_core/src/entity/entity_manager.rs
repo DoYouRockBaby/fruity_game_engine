@@ -1,6 +1,5 @@
 use crate::component::component::AnyComponent;
 use crate::component::component_list_rwlock::ComponentListRwLock;
-use crate::entity::archetype::rwlock::EntityRwLock;
 use crate::entity::archetype::rwlock::EntityRwLockWeak;
 use crate::entity::archetype::Archetype;
 use crate::entity::entity::get_type_identifier;
@@ -10,6 +9,7 @@ use crate::service::service::Service;
 use crate::service::utils::cast_service;
 use crate::service::utils::cast_service_mut;
 use crate::service::utils::ArgumentCaster;
+use crate::signal::Signal;
 use crate::ServiceManager;
 use crate::World;
 use fruity_any::*;
@@ -18,7 +18,6 @@ use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
-use fruity_observer::Signal;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -36,10 +35,10 @@ pub struct EntityManager {
     service_manager: Arc<RwLock<ServiceManager>>,
 
     /// Signal propagated when a new entity is inserted into the collection
-    pub on_entity_created: Signal<(EntityId, EntityRwLock)>,
+    pub on_entity_created: Signal<EntityRwLockWeak>,
 
     /// Signal propagated when a new entity is removed from the collection
-    pub on_entity_removed: Signal<(EntityId, EntityRwLock)>,
+    pub on_entity_removed: Signal<EntityId>,
 }
 
 impl EntityManager {
@@ -114,7 +113,7 @@ impl EntityManager {
     ///
     pub fn create(&mut self, components: Vec<AnyComponent>) -> EntityId {
         self.id_incrementer += 1;
-        let entity_id = EntityId(self.id_incrementer);
+        let entity_id = self.id_incrementer;
         let entity_identifier = get_type_identifier(&components);
 
         match self.archetype_by_identifier(entity_identifier) {
@@ -127,8 +126,7 @@ impl EntityManager {
             }
         }
 
-        /*self.on_entity_created
-        .notify((entity_id, self.get(entity_id).unwrap()));*/
+        self.on_entity_created.notify(self.get(entity_id).unwrap());
         entity_id
     }
 
@@ -138,7 +136,7 @@ impl EntityManager {
     /// * `entity_id` - The entity id
     ///
     pub fn remove(&mut self, entity_id: EntityId) {
-        if let Some(entity) =
+        if let Some(_) =
             self.archetypes
                 .iter_mut()
                 .find_map(|archetype| match archetype.remove(entity_id) {
@@ -148,7 +146,7 @@ impl EntityManager {
                     },
                 })
         {
-            self.on_entity_removed.notify((entity_id, entity));
+            self.on_entity_removed.notify(entity_id);
         } else {
             log::error!(
                 "Trying to delete an unregistered entity with entity id {:?}",

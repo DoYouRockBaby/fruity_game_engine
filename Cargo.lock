@@ -686,8 +686,8 @@ dependencies = [
  "fruity_any",
  "fruity_core_derive",
  "fruity_introspect",
- "fruity_observer",
  "itertools",
+ "lazy_static",
  "log",
  "rayon",
  "yaml-rust",
@@ -728,7 +728,6 @@ dependencies = [
  "fruity_any",
  "fruity_core",
  "fruity_introspect",
- "fruity_observer",
  "fruity_windows",
  "image",
  "log",
@@ -748,7 +747,6 @@ dependencies = [
  "fruity_core",
  "fruity_graphic",
  "fruity_introspect",
- "fruity_observer",
  "image",
  "log",
  "rayon",
@@ -781,20 +779,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "fruity_observer"
-version = "0.1.0"
-dependencies = [
- "lazy_static",
-]
-
-[[package]]
 name = "fruity_windows"
 version = "0.1.0"
 dependencies = [
  "fruity_any",
  "fruity_core",
  "fruity_introspect",
- "fruity_observer",
  "winit",
 ]
 
