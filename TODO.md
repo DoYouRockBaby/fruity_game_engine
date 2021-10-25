@@ -1,12 +1,14 @@
-# ROADMAP
-
-[X] Make the archetype able to store datas without referencing for performances
-[X] Make serialized able to be extended in modules (put it into introspect, make intropect better ...)
-[ ] Allow javascript to play with signals
-[ ] Add a "field changed" signal on every entities
-[ ] Implement entity hierarchy
-
 # FEATURES V1
+
+## ECS
+
+[X] Make serialized able to be extended in modules (put it into introspect, make intropect better ...)
+[X] Make the archetype able to store datas in plain array for performances
+[O] Test and stabilize ECS
+[O] Implement entity hierarchy
+[ ] Add a "field changed" signal on every entities
+[ ] There should be some memory leak in archetype
+[ ] Make macros for native systems
 
 ## Editor
 
@@ -37,6 +39,7 @@
 
 ## Scripting
 
+[O] Allow javascript to play with signals
 [ ] Find a better way to store SerializedComponent, to have something more effective on read
 [ ] There should be some memory leak when a js object is released
 [X] Javascript module is highly unsafe cause i force to put a one thread runtime into a multi thread host
@@ -49,7 +52,6 @@
 
 ## Others
 
-[ ] Make macros for native systems
 [ ] Implement a basic sound features
 [ ] Dynamic libraries rust
 [ ] Hot reload js
@@ -62,4 +64,3 @@
 [ ] Rust doc everywhere
 [ ] Remove as many unwrap as possible (ecs and javascript)
 [X] A lot of unsafe code were created to avoid lifetime issue in ecs, remove as many as possible
-[ ] There should be some memory leak in archetype
