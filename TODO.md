@@ -19,6 +19,7 @@
 
 ## Game tools
 
+[ ] Inputs
 [ ] Time service
 [ ] Animations everywhere (including sprite animations)
 [ ] State manager
