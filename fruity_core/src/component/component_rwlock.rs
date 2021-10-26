@@ -103,6 +103,7 @@ impl IntrospectObject for ComponentRwLock {
                                 call(writer.as_any_mut(), args)
                             }))
                         }
+                        SetterCaller::None => SetterCaller::None,
                     },
                 }
             })

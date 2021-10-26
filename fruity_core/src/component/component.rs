@@ -115,6 +115,7 @@ impl IntrospectObject for AnyComponent {
                                 call(this.component.as_mut().as_any_mut(), args)
                             }))
                         }
+                        SetterCaller::None => SetterCaller::None,
                     },
                 }
             })

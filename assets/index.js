@@ -28,10 +28,16 @@ const resourcesManager = services.get("resources_manager");
 
 console.log("ICI");
 
+entityManager.onEntityCreated.addObserver((entity) => {
+    console.log("SIGNAL");
+    console.log(entity);
+});
+
 
 systemManager.addBeginSystem(() => {
     resourcesManager.readResourceSettings("assets/resources.yaml");
 
+    console.log("1");
     entityManager.create([
         new Position({ x: 0.25, y: 0.25 }),
         new Size({ width: 0.5, height: 0.5 }),
@@ -41,6 +47,7 @@ systemManager.addBeginSystem(() => {
         }),
         new Velocity({ x: 0.001, y: 0.001 }),
     ]);
+    console.log("2");
 
     entityManager.create([
         new Position({ x: -0.25, y: 0.25 }),

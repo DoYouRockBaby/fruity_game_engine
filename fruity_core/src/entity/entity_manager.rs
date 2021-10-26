@@ -18,6 +18,7 @@ use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
+use fruity_introspect::SetterCaller;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -48,8 +49,8 @@ impl EntityManager {
             id_incrementer: 0,
             archetypes: Vec::new(),
             service_manager: world.service_manager.clone(),
-            on_entity_created: Signal::new(),
-            on_entity_removed: Signal::new(),
+            on_entity_created: Signal::new(world.service_manager.clone()),
+            on_entity_removed: Signal::new(world.service_manager.clone()),
         }
     }
 
@@ -214,7 +215,17 @@ impl IntrospectObject for EntityManager {
     }
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
-        vec![]
+        vec![FieldInfo {
+            name: "on_entity_created".to_string(),
+            getter: Arc::new(|this| {
+                this.downcast_ref::<EntityManager>()
+                    .unwrap()
+                    .on_entity_created
+                    .clone()
+                    .into()
+            }),
+            setter: SetterCaller::None,
+        }]
     }
 }
 

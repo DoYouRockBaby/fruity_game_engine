@@ -6,7 +6,7 @@
 [X] Make the archetype able to store datas in plain array for performances
 [O] Test and stabilize ECS
 [O] Implement entity hierarchy
-[ ] Add a "field changed" signal on every entities
+[O] Add a "field changed" signal on every entities
 [ ] There should be some memory leak in archetype
 [ ] Make macros for native systems
 
@@ -39,11 +39,11 @@
 
 ## Scripting
 
-[O] Allow javascript to play with signals
 [ ] Find a better way to store SerializedComponent, to have something more effective on read
 [ ] There should be some memory leak when a js object is released
 [X] Javascript module is highly unsafe cause i force to put a one thread runtime into a multi thread host
 [ ] Implement web workers in js
+[X] Allow javascript to play with signals (depends on next)
 [ ] Fix javascript services
 [ ] Make javascript able to import modules via package.json
 [ ] Test and make microjob library compatible with javascript

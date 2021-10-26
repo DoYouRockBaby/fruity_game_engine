@@ -84,6 +84,9 @@ pub enum SetterCaller {
 
     /// With mutability
     Mut(Arc<dyn Fn(&mut dyn Any, Serialized)>),
+
+    /// No setter
+    None,
 }
 
 /// Informations about a field of an introspect object
@@ -168,6 +171,7 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Box<T> {
                                 call(this.as_mut().as_any_mut(), args)
                             }))
                         }
+                        SetterCaller::None => SetterCaller::None,
                     },
                 }
             })
@@ -222,10 +226,11 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Arc<T> {
 
                                 call(this.as_ref().as_any_ref(), args)
                             }))
-                        }
+                        },
                         SetterCaller::Mut(_) => {
                             panic!("Cannot call a mutable function from an arc, should be wrap into a lock");
-                        }
+                        },
+                        SetterCaller::None => SetterCaller::None,
                     },
                 }
             })
@@ -290,6 +295,7 @@ impl<T: IntrospectObject> IntrospectObject for RwLock<T> {
                                 call(writer.deref_mut(), args)
                             }))
                         }
+                        SetterCaller::None => SetterCaller::None,
                     },
                 }
             })

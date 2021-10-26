@@ -5,6 +5,7 @@ use fruity_core::service::utils::cast_service;
 use fruity_core::service::utils::ArgumentCaster;
 use fruity_core::signal::Signal;
 use fruity_core::system::system_manager::SystemManager;
+use fruity_core::world::World;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
@@ -46,16 +47,19 @@ impl Debug for WindowsManager {
 }
 
 impl WindowsManager {
-    pub fn new(system_manager: ServiceRwLock<SystemManager>) -> WindowsManager {
+    pub fn new(world: &World) -> WindowsManager {
+        let service_manager = world.service_manager.read().unwrap();
+        let system_manager = service_manager.get::<SystemManager>().unwrap();
+
         WindowsManager {
             system_manager,
             event_stack: Arc::new(RwLock::new(Vec::new())),
             window: RwLock::new(None),
-            on_windows_creation: Signal::new(),
-            on_starting_event_loop: Signal::new(),
-            on_start_update: Signal::new(),
-            on_end_update: Signal::new(),
-            on_resize: Signal::new(),
+            on_windows_creation: Signal::new(world.service_manager.clone()),
+            on_starting_event_loop: Signal::new(world.service_manager.clone()),
+            on_start_update: Signal::new(world.service_manager.clone()),
+            on_end_update: Signal::new(world.service_manager.clone()),
+            on_resize: Signal::new(world.service_manager.clone()),
         }
     }
 
@@ -95,12 +99,12 @@ impl WindowsManager {
         std::mem::drop(system_manager_reader);
 
         // For tests
-        /*{
+        {
             let system_manager_reader = self.system_manager.read().unwrap();
             system_manager_reader.run();
             std::mem::drop(system_manager_reader);
             return;
-        }*/
+        }
 
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Wait;

@@ -66,6 +66,7 @@ impl ComponentsFactory {
                         SetterCaller::Mut(call) => {
                             call(component.as_any_mut(), value);
                         }
+                        SetterCaller::None => (),
                     }
                 }
             })

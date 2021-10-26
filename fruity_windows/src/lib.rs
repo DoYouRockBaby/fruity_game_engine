@@ -1,13 +1,12 @@
 use crate::windows_manager::WindowsManager;
-use fruity_core::system::system_manager::SystemManager;
 use fruity_core::world::World;
 
 pub mod windows_manager;
 
 /// Initialize this extension
 pub fn initialize(world: &World) {
-    let mut service_manager = world.service_manager.write().unwrap();
-    let system_manager = service_manager.get::<SystemManager>().unwrap();
+    let windows_manager = WindowsManager::new(world);
 
-    service_manager.register("windows_manager", WindowsManager::new(system_manager));
+    let mut service_manager = world.service_manager.write().unwrap();
+    service_manager.register("windows_manager", windows_manager);
 }

@@ -49,7 +49,7 @@ fn method_callback(
 ) {
     // Get this as an introspect object
     let intern_value =
-        get_intern_value_from_v8_object::<Box<dyn SerializableObject>>(scope, args.this());
+        get_intern_value_from_v8_object_mut::<Box<dyn SerializableObject>>(scope, args.this());
 
     if let Some(introspect_object) = intern_value {
         // Extract the current method info
@@ -85,11 +85,14 @@ fn method_callback(
                     }
                 }
             }
-            MethodCaller::Mut(_call) => {
-                // Mutable methods are handled by impl<T: SerializableObject> SerializableObject for RwLock<T>
-                // This should not be reached, if it's happen, it means that you try yo access with mutability
-                // something that is not protected by a lock
-                None
+            MethodCaller::Mut(call) => {
+                match call(introspect_object.as_any_mut(), deserialized_args) {
+                    Ok(result) => result,
+                    Err(err) => {
+                        log_introspect_error(&err);
+                        None
+                    }
+                }
             }
         };
 
@@ -116,7 +119,7 @@ fn getter_callback(
 
             field_infos
                 .iter()
-                .find(|method_info| method_info.name == name)
+                .find(|method_info| format_function_name_from_rust_to_js(&method_info.name) == name)
                 .unwrap()
                 .clone()
         };
@@ -165,6 +168,7 @@ fn setter_callback(
                 // This should not be reached, if it's happen, it means that you try yo access with mutability
                 // something that is not protected by a lock
             }
+            SetterCaller::None => (),
         };
     }
 }

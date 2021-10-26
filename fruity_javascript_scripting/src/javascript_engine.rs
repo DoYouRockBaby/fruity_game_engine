@@ -138,6 +138,10 @@ impl JavascriptEngine {
     }
 }
 
+impl Drop for JavascriptEngine {
+    fn drop(&mut self) {}
+}
+
 impl IntrospectObject for JavascriptEngine {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]

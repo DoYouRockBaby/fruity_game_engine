@@ -1,5 +1,6 @@
 use crate::service::utils::cast_service_mut;
 use crate::service::utils::ArgumentCaster;
+use crate::ServiceManager;
 use fruity_any::FruityAny;
 use fruity_introspect::log_introspect_error;
 use fruity_introspect::serializable_object::SerializableObject;
@@ -12,6 +13,7 @@ use fruity_introspect::MethodInfo;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::RwLock;
 
 struct IdGenerator {
     incrementer: usize,
@@ -44,15 +46,17 @@ struct InternSignal<T: Into<Serialized> + Debug + Clone + 'static> {
 #[derive(Clone)]
 pub struct Signal<T: Into<Serialized> + Debug + Clone + 'static> {
     intern: Arc<Mutex<InternSignal<T>>>,
+    service_manager: Arc<RwLock<ServiceManager>>,
 }
 
 impl<T: Into<Serialized> + Debug + Clone + 'static> Signal<T> {
     /// Returns a Signal
-    pub fn new() -> Signal<T> {
+    pub fn new(service_manager: Arc<RwLock<ServiceManager>>) -> Signal<T> {
         Signal {
             intern: Arc::new(Mutex::new(InternSignal {
                 observers: Vec::new(),
             })),
+            service_manager,
         }
     }
 
@@ -89,13 +93,13 @@ impl<T: Into<Serialized> + Debug + Clone + 'static> IntrospectObject for Signal<
             call: MethodCaller::Mut(Arc::new(|this, args| {
                 let this = cast_service_mut::<Signal<T>>(this);
 
-                let mut caster = ArgumentCaster::new("add_begin_system", args);
+                let mut caster = ArgumentCaster::new("add_observer", args);
                 let arg1 = caster.cast_next::<Callback>()?;
-                let intern = this.intern.clone();
+                let service_manager = this.service_manager.clone();
 
                 this.add_observer(move |arg| {
                     let arg: Serialized = arg.clone().into();
-                    match arg1(intern.clone(), vec![arg]) {
+                    match arg1(service_manager.clone(), vec![arg]) {
                         Ok(_) => (),
                         Err(err) => log_introspect_error(&err),
                     };
@@ -176,7 +180,7 @@ impl<T: Into<Serialized> + Debug + Clone + 'static> FruityAny for Signal<T> {
 
 impl<T: Into<Serialized> + Debug + Clone + 'static> Into<Serialized> for Signal<T> {
     fn into(self) -> Serialized {
-        Serialized::NativeObject(Box::new(self.clone()))
+        Serialized::NativeObject(Box::new(self))
     }
 }
 
