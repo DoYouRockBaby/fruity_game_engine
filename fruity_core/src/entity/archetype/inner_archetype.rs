@@ -135,7 +135,7 @@ impl InnerArchetype {
         // Create then entity buffer
         let entity_index = self.entity_size;
         let mut entity_buffer: Vec<u8> = vec![0; self.entity_size];
-        encode_entity(entity_id, &mut entity_buffer, &components);
+        encode_entity(entity_id, &mut entity_buffer, components);
 
         // Store the entity
         self.buffer.append(&mut entity_buffer);

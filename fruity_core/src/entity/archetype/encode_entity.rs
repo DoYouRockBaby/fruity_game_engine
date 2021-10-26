@@ -19,10 +19,7 @@ pub(crate) fn entity_size(components: &[AnyComponent]) -> usize {
 
     let all_components_size: usize = components
         .iter()
-        .map(|component| {
-            let reader = component.read().unwrap();
-            reader.encode_size()
-        })
+        .map(|component| component.encode_size())
         .sum();
 
     let entity_size = size_of::<EntityCellHead>()
@@ -42,7 +39,7 @@ pub(crate) fn entity_size(components: &[AnyComponent]) -> usize {
 pub(crate) fn encode_entity(
     entity_id: EntityId,
     mut entity_buffer: &mut [u8],
-    components: &[AnyComponent],
+    components: Vec<AnyComponent>,
 ) {
     // Store the head
     let head = EntityCellHead::new(entity_id);
@@ -63,8 +60,6 @@ pub(crate) fn encode_entity(
     let mut relative_index = 0;
     let decoding_infos_buffer_index = size_of::<EntityCellHead>();
     for (index, component) in components.iter().enumerate() {
-        let reader = component.read().unwrap();
-
         let buffer_index =
             decoding_infos_buffer_index + index * size_of::<ComponentDecodingInfos>();
         let buffer_end = buffer_index + size_of::<ComponentDecodingInfos>();
@@ -72,12 +67,12 @@ pub(crate) fn encode_entity(
 
         let decoding_infos = ComponentDecodingInfos {
             relative_index,
-            size: reader.encode_size(),
-            decoder: reader.get_decoder(),
-            decoder_mut: reader.get_decoder_mut(),
+            size: component.encode_size(),
+            decoder: component.get_decoder(),
+            decoder_mut: component.get_decoder_mut(),
         };
 
-        relative_index += reader.encode_size();
+        relative_index += component.encode_size();
 
         let encoded_infos = unsafe {
             std::slice::from_raw_parts(
@@ -93,18 +88,15 @@ pub(crate) fn encode_entity(
     let mut component_buffer_index =
         size_of::<EntityCellHead>() + components.len() * size_of::<ComponentDecodingInfos>();
     for component in components.into_iter() {
-        let reader = component.read().unwrap();
-
         let buffer_index = component_buffer_index;
-        let buffer_end = component_buffer_index + reader.encode_size();
+        let buffer_end = component_buffer_index + component.encode_size();
         let component_buffer = &mut entity_buffer[buffer_index..buffer_end];
-        reader.encode(component_buffer);
+        component.encode(component_buffer);
 
-        component_buffer_index += reader.encode_size();
+        component_buffer_index += component.encode_size();
 
         // TODO: Handle the memory leaks
         // Exists to prevent the nested values to be droped
-        std::mem::drop(reader);
         std::mem::forget(component);
     }
 }

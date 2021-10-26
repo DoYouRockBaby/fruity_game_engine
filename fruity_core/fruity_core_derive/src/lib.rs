@@ -61,6 +61,10 @@ fn derive_component_trait(input: TokenStream) -> TokenStream {
                     &mut body[0]
                 }
             }
+
+            fn duplicate(&self) -> Box<dyn fruity_core::component::component::Component> {
+                Box::new(self.clone())
+            }
         }
     };
 

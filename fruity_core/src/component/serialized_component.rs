@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 /// A wrapper for components that come from scripting languages as serialized
-#[derive(Debug, FruityAny)]
+#[derive(Debug, Clone, FruityAny)]
 pub struct SerializedComponent {
     class_name: String,
     fields: HashMap<String, Serialized>,
@@ -57,6 +57,10 @@ impl Component for SerializedComponent {
             let (_head, body, _tail) = unsafe { data.align_to_mut::<Self>() };
             &mut body[0]
         }
+    }
+
+    fn duplicate(&self) -> Box<dyn Component> {
+        Box::new(self.clone())
     }
 }
 
