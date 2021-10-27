@@ -12,6 +12,17 @@ pub fn push_thread_scope_stack(scope: &mut v8::HandleScope) {
     });
 }
 
+pub fn top_thread_scope_stack<'a>() -> Option<&'a mut v8::HandleScope<'a>> {
+    let scope = THREAD_SCOPE_STACK.with(|scope_stack| {
+        let scope_stack = unsafe { &mut *scope_stack.get() };
+        scope_stack.last_mut()
+    });
+
+    scope.map(|scope| unsafe {
+        std::mem::transmute::<&mut v8::HandleScope, &mut v8::HandleScope>(scope)
+    })
+}
+
 pub fn pop_thread_scope_stack<'a>() -> Option<&'a mut v8::HandleScope<'a>> {
     let scope = THREAD_SCOPE_STACK.with(|scope_stack| {
         let scope_stack = unsafe { &mut *scope_stack.get() };

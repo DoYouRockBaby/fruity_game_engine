@@ -1,18 +1,16 @@
 use crate::js_value::object::introspect_object::deserialize_v8_introspect_object;
+use crate::js_value::utils::get_service_manager;
 use crate::js_value::utils::get_stored_callback;
 use crate::js_value::utils::store_callback;
 use crate::serialize::serialize::serialize_v8;
-use crate::thread_scope_stack::pop_thread_scope_stack;
+use crate::thread_scope_stack::top_thread_scope_stack;
 use crate::JavascriptEngine;
-use fruity_any::FruityAny;
-use fruity_core::service::service_manager::ServiceManager;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::IntrospectError;
 use rusty_v8 as v8;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 pub fn deserialize_v8<'a>(
     scope: &mut v8::HandleScope<'a>,
@@ -58,13 +56,12 @@ pub fn deserialize_v8<'a>(
         // Store the function into a global object
         let v8_function = v8::Local::<v8::Function>::try_from(v8_value).unwrap();
         let callback_identifier = store_callback(scope, v8_function);
+        let service_manager = get_service_manager(scope).unwrap();
 
         // Push the scope in the stack
-        let callback = move |service_manager: Arc<dyn FruityAny>,
-                             args: Vec<Serialized>|
-              -> Result<Option<Serialized>, IntrospectError> {
+        let callback = move |args: Vec<Serialized>| -> Result<Option<Serialized>, IntrospectError> {
             // Get the previously stored scope
-            let scope = pop_thread_scope_stack();
+            let scope = top_thread_scope_stack();
 
             if let Some(scope) = scope {
                 // If there is a scope in the stack, we can directly use it to run the function
@@ -87,10 +84,6 @@ pub fn deserialize_v8<'a>(
                 }
             } else {
                 // Otherwise, we fallback by running it from the javascript manager
-                let service_manager = service_manager
-                    .as_any_arc()
-                    .downcast::<RwLock<ServiceManager>>()
-                    .unwrap();
 
                 let service_manager = service_manager.read().unwrap();
                 let javascript_engine = service_manager.read::<JavascriptEngine>();

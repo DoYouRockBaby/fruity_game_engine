@@ -17,7 +17,6 @@ pub mod impl_tuples;
 
 use crate::serializable_object::SerializableObject;
 use crate::IntrospectError;
-use fruity_any::FruityAny;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::Debug;
@@ -26,10 +25,7 @@ use std::sync::RwLock;
 
 /// A callback for the serialized type
 pub type Callback = Arc<
-    dyn Fn(Arc<dyn FruityAny>, Vec<Serialized>) -> Result<Option<Serialized>, IntrospectError>
-        + Sync
-        + Send
-        + 'static,
+    dyn Fn(Vec<Serialized>) -> Result<Option<Serialized>, IntrospectError> + Sync + Send + 'static,
 >;
 
 /// A list of serialized object fields
@@ -92,10 +88,7 @@ pub enum Serialized {
     /// Service reference value
     Callback(
         Arc<
-            dyn Fn(
-                    Arc<dyn FruityAny>,
-                    Vec<Serialized>,
-                ) -> Result<Option<Serialized>, IntrospectError>
+            dyn Fn(Vec<Serialized>) -> Result<Option<Serialized>, IntrospectError>
                 + Sync
                 + Send
                 + 'static,

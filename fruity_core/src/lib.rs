@@ -69,7 +69,7 @@ macro_rules! entity_type {
 /// Initialize this extension
 pub fn initialize(world: &World) {
     let mut service_manager = world.service_manager.write().unwrap();
-    service_manager.register("entity_manager", EntityManager::new(world));
+    service_manager.register("entity_manager", EntityManager::new());
     service_manager.register("system_manager", SystemManager::new(world));
     service_manager.register("components_factory", ComponentsFactory::new());
     service_manager.register("resources_manager", ResourcesManager::new(world));

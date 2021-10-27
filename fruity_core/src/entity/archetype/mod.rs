@@ -5,6 +5,7 @@ use crate::entity::archetype::inner_archetype::EntityCellHead;
 use crate::entity::archetype::inner_archetype::InnerArchetype;
 use crate::entity::archetype::rwlock::EntitySharedRwLock;
 use crate::entity::entity::get_type_identifier;
+use crate::entity::entity::get_type_identifier_by_any;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
 use crate::entity::entity_manager::RemoveEntityError;
@@ -39,7 +40,7 @@ impl Archetype {
     ///
     pub fn new(entity_id: EntityId, components: Vec<AnyComponent>) -> Archetype {
         // Deduce the archetype properties from the components
-        let identifier = get_type_identifier(&components);
+        let identifier = get_type_identifier_by_any(&components);
 
         let components_per_entity = components.len();
 

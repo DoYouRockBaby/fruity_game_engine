@@ -5,6 +5,7 @@ use crate::js_value::utils::get_intern_value_from_v8_object_mut;
 use crate::js_value::utils::inject_option_serialized_into_v8_return_value;
 use crate::js_value::utils::inject_serialized_into_v8_return_value;
 use crate::serialize::deserialize::deserialize_v8;
+use crate::thread_scope_stack::pop_thread_scope_stack;
 use crate::thread_scope_stack::push_thread_scope_stack;
 use crate::JsObject;
 use fruity_introspect::log_introspect_error;
@@ -100,6 +101,9 @@ fn method_callback(
             }
         };
 
+        // Remove the scope into the scope stack
+        pop_thread_scope_stack();
+
         // Return the result
         inject_option_serialized_into_v8_return_value(scope, &result, &mut return_value);
     }
@@ -128,8 +132,14 @@ fn getter_callback(
                 .clone()
         };
 
+        // Push the scope into the scope stack
+        push_thread_scope_stack(scope);
+
         // Call the function
         let result = (field_info.getter)(introspect_object.as_any_ref());
+
+        // Remove the scope into the scope stack
+        pop_thread_scope_stack();
 
         // Return the result
         inject_serialized_into_v8_return_value(scope, &result, &mut return_value);
@@ -162,6 +172,9 @@ fn setter_callback(
         // Build the arguments
         let deserialized_arg = deserialize_v8(scope, value).unwrap();
 
+        // Push the scope into the scope stack
+        push_thread_scope_stack(scope);
+
         // Call the function
         match field_info.setter {
             SetterCaller::Const(call) => {
@@ -174,6 +187,9 @@ fn setter_callback(
             }
             SetterCaller::None => (),
         };
+
+        // Remove the scope into the scope stack
+        pop_thread_scope_stack();
     }
 }
 

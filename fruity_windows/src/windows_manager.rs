@@ -55,11 +55,11 @@ impl WindowsManager {
             system_manager,
             event_stack: Arc::new(RwLock::new(Vec::new())),
             window: RwLock::new(None),
-            on_windows_creation: Signal::new(world.service_manager.clone()),
-            on_starting_event_loop: Signal::new(world.service_manager.clone()),
-            on_start_update: Signal::new(world.service_manager.clone()),
-            on_end_update: Signal::new(world.service_manager.clone()),
-            on_resize: Signal::new(world.service_manager.clone()),
+            on_windows_creation: Signal::new(),
+            on_starting_event_loop: Signal::new(),
+            on_start_update: Signal::new(),
+            on_end_update: Signal::new(),
+            on_resize: Signal::new(),
         }
     }
 

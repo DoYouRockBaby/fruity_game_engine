@@ -6,6 +6,7 @@ use crate::entity::archetype::rwlock::EntitySharedRwLock;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
 use crate::entity::entity_manager::RemoveEntityError;
+use crate::signal::Signal;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -16,6 +17,7 @@ pub struct EntityCellHead {
     pub(crate) entity_id: EntityId,
     pub(crate) enabled: bool,
     pub(crate) deleted: bool,
+    pub(crate) on_updated: Signal<()>,
     pub(crate) lock: RwLock<()>,
 }
 
@@ -26,6 +28,7 @@ impl EntityCellHead {
             entity_id,
             enabled: true,
             deleted: false,
+            on_updated: Signal::new(),
             lock: RwLock::new(()),
         }
     }
@@ -133,7 +136,7 @@ impl InnerArchetype {
     ///
     pub(crate) fn add(&mut self, entity_id: EntityId, components: Vec<AnyComponent>) {
         // Create then entity buffer
-        let entity_index = self.entity_size;
+        let entity_index = self.buffer.len();
         let mut entity_buffer: Vec<u8> = vec![0; self.entity_size];
         encode_entity(entity_id, &mut entity_buffer, components);
 

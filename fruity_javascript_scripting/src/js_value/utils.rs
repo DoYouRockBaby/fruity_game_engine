@@ -1,11 +1,15 @@
+use crate::bridge::service::SERVICE_MANAGER_GLOBAL_VAR_NAME;
 use crate::javascript_engine::CallbackIdentifier;
 use crate::serialize::serialize::serialize_v8;
 use convert_case::Case;
 use convert_case::Casing;
+use fruity_core::service::service_manager::ServiceManager;
 use fruity_introspect::serialized::Serialized;
 use rusty_v8 as v8;
 use std::any::Any;
 use std::convert::TryFrom;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 pub fn get_intern_value_from_v8_object<'a, T: Any>(
     scope: &mut v8::HandleScope,
@@ -76,6 +80,18 @@ pub fn check_object_intern_identifier<'a>(
     } else {
         None
     }
+}
+
+pub fn get_service_manager(scope: &mut v8::HandleScope) -> Option<Arc<RwLock<ServiceManager>>> {
+    let context = scope.get_current_context();
+    let global_object = context.global(scope);
+    let service_manager_string = v8::String::new(scope, SERVICE_MANAGER_GLOBAL_VAR_NAME).unwrap();
+    let service_manager_v8 = global_object.get(scope, service_manager_string.into())?;
+    let service_manager_v8 = v8::Local::<v8::Object>::try_from(service_manager_v8).ok()?;
+    let service_manager: &Arc<RwLock<ServiceManager>> =
+        get_intern_value_from_v8_object(scope, service_manager_v8)?;
+
+    Some(service_manager.clone())
 }
 
 pub fn store_callback(

@@ -1,11 +1,15 @@
 use crate::component::component_list_rwlock::ComponentListRwLock;
+use crate::component::component_rwlock::ComponentRwLock;
 use crate::entity::archetype::encode_entity::decode_components;
 use crate::entity::archetype::encode_entity::decode_components_mut;
 use crate::entity::archetype::encode_entity::decode_entity_head;
+use crate::entity::archetype::get_type_identifier;
 use crate::entity::archetype::inner_archetype::InnerArchetype;
 use crate::entity::archetype::Component;
+use crate::entity::archetype::EntityCellHead;
 use crate::entity::archetype::EntityTypeIdentifier;
 use crate::service::utils::cast_service;
+use crate::service::utils::ArgumentCaster;
 use fruity_any::*;
 use fruity_introspect::serializable_object::SerializableObject;
 use fruity_introspect::serialized::Serialized;
@@ -13,6 +17,7 @@ use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
+use fruity_introspect::SetterCaller;
 use itertools::Itertools;
 use std::fmt::Debug;
 use std::fmt::Formatter;
@@ -52,6 +57,37 @@ impl EntitySharedRwLock {
     /// Create a write guard over the entity RwLock
     pub fn write(&self) -> EntityWriteGuard {
         EntityWriteGuard::new(&self.inner_archetype, self.buffer_index)
+    }
+
+    /// Get a component rwlock
+    ///
+    /// # Arguments
+    /// * `component_type` - The component type
+    ///
+    pub fn get_component(&self, component_type: String) -> Option<ComponentRwLock> {
+        let reader = self.read();
+        reader
+            .iter()
+            .enumerate()
+            .find(|(_index, component)| component.get_component_type() == component_type)
+            .map(|(index, _component)| ComponentRwLock::new(self.clone(), index))
+    }
+
+    /// Check if the entity contains the given component types
+    ///
+    /// # Arguments
+    /// * `component_types` - The component types
+    ///
+    pub fn contains(&self, component_types: &EntityTypeIdentifier) -> bool {
+        let reader = self.read();
+        let entity_type_identifier = get_type_identifier(&reader);
+        entity_type_identifier.contains(component_types)
+    }
+
+    /// Get components count
+    pub fn len(&self) -> usize {
+        let reader = self.read();
+        reader.len()
     }
 
     /// Get collections of components list reader
@@ -96,6 +132,19 @@ impl EntitySharedRwLock {
         component_indexes.map(move |component_indexes| {
             ComponentListRwLock::new(weak.clone(), component_indexes.clone())
         })
+    }
+}
+
+impl Deref for EntitySharedRwLock {
+    type Target = EntityCellHead;
+
+    fn deref(&self) -> &<Self as std::ops::Deref>::Target {
+        let archetype_reader = self.inner_archetype.read().unwrap();
+
+        // TODO: Try a way to remove that (ignore the fact that archetype reader is local)
+        let archetype_ref = unsafe { &*(&archetype_reader as *const _) } as &InnerArchetype;
+
+        decode_entity_head(archetype_ref, self.buffer_index)
     }
 }
 
@@ -150,9 +199,10 @@ impl<'a> Debug for EntityReadGuard<'a> {
 
 /// An entity guard that can be used to access an entity with mutability
 pub struct EntityWriteGuard<'a> {
+    entity_head: &'a EntityCellHead,
     components: Vec<&'a mut dyn Component>,
     _archetype_reader: RwLockReadGuard<'a, InnerArchetype>,
-    _entity_writer: RwLockWriteGuard<'a, ()>,
+    entity_writer: Option<RwLockWriteGuard<'a, ()>>,
 }
 
 impl<'a> EntityWriteGuard<'a> {
@@ -169,10 +219,18 @@ impl<'a> EntityWriteGuard<'a> {
         let components = decode_components_mut(archetype_ref, entity_head);
 
         EntityWriteGuard {
+            entity_head,
             components,
             _archetype_reader: archetype_reader,
-            _entity_writer: entity_head.lock.write().unwrap(),
+            entity_writer: Some(entity_head.lock.write().unwrap()),
         }
+    }
+}
+
+impl<'a> Drop for EntityWriteGuard<'a> {
+    fn drop(&mut self) {
+        std::mem::drop(self.entity_writer.take());
+        self.entity_head.on_updated.notify(());
     }
 }
 
@@ -198,21 +256,64 @@ impl<'a> Debug for EntityWriteGuard<'a> {
 
 impl IntrospectObject for EntitySharedRwLock {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
-        vec![MethodInfo {
-            name: "len".to_string(),
-            call: MethodCaller::Const(Arc::new(move |this, _args| {
-                let this = cast_service::<EntitySharedRwLock>(this);
-                let this = this.read();
+        vec![
+            MethodInfo {
+                name: "get_component".to_string(),
+                call: MethodCaller::Const(Arc::new(move |this, args| {
+                    let this = cast_service::<EntitySharedRwLock>(this);
 
-                let result = this.len();
+                    let mut caster = ArgumentCaster::new("get_component", args);
+                    let arg1 = caster.cast_next::<String>()?;
 
-                Ok(Some(Serialized::USize(result)))
-            })),
-        }]
+                    let result = this.get_component(arg1);
+
+                    Ok(result.map(|result| Serialized::NativeObject(Box::new(result))))
+                })),
+            },
+            MethodInfo {
+                name: "contains".to_string(),
+                call: MethodCaller::Const(Arc::new(move |this, args| {
+                    let this = cast_service::<EntitySharedRwLock>(this);
+
+                    let mut caster = ArgumentCaster::new("contains", args);
+                    let arg1 = caster.cast_next::<Vec<String>>()?;
+
+                    let result = this.contains(&EntityTypeIdentifier(arg1));
+
+                    Ok(Some(Serialized::Bool(result)))
+                })),
+            },
+            MethodInfo {
+                name: "len".to_string(),
+                call: MethodCaller::Const(Arc::new(move |this, _args| {
+                    let this = cast_service::<EntitySharedRwLock>(this);
+                    let result = this.len();
+
+                    Ok(Some(Serialized::USize(result)))
+                })),
+            },
+        ]
     }
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
-        vec![]
+        vec![
+            FieldInfo {
+                name: "id".to_string(),
+                getter: Arc::new(|this| {
+                    let this = cast_service::<EntitySharedRwLock>(this);
+                    this.entity_id.into()
+                }),
+                setter: SetterCaller::None,
+            },
+            FieldInfo {
+                name: "on_updated".to_string(),
+                getter: Arc::new(|this| {
+                    let this = cast_service::<EntitySharedRwLock>(this);
+                    this.on_updated.clone().into()
+                }),
+                setter: SetterCaller::None,
+            },
+        ]
     }
 }
 

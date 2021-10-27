@@ -36,8 +36,19 @@ service2.hello2("World");
 console.log("1");
 
 entityManager.onEntityCreated.addObserver((entity) => {
-    console.log("SIGNAL");
-    console.log(entity);
+    if (entity.contains(["Position", "Camera"])) {
+        let position = entity.getComponent("Position");
+        let camera = entity.getComponent("Camera");
+        console.log("New camera");
+        console.log("Position", position.x, position.y);
+        console.log("Camera", camera.near, camera.far);
+        console.log("Unknown", entity.getComponent("Unknown"));
+
+        entity.onUpdated.addObserver(() => {
+            let camera = entity.getComponent("Camera");
+            console.log("New camera was updated", camera.near);
+        })
+    }
 });
 
 
@@ -74,8 +85,6 @@ systemManager.addBeginSystem(() => {
 
     console.log("ENTITIES CREATED");
 });
-
-
 
 systemManager.addSystem(() => {
     entityManager

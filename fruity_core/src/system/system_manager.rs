@@ -304,8 +304,8 @@ impl IntrospectObject for SystemManager {
                     let arg2 = caster.cast_next_optional::<usize>();
 
                     this.add_system(
-                        move |service_manager| {
-                            match arg1(service_manager, vec![]) {
+                        move |_| {
+                            match arg1(vec![]) {
                                 Ok(_) => (),
                                 Err(err) => log_introspect_error(&err),
                             };
@@ -326,8 +326,8 @@ impl IntrospectObject for SystemManager {
                     let arg2 = caster.cast_next_optional::<usize>();
 
                     this.add_begin_system(
-                        move |service_manager| {
-                            match arg1(service_manager, vec![]) {
+                        move |_| {
+                            match arg1(vec![]) {
                                 Ok(_) => (),
                                 Err(err) => log_introspect_error(&err),
                             };
@@ -348,8 +348,8 @@ impl IntrospectObject for SystemManager {
                     let arg2 = caster.cast_next_optional::<usize>();
 
                     this.add_end_system(
-                        move |service_manager| {
-                            match arg1(service_manager, vec![]) {
+                        move |_| {
+                            match arg1(vec![]) {
                                 Ok(_) => (),
                                 Err(err) => log_introspect_error(&err),
                             };

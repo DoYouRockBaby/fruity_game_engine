@@ -1,6 +1,4 @@
 use crate::service::service::Service;
-use crate::service::utils::cast_service_mut;
-use crate::ServiceManager;
 use fruity_any::*;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
@@ -8,25 +6,17 @@ use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 /// A wrapper for services that come from scripting languages as serialized
 #[derive(Debug, FruityAny)]
 pub struct SerializedService {
-    service_manager: Arc<RwLock<ServiceManager>>,
     serialized: Serialized,
 }
 
 impl SerializedService {
     /// Returns a SerializedService
-    pub fn new(
-        service_manager: Arc<RwLock<ServiceManager>>,
-        serialized: Serialized,
-    ) -> SerializedService {
-        SerializedService {
-            service_manager,
-            serialized,
-        }
+    pub fn new(serialized: Serialized) -> SerializedService {
+        SerializedService { serialized }
     }
 }
 
@@ -46,10 +36,7 @@ impl IntrospectObject for SerializedService {
 
                     MethodInfo {
                         name: key.clone(),
-                        call: MethodCaller::Mut(Arc::new(move |this, args| {
-                            let this = cast_service_mut::<SerializedService>(this);
-                            callback(this.service_manager.clone(), args)
-                        })),
+                        call: MethodCaller::Mut(Arc::new(move |_this, args| callback(args))),
                     }
                 })
                 .collect::<Vec<_>>()

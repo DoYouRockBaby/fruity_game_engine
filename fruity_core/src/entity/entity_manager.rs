@@ -2,7 +2,7 @@ use crate::component::component::AnyComponent;
 use crate::component::component_list_rwlock::ComponentListRwLock;
 use crate::entity::archetype::rwlock::EntitySharedRwLock;
 use crate::entity::archetype::Archetype;
-use crate::entity::entity::get_type_identifier;
+use crate::entity::entity::get_type_identifier_by_any;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
 use crate::service::service::Service;
@@ -10,8 +10,6 @@ use crate::service::utils::cast_service;
 use crate::service::utils::cast_service_mut;
 use crate::service::utils::ArgumentCaster;
 use crate::signal::Signal;
-use crate::ServiceManager;
-use crate::World;
 use fruity_any::*;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
@@ -33,7 +31,6 @@ pub enum RemoveEntityError {
 pub struct EntityManager {
     id_incrementer: u64,
     archetypes: Vec<Archetype>,
-    service_manager: Arc<RwLock<ServiceManager>>,
 
     /// Signal propagated when a new entity is inserted into the collection
     pub on_entity_created: Signal<EntitySharedRwLock>,
@@ -44,13 +41,12 @@ pub struct EntityManager {
 
 impl EntityManager {
     /// Returns an EntityManager
-    pub fn new(world: &World) -> EntityManager {
+    pub fn new() -> EntityManager {
         EntityManager {
             id_incrementer: 0,
             archetypes: Vec::new(),
-            service_manager: world.service_manager.clone(),
-            on_entity_created: Signal::new(world.service_manager.clone()),
-            on_entity_removed: Signal::new(world.service_manager.clone()),
+            on_entity_created: Signal::new(),
+            on_entity_removed: Signal::new(),
         }
     }
 
@@ -115,7 +111,7 @@ impl EntityManager {
     pub fn create(&mut self, components: Vec<AnyComponent>) -> EntityId {
         self.id_incrementer += 1;
         let entity_id = self.id_incrementer;
-        let entity_identifier = get_type_identifier(&components);
+        let entity_identifier = get_type_identifier_by_any(&components);
 
         match self.archetype_by_identifier(entity_identifier) {
             Some(archetype) => {
@@ -182,26 +178,26 @@ impl IntrospectObject for EntityManager {
                 })),
             },
             MethodInfo {
-                name: "iter_components".to_string(),
+                name: "iter_entities".to_string(),
                 call: MethodCaller::Const(Arc::new(move |this, args| {
                     let this = cast_service::<EntityManager>(this);
 
-                    let mut caster = ArgumentCaster::new("iter_components", args);
+                    let mut caster = ArgumentCaster::new("iter_entities", args);
                     let arg1 = caster.cast_next::<Vec<String>>()?;
 
                     let iterator = this
-                        .iter_components(EntityTypeIdentifier(arg1))
-                        .map(|component| Serialized::NativeObject(Box::new(component)));
+                        .iter_entities(EntityTypeIdentifier(arg1))
+                        .map(|entity| Serialized::NativeObject(Box::new(entity)));
 
                     Ok(Some(Serialized::Iterator(Arc::new(RwLock::new(iterator)))))
                 })),
             },
             MethodInfo {
-                name: "iter_components_mut".to_string(),
+                name: "iter_components".to_string(),
                 call: MethodCaller::Const(Arc::new(move |this, args| {
                     let this = cast_service::<EntityManager>(this);
 
-                    let mut caster = ArgumentCaster::new("iter_components_mut", args);
+                    let mut caster = ArgumentCaster::new("iter_components", args);
                     let arg1 = caster.cast_next::<Vec<String>>()?;
 
                     let iterator = this

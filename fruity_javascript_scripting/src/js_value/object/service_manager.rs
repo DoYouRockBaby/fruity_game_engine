@@ -43,7 +43,7 @@ fn service_manager_register_callback(
 
         // Call the function
         let mut service_manager_writer = service_manager.write().unwrap();
-        let service = SerializedService::new(service_manager.clone(), object);
+        let service = SerializedService::new(object);
         service_manager_writer.register(&name, service);
     }
 }

@@ -1,4 +1,5 @@
 use crate::component::component::AnyComponent;
+use crate::component::component::Component;
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -47,7 +48,17 @@ impl EntityTypeIdentifier {
 pub type EntityId = u64;
 
 /// Get the entity type identifier from a list of components
-pub fn get_type_identifier(components: &[AnyComponent]) -> EntityTypeIdentifier {
+pub fn get_type_identifier_by_any(components: &[AnyComponent]) -> EntityTypeIdentifier {
+    let identifier = components
+        .iter()
+        .map(|component| component.get_component_type())
+        .collect::<Vec<_>>();
+
+    EntityTypeIdentifier(identifier)
+}
+
+/// Get the entity type identifier from a list of components
+pub fn get_type_identifier(components: &[&dyn Component]) -> EntityTypeIdentifier {
     let identifier = components
         .iter()
         .map(|component| component.get_component_type())
