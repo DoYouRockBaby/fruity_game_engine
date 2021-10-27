@@ -44,7 +44,7 @@
 [X] Javascript module is highly unsafe cause i force to put a one thread runtime into a multi thread host
 [ ] Implement web workers in js
 [X] Allow javascript to play with signals (depends on next)
-[ ] Fix javascript services
+[X] Fix javascript services
 [ ] Make javascript able to import modules via package.json
 [ ] Test and make microjob library compatible with javascript
 [ ] Abstract everything (espescialy javascript and render)

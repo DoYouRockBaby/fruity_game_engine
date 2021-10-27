@@ -13,6 +13,11 @@ use pretty_env_logger::formatted_builder;
 fn main() {
     let mut builder = formatted_builder();
     builder.parse_filters("trace");
+    builder.filter_module("naga", log::LevelFilter::Off);
+    builder.filter_module("winit", log::LevelFilter::Off);
+    builder.filter_module("mio", log::LevelFilter::Off);
+    builder.filter_module("wgpu_core", log::LevelFilter::Off);
+    builder.filter_module("wgpu_hal", log::LevelFilter::Off);
     builder.try_init().unwrap();
 
     let world = World::new();

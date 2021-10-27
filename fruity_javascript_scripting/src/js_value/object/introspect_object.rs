@@ -5,6 +5,7 @@ use crate::js_value::utils::get_intern_value_from_v8_object_mut;
 use crate::js_value::utils::inject_option_serialized_into_v8_return_value;
 use crate::js_value::utils::inject_serialized_into_v8_return_value;
 use crate::serialize::deserialize::deserialize_v8;
+use crate::thread_scope_stack::push_thread_scope_stack;
 use crate::JsObject;
 use fruity_introspect::log_introspect_error;
 use fruity_introspect::serializable_object::SerializableObject;
@@ -73,6 +74,9 @@ fn method_callback(
         let deserialized_args = (0..args.length())
             .filter_map(|index| deserialize_v8(scope, args.get(index)))
             .collect::<Vec<_>>();
+
+        // Push the scope into the scope stack
+        push_thread_scope_stack(scope);
 
         // Call the function
         let result = match method_info.call {

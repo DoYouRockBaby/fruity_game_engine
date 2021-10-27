@@ -1,4 +1,4 @@
-/*class Service2 {
+class Service2 {
     constructor() {
         this.hello = this.hello.bind(this);
     }
@@ -10,7 +10,7 @@
     hello2 = (str) => {
         console.log("Hello 2", str);
     }
-}*/
+}
 
 class Velocity {
     constructor(args) {
@@ -19,14 +19,21 @@ class Velocity {
 }
 
 console.log("ICI");
-//services.register("service2", new Service2());
+services.register("service2", new Service2());
 const systemManager = services.get("system_manager");
 const entityManager = services.get("entity_manager");
 const componentFactory = services.get("components_factory");
 const windowsManager = services.get("windows_manager");
 const resourcesManager = services.get("resources_manager");
+const service2 = services.get("service2");
 
 console.log("ICI");
+
+console.log("JS System", windowsManager.getSize());
+console.log("1");
+service2.hello("World");
+service2.hello2("World");
+console.log("1");
 
 entityManager.onEntityCreated.addObserver((entity) => {
     console.log("SIGNAL");
@@ -68,6 +75,8 @@ systemManager.addBeginSystem(() => {
     console.log("ENTITIES CREATED");
 });
 
+
+
 systemManager.addSystem(() => {
     entityManager
         .iterComponents(["Position", "Velocity"])
@@ -75,8 +84,6 @@ systemManager.addSystem(() => {
             components.get(0).x += components.get(1).x;
             components.get(0).y += components.get(1).y;
         });
-
-    console.log("ENTITIES UPDATED");
 
     /*console.log("JS System", windowsManager.getSize());
     console.log("1");

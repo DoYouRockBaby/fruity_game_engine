@@ -8,6 +8,8 @@ use crate::module_map::ModuleInfos;
 use crate::module_map::ModuleMap;
 use crate::normalize_path::normalize_path;
 use crate::serialize::serialize::serialize_v8;
+use crate::thread_scope_stack::clear_thread_scope_stack;
+use crate::thread_scope_stack::push_thread_scope_stack;
 use fruity_introspect::serialized::Serialized;
 use rusty_v8 as v8;
 use std::cell::RefCell;
@@ -70,7 +72,8 @@ impl JsRuntime {
 
   pub fn handle_scope(&mut self) -> v8::HandleScope {
     let context = self.global_context();
-    v8::HandleScope::with_context(self.v8_isolate(), context)
+    let isolate = self.v8_isolate();
+    v8::HandleScope::with_context(isolate, context)
   }
 
   pub fn global_context(&self) -> v8::Global<v8::Context> {
@@ -83,18 +86,21 @@ impl JsRuntime {
 
   pub fn global_object(&mut self) -> JsObject {
     let global_context = self.global_context();
-    let isolate = self.v8_isolate();
-    let mut scope = v8::HandleScope::with_context(isolate, global_context.clone());
+    let scope = &mut self.handle_scope();
+    let global_object = global_context.get(scope).global(scope);
 
-    let global = global_context.get(&mut scope).global(&mut scope);
-    let global = v8::Global::new(&mut scope, global);
-    JsObject::from_v8(global)
+    let global_object = v8::Global::new(scope, global_object);
+    JsObject::from_v8(global_object)
   }
 
   pub fn run_script(&mut self, source: &str) -> Result<(), JsError> {
     // Enter the context for compiling and running the script
-    let mut scope = self.handle_scope();
-    let mut try_catch = v8::TryCatch::new(&mut scope);
+    let scope = &mut self.handle_scope();
+
+    // Push the scope into the scope stack
+    push_thread_scope_stack(scope);
+
+    let mut try_catch = v8::TryCatch::new(scope);
 
     // Prepare the sources
     let source = v8::String::new(&mut try_catch, &source).unwrap();
@@ -113,14 +119,21 @@ impl JsRuntime {
       return exception_to_err_result(&mut try_catch, exception);
     }
 
+    // Clear the scope stack
+    clear_thread_scope_stack();
+
     Ok(())
   }
 
   #[allow(unused_must_use)]
   pub fn run_module(&mut self, filepath: &str) -> Result<(), JsError> {
     // Enter the context for compiling and running the script
-    let mut scope = self.handle_scope();
-    let mut try_catch = v8::TryCatch::new(&mut scope);
+    let scope = &mut self.handle_scope();
+
+    // Push the scope into the scope stack
+    push_thread_scope_stack(scope);
+
+    let mut try_catch = v8::TryCatch::new(scope);
 
     // Create the module
     let module = compile_module(&mut try_catch, filepath)?;
@@ -143,28 +156,35 @@ impl JsRuntime {
       return exception_to_err_result(&mut try_catch, exception);
     }
 
+    // Clear the scope stack
+    clear_thread_scope_stack();
+
     Ok(())
   }
 
   pub fn run_stored_callback(&mut self, identifier: CallbackIdentifier, args: Vec<Serialized>) {
-    let mut scope = self.handle_scope();
-    let context = v8::Context::new(&mut scope);
+    let scope = &mut self.handle_scope();
+
+    // Push the scope into the scope stack
+    push_thread_scope_stack(scope);
 
     // Get the function from a specific global object
-    let callback = get_stored_callback(&mut scope, identifier);
+    let callback = get_stored_callback(scope, identifier);
 
     if let Some(callback) = callback {
       // Instantiate parameters and return handle
       let args = args
         .iter()
-        .filter_map(|arg| serialize_v8(&mut scope, arg))
+        .filter_map(|arg| serialize_v8(scope, arg))
         .collect::<Vec<_>>();
 
-      let global = context.global(&mut scope);
-      let recv: v8::Local<v8::Value> = global.into();
+      let recv = v8::undefined(scope);
 
       // Call function
-      callback.call(&mut scope, recv, &args);
+      callback.call(scope, recv.into(), &args);
+
+      // Clear the scope stack
+      clear_thread_scope_stack();
     }
   }
 

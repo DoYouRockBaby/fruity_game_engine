@@ -17,6 +17,7 @@ mod normalize_path;
 mod resources;
 mod runtime;
 mod serialize;
+mod thread_scope_stack;
 
 /// Initialize this extension
 pub fn initialize(world: &World) {

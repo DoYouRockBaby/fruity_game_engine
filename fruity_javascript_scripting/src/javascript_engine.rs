@@ -49,6 +49,7 @@ impl JavascriptEngine {
             let mut runtime = JsRuntime::new();
             configure_services(&mut runtime, service_manager.clone());
             configure_components(&mut runtime, service_manager.clone());
+
             loading_sender.send(()).unwrap();
 
             for received in receiver {

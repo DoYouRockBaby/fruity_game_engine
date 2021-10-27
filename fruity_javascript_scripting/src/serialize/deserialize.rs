@@ -1,5 +1,8 @@
 use crate::js_value::object::introspect_object::deserialize_v8_introspect_object;
+use crate::js_value::utils::get_stored_callback;
 use crate::js_value::utils::store_callback;
+use crate::serialize::serialize::serialize_v8;
+use crate::thread_scope_stack::pop_thread_scope_stack;
 use crate::JavascriptEngine;
 use fruity_any::FruityAny;
 use fruity_core::service::service_manager::ServiceManager;
@@ -56,18 +59,43 @@ pub fn deserialize_v8<'a>(
         let v8_function = v8::Local::<v8::Function>::try_from(v8_value).unwrap();
         let callback_identifier = store_callback(scope, v8_function);
 
+        // Push the scope in the stack
         let callback = move |service_manager: Arc<dyn FruityAny>,
                              args: Vec<Serialized>|
               -> Result<Option<Serialized>, IntrospectError> {
-            // Get scope
-            let service_manager = service_manager
-                .as_any_arc()
-                .downcast::<RwLock<ServiceManager>>()
-                .unwrap();
+            // Get the previously stored scope
+            let scope = pop_thread_scope_stack();
 
-            let service_manager = service_manager.read().unwrap();
-            let javascript_engine = service_manager.read::<JavascriptEngine>();
-            javascript_engine.run_callback(callback_identifier, args);
+            if let Some(scope) = scope {
+                // If there is a scope in the stack, we can directly use it to run the function
+                // Case the context is javascript, we directly run the js function
+                let context = v8::Context::new(scope);
+
+                // Get the function from a specific global object
+                let callback = get_stored_callback(scope, callback_identifier);
+                if let Some(callback) = callback {
+                    // Instantiate parameters and return handle
+                    let args = args
+                        .iter()
+                        .filter_map(|arg| serialize_v8(scope, arg))
+                        .collect::<Vec<_>>();
+                    let global = context.global(scope);
+                    let recv: v8::Local<v8::Value> = global.into();
+
+                    // Call function
+                    callback.call(scope, recv, &args);
+                }
+            } else {
+                // Otherwise, we fallback by running it from the javascript manager
+                let service_manager = service_manager
+                    .as_any_arc()
+                    .downcast::<RwLock<ServiceManager>>()
+                    .unwrap();
+
+                let service_manager = service_manager.read().unwrap();
+                let javascript_engine = service_manager.read::<JavascriptEngine>();
+                javascript_engine.run_callback(callback_identifier, args);
+            }
 
             Ok(None)
         };
