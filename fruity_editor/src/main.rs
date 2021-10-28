@@ -1,12 +1,14 @@
+use crate::components::entity::entity_list::EntityList;
 use crate::state::theme::ThemeMessage;
 use crate::state::update_state;
 use crate::state::Message;
 use crate::state::State;
 use iced::{
-    executor, Alignment, Application, Column, Command, Container, Element,
-    Length, Radio, Row, Rule, Settings, Text,
+    executor, Alignment, Application, Column, Command, Container, Element, Length, Radio, Row,
+    Rule, Settings, Text,
 };
 
+mod components;
 mod state;
 mod style;
 
@@ -17,6 +19,7 @@ pub fn main() -> iced::Result {
 #[derive(Default)]
 struct FruityEditor {
     state: State,
+    entity_list: EntityList,
 }
 
 impl Application for FruityEditor {
@@ -33,7 +36,8 @@ impl Application for FruityEditor {
     }
 
     fn update(&mut self, message: Message) -> Command<Self::Message> {
-        update_state(&mut self.state, message);
+        update_state(&mut self.state, message.clone());
+        self.entity_list.update(message.clone());
 
         Command::none()
     }
@@ -66,7 +70,8 @@ impl Application for FruityEditor {
                     .height(Length::Units(100))
                     .align_items(Alignment::Center)
                     .push(Rule::vertical(38).style(self.state.theme.theme)),
-            );
+            )
+            .push(self.entity_list.view(&self.state));
 
         Container::new(content)
             .width(Length::Fill)
