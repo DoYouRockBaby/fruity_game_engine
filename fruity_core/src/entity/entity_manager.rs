@@ -61,6 +61,15 @@ impl EntityManager {
             .find_map(|archetype| archetype.get(entity_id))
     }
 
+    /// Iterate over all entities
+    pub fn iter_all_entities(&self) -> impl Iterator<Item = EntitySharedRwLock> {
+        let archetypes = unsafe { &*(&self.archetypes as *const _) } as &Vec<Archetype>;
+        archetypes
+            .iter()
+            .map(|archetype| archetype.iter())
+            .flatten()
+    }
+
     /// Iterate over all entities with a specific archetype type
     /// Use every entity that contains the provided entity type
     ///

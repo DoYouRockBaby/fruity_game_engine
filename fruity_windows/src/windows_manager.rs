@@ -1,3 +1,4 @@
+use core::ffi::c_void;
 use fruity_any::*;
 use fruity_core::service::service::Service;
 use fruity_core::service::service_rwlock::ServiceRwLock;
@@ -33,9 +34,12 @@ pub struct WindowsManager {
     pub on_start_update: Signal<()>,
     pub on_end_update: Signal<()>,
     pub on_resize: Signal<(usize, usize)>,
+    pub on_cursor_moved: Signal<(usize, usize)>,
+    pub on_event: Signal<Event<'static, FruityWindowsEvent>>,
+    pub on_events_cleared: Signal<()>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum FruityWindowsEvent {
     Close,
 }
@@ -60,6 +64,9 @@ impl WindowsManager {
             on_start_update: Signal::new(),
             on_end_update: Signal::new(),
             on_resize: Signal::new(),
+            on_cursor_moved: Signal::new(),
+            on_event: Signal::new(),
+            on_events_cleared: Signal::new(),
         }
     }
 
@@ -92,6 +99,9 @@ impl WindowsManager {
         let on_start_update = self.on_start_update.clone();
         let on_end_update = self.on_end_update.clone();
         let on_resize = self.on_resize.clone();
+        let on_event = self.on_event.clone();
+        let on_events_cleared = self.on_events_cleared.clone();
+        let on_cursor_moved = self.on_cursor_moved.clone();
 
         // Run the begin systems before everything
         let system_manager_reader = self.system_manager.read().unwrap();
@@ -108,6 +118,17 @@ impl WindowsManager {
 
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Wait;
+
+            {
+                // TODO: Try to find a way to remove this
+                let event = &event as *const _ as *const c_void;
+                let event = event as *const Event<'static, FruityWindowsEvent>;
+                let event = unsafe { &*event as &Event<'static, FruityWindowsEvent> };
+                let event =
+                    unsafe { &*(&event as *const _) } as &Event<'static, FruityWindowsEvent>;
+                let event = event.clone();
+                on_event.notify(event);
+            }
 
             match event {
                 // Check if the user has closed the window from the OS
@@ -127,6 +148,13 @@ impl WindowsManager {
                 } => {
                     on_resize.notify((physical_size.width as usize, physical_size.height as usize));
                 }
+                // Check if the user has moved the cursor
+                Event::WindowEvent {
+                    event: WindowEvent::CursorMoved { position, .. },
+                    ..
+                } => {
+                    on_cursor_moved.notify((position.x as usize, position.y as usize));
+                }
                 Event::WindowEvent {
                     event: WindowEvent::ScaleFactorChanged { new_inner_size, .. },
                     ..
@@ -135,6 +163,9 @@ impl WindowsManager {
                         new_inner_size.width as usize,
                         new_inner_size.height as usize,
                     ));
+                }
+                Event::MainEventsCleared => {
+                    on_events_cleared.notify(());
                 }
                 _ => (),
             }
@@ -187,6 +218,16 @@ impl WindowsManager {
             )
         } else {
             (0, 0)
+        }
+    }
+
+    pub fn get_scale_factor(&self) -> f64 {
+        let window = self.window.read().unwrap();
+        if let Some(window) = window.as_ref() {
+            let window = window.read().unwrap();
+            window.scale_factor()
+        } else {
+            0.0
         }
     }
 

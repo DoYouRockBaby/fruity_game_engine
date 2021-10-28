@@ -36,17 +36,17 @@ lazy_static! {
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ObserverIdentifier(usize);
 
-struct InternSignal<T: Into<Serialized> + Debug + Clone + 'static> {
+struct InternSignal<T> {
     observers: Vec<(ObserverIdentifier, Box<dyn Fn(&T) + Sync + Send>)>,
 }
 
 /// An observer pattern
 #[derive(Clone)]
-pub struct Signal<T: Into<Serialized> + Debug + Clone + 'static> {
+pub struct Signal<T> {
     intern: Arc<Mutex<InternSignal<T>>>,
 }
 
-impl<T: Into<Serialized> + Debug + Clone + 'static> Signal<T> {
+impl<T> Signal<T> {
     /// Returns a Signal
     pub fn new() -> Signal<T> {
         Signal {
@@ -179,7 +179,7 @@ impl<T: Into<Serialized> + Debug + Clone + 'static> Into<Serialized> for Signal<
     }
 }
 
-impl<T: Into<Serialized> + Debug + Clone + 'static> Debug for Signal<T> {
+impl<T> Debug for Signal<T> {
     fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         Ok(())
     }

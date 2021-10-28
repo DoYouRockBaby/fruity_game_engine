@@ -15,7 +15,7 @@ use std::sync::RwLock;
 /// Extern users are not supposed to have access to that
 pub struct EntityCellHead {
     pub(crate) entity_id: EntityId,
-    pub(crate) enabled: bool,
+    pub enabled: bool,
     pub(crate) deleted: bool,
     pub(crate) on_updated: Signal<()>,
     pub(crate) lock: RwLock<()>,

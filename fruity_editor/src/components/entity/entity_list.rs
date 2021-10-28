@@ -1,15 +1,13 @@
-use crate::Message;
-use crate::State;
+use crate::state::Message;
+use crate::state::State;
 use fruity_core::entity::archetype::rwlock::EntitySharedRwLock;
 use fruity_core::entity::entity_manager::EntityManager;
 use iced::scrollable;
-use iced::Alignment;
 use iced::Checkbox;
 use iced::Column;
 use iced::Container;
 use iced::Element;
 use iced::Length;
-use iced::Row;
 use iced::Scrollable;
 
 #[derive(Default)]
@@ -42,7 +40,7 @@ impl EntityList {
     }
 
     fn get_entities(&mut self, state: &State) -> impl Iterator<Item = EntitySharedRwLock> {
-        let service_manager = state.world.world.service_manager.clone();
+        let service_manager = state.world.service_manager.clone();
         let service_manager = service_manager.read().unwrap();
         let entity_manager = service_manager.read::<EntityManager>();
         entity_manager.iter_all_entities()

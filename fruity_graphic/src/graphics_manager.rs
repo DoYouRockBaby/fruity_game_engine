@@ -1,6 +1,7 @@
 use crate::math::Matrix4;
 use fruity_any::*;
 use fruity_core::service::service::Service;
+use fruity_core::signal::Signal;
 use fruity_core::world::World;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
@@ -34,6 +35,9 @@ pub struct GraphicsManager {
     state: Option<State>,
     current_output: Option<wgpu::SurfaceTexture>,
     current_encoder: Option<RwLock<wgpu::CommandEncoder>>,
+    pub on_initialized: Signal<()>,
+    pub on_before_draw_end: Signal<()>,
+    pub on_after_draw_end: Signal<()>,
 }
 
 impl GraphicsManager {
@@ -50,6 +54,11 @@ impl GraphicsManager {
             let window = windows_manager.get_window().unwrap();
 
             graphics_manager.initialize(window.clone());
+            std::mem::drop(graphics_manager);
+
+            // Dispatch initialized event
+            let graphics_manager = service_manager.read::<GraphicsManager>();
+            graphics_manager.on_initialized.notify(());
         });
 
         let service_manager = world.service_manager.clone();
@@ -63,9 +72,21 @@ impl GraphicsManager {
         let service_manager = world.service_manager.clone();
         windows_manager.on_end_update.add_observer(move |_| {
             let service_manager = service_manager.read().unwrap();
-            let mut graphics_manager = service_manager.write::<GraphicsManager>();
 
+            // Send the event that we will end to draw
+            let graphics_manager = service_manager.read::<GraphicsManager>();
+            graphics_manager.on_before_draw_end.notify(());
+            std::mem::drop(graphics_manager);
+
+            // End the drawing
+            let mut graphics_manager = service_manager.write::<GraphicsManager>();
             graphics_manager.end_draw();
+            std::mem::drop(graphics_manager);
+
+            // Send the event that we finish to draw
+            let graphics_manager = service_manager.read::<GraphicsManager>();
+            graphics_manager.on_after_draw_end.notify(());
+            std::mem::drop(graphics_manager);
         });
 
         let service_manager = world.service_manager.clone();
@@ -82,6 +103,9 @@ impl GraphicsManager {
             state: None,
             current_encoder: None,
             current_output: None,
+            on_initialized: Signal::new(),
+            on_before_draw_end: Signal::new(),
+            on_after_draw_end: Signal::new(),
         }
     }
 
@@ -122,7 +146,7 @@ impl GraphicsManager {
                 format: surface.get_preferred_format(&adapter).unwrap(),
                 width: size.width,
                 height: size.height,
-                present_mode: wgpu::PresentMode::Fifo,
+                present_mode: wgpu::PresentMode::Mailbox,
             };
 
             surface.configure(&device, &config);
@@ -192,7 +216,7 @@ impl GraphicsManager {
 
         let queue = self.get_queue().unwrap();
 
-        // submit will accept anything that implements IntoIter
+        // Submit will accept anything that implements IntoIter
         queue.submit(std::iter::once(encoder.finish()));
         output.present();
     }

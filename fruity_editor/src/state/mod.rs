@@ -4,14 +4,24 @@ use crate::state::theme::ThemeState;
 use crate::state::world::update_world;
 use crate::state::world::WorldMessage;
 use crate::state::world::WorldState;
+use crate::World;
 
 pub mod theme;
 pub mod world;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct State {
     pub theme: ThemeState,
     pub world: WorldState,
+}
+
+impl State {
+    pub fn new(world: &World) -> Self {
+        State {
+            theme: ThemeState::default(),
+            world: WorldState::new(world),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

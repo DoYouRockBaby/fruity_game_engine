@@ -2,6 +2,7 @@ extern crate pretty_env_logger;
 
 use fruity_core::initialize as initialize_ecs;
 use fruity_core::world::World;
+use fruity_editor::initialize as initialize_editor;
 use fruity_graphic::initialize as initialize_graphic;
 use fruity_graphic_2d::initialize as initialize_graphic_2d;
 use fruity_javascript_scripting::initialize as initialize_javascript;
@@ -18,6 +19,7 @@ fn main() {
     builder.filter_module("mio", log::LevelFilter::Off);
     builder.filter_module("wgpu_core", log::LevelFilter::Off);
     builder.filter_module("wgpu_hal", log::LevelFilter::Off);
+    builder.filter_module("iced_wgpu", log::LevelFilter::Off);
     builder.try_init().unwrap();
 
     let world = World::new();
@@ -26,6 +28,7 @@ fn main() {
     initialize_graphic(&world);
     initialize_graphic_2d(&world);
     initialize_javascript(&world);
+    initialize_editor(&world);
 
     // Run the javascript module
     let javascript_engine = {
