@@ -12,6 +12,7 @@ fruity_graphic_2d = { path = "fruity_graphic_2d" }
 fruity_introspect = { path = "fruity_introspect" }
 fruity_javascript_scripting = { path = "fruity_javascript_scripting" }
 fruity_windows = { path = "fruity_windows" }
+rusty_v8 = "0.32.0"
 pretty_env_logger = "0.4.0"
 log = "0.4.14"
 rayon = "1.5"

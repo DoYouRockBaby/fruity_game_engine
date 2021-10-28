@@ -4,9 +4,9 @@
 
 [X] Make serialized able to be extended in modules (put it into introspect, make intropect better ...)
 [X] Make the archetype able to store datas in plain array for performances
-[O] Test and stabilize ECS
-[O] Implement entity hierarchy
-[O] Add a "field changed" signal on every entities
+[P] Test and stabilize ECS
+[P] Implement entity hierarchy
+[X] Add a "field changed" signal on every entities
 [ ] There should be some memory leak in archetype
 [ ] Make macros for native systems
 

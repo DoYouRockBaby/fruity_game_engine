@@ -44,10 +44,10 @@ entityManager.onEntityCreated.addObserver((entity) => {
         console.log("Camera", camera.near, camera.far);
         console.log("Unknown", entity.getComponent("Unknown"));
 
-        entity.onUpdated.addObserver(() => {
+        /*entity.onUpdated.addObserver(() => {
             let camera = entity.getComponent("Camera");
             console.log("New camera was updated", camera.near);
-        })
+        });*/
     }
 });
 

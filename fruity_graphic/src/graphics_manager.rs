@@ -10,6 +10,7 @@ use std::fmt::Debug;
 use std::ops::Deref;
 use std::sync::Arc;
 use std::sync::RwLock;
+use tokio::runtime::Builder;
 use wgpu::util::DeviceExt;
 use winit::window::Window;
 
@@ -147,7 +148,7 @@ impl GraphicsManager {
             });
         };
 
-        tokio::runtime::Builder::new_multi_thread()
+        Builder::new_multi_thread()
             .enable_all()
             .build()
             .unwrap()
