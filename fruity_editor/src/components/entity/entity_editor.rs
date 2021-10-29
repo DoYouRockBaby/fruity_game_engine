@@ -29,6 +29,9 @@ impl EntityEditor {
 
     pub fn view(&mut self, state: &State) -> Element<Message, Renderer> {
         if let Some(entity) = &state.entity.selected_entity {
+            let entity = entity.read();
+
+            // Render entity head
             let enabled_checkbox = Checkbox::new(entity.enabled, "", |enabled| {
                 Message::Entity(EntityMessage::SetEnabled(enabled))
             })
@@ -55,6 +58,9 @@ impl EntityEditor {
                         .push(name_input),
                 )
                 .style(state.theme.theme);
+
+            // Render each components
+            // TODO
 
             scrollable.into()
         } else {

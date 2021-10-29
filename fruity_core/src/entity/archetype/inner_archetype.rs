@@ -14,12 +14,23 @@ use std::sync::RwLock;
 /// This store all the information related to a specific entity, is intended to be used by inner_archetype
 /// Extern users are not supposed to have access to that
 pub struct EntityCellHead {
+    /// The entity id
     pub entity_id: EntityId,
+
+    /// the entity name
     pub name: String,
+
+    /// If false, the entity will be ignored by the systems
     pub enabled: bool,
+
+    /// A marker for an entity that is deleted but that is not yet free into memory
     pub deleted: bool,
+
+    /// A signal that is sent when the a write lock on the entity is released
     pub on_updated: Signal<()>,
-    pub lock: RwLock<()>,
+
+    /// The locker for the entity, used to avoir multithread collisions
+    pub(crate) lock: RwLock<()>,
 }
 
 impl EntityCellHead {

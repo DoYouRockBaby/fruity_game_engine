@@ -68,6 +68,7 @@ impl EntitySharedRwLock {
     pub fn get_component(&self, component_type: String) -> Option<ComponentRwLock> {
         let reader = self.read();
         reader
+            .get_components()
             .iter()
             .enumerate()
             .find(|(_index, component)| component.get_component_type() == component_type)
@@ -81,14 +82,14 @@ impl EntitySharedRwLock {
     ///
     pub fn contains(&self, component_types: &EntityTypeIdentifier) -> bool {
         let reader = self.read();
-        let entity_type_identifier = get_type_identifier(&reader);
+        let entity_type_identifier = get_type_identifier(&reader.get_components());
         entity_type_identifier.contains(component_types)
     }
 
     /// Get components count
     pub fn len(&self) -> usize {
         let reader = self.read();
-        reader.len()
+        reader.get_components().len()
     }
 
     /// Get collections of components list reader
@@ -136,40 +137,16 @@ impl EntitySharedRwLock {
     }
 }
 
-impl Deref for EntitySharedRwLock {
-    type Target = EntityCellHead;
-
-    fn deref(&self) -> &<Self as std::ops::Deref>::Target {
-        let archetype_reader = self.inner_archetype.read().unwrap();
-
-        // TODO: Try a way to remove that (ignore the fact that archetype reader is local)
-        let archetype_ref = unsafe { &*(&archetype_reader as *const _) } as &InnerArchetype;
-
-        decode_entity_head(archetype_ref, self.buffer_index)
-    }
-}
-
-impl DerefMut for EntitySharedRwLock {
-    fn deref_mut(&mut self) -> &mut <Self as std::ops::Deref>::Target {
-        let mut archetype_writer = self.inner_archetype.write().unwrap();
-
-        // TODO: Try a way to remove that (ignore the fact that archetype reader is local)
-        let archetype_mut =
-            unsafe { &mut *(&mut archetype_writer as *mut _) } as &mut InnerArchetype;
-
-        decode_entity_head_mut(archetype_mut, self.buffer_index)
-    }
-}
-
 impl Debug for EntitySharedRwLock {
     fn fmt(&self, formater: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         let reader = self.read();
-        reader.deref().fmt(formater)
+        reader.get_components().fmt(formater)
     }
 }
 
 /// An entity guard that can be used to access an entity without mutability
 pub struct EntityReadGuard<'a> {
+    entity_head: &'a EntityCellHead,
     components: Vec<&'a dyn Component>,
     _archetype_reader: RwLockReadGuard<'a, InnerArchetype>,
     _entity_reader: RwLockReadGuard<'a, ()>,
@@ -189,30 +166,36 @@ impl<'a> EntityReadGuard<'a> {
         let components = decode_components(archetype_ref, entity_head);
 
         EntityReadGuard {
+            entity_head,
             components,
             _archetype_reader: archetype_reader,
             _entity_reader: entity_head.lock.read().unwrap(),
         }
     }
+
+    /// Get the list of the components in the entity
+    pub fn get_components(&self) -> &[&'a dyn Component] {
+        &self.components
+    }
 }
 
 impl<'a> Deref for EntityReadGuard<'a> {
-    type Target = [&'a dyn Component];
+    type Target = EntityCellHead;
 
     fn deref(&self) -> &<Self as std::ops::Deref>::Target {
-        &self.components
+        &self.entity_head
     }
 }
 
 impl<'a> Debug for EntityReadGuard<'a> {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        self.deref().fmt(formatter)
+        self.get_components().fmt(formatter)
     }
 }
 
 /// An entity guard that can be used to access an entity with mutability
 pub struct EntityWriteGuard<'a> {
-    entity_head: &'a EntityCellHead,
+    entity_head: &'a mut EntityCellHead,
     components: Vec<&'a mut dyn Component>,
     _archetype_reader: RwLockReadGuard<'a, InnerArchetype>,
     entity_writer: Option<RwLockWriteGuard<'a, ()>>,
@@ -225,18 +208,33 @@ impl<'a> EntityWriteGuard<'a> {
     ) -> EntityWriteGuard<'a> {
         let archetype_reader = inner_archetype.read().unwrap();
 
+        let archetype_mut = unsafe {
+            &mut *(&archetype_reader as &InnerArchetype as *const InnerArchetype
+                as *mut InnerArchetype)
+        } as &mut InnerArchetype;
+        let mut entity_head = decode_entity_head_mut(archetype_mut, buffer_index);
+        let entity_head_2 = unsafe { &mut *(&mut entity_head as *mut _) } as &mut EntityCellHead;
+
         // TODO: Try a way to remove that (ignore the fact that archetype reader is local)
         let archetype_ref = unsafe { &*(&archetype_reader as *const _) } as &InnerArchetype;
-
-        let entity_head = decode_entity_head(archetype_ref, buffer_index);
         let components = decode_components_mut(archetype_ref, entity_head);
 
         EntityWriteGuard {
-            entity_head,
+            entity_head: entity_head_2,
             components,
             _archetype_reader: archetype_reader,
             entity_writer: Some(entity_head.lock.write().unwrap()),
         }
+    }
+
+    /// Get the list of the components in the entity
+    pub fn get_components(&self) -> &[&'a mut dyn Component] {
+        &self.components
+    }
+
+    /// Get the list of the components in the entity with mutability
+    pub fn get_components_mut(&mut self) -> &mut [&'a mut dyn Component] {
+        &mut self.components
     }
 }
 
@@ -248,22 +246,22 @@ impl<'a> Drop for EntityWriteGuard<'a> {
 }
 
 impl<'a> Deref for EntityWriteGuard<'a> {
-    type Target = [&'a mut dyn Component];
+    type Target = EntityCellHead;
 
     fn deref(&self) -> &<Self as std::ops::Deref>::Target {
-        &self.components
+        &self.entity_head
     }
 }
 
-impl<'s> DerefMut for EntityWriteGuard<'s> {
-    fn deref_mut(&mut self) -> &mut <Self as Deref>::Target {
-        &mut self.components
+impl<'a> DerefMut for EntityWriteGuard<'a> {
+    fn deref_mut(&mut self) -> &mut <Self as std::ops::Deref>::Target {
+        &mut self.entity_head
     }
 }
 
 impl<'a> Debug for EntityWriteGuard<'a> {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        self.deref().fmt(formatter)
+        self.get_components().fmt(formatter)
     }
 }
 
@@ -314,7 +312,9 @@ impl IntrospectObject for EntitySharedRwLock {
                 name: "id".to_string(),
                 getter: Arc::new(|this| {
                     let this = cast_service::<EntitySharedRwLock>(this);
-                    this.entity_id.into()
+                    let reader = this.read();
+
+                    reader.entity_id.into()
                 }),
                 setter: SetterCaller::None,
             },
@@ -322,7 +322,9 @@ impl IntrospectObject for EntitySharedRwLock {
                 name: "on_updated".to_string(),
                 getter: Arc::new(|this| {
                     let this = cast_service::<EntitySharedRwLock>(this);
-                    this.on_updated.clone().into()
+                    let reader = this.read();
+
+                    reader.on_updated.clone().into()
                 }),
                 setter: SetterCaller::None,
             },

@@ -37,7 +37,11 @@ impl<'s> Deref for ComponentReadGuard<'s> {
     type Target = dyn Component;
 
     fn deref(&self) -> &<Self as Deref>::Target {
-        *self.guard.get(self.component_index).unwrap()
+        *self
+            .guard
+            .get_components()
+            .get(self.component_index)
+            .unwrap()
     }
 }
 
@@ -82,13 +86,21 @@ impl<'s> Deref for ComponentWriteGuard<'s> {
     type Target = dyn Component;
 
     fn deref(&self) -> &<Self as Deref>::Target {
-        *self.guard.get(self.component_index).unwrap()
+        *self
+            .guard
+            .get_components()
+            .get(self.component_index)
+            .unwrap()
     }
 }
 
 impl<'s> DerefMut for ComponentWriteGuard<'s> {
     fn deref_mut(&mut self) -> &mut <Self as Deref>::Target {
-        *self.guard.get_mut(self.component_index).unwrap()
+        *self
+            .guard
+            .get_components_mut()
+            .get_mut(self.component_index)
+            .unwrap()
     }
 }
 

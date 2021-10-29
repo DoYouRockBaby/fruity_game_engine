@@ -37,8 +37,10 @@ impl EntityList {
             entity_manager
                 .iter_all_entities()
                 .map(|entity| {
+                    let entity_2 = entity.clone();
+                    let entity_reader = entity_2.read();
                     (
-                        entity.entity_id,
+                        entity_reader.entity_id,
                         EntityItem {
                             entity,
                             button_state: button::State::new(),
@@ -53,8 +55,10 @@ impl EntityList {
             .on_entity_created
             .add_observer(move |entity| {
                 let mut items = items_2.lock().unwrap();
+                let entity_reader = entity.read();
+
                 items.insert(
-                    entity.entity_id,
+                    entity_reader.entity_id,
                     EntityItem {
                         entity: entity.clone(),
                         button_state: button::State::new(),
@@ -110,7 +114,8 @@ impl EntityItem {
     pub fn update(&mut self, _message: &Message) {}
 
     pub fn view(&mut self, state: &State) -> Element<Message, Renderer> {
-        let text = Text::new(&self.entity.name).size(16);
+        let entity = self.entity.read();
+        let text = Text::new(&entity.name).size(16);
 
         Button::new(&mut self.button_state, text)
             .style(state.theme.theme.list_item())

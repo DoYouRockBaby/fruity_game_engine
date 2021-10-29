@@ -1,5 +1,4 @@
 use fruity_core::entity::archetype::rwlock::EntitySharedRwLock;
-use std::ops::DerefMut;
 
 #[derive(Debug, Default)]
 pub struct EntityState {
@@ -20,12 +19,14 @@ pub fn update_entity(state: &mut EntityState, message: EntityMessage) {
         EntityMessage::UnselectEntity => state.selected_entity = None,
         EntityMessage::SetEnabled(enabled) => {
             if let Some(entity) = &mut state.selected_entity {
+                let mut entity = entity.write();
                 entity.enabled = enabled;
             }
         }
         EntityMessage::SetName(name) => {
             if let Some(entity) = &mut state.selected_entity {
-                entity.deref_mut().name = name;
+                let mut entity = entity.write();
+                entity.name = name;
             }
         }
     }
