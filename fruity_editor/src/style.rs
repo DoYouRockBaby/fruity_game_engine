@@ -4,12 +4,11 @@ use iced::{
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Theme {
-    Light,
     Dark,
 }
 
 impl Theme {
-    pub const ALL: [Theme; 2] = [Theme::Light, Theme::Dark];
+    pub const ALL: [Theme; 1] = [Theme::Dark];
 }
 
 impl Default for Theme {
@@ -21,7 +20,6 @@ impl Default for Theme {
 impl From<Theme> for Box<dyn container::StyleSheet> {
     fn from(theme: Theme) -> Self {
         match theme {
-            Theme::Light => Default::default(),
             Theme::Dark => dark::Container.into(),
         }
     }
@@ -30,7 +28,6 @@ impl From<Theme> for Box<dyn container::StyleSheet> {
 impl From<Theme> for Box<dyn radio::StyleSheet> {
     fn from(theme: Theme) -> Self {
         match theme {
-            Theme::Light => Default::default(),
             Theme::Dark => dark::Radio.into(),
         }
     }
@@ -39,7 +36,6 @@ impl From<Theme> for Box<dyn radio::StyleSheet> {
 impl From<Theme> for Box<dyn text_input::StyleSheet> {
     fn from(theme: Theme) -> Self {
         match theme {
-            Theme::Light => Default::default(),
             Theme::Dark => dark::TextInput.into(),
         }
     }
@@ -48,7 +44,6 @@ impl From<Theme> for Box<dyn text_input::StyleSheet> {
 impl From<Theme> for Box<dyn button::StyleSheet> {
     fn from(theme: Theme) -> Self {
         match theme {
-            Theme::Light => light::Button.into(),
             Theme::Dark => dark::Button.into(),
         }
     }
@@ -57,7 +52,6 @@ impl From<Theme> for Box<dyn button::StyleSheet> {
 impl From<Theme> for Box<dyn scrollable::StyleSheet> {
     fn from(theme: Theme) -> Self {
         match theme {
-            Theme::Light => Default::default(),
             Theme::Dark => dark::Scrollable.into(),
         }
     }
@@ -66,7 +60,6 @@ impl From<Theme> for Box<dyn scrollable::StyleSheet> {
 impl From<Theme> for Box<dyn slider::StyleSheet> {
     fn from(theme: Theme) -> Self {
         match theme {
-            Theme::Light => Default::default(),
             Theme::Dark => dark::Slider.into(),
         }
     }
@@ -75,7 +68,6 @@ impl From<Theme> for Box<dyn slider::StyleSheet> {
 impl From<Theme> for Box<dyn progress_bar::StyleSheet> {
     fn from(theme: Theme) -> Self {
         match theme {
-            Theme::Light => Default::default(),
             Theme::Dark => dark::ProgressBar.into(),
         }
     }
@@ -84,7 +76,6 @@ impl From<Theme> for Box<dyn progress_bar::StyleSheet> {
 impl From<Theme> for Box<dyn checkbox::StyleSheet> {
     fn from(theme: Theme) -> Self {
         match theme {
-            Theme::Light => Default::default(),
             Theme::Dark => dark::Checkbox.into(),
         }
     }
@@ -93,34 +84,15 @@ impl From<Theme> for Box<dyn checkbox::StyleSheet> {
 impl From<Theme> for Box<dyn rule::StyleSheet> {
     fn from(theme: Theme) -> Self {
         match theme {
-            Theme::Light => Default::default(),
             Theme::Dark => dark::Rule.into(),
         }
     }
 }
 
-mod light {
-    use iced::{button, Color, Vector};
-
-    pub struct Button;
-
-    impl button::StyleSheet for Button {
-        fn active(&self) -> button::Style {
-            button::Style {
-                background: Color::from_rgb(0.11, 0.42, 0.87).into(),
-                border_radius: 12.0,
-                shadow_offset: Vector::new(1.0, 1.0),
-                text_color: Color::from_rgb8(0xEE, 0xEE, 0xEE),
-                ..button::Style::default()
-            }
-        }
-
-        fn hovered(&self) -> button::Style {
-            button::Style {
-                text_color: Color::WHITE,
-                shadow_offset: Vector::new(1.0, 2.0),
-                ..self.active()
-            }
+impl Theme {
+    pub fn list_item(&self) -> Box<dyn button::StyleSheet> {
+        match self {
+            Theme::Dark => dark::ListItem.into(),
         }
     }
 }
@@ -235,6 +207,35 @@ mod dark {
             button::Style {
                 background: ACTIVE.into(),
                 border_radius: 3.0,
+                text_color: Color::WHITE,
+                ..button::Style::default()
+            }
+        }
+
+        fn hovered(&self) -> button::Style {
+            button::Style {
+                background: HOVERED.into(),
+                text_color: Color::WHITE,
+                ..self.active()
+            }
+        }
+
+        fn pressed(&self) -> button::Style {
+            button::Style {
+                border_width: 1.0,
+                border_color: Color::WHITE,
+                ..self.hovered()
+            }
+        }
+    }
+
+    pub struct ListItem;
+
+    impl button::StyleSheet for ListItem {
+        fn active(&self) -> button::Style {
+            button::Style {
+                background: SURFACE.into(),
+                border_radius: 0.0,
                 text_color: Color::WHITE,
                 ..button::Style::default()
             }

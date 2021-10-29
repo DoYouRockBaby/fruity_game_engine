@@ -38,7 +38,7 @@ impl Archetype {
     /// # Generic Arguments
     /// * `T` - The type of the entities stored into the archetype
     ///
-    pub fn new(entity_id: EntityId, components: Vec<AnyComponent>) -> Archetype {
+    pub fn new(entity_id: EntityId, name: String, components: Vec<AnyComponent>) -> Archetype {
         // Deduce the archetype properties from the components
         let identifier = get_type_identifier_by_any(&components);
 
@@ -53,7 +53,7 @@ impl Archetype {
 
         // Create the first entity
         let mut writer = inner_archetype.write().unwrap();
-        writer.add(entity_id, components);
+        writer.add(entity_id, name, components);
         std::mem::drop(writer);
 
         Archetype {
@@ -104,9 +104,9 @@ impl Archetype {
     /// # Generic Arguments
     /// * `T` - The type of the new entity
     ///
-    pub fn add(&self, entity_id: EntityId, components: Vec<AnyComponent>) {
+    pub fn add(&self, entity_id: EntityId, name: String, components: Vec<AnyComponent>) {
         let mut writer = self.inner_archetype.write().unwrap();
-        writer.add(entity_id, components);
+        writer.add(entity_id, name, components);
     }
 
     /// Remove an entity based on its id

@@ -38,11 +38,12 @@ pub(crate) fn entity_size(components: &[AnyComponent]) -> usize {
 ///
 pub(crate) fn encode_entity(
     entity_id: EntityId,
+    name: String,
     mut entity_buffer: &mut [u8],
     components: Vec<AnyComponent>,
 ) {
     // Store the head
-    let head = EntityCellHead::new(entity_id);
+    let head = EntityCellHead::new(entity_id, name);
     let encoded_head = unsafe {
         std::slice::from_raw_parts(
             (&*&head as *const EntityCellHead) as *const u8,
@@ -114,6 +115,21 @@ pub(crate) fn decode_entity_head<'a>(
     let entity_lock_buffer = &inner_archetype.buffer[buffer_index..buffer_end];
     let (_head, body, _tail) = unsafe { entity_lock_buffer.align_to::<EntityCellHead>() };
     &body[0]
+}
+
+// Get the entity rw lock stored in an archetype from it's index with mutability
+///
+/// # Arguments
+/// * `components` - The list of the entity components
+///
+pub(crate) fn decode_entity_head_mut<'a>(
+    inner_archetype: &'a mut InnerArchetype,
+    buffer_index: usize,
+) -> &'a mut EntityCellHead {
+    let buffer_end = buffer_index + size_of::<EntityCellHead>();
+    let entity_lock_buffer = &mut inner_archetype.buffer[buffer_index..buffer_end];
+    let (_head, body, _tail) = unsafe { entity_lock_buffer.align_to_mut::<EntityCellHead>() };
+    &mut body[0]
 }
 
 // Get the entity rw lock stored in an archetype from it's index

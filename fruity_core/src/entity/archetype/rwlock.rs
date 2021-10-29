@@ -3,6 +3,7 @@ use crate::component::component_rwlock::ComponentRwLock;
 use crate::entity::archetype::encode_entity::decode_components;
 use crate::entity::archetype::encode_entity::decode_components_mut;
 use crate::entity::archetype::encode_entity::decode_entity_head;
+use crate::entity::archetype::encode_entity::decode_entity_head_mut;
 use crate::entity::archetype::get_type_identifier;
 use crate::entity::archetype::inner_archetype::InnerArchetype;
 use crate::entity::archetype::Component;
@@ -145,6 +146,18 @@ impl Deref for EntitySharedRwLock {
         let archetype_ref = unsafe { &*(&archetype_reader as *const _) } as &InnerArchetype;
 
         decode_entity_head(archetype_ref, self.buffer_index)
+    }
+}
+
+impl DerefMut for EntitySharedRwLock {
+    fn deref_mut(&mut self) -> &mut <Self as std::ops::Deref>::Target {
+        let mut archetype_writer = self.inner_archetype.write().unwrap();
+
+        // TODO: Try a way to remove that (ignore the fact that archetype reader is local)
+        let archetype_mut =
+            unsafe { &mut *(&mut archetype_writer as *mut _) } as &mut InnerArchetype;
+
+        decode_entity_head_mut(archetype_mut, self.buffer_index)
     }
 }
 

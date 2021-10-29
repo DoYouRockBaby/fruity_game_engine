@@ -117,17 +117,17 @@ impl EntityManager {
     /// # Arguments
     /// * `entity` - The entity that will be added
     ///
-    pub fn create(&mut self, components: Vec<AnyComponent>) -> EntityId {
+    pub fn create(&mut self, name: String, components: Vec<AnyComponent>) -> EntityId {
         self.id_incrementer += 1;
         let entity_id = self.id_incrementer;
         let entity_identifier = get_type_identifier_by_any(&components);
 
         match self.archetype_by_identifier(entity_identifier) {
             Some(archetype) => {
-                archetype.add(entity_id, components);
+                archetype.add(entity_id, name, components);
             }
             None => {
-                let archetype = Archetype::new(entity_id, components);
+                let archetype = Archetype::new(entity_id, name, components);
                 self.archetypes.push(archetype);
             }
         }
@@ -180,8 +180,9 @@ impl IntrospectObject for EntityManager {
                     let this = cast_service_mut::<EntityManager>(this);
 
                     let mut caster = ArgumentCaster::new("create", args);
-                    let arg1 = caster.cast_next::<Vec<AnyComponent>>()?;
-                    this.create(arg1);
+                    let arg1 = caster.cast_next::<String>()?;
+                    let arg2 = caster.cast_next::<Vec<AnyComponent>>()?;
+                    this.create(arg1, arg2);
 
                     Ok(None)
                 })),

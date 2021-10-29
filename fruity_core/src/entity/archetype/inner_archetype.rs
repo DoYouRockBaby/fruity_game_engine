@@ -14,18 +14,20 @@ use std::sync::RwLock;
 /// This store all the information related to a specific entity, is intended to be used by inner_archetype
 /// Extern users are not supposed to have access to that
 pub struct EntityCellHead {
-    pub(crate) entity_id: EntityId,
+    pub entity_id: EntityId,
+    pub name: String,
     pub enabled: bool,
-    pub(crate) deleted: bool,
-    pub(crate) on_updated: Signal<()>,
-    pub(crate) lock: RwLock<()>,
+    pub deleted: bool,
+    pub on_updated: Signal<()>,
+    pub lock: RwLock<()>,
 }
 
 impl EntityCellHead {
     /// Returns a EntityCellHead
-    pub(crate) fn new(entity_id: EntityId) -> EntityCellHead {
+    pub(crate) fn new(entity_id: EntityId, name: String) -> EntityCellHead {
         EntityCellHead {
             entity_id,
+            name,
             enabled: true,
             deleted: false,
             on_updated: Signal::new(),
@@ -134,11 +136,11 @@ impl InnerArchetype {
     /// * `entity_id` - The entity id
     /// * `entity` - The entity datas
     ///
-    pub(crate) fn add(&mut self, entity_id: EntityId, components: Vec<AnyComponent>) {
+    pub(crate) fn add(&mut self, entity_id: EntityId, name: String, components: Vec<AnyComponent>) {
         // Create then entity buffer
         let entity_index = self.buffer.len();
         let mut entity_buffer: Vec<u8> = vec![0; self.entity_size];
-        encode_entity(entity_id, &mut entity_buffer, components);
+        encode_entity(entity_id, name, &mut entity_buffer, components);
 
         // Store the entity
         self.buffer.append(&mut entity_buffer);

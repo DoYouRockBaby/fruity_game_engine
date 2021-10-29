@@ -1,4 +1,4 @@
-use crate::Controls;
+use crate::Panes;
 use crate::World;
 use core::ffi::c_void;
 use fruity_any::*;
@@ -34,7 +34,7 @@ use std::ops::Deref;
 pub struct EditorManagerState {
     debug: IcedDebug,
     renderer: Renderer,
-    state: State<Controls>,
+    state: State<Panes>,
     viewport: Viewport,
     staging_belt: wgpu::util::StagingBelt,
     modifiers: ModifiersState,
@@ -48,7 +48,7 @@ pub struct EditorManager {
     windows_manager: ServiceRwLock<WindowsManager>,
     graphic_manager: ServiceRwLock<GraphicsManager>,
     state: Option<EditorManagerState>,
-    controls: Option<Controls>,
+    panes: Option<Panes>,
 }
 
 unsafe impl Send for EditorManager {}
@@ -149,12 +149,12 @@ impl EditorManager {
             });
 
         // Create the base UI
-        let controls = Controls::new(world);
+        let panes = Panes::new(world);
 
         EditorManager {
             windows_manager: windows_manager.clone(),
             graphic_manager: graphic_manager.clone(),
-            controls: Some(controls),
+            panes: Some(panes),
             state: None,
         }
     }
@@ -195,7 +195,7 @@ impl EditorManager {
         // Create the UI State that will be used to manage the UI
         let modifiers = ModifiersState::default();
         let state = program::State::new(
-            self.controls.take().unwrap(),
+            self.panes.take().unwrap(),
             Size::new(size.0 as f32, size.1 as f32),
             conversion::cursor_position(cursor_position, windows_manager.get_scale_factor()),
             &mut renderer,

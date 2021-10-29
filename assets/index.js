@@ -48,8 +48,7 @@ entityManager.onEntityCreated.addObserver((entity) => {
 systemManager.addBeginSystem(() => {
     resourcesManager.readResourceSettings("assets/resources.yaml");
 
-    console.log("1");
-    entityManager.create([
+    entityManager.create("Image 1", [
         new Position({ x: 0.25, y: 0.25 }),
         new Size({ width: 0.5, height: 0.5 }),
         new Sprite({
@@ -58,9 +57,8 @@ systemManager.addBeginSystem(() => {
         }),
         new Velocity({ x: 0.001, y: 0.001 }),
     ]);
-    console.log("2");
 
-    entityManager.create([
+    entityManager.create("Image 2", [
         new Position({ x: -0.25, y: 0.25 }),
         new Size({ width: 0.3, height: 0.3 }),
         new Sprite({
@@ -69,7 +67,7 @@ systemManager.addBeginSystem(() => {
         }),
     ]);
 
-    entityManager.create([
+    entityManager.create("Camera", [
         new Position({ x: -1, y: -1 }),
         new Size({ width: 2, height: 2 }),
         new Camera({}),

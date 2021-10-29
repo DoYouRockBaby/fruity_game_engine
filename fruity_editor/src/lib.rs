@@ -1,4 +1,4 @@
-use crate::components::controls::Controls;
+use crate::components::panes::Panes;
 use crate::editor_manager::EditorManager;
 use fruity_core::world::World;
 
