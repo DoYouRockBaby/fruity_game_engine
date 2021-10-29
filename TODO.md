@@ -1,26 +1,24 @@
-#########################
-C'est probablement le viewport (voir la démo)
-#########################
-
-
-
 # FEATURES V1
 
 ## ECS
 
 [X] Make serialized able to be extended in modules (put it into introspect, make intropect better ...)
 [X] Make the archetype able to store datas in plain array for performances
-[P] Test and stabilize ECS
-[P] Implement entity hierarchy
 [X] Add a "field changed" signal on every entities
+[P] Implement entity hierarchy
 [ ] There should be some memory leak in archetype
 [ ] Make macros for native systems
+[ ] Test and stabilize ECS
 
 ## Editor
 
-[ ] Base editor
-[ ] Entity hierarchy visualisation
+[X] Base editor
+[P] Implement a basic hook system
+[ ] Create a pseudo DOM to abstract the interface creation
+[ ] Wrap the DOM system with iced
+[ ] Expose the GUI API to javascript to create custom component editor
 [ ] Components visualization
+[ ] Entity hierarchy visualisation
 [ ] Resources browser
 [ ] Resources visualisation, take the material as an example and try to make it easy to edit in sprite component
 [ ] Gizmos
