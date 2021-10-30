@@ -4,6 +4,7 @@ use fruity_core::world::World;
 
 pub mod components;
 pub mod editor_manager;
+pub mod hooks;
 pub mod state;
 pub mod style;
 pub mod ui_element;

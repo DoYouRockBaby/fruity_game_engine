@@ -1,10 +1,11 @@
+use crate::hooks::topo;
+use crate::hooks::use_global;
+use crate::hooks::use_state;
+use crate::hooks::CloneState;
+use crate::hooks::StateAccess;
+use crate::state::theme::ThemeState;
 use crate::state::Message;
-use crate::state::State;
 use crate::ui_element::UIElement;
-use comp_state::topo;
-use comp_state::use_state;
-use comp_state::CloneState;
-use comp_state::StateAccess;
 use iced::button;
 use iced::scrollable;
 use iced::text_input;
@@ -21,20 +22,23 @@ use iced_winit::Length;
 use std::any::Any;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 #[topo::nested]
-fn draw_ui_element(element: UIElement, state: &State) -> Element<Message, Renderer> {
+pub fn draw_ui_element<'a>(element: UIElement) -> Element<'a, Message, Renderer> {
     let button_state = use_state(|| Rc::<RefCell<button::State>>::default());
     let input_state = use_state(|| Rc::<RefCell<text_input::State>>::default());
     let scroll_state = use_state(|| Rc::<RefCell<scrollable::State>>::default());
     let list_state = use_state(|| Rc::<RefCell<HashMap<usize, button::State>>>::default());
 
     match element {
-        UIElement::Row(elements) => draw_row(elements, state),
-        UIElement::Column(elements) => draw_column(elements, state),
-        UIElement::Text(text) => draw_text(text, state),
+        UIElement::Empty => draw_empty(),
+        UIElement::Row(elements) => draw_row(elements),
+        UIElement::Column(elements) => draw_column(elements),
+        UIElement::Text(text) => draw_text(text),
         UIElement::Button { label, on_click } => {
             let button_state = button_state.get();
             let mut button_state = button_state.borrow_mut();
@@ -47,13 +51,13 @@ fn draw_ui_element(element: UIElement, state: &State) -> Element<Message, Render
                 )
             };
 
-            draw_button(label, on_click, button_state, state)
+            draw_button(label, on_click, button_state)
         }
         UIElement::Input {
             label,
             value,
             placeholder,
-            on_changed,
+            on_change,
         } => {
             let input_state = input_state.get();
             let mut input_state = input_state.borrow_mut();
@@ -66,12 +70,12 @@ fn draw_ui_element(element: UIElement, state: &State) -> Element<Message, Render
                 )
             };
 
-            draw_input(label, value, placeholder, on_changed, input_state, state)
+            draw_input(label, value, placeholder, on_change, input_state)
         }
         UIElement::IntegerInput {
             label,
             value,
-            on_changed,
+            on_change,
         } => {
             let input_state = input_state.get();
             let mut input_state = input_state.borrow_mut();
@@ -84,12 +88,12 @@ fn draw_ui_element(element: UIElement, state: &State) -> Element<Message, Render
                 )
             };
 
-            draw_integer_input(label, value, on_changed, input_state, state)
+            draw_integer_input(label, value, on_change, input_state)
         }
         UIElement::FloatInput {
             label,
             value,
-            on_changed,
+            on_change,
         } => {
             let input_state = input_state.get();
             let mut input_state = input_state.borrow_mut();
@@ -102,19 +106,18 @@ fn draw_ui_element(element: UIElement, state: &State) -> Element<Message, Render
                 )
             };
 
-            draw_float_input(label, value, on_changed, input_state, state)
+            draw_float_input(label, value, on_change, input_state)
         }
         UIElement::Checkbox {
             label,
             value,
-            on_changed,
-        } => draw_checkbox(label, value, on_changed, state),
+            on_change,
+        } => draw_checkbox(label, value, on_change),
         UIElement::ListView {
             items,
             get_key,
             render_item,
             on_clicked,
-            is_selected,
         } => {
             let scroll_state = scroll_state.get();
             let mut scroll_state = scroll_state.borrow_mut();
@@ -132,47 +135,51 @@ fn draw_ui_element(element: UIElement, state: &State) -> Element<Message, Render
                 get_key,
                 render_item,
                 on_clicked,
-                is_selected,
                 scroll_state,
                 &list_state,
-                state,
             )
         }
     }
 }
 
-fn draw_row(elements: Vec<UIElement>, state: &State) -> Element<Message, Renderer> {
+fn draw_empty<'a>() -> Element<'a, Message, Renderer> {
+    Row::new().into()
+}
+
+fn draw_row<'a>(elements: Vec<UIElement>) -> Element<'a, Message, Renderer> {
     elements
         .into_iter()
         .fold(Row::new(), |row, element| {
-            row.push(draw_ui_element(element, state))
+            row.push(draw_ui_element(element))
         })
         .into()
 }
 
-fn draw_column(elements: Vec<UIElement>, state: &State) -> Element<Message, Renderer> {
+fn draw_column<'a>(elements: Vec<UIElement>) -> Element<'a, Message, Renderer> {
     elements
         .into_iter()
         .fold(Column::new(), |row, element| {
-            row.push(draw_ui_element(element, state))
+            row.push(draw_ui_element(element))
         })
         .into()
 }
 
-fn draw_text(text: String, _state: &State) -> Element<Message, Renderer> {
+fn draw_text<'a>(text: String) -> Element<'a, Message, Renderer> {
     Text::new(text).size(16).into()
 }
 
 fn draw_button<'a>(
     label: String,
-    on_click: Box<dyn Fn() + Send + Sync>,
-    button_state: &'a mut iced::button::State,
-    state: &State,
+    on_click: Box<dyn FnMut() + Send + Sync>,
+    button_state: &'a mut button::State,
 ) -> Element<'a, Message, Renderer> {
+    let theme_state = use_global::<ThemeState>();
+
     let label = Text::new(label).size(16);
+    let on_click = Arc::new(Mutex::new(on_click));
     Button::new(button_state, label)
-        .on_press(Message::Callback(on_click.into()))
-        .style(state.theme.theme)
+        .on_press(Message::Callback(on_click))
+        .style(theme_state.theme)
         .into()
 }
 
@@ -180,17 +187,20 @@ fn draw_input<'a>(
     label: String,
     value: String,
     placeholder: String,
-    on_changed: Box<dyn Fn(&str) + Send + Sync>,
+    on_change: Box<dyn FnMut(&str) + Send + Sync>,
     input_state: &'a mut text_input::State,
-    state: &State,
 ) -> Element<'a, Message, Renderer> {
+    let theme_state = use_global::<ThemeState>();
+
     let label = Text::new(label).size(16);
-    let on_changed: Arc<dyn Fn(&str) + Send + Sync> = on_changed.into();
+    let on_change = Arc::new(Mutex::new(on_change));
+    //let on_change: Arc<dyn FnMut(&str) + Send + Sync> = on_change.into();
     let input: Element<Message, Renderer> =
         TextInput::new(input_state, &placeholder, &value, move |value| {
-            Message::StringChanged(on_changed.clone(), value)
+            Message::StringChanged(on_change.clone(), value)
         })
-        .style(state.theme.theme)
+        .size(16)
+        .style(theme_state.theme)
         .into();
 
     Row::new().push(label).push(input).into()
@@ -199,21 +209,24 @@ fn draw_input<'a>(
 fn draw_integer_input<'a>(
     label: String,
     value: i64,
-    on_changed: Box<dyn Fn(i64) + Send + Sync>,
+    on_change: Box<dyn FnMut(i64) + Send + Sync>,
     input_state: &'a mut text_input::State,
-    state: &State,
 ) -> Element<'a, Message, Renderer> {
+    let theme_state = use_global::<ThemeState>();
+
     let label = Text::new(label).size(16);
-    let on_changed: Arc<dyn Fn(i64) + Send + Sync> = on_changed.into();
+    let on_change = Arc::new(Mutex::new(on_change));
+    //let on_change: Arc<dyn FnMut(i64) + Send + Sync> = on_change.into();
     let input: Element<Message, Renderer> =
         TextInput::new(input_state, "", &value.to_string(), move |value| {
             if let Ok(value) = value.parse::<i64>() {
-                Message::IntegerChanged(on_changed.clone(), value)
+                Message::IntegerChanged(on_change.clone(), value)
             } else {
                 Message::Empty
             }
         })
-        .style(state.theme.theme)
+        .size(16)
+        .style(theme_state.theme)
         .into();
 
     Row::new().push(label).push(input).into()
@@ -222,37 +235,43 @@ fn draw_integer_input<'a>(
 fn draw_float_input<'a>(
     label: String,
     value: f64,
-    on_changed: Box<dyn Fn(f64) + Send + Sync>,
+    on_change: Box<dyn FnMut(f64) + Send + Sync>,
     input_state: &'a mut text_input::State,
-    state: &State,
 ) -> Element<'a, Message, Renderer> {
+    let theme_state = use_global::<ThemeState>();
+
     let label = Text::new(label).size(16);
-    let on_changed: Arc<dyn Fn(f64) + Send + Sync> = on_changed.into();
+    let on_change = Arc::new(Mutex::new(on_change));
+    //let on_change: Arc<dyn FnMut(f64) + Send + Sync> = on_change.into();
     let input: Element<Message, Renderer> =
         TextInput::new(input_state, "", &value.to_string(), move |value| {
             if let Ok(value) = value.parse::<f64>() {
-                Message::FloatChanged(on_changed.clone(), value)
+                Message::FloatChanged(on_change.clone(), value)
             } else {
                 Message::Empty
             }
         })
-        .style(state.theme.theme)
+        .size(16)
+        .style(theme_state.theme)
         .into();
 
     Row::new().push(label).push(input).into()
 }
 
-fn draw_checkbox(
+fn draw_checkbox<'a>(
     label: String,
     value: bool,
-    on_changed: Box<dyn Fn(bool) + Send + Sync>,
-    state: &State,
-) -> Element<Message, Renderer> {
-    let on_changed: Arc<dyn Fn(bool) + Send + Sync> = on_changed.into();
+    on_change: Box<dyn FnMut(bool) + Send + Sync>,
+) -> Element<'a, Message, Renderer> {
+    let theme_state = use_global::<ThemeState>();
+
+    let on_change = Arc::new(Mutex::new(on_change));
+    //let on_change: Arc<dyn FnMut(bool) + Send + Sync> = on_change.into();
     Checkbox::new(value, &label, move |value| {
-        Message::BoolChanged(on_changed.clone(), value)
+        Message::BoolChanged(on_change.clone(), value)
     })
-    .style(state.theme.theme)
+    .size(16)
+    .style(theme_state.theme)
     .into()
 }
 
@@ -260,17 +279,20 @@ fn draw_listview<'a>(
     items: Vec<Box<dyn Any + Send + Sync>>,
     get_key: Box<dyn Fn(&dyn Any) -> usize + Send + Sync>,
     render_item: Box<dyn Fn(&dyn Any) -> UIElement + Send + Sync>,
-    on_clicked: Box<dyn Fn(&dyn Any) + Send + Sync>,
-    _is_selected: Option<Box<dyn Fn(&dyn Any) -> bool + Send + Sync>>,
+    on_clicked: Box<dyn FnMut(&dyn Any) + Send + Sync>,
     scroll_state: &'a mut scrollable::State,
     list_state: &StateAccess<Rc<RefCell<HashMap<usize, button::State>>>>,
-    state: &'a State,
 ) -> Element<'a, Message, Renderer> {
+    let theme_state = use_global::<ThemeState>();
+
     let old_list_state = list_state.get();
     let mut old_list_state = old_list_state.borrow_mut();
 
     // Update list button states from keys
-    let keys = items.iter().map(|item| get_key(item)).collect::<Vec<_>>();
+    let keys = items
+        .iter()
+        .map(|item| get_key(item.deref()))
+        .collect::<Vec<_>>();
     let new_list_state = keys
         .into_iter()
         .fold(HashMap::new(), |mut new_list_state, key| {
@@ -289,14 +311,16 @@ fn draw_listview<'a>(
     let list_state = list_state.get();
     let mut list_state = list_state.borrow_mut();
 
-    let on_clicked: Arc<dyn Fn(&dyn Any) + Send + Sync> = on_clicked.into();
+    let on_clicked = Arc::new(Mutex::new(on_clicked));
+    /*let on_clicked: Arc<Mutex<dyn FnMut(&dyn Any) + Send + Sync>> =
+    Arc::new(Mutex::new(on_clicked));*/
     items
         .into_iter()
         .fold(
             Scrollable::new(scroll_state)
                 .width(Length::Fill)
                 .height(Length::Units(500))
-                .style(state.theme.theme),
+                .style(theme_state.theme),
             |scrollable, item| {
                 // TODO: Try to find a way to remove that
                 // Create a custom use_state for mutable references
@@ -308,13 +332,13 @@ fn draw_listview<'a>(
                 };
 
                 scrollable.push({
-                    let key = get_key(&item);
-                    let rendered_item = render_item(&item);
+                    let key = get_key(item.deref());
+                    let rendered_item = render_item(item.deref());
 
                     let item_state = list_state.get_mut(&key).unwrap();
                     let item: Element<Message, Renderer> =
-                        Button::new(item_state, draw_ui_element(rendered_item, state))
-                            .style(state.theme.theme.list_item())
+                        Button::new(item_state, draw_ui_element(rendered_item))
+                            .style(theme_state.theme.list_item())
                             .on_press(Message::AnyChanged(on_clicked.clone(), item.into()))
                             .width(Length::Fill)
                             .into();

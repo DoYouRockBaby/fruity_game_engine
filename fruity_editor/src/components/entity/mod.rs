@@ -1,2 +1,2 @@
-pub mod entity_editor;
+pub mod entity_edit;
 pub mod entity_list;

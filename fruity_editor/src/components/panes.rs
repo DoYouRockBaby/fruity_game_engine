@@ -1,9 +1,15 @@
-use crate::components::entity::entity_editor::EntityEditor;
-use crate::components::entity::entity_list::EntityList;
-use crate::state::update_state;
+use crate::components::entity::entity_edit::entity_edit_component;
+use crate::components::entity::entity_list::entity_list_component;
+use crate::hooks::declare_global;
+use crate::hooks::use_global;
+use crate::state::entity::EntityState;
+use crate::state::handle_message;
+use crate::state::theme::ThemeState;
+use crate::state::world::WorldState;
 use crate::state::Message;
-use crate::state::State;
+use crate::ui_element::draw_ui_element::draw_ui_element;
 use crate::World;
+use iced::Container;
 use iced_wgpu::Renderer;
 use iced_winit::pane_grid;
 use iced_winit::Command;
@@ -15,15 +21,15 @@ use iced_winit::Row;
 use iced_winit::Text;
 
 enum PaneType {
-    Entities(EntityList),
-    EntityEditor(EntityEditor),
+    Entities,
+    EntityEditor,
     None,
 }
 
 pub struct Panes {
     panes: pane_grid::State<PaneType>,
     focus: Option<pane_grid::Pane>,
-    state: State,
+    theme_state: &'static ThemeState,
 }
 
 #[derive(Debug, Clone)]
@@ -36,26 +42,26 @@ pub enum PanesMessage {
 
 impl Panes {
     pub fn new(world: &World) -> Self {
-        let state = State::new(world);
+        declare_global(WorldState::new(world));
+        declare_global(ThemeState::default());
+        declare_global(EntityState::default());
+
+        let theme_state = use_global::<ThemeState>();
 
         Panes {
             panes: pane_grid::State::with_configuration(pane_grid::Configuration::Split {
                 axis: pane_grid::Axis::Vertical,
                 ratio: 0.10,
-                a: Box::new(pane_grid::Configuration::Pane(PaneType::Entities(
-                    EntityList::new(&state),
-                ))),
+                a: Box::new(pane_grid::Configuration::Pane(PaneType::Entities)),
                 b: Box::new(pane_grid::Configuration::Split {
                     axis: pane_grid::Axis::Vertical,
                     ratio: 0.10,
                     a: Box::new(pane_grid::Configuration::Pane(PaneType::None)),
-                    b: Box::new(pane_grid::Configuration::Pane(PaneType::EntityEditor(
-                        EntityEditor::new(),
-                    ))),
+                    b: Box::new(pane_grid::Configuration::Pane(PaneType::EntityEditor)),
                 }),
             }),
             focus: None,
-            state,
+            theme_state,
         }
     }
 }
@@ -65,8 +71,7 @@ impl Program for Panes {
     type Message = Message;
 
     fn update(&mut self, message: Message) -> Command<Self::Message> {
-        update_state(&mut self.state, message.clone());
-        //self.entity_list.update(message.clone());
+        handle_message(message.clone());
 
         if let Message::Panes(message) = message {
             match message {
@@ -85,35 +90,42 @@ impl Program for Panes {
     }
 
     fn view(&mut self) -> Element<Message, Renderer> {
-        let state = &self.state;
-        let panes = &mut self.panes;
+        let theme_state = self.theme_state;
 
-        let pane_grid: Element<Message, Renderer> = PaneGrid::new(panes, |_id, pane| {
+        let pane_grid: Element<Message, Renderer> = PaneGrid::new(&mut self.panes, |_id, pane| {
             let content: pane_grid::Content<Message, Renderer> = match pane {
-                PaneType::Entities(entity_list) => {
+                PaneType::Entities => {
                     let title =
                         Row::with_children(vec![Text::new("Entities").size(16).into()]).spacing(5);
                     let title_bar = pane_grid::TitleBar::new(title)
                         //.panes(pane.panes.view(id, total_panes, pane.is_pinned))
                         .padding(10)
-                        .style(state.theme.theme);
+                        .style(theme_state.theme);
 
-                    pane_grid::Content::new(entity_list.view(state))
+                    let content =
+                        Container::new(draw_ui_element(entity_list_component())).padding(10);
+
+                    pane_grid::Content::new(content)
                         .title_bar(title_bar)
-                        .style(state.theme.theme)
+                        .style(theme_state.theme)
                         .into()
                 }
-                PaneType::EntityEditor(entity_editor) => {
+                PaneType::EntityEditor => {
                     let title = Row::with_children(vec![Text::new("Edit entity").size(16).into()])
                         .spacing(5);
                     let title_bar = pane_grid::TitleBar::new(title)
                         //.panes(pane.panes.view(id, total_panes, pane.is_pinned))
                         .padding(10)
-                        .style(state.theme.theme);
+                        .style(theme_state.theme);
 
-                    pane_grid::Content::new(entity_editor.view(state))
+                    let content = Container::new(draw_ui_element(entity_edit_component()))
+                        .width(Length::Fill)
+                        .height(Length::Fill)
+                        .padding(10);
+
+                    pane_grid::Content::new(content)
                         .title_bar(title_bar)
-                        .style(state.theme.theme)
+                        .style(theme_state.theme)
                         .into()
                 }
                 PaneType::None => pane_grid::Content::new(Row::new()).into(),
