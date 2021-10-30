@@ -9,6 +9,7 @@ use crate::state::world::WorldState;
 use crate::state::Message;
 use crate::ui_element::draw_ui_element::draw_ui_element;
 use crate::World;
+use iced::pane_grid::Pane;
 use iced::Container;
 use iced_wgpu::Renderer;
 use iced_winit::pane_grid;
@@ -20,9 +21,11 @@ use iced_winit::Program;
 use iced_winit::Row;
 use iced_winit::Text;
 
+#[derive(PartialEq)]
 enum PaneType {
     Entities,
     EntityEditor,
+    Blank,
     None,
 }
 
@@ -50,15 +53,20 @@ impl Panes {
 
         Panes {
             panes: pane_grid::State::with_configuration(pane_grid::Configuration::Split {
-                axis: pane_grid::Axis::Vertical,
-                ratio: 0.10,
-                a: Box::new(pane_grid::Configuration::Pane(PaneType::Entities)),
-                b: Box::new(pane_grid::Configuration::Split {
+                axis: pane_grid::Axis::Horizontal,
+                ratio: 0.20,
+                a: Box::new(pane_grid::Configuration::Split {
                     axis: pane_grid::Axis::Vertical,
                     ratio: 0.10,
-                    a: Box::new(pane_grid::Configuration::Pane(PaneType::None)),
-                    b: Box::new(pane_grid::Configuration::Pane(PaneType::EntityEditor)),
+                    a: Box::new(pane_grid::Configuration::Pane(PaneType::Entities)),
+                    b: Box::new(pane_grid::Configuration::Split {
+                        axis: pane_grid::Axis::Vertical,
+                        ratio: 0.20,
+                        a: Box::new(pane_grid::Configuration::Pane(PaneType::None)),
+                        b: Box::new(pane_grid::Configuration::Pane(PaneType::EntityEditor)),
+                    }),
                 }),
+                b: Box::new(pane_grid::Configuration::Pane(PaneType::Blank)),
             }),
             focus: None,
             theme_state,
@@ -77,7 +85,13 @@ impl Program for Panes {
             match message {
                 PanesMessage::Clicked(pane) => self.focus = Some(pane),
                 PanesMessage::Dragged(pane_grid::DragEvent::Dropped { pane, target }) => {
-                    self.panes.swap(&pane, &target)
+                    let pane1 = self.panes.get(&pane).unwrap();
+                    let pane2 = self.panes.get(&target).unwrap();
+
+                    // Avoid if one is a none pane
+                    if PaneType::None != *pane1 && PaneType::None != *pane2 {
+                        self.panes.swap(&pane, &target);
+                    }
                 }
                 PanesMessage::Resized(pane_grid::ResizeEvent { split, ratio }) => {
                     self.panes.resize(&split, ratio)
@@ -102,8 +116,10 @@ impl Program for Panes {
                         .padding(10)
                         .style(theme_state.theme);
 
-                    let content =
-                        Container::new(draw_ui_element(entity_list_component())).padding(10);
+                    let content = Container::new(
+                        Row::with_children(vec![draw_ui_element(entity_list_component())])
+                            .padding(10),
+                    );
 
                     pane_grid::Content::new(content)
                         .title_bar(title_bar)
@@ -113,15 +129,34 @@ impl Program for Panes {
                 PaneType::EntityEditor => {
                     let title = Row::with_children(vec![Text::new("Edit entity").size(16).into()])
                         .spacing(5);
+
                     let title_bar = pane_grid::TitleBar::new(title)
                         //.panes(pane.panes.view(id, total_panes, pane.is_pinned))
                         .padding(10)
                         .style(theme_state.theme);
 
-                    let content = Container::new(draw_ui_element(entity_edit_component()))
-                        .width(Length::Fill)
-                        .height(Length::Fill)
-                        .padding(10);
+                    let content = Container::new(
+                        Row::with_children(vec![draw_ui_element(entity_edit_component())])
+                            .padding(10),
+                    )
+                    .width(Length::Fill)
+                    .height(Length::Fill);
+
+                    pane_grid::Content::new(content)
+                        .title_bar(title_bar)
+                        .style(theme_state.theme)
+                        .into()
+                }
+                PaneType::Blank => {
+                    let title =
+                        Row::with_children(vec![Text::new("Unknown").size(16).into()]).spacing(5);
+
+                    let title_bar = pane_grid::TitleBar::new(title)
+                        //.panes(pane.panes.view(id, total_panes, pane.is_pinned))
+                        .padding(10)
+                        .style(theme_state.theme);
+
+                    let content = Container::new(Row::with_children(vec![]).padding(10));
 
                     pane_grid::Content::new(content)
                         .title_bar(title_bar)
@@ -135,7 +170,6 @@ impl Program for Panes {
         })
         .width(Length::Fill)
         .height(Length::Fill)
-        .spacing(10)
         .on_click(|event| Message::Panes(PanesMessage::Clicked(event)))
         .on_drag(|event| Message::Panes(PanesMessage::Dragged(event)))
         .on_resize(10, |event| Message::Panes(PanesMessage::Resized(event)))
