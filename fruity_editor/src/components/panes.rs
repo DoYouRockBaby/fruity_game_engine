@@ -9,7 +9,6 @@ use crate::state::world::WorldState;
 use crate::state::Message;
 use crate::ui_element::draw_ui_element::draw_ui_element;
 use crate::World;
-use iced::pane_grid::Pane;
 use iced::Container;
 use iced_wgpu::Renderer;
 use iced_winit::pane_grid;
