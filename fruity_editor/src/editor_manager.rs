@@ -196,7 +196,7 @@ impl EditorManager {
         let modifiers = ModifiersState::default();
         let state = program::State::new(
             self.panes.take().unwrap(),
-            Size::new(size.0 as f32, size.1 as f32),
+            viewport.logical_size(),
             conversion::cursor_position(cursor_position, windows_manager.get_scale_factor()),
             &mut renderer,
             &mut debug,
@@ -299,9 +299,8 @@ impl EditorManager {
             // If there are events pending
             if !state.state.is_queue_empty() {
                 // We update iced
-                let size = windows_manager.get_size();
                 state.state.update(
-                    Size::new(size.0 as f32, size.1 as f32),
+                    state.viewport.logical_size(),
                     conversion::cursor_position(
                         state.cursor_position,
                         windows_manager.get_scale_factor(),

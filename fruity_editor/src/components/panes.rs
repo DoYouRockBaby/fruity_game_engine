@@ -53,14 +53,14 @@ impl Panes {
         Panes {
             panes: pane_grid::State::with_configuration(pane_grid::Configuration::Split {
                 axis: pane_grid::Axis::Horizontal,
-                ratio: 0.20,
+                ratio: 0.80,
                 a: Box::new(pane_grid::Configuration::Split {
                     axis: pane_grid::Axis::Vertical,
-                    ratio: 0.10,
+                    ratio: 0.20,
                     a: Box::new(pane_grid::Configuration::Pane(PaneType::Entities)),
                     b: Box::new(pane_grid::Configuration::Split {
                         axis: pane_grid::Axis::Vertical,
-                        ratio: 0.20,
+                        ratio: 0.70,
                         a: Box::new(pane_grid::Configuration::Pane(PaneType::None)),
                         b: Box::new(pane_grid::Configuration::Pane(PaneType::EntityEditor)),
                     }),
