@@ -108,6 +108,28 @@ impl ResourcesManager {
         self.resources.contains_key(&identifier)
     }
 
+    /// Load an any resource file
+    ///
+    /// # Arguments
+    /// * `path` - The path of the file
+    /// * `resource_type` - The resource type
+    ///
+    pub fn load_resource_file(
+        &mut self,
+        path: &str,
+        resource_type: &str,
+    ) -> Result<(), LoadResourceError> {
+        let mut file = File::open(path).unwrap();
+        self.load_resource(
+            ResourceIdentifier(path.to_string()),
+            resource_type,
+            &mut file,
+            Settings::new(),
+        )?;
+
+        Ok(())
+    }
+
     /// Load and add a resource into the collection
     ///
     /// # Arguments
@@ -142,19 +164,9 @@ impl ResourcesManager {
     ///
     /// # Arguments
     /// * `path` - The path of the file
-    /// * `resource_type` - The resource type
-    /// * `read` - The reader, generaly a file reader
     ///
     pub fn read_resource_settings(&mut self, path: &str) -> Result<(), LoadResourceError> {
-        let mut file = File::open(path).unwrap();
-        self.load_resource(
-            ResourceIdentifier(path.to_string()),
-            "resource_settings",
-            &mut file,
-            Settings::new(),
-        )?;
-
-        Ok(())
+        self.load_resource_file(path, "resource_settings")
     }
 
     /// Add a resource into the collection

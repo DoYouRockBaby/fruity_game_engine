@@ -1,15 +1,12 @@
 extern crate pretty_env_logger;
 
 use fruity_core::initialize as initialize_ecs;
+use fruity_core::module::load_modules;
+use fruity_core::resource::resources_manager::ResourceIdentifier;
+use fruity_core::resource::resources_manager::ResourcesManager;
 use fruity_core::world::World;
-use fruity_editor::initialize as initialize_editor;
-use fruity_graphic::initialize as initialize_graphic;
-use fruity_graphic_2d::initialize as initialize_graphic_2d;
-use fruity_javascript_scripting::initialize as initialize_javascript;
-use fruity_javascript_scripting::javascript_engine::JavascriptEngine;
-use fruity_windows::initialize as initialize_windows;
-use fruity_windows::windows_manager::WindowsManager;
 use pretty_env_logger::formatted_builder;
+use std::fs::File;
 
 fn main() {
     let mut builder = formatted_builder();
@@ -24,25 +21,24 @@ fn main() {
 
     let world = World::new();
     initialize_ecs(&world);
-    initialize_windows(&world);
+    load_modules(&world, "./").unwrap();
+    /*initialize_windows(&world);
     initialize_graphic(&world);
     initialize_graphic_2d(&world);
     initialize_javascript(&world);
-    initialize_editor(&world);
+    initialize_editor(&world);*/
 
-    // Run the javascript module
-    let javascript_engine = {
+    // Run the javascript main module
+    {
         let service_manager = world.service_manager.read().unwrap();
-        service_manager.get::<JavascriptEngine>().unwrap()
+        let mut resources_manager = service_manager.write::<ResourcesManager>();
+        resources_manager
+            .load_resource_file("assets/index.js", "js")
+            .unwrap();
     };
-
-    let javascript_engine = javascript_engine.read().unwrap();
-    javascript_engine.run_module("assets/index.js");
 
     // Run the engine
     {
-        let service_manager = world.service_manager.read().unwrap();
-        let windows_manager = service_manager.read::<WindowsManager>();
-        windows_manager.run();
+        //run
     }
 }

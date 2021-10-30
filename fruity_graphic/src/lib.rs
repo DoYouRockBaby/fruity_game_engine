@@ -1,3 +1,4 @@
+#![crate_type = "cdylib"]
 use crate::graphics_manager::GraphicsManager;
 use crate::resources::image_resource::load_image;
 use crate::resources::material_resource::load_material;
@@ -9,7 +10,14 @@ pub mod graphics_manager;
 pub mod math;
 pub mod resources;
 
-/// Initialize this extension
+pub fn identifier() -> &'static str {
+    "fruity_graphic"
+}
+
+pub fn dependencies() -> &'static [&'static str] {
+    &["fruity_windows"]
+}
+
 pub fn initialize(world: &World) {
     let graphics_manager = GraphicsManager::new(world);
 

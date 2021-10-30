@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2018"
 resolver = "2"
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 log = "0.4.14"
 rusty_v8 = "0.32.0"

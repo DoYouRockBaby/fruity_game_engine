@@ -1,3 +1,4 @@
+#![crate_type = "cdylib"]
 use crate::bridge::components::configure_components;
 use crate::bridge::service::configure_services;
 use crate::javascript_engine::JavascriptEngine;
@@ -19,7 +20,14 @@ mod runtime;
 mod serialize;
 mod thread_scope_stack;
 
-/// Initialize this extension
+pub fn identifier() -> &'static str {
+    "fruity_javascript_scripting"
+}
+
+pub fn dependencies() -> &'static [&'static str] {
+    &[]
+}
+
 pub fn initialize(world: &World) {
     let javascript_engine = JavascriptEngine::new(world);
 

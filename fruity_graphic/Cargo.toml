@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2018"
 resolver = "2"
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 bytemuck = { version = "1.4", features = [ "derive" ] }
 tokio = { version = "1.12", features = ["rt", "rt-multi-thread", "time"] }
@@ -16,4 +19,6 @@ cgmath = "0.18"
 fruity_any = { path = "../fruity_any" }
 fruity_core = { path = "../fruity_core" }
 fruity_introspect = { path = "../fruity_introspect" }
+
+[build-dependencies]
 fruity_windows = { path = "../fruity_windows" }

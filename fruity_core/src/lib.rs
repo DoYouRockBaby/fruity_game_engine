@@ -23,6 +23,9 @@ pub use fruity_core_derive::Component;
 #[macro_use]
 extern crate lazy_static;
 
+/// Tools to load dynamicaly modules
+pub mod module;
+
 /// All related with components
 pub mod component;
 
