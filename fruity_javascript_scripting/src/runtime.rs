@@ -87,7 +87,7 @@ impl JsRuntime {
   pub fn global_object(&mut self) -> JsObject {
     let global_context = self.global_context();
     let scope = &mut self.handle_scope();
-    let global_object = global_context.get(scope).global(scope);
+    let global_object = global_context.open(scope).global(scope);
 
     let global_object = v8::Global::new(scope, global_object);
     JsObject::from_v8(global_object)
