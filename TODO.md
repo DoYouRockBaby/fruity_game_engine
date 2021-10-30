@@ -6,6 +6,7 @@
 [X] Make the archetype able to store datas in plain array for performances
 [X] Add a "field changed" signal on every entities
 [P] Implement entity hierarchy
+[ ] Put a get_constructor function into introspect
 [ ] There should be some memory leak in archetype
 [ ] Make macros for native systems
 [ ] Test and stabilize ECS
