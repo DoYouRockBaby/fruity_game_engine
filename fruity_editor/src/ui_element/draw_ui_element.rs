@@ -5,10 +5,12 @@ use crate::hooks::CloneState;
 use crate::hooks::StateAccess;
 use crate::state::theme::ThemeState;
 use crate::state::Message;
+use crate::ui_element::UIAlign;
 use crate::ui_element::UIElement;
 use iced::button;
 use iced::scrollable;
 use iced::text_input;
+use iced::Alignment;
 use iced::Button;
 use iced::Checkbox;
 use iced::Column;
@@ -27,6 +29,16 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::Mutex;
 
+impl Into<Alignment> for UIAlign {
+    fn into(self) -> Alignment {
+        match self {
+            UIAlign::Start => Alignment::Start,
+            UIAlign::Center => Alignment::Center,
+            UIAlign::End => Alignment::End,
+        }
+    }
+}
+
 #[topo::nested]
 pub fn draw_ui_element<'a>(element: UIElement) -> Element<'a, Message, Renderer> {
     let button_state = use_state(|| Rc::<RefCell<button::State>>::default());
@@ -36,8 +48,8 @@ pub fn draw_ui_element<'a>(element: UIElement) -> Element<'a, Message, Renderer>
 
     match element {
         UIElement::Empty => draw_empty(),
-        UIElement::Row(elements) => draw_row(elements),
-        UIElement::Column(elements) => draw_column(elements),
+        UIElement::Row { children, align } => draw_row(children, align),
+        UIElement::Column { children, align } => draw_column(children, align),
         UIElement::Text(text) => draw_text(text),
         UIElement::Button { label, on_click } => {
             let button_state = button_state.get();
@@ -146,19 +158,19 @@ fn draw_empty<'a>() -> Element<'a, Message, Renderer> {
     Row::new().into()
 }
 
-fn draw_row<'a>(elements: Vec<UIElement>) -> Element<'a, Message, Renderer> {
-    elements
+fn draw_row<'a>(children: Vec<UIElement>, align: UIAlign) -> Element<'a, Message, Renderer> {
+    children
         .into_iter()
-        .fold(Row::new(), |row, element| {
+        .fold(Row::new().align_items(align.into()), |row, element| {
             row.push(draw_ui_element(element))
         })
         .into()
 }
 
-fn draw_column<'a>(elements: Vec<UIElement>) -> Element<'a, Message, Renderer> {
-    elements
+fn draw_column<'a>(children: Vec<UIElement>, align: UIAlign) -> Element<'a, Message, Renderer> {
+    children
         .into_iter()
-        .fold(Column::new(), |row, element| {
+        .fold(Column::new().align_items(align.into()), |row, element| {
             row.push(draw_ui_element(element))
         })
         .into()
@@ -194,11 +206,11 @@ fn draw_input<'a>(
 
     let label = Text::new(label).size(16);
     let on_change = Arc::new(Mutex::new(on_change));
-    //let on_change: Arc<dyn FnMut(&str) + Send + Sync> = on_change.into();
     let input: Element<Message, Renderer> =
         TextInput::new(input_state, &placeholder, &value, move |value| {
             Message::StringChanged(on_change.clone(), value)
         })
+        .padding(4)
         .size(16)
         .style(theme_state.theme)
         .into();
@@ -216,7 +228,6 @@ fn draw_integer_input<'a>(
 
     let label = Text::new(label).size(16);
     let on_change = Arc::new(Mutex::new(on_change));
-    //let on_change: Arc<dyn FnMut(i64) + Send + Sync> = on_change.into();
     let input: Element<Message, Renderer> =
         TextInput::new(input_state, "", &value.to_string(), move |value| {
             if let Ok(value) = value.parse::<i64>() {
@@ -242,7 +253,6 @@ fn draw_float_input<'a>(
 
     let label = Text::new(label).size(16);
     let on_change = Arc::new(Mutex::new(on_change));
-    //let on_change: Arc<dyn FnMut(f64) + Send + Sync> = on_change.into();
     let input: Element<Message, Renderer> =
         TextInput::new(input_state, "", &value.to_string(), move |value| {
             if let Ok(value) = value.parse::<f64>() {
@@ -266,7 +276,6 @@ fn draw_checkbox<'a>(
     let theme_state = use_global::<ThemeState>();
 
     let on_change = Arc::new(Mutex::new(on_change));
-    //let on_change: Arc<dyn FnMut(bool) + Send + Sync> = on_change.into();
     Checkbox::new(value, &label, move |value| {
         Message::BoolChanged(on_change.clone(), value)
     })
@@ -312,8 +321,6 @@ fn draw_listview<'a>(
     let mut list_state = list_state.borrow_mut();
 
     let on_clicked = Arc::new(Mutex::new(on_clicked));
-    /*let on_clicked: Arc<Mutex<dyn FnMut(&dyn Any) + Send + Sync>> =
-    Arc::new(Mutex::new(on_clicked));*/
     items
         .into_iter()
         .fold(

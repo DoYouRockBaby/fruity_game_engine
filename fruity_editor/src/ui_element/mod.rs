@@ -2,10 +2,28 @@ use std::any::Any;
 
 pub mod draw_ui_element;
 
+pub enum UIAlign {
+    Start,
+    Center,
+    End,
+}
+
+impl Default for UIAlign {
+    fn default() -> Self {
+        UIAlign::Start
+    }
+}
+
 pub enum UIElement {
     Empty,
-    Row(Vec<UIElement>),
-    Column(Vec<UIElement>),
+    Row {
+        children: Vec<UIElement>,
+        align: UIAlign,
+    },
+    Column {
+        children: Vec<UIElement>,
+        align: UIAlign,
+    },
     Text(String),
     Button {
         label: String,
