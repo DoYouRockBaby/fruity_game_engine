@@ -14,16 +14,22 @@ class Velocity {
     }
 }
 
-console.log("ICI");
+console.log("ICI1");
 services.register("service2", new Service2());
+console.log("ICI2");
 const systemManager = services.get("system_manager");
+console.log("ICI3");
 const entityManager = services.get("entity_manager");
+console.log("ICI4");
 const componentFactory = services.get("components_factory");
+console.log("ICI5");
 const windowsManager = services.get("windows_manager");
+console.log("ICI6");
 const resourcesManager = services.get("resources_manager");
+console.log("ICI7");
 const service2 = services.get("service2");
 
-console.log("ICI");
+console.log("ICI8");
 
 console.log("JS System", windowsManager.getSize());
 service2.hello("World");

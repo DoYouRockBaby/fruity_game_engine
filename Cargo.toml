@@ -4,27 +4,15 @@ version = "0.1.0"
 edition = "2018"
 resolver = "2"
 
-[workspace]
-members = [
-  "fruity_editor",
-  "fruity_graphic",
-  "fruity_graphic_2d",
-  "fruity_javascript_scripting",
-  "fruity_windows",
-]
-
 [dependencies]
 fruity_any = { path = "fruity_any" }
 fruity_core = { path = "fruity_core" }
 fruity_introspect = { path = "fruity_introspect" }
 hot_reload_lib = { path = "deps/hot_reload_lib" }
-rusty_v8 = "0.32.0"
 pretty_env_logger = "0.4.0"
 log = "0.4.14"
 rayon = "1.5"
 mini-redis = "0.4"
-
-[build-dependencies]
 fruity_editor = { path = "fruity_editor" }
 fruity_graphic = { path = "fruity_graphic" }
 fruity_graphic_2d = { path = "fruity_graphic_2d" }

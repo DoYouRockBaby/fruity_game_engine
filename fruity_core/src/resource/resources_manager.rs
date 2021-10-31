@@ -1,5 +1,4 @@
 use crate::resource::error::AddResourceError;
-use crate::resource::error::AddResourceLoaderError;
 use crate::resource::error::LoadResourceError;
 use crate::resource::error::RemoveResourceError;
 use crate::resource::resource::Resource;
@@ -211,20 +210,9 @@ impl ResourcesManager {
     /// * `resource_type` - The resource loader type
     /// * `loader` - The resource loader
     ///
-    pub fn add_resource_loader(
-        &mut self,
-        resource_type: &str,
-        loader: ResourceLoader,
-    ) -> Result<(), AddResourceLoaderError> {
-        if self.resource_loaders.contains_key(resource_type) {
-            Err(AddResourceLoaderError::ResourceTypeAlreadyExists(
-                resource_type.to_string(),
-            ))
-        } else {
-            self.resource_loaders
-                .insert(resource_type.to_string(), loader);
-            Ok(())
-        }
+    pub fn add_resource_loader(&mut self, resource_type: &str, loader: ResourceLoader) {
+        self.resource_loaders
+            .insert(resource_type.to_string(), loader);
     }
 }
 

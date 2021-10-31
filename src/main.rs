@@ -1,12 +1,9 @@
 extern crate pretty_env_logger;
 
-use fruity_core::initialize as initialize_ecs;
-use fruity_core::module::load_modules;
-use fruity_core::resource::resources_manager::ResourceIdentifier;
-use fruity_core::resource::resources_manager::ResourcesManager;
+use fruity_core::initialize as initialize_core;
+use fruity_core::module::module_manager::ModuleManager;
 use fruity_core::world::World;
 use pretty_env_logger::formatted_builder;
-use std::fs::File;
 
 fn main() {
     let mut builder = formatted_builder();
@@ -20,25 +17,33 @@ fn main() {
     builder.try_init().unwrap();
 
     let world = World::new();
-    initialize_ecs(&world);
-    load_modules(&world, "./").unwrap();
-    /*initialize_windows(&world);
-    initialize_graphic(&world);
-    initialize_graphic_2d(&world);
-    initialize_javascript(&world);
-    initialize_editor(&world);*/
+    initialize_core(&world);
 
-    // Run the javascript main module
-    {
+    // Load modules
+    let module_manager = {
         let service_manager = world.service_manager.read().unwrap();
-        let mut resources_manager = service_manager.write::<ResourcesManager>();
-        resources_manager
-            .load_resource_file("assets/index.js", "js")
-            .unwrap();
+        service_manager.get::<ModuleManager>().unwrap()
     };
 
+    let module_manager = module_manager.read().unwrap();
+
+    module_manager
+        .load_module("./target/debug", "fruity_windows")
+        .unwrap();
+    module_manager
+        .load_module("./target/debug", "fruity_graphic")
+        .unwrap();
+    module_manager
+        .load_module("./target/debug", "fruity_graphic_2d")
+        .unwrap();
+    module_manager
+        .load_module("./target/debug", "fruity_editor")
+        .unwrap();
+    module_manager
+        .load_module("./target/debug", "fruity_javascript_scripting")
+        .unwrap();
+    std::mem::drop(module_manager);
+
     // Run the engine
-    {
-        //run
-    }
+    world.run();
 }

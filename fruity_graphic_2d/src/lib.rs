@@ -1,4 +1,3 @@
-#![crate_type = "cdylib"]
 use crate::components::camera::Camera;
 use crate::components::position::Position;
 use crate::components::size::Size;
@@ -16,14 +15,7 @@ pub mod components;
 pub mod graphics_2d_manager;
 pub mod systems;
 
-pub fn identifier() -> &'static str {
-    "fruity_graphic_2d"
-}
-
-pub fn dependencies() -> &'static [&'static str] {
-    &["fruity_graphic"]
-}
-
+#[no_mangle]
 pub fn initialize(world: &World) {
     let graphic_2d_manager = Graphics2dManager::new(world);
 

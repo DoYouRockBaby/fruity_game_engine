@@ -12,6 +12,7 @@
 
 use crate::component::components_factory::ComponentsFactory;
 use crate::entity::entity_manager::EntityManager;
+use crate::module::module_manager::ModuleManager;
 use crate::resource::load_resources::load_resources;
 use crate::resource::resources_manager::ResourcesManager;
 use crate::service::service_manager::ServiceManager;
@@ -72,13 +73,12 @@ macro_rules! entity_type {
 /// Initialize this extension
 pub fn initialize(world: &World) {
     let mut service_manager = world.service_manager.write().unwrap();
+    service_manager.register("module_manager", ModuleManager::new(world));
     service_manager.register("entity_manager", EntityManager::new());
     service_manager.register("system_manager", SystemManager::new(world));
     service_manager.register("components_factory", ComponentsFactory::new());
     service_manager.register("resources_manager", ResourcesManager::new(world));
 
     let mut resources_manager = service_manager.write::<ResourcesManager>();
-    resources_manager
-        .add_resource_loader("resource_settings", load_resources)
-        .unwrap();
+    resources_manager.add_resource_loader("resource_settings", load_resources);
 }

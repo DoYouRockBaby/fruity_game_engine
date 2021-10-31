@@ -27,11 +27,7 @@ pub fn use_global<T: 'static>() -> &'static mut T {
             >(&mut globals.borrow_mut())
         };
 
-        if globals.contains_key(&TypeId::of::<T>()) {
-            globals.get_mut(&TypeId::of::<T>()).unwrap().deref_mut()
-        } else {
-            globals.get_mut(&TypeId::of::<T>()).unwrap().deref_mut()
-        }
+        globals.get_mut(&TypeId::of::<T>()).unwrap().deref_mut()
     });
 
     globals.downcast_mut::<T>().unwrap()

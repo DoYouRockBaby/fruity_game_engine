@@ -14,19 +14,26 @@ pub struct HotReloadLib {
     loaded_path: PathBuf,
     library: Option<lib::Library>,
     watch_event_receiver: Receiver<RawEvent>,
+    on_updated: Box<dyn Fn(&lib::Library) + 'static>,
     _watcher: notify::RecommendedWatcher,
 }
 
 impl HotReloadLib {
-    pub fn new(folder: &str, lib_name: &str) -> Self {
+    pub fn new<F>(folder: &str, lib_name: &str, on_updated: F) -> Self
+    where
+        F: Fn(&lib::Library) + 'static,
+    {
         let lib_path_string = {
             let prefix = "lib";
             let extension = "dylib";
             format!("{}/{}{}.{}", folder, prefix, lib_name, extension)
         };
+
         let lib_path = Path::new(&lib_path_string).canonicalize().unwrap();
         let (tx, rx) = channel();
         let (library, loaded_path) = copy_and_load_library(&lib_path_string);
+        on_updated(&library);
+
         let mut watcher = raw_watcher(tx).unwrap();
         watcher.watch(folder, RecursiveMode::NonRecursive).unwrap();
 
@@ -36,6 +43,7 @@ impl HotReloadLib {
             loaded_path: loaded_path,
             library: Some(library),
             watch_event_receiver: rx,
+            on_updated: Box::new(on_updated),
             _watcher: watcher,
         }
     }
@@ -65,6 +73,7 @@ impl HotReloadLib {
                         let (library, path) = copy_and_load_library(&self.original_lib_path_string);
                         self.library = Some(library);
                         self.loaded_path = path;
+                        (self.on_updated)(self.library.as_ref().unwrap());
                     }
                 }
             }
@@ -95,4 +104,15 @@ fn copy_and_load_library(lib_path: &String) -> (lib::Library, PathBuf) {
             .expect(format!("Failed to load library '{:?}'", unique_lib_path).as_str()),
         unique_lib_path,
     )
+}
+
+pub fn load_symbol<'a, Signature: 'a>(
+    library: &'a lib::Library,
+    symbol_name: &str,
+) -> lib::Symbol<'a, Signature> {
+    unsafe {
+        library
+            .get(symbol_name.as_bytes())
+            .expect(format!("Failed to find symbol '{:?}'", symbol_name).as_str())
+    }
 }

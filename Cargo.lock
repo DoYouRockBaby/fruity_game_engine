@@ -1002,7 +1002,6 @@ dependencies = [
  "mini-redis",
  "pretty_env_logger",
  "rayon",
- "rusty_v8",
 ]
 
 [[package]]

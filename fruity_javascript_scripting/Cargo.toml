@@ -5,7 +5,7 @@ edition = "2018"
 resolver = "2"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["dylib"]
 
 [dependencies]
 log = "0.4.14"

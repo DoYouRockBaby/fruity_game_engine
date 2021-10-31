@@ -11,6 +11,10 @@ pub mod service_manager;
 /// Provides a wrapper for service for a serialized object
 pub mod serialized_service;
 
+/// Provides a wrapper to simplify the implementation of a service into a single thread
+/// Is used when you want to implement a service with fields that are not Send Sync
+pub mod single_thread_service;
+
 /// Provides trait for services
 pub mod service;
 

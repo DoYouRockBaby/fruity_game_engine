@@ -11,7 +11,10 @@
             "preLaunchTask": "build",
             "program": "${workspaceRoot}/target/debug/fruity_game_engine",
             "args": [],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "DYLD_LIBRARY_PATH": "/Users/leo/.rustup/toolchains/stable-aarch64-apple-darwin/lib"
+            }
         }
     ]
 }

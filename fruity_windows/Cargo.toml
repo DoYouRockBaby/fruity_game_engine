@@ -5,7 +5,7 @@ edition = "2018"
 resolver = "2"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["dylib"]
 
 [dependencies]
 winit = "0.25.0"

@@ -1,4 +1,3 @@
-#![crate_type = "cdylib"]
 use crate::graphics_manager::GraphicsManager;
 use crate::resources::image_resource::load_image;
 use crate::resources::material_resource::load_material;
@@ -10,14 +9,7 @@ pub mod graphics_manager;
 pub mod math;
 pub mod resources;
 
-pub fn identifier() -> &'static str {
-    "fruity_graphic"
-}
-
-pub fn dependencies() -> &'static [&'static str] {
-    &["fruity_windows"]
-}
-
+#[no_mangle]
 pub fn initialize(world: &World) {
     let graphics_manager = GraphicsManager::new(world);
 
@@ -25,31 +17,13 @@ pub fn initialize(world: &World) {
     service_manager.register("graphics_manager", graphics_manager);
 
     let mut resources_manager = service_manager.write::<ResourcesManager>();
-    resources_manager
-        .add_resource_loader("png", load_image)
-        .unwrap();
-    resources_manager
-        .add_resource_loader("jpeg", load_image)
-        .unwrap();
-    resources_manager
-        .add_resource_loader("jpg", load_image)
-        .unwrap();
-    resources_manager
-        .add_resource_loader("gif", load_image)
-        .unwrap();
-    resources_manager
-        .add_resource_loader("bmp", load_image)
-        .unwrap();
-    resources_manager
-        .add_resource_loader("ico", load_image)
-        .unwrap();
-    resources_manager
-        .add_resource_loader("tiff", load_image)
-        .unwrap();
-    resources_manager
-        .add_resource_loader("wgsl", load_shader)
-        .unwrap();
-    resources_manager
-        .add_resource_loader("material", load_material)
-        .unwrap();
+    resources_manager.add_resource_loader("png", load_image);
+    resources_manager.add_resource_loader("jpeg", load_image);
+    resources_manager.add_resource_loader("jpg", load_image);
+    resources_manager.add_resource_loader("gif", load_image);
+    resources_manager.add_resource_loader("bmp", load_image);
+    resources_manager.add_resource_loader("ico", load_image);
+    resources_manager.add_resource_loader("tiff", load_image);
+    resources_manager.add_resource_loader("wgsl", load_shader);
+    resources_manager.add_resource_loader("material", load_material);
 }

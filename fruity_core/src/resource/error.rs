@@ -23,13 +23,6 @@ pub enum RemoveResourceError {
     ResourceNotFound(ResourceIdentifier),
 }
 
-/// Error that can occure whilte trying to add a resource loader for a given type in the resources manager
-#[derive(Debug, Clone)]
-pub enum AddResourceLoaderError {
-    /// The resource type already exists
-    ResourceTypeAlreadyExists(String),
-}
-
 impl From<AddResourceError> for LoadResourceError {
     fn from(error: AddResourceError) -> Self {
         match error {

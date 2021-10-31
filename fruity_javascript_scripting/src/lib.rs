@@ -1,4 +1,3 @@
-#![crate_type = "cdylib"]
 use crate::bridge::components::configure_components;
 use crate::bridge::service::configure_services;
 use crate::javascript_engine::JavascriptEngine;
@@ -20,14 +19,7 @@ mod runtime;
 mod serialize;
 mod thread_scope_stack;
 
-pub fn identifier() -> &'static str {
-    "fruity_javascript_scripting"
-}
-
-pub fn dependencies() -> &'static [&'static str] {
-    &[]
-}
-
+#[no_mangle]
 pub fn initialize(world: &World) {
     let javascript_engine = JavascriptEngine::new(world);
 
@@ -35,7 +27,20 @@ pub fn initialize(world: &World) {
     service_manager.register("javascript_engine", javascript_engine);
 
     let mut resources_manager = service_manager.write::<ResourcesManager>();
-    resources_manager
-        .add_resource_loader("js", load_js_script)
-        .unwrap();
+    resources_manager.add_resource_loader("js", load_js_script);
+
+    std::mem::drop(resources_manager);
+    std::mem::drop(service_manager);
+
+    // Load index script
+    // TODO: Make it configurable
+    {
+        let javascript_engine = {
+            let service_manager = world.service_manager.read().unwrap();
+            service_manager.get::<JavascriptEngine>().unwrap()
+        };
+
+        let javascript_engine = javascript_engine.read().unwrap();
+        javascript_engine.run_module("assets/index.js");
+    };
 }

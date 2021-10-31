@@ -53,6 +53,7 @@ impl Debug for WindowsManager {
 impl WindowsManager {
     pub fn new(world: &World) -> WindowsManager {
         let service_manager = world.service_manager.read().unwrap();
+
         let system_manager = service_manager.get::<SystemManager>().unwrap();
 
         WindowsManager {
