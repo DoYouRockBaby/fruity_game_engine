@@ -1,5 +1,8 @@
+use crate::ui_element::layout::Column;
+use crate::ui_element::layout::Empty;
 use crate::ui_element::UIAlign;
 use crate::ui_element::UIElement;
+use crate::ui_element::UIWidget;
 use fruity_core::component::component_rwlock::ComponentRwLock;
 use fruity_introspect::FieldInfo;
 use std::any::TypeId;
@@ -46,13 +49,14 @@ pub fn edit_component_component(component: ComponentRwLock) -> UIElement {
             } else if field_info.ty == String::type_id() {
                 String::render_edit(component.clone(), field_info)
             } else {
-                UIElement::Empty
+                Empty {}.elem()
             }
         })
         .collect::<Vec<_>>();
 
-    UIElement::Column {
+    Column {
         children: fields_edit,
         align: UIAlign::Start,
     }
+    .elem()
 }

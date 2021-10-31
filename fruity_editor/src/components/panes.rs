@@ -7,7 +7,6 @@ use crate::state::handle_message;
 use crate::state::theme::ThemeState;
 use crate::state::world::WorldState;
 use crate::state::Message;
-use crate::ui_element::draw_ui_element::draw_ui_element;
 use crate::World;
 use iced::Container;
 use iced_wgpu::Renderer;
@@ -116,8 +115,7 @@ impl Program for Panes {
                         .style(theme_state.theme);
 
                     let content =
-                        Row::with_children(vec![draw_ui_element(entity_list_component())])
-                            .padding(10);
+                        Row::with_children(vec![entity_list_component().draw()]).padding(10);
 
                     pane_grid::Content::new(content)
                         .title_bar(title_bar)
@@ -134,8 +132,7 @@ impl Program for Panes {
                         .style(theme_state.theme);
 
                     let content = Container::new(
-                        Row::with_children(vec![draw_ui_element(entity_edit_component())])
-                            .padding(10),
+                        Row::with_children(vec![entity_edit_component().draw()]).padding(10),
                     );
 
                     pane_grid::Content::new(content)

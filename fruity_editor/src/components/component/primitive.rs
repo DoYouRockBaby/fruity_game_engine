@@ -1,11 +1,18 @@
 use crate::components::component::EditableComponent;
+use crate::ui_element::input::Checkbox;
+use crate::ui_element::input::FloatInput;
+use crate::ui_element::input::Input;
+use crate::ui_element::input::IntegerInput;
 use crate::ui_element::UIElement;
+use crate::ui_element::UIWidget;
 use fruity_core::component::component_rwlock::ComponentRwLock;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::SetterCaller;
 use std::any::TypeId;
 use std::convert::TryFrom;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 macro_rules! impl_int_for_editable_component {
     ( $type:ident ) => {
@@ -13,6 +20,7 @@ macro_rules! impl_int_for_editable_component {
             fn type_id() -> TypeId {
                 TypeId::of::<$type>()
             }
+
             fn render_edit(component: ComponentRwLock, field_info: &FieldInfo) -> UIElement {
                 let reader = component.read();
                 let value = (field_info.getter)(reader.as_any_ref());
@@ -24,10 +32,10 @@ macro_rules! impl_int_for_editable_component {
 
                 let field_info = field_info.clone();
                 let component = component.clone();
-                UIElement::IntegerInput {
+                IntegerInput {
                     label: field_info.name.to_string(),
                     value: value as i64,
-                    on_change: Box::new(move |value| {
+                    on_change: Arc::new(Mutex::new(move |value| {
                         let mut writer = component.write();
 
                         match &field_info.setter {
@@ -41,8 +49,9 @@ macro_rules! impl_int_for_editable_component {
                             ),
                             SetterCaller::None => (),
                         };
-                    }),
+                    })),
                 }
+                .elem()
             }
         }
     };
@@ -76,10 +85,10 @@ macro_rules! impl_float_for_editable_component {
 
                 let field_info = field_info.clone();
                 let component = component.clone();
-                UIElement::FloatInput {
+                FloatInput {
                     label: field_info.name.to_string(),
                     value: value as f64,
-                    on_change: Box::new(move |value| {
+                    on_change: Arc::new(Mutex::new(move |value| {
                         let component = component.clone();
                         let mut writer = component.write();
 
@@ -94,8 +103,9 @@ macro_rules! impl_float_for_editable_component {
                             ),
                             SetterCaller::None => (),
                         };
-                    }),
+                    })),
                 }
+                .elem()
             }
         }
     };
@@ -119,10 +129,10 @@ impl EditableComponent for bool {
 
         let field_info = field_info.clone();
         let component = component.clone();
-        UIElement::Checkbox {
+        Checkbox {
             label: field_info.name.to_string(),
             value: value,
-            on_change: Box::new(move |value| {
+            on_change: Arc::new(Mutex::new(move |value| {
                 let mut writer = component.write();
 
                 match &field_info.setter {
@@ -134,8 +144,9 @@ impl EditableComponent for bool {
                     }
                     SetterCaller::None => (),
                 };
-            }),
+            })),
         }
+        .elem()
     }
 }
 
@@ -154,11 +165,11 @@ impl EditableComponent for String {
 
         let field_info = field_info.clone();
         let component = component.clone();
-        UIElement::Input {
+        Input {
             label: field_info.name.to_string(),
             placeholder: "".to_string(),
             value: value,
-            on_change: Box::new(move |value| {
+            on_change: Arc::new(Mutex::new(move |value: &str| {
                 let mut writer = component.write();
 
                 match &field_info.setter {
@@ -172,7 +183,8 @@ impl EditableComponent for String {
                     ),
                     SetterCaller::None => (),
                 };
-            }),
+            })),
         }
+        .elem()
     }
 }
