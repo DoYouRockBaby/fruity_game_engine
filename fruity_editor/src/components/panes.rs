@@ -115,14 +115,13 @@ impl Program for Panes {
                         .padding(10)
                         .style(theme_state.theme);
 
-                    let content = Container::new(
+                    let content =
                         Row::with_children(vec![draw_ui_element(entity_list_component())])
-                            .padding(10),
-                    );
+                            .padding(10);
 
                     pane_grid::Content::new(content)
                         .title_bar(title_bar)
-                        .style(theme_state.theme)
+                        .style(theme_state.theme.panel())
                         .into()
                 }
                 PaneType::EntityEditor => {
@@ -137,13 +136,11 @@ impl Program for Panes {
                     let content = Container::new(
                         Row::with_children(vec![draw_ui_element(entity_edit_component())])
                             .padding(10),
-                    )
-                    .width(Length::Fill)
-                    .height(Length::Fill);
+                    );
 
                     pane_grid::Content::new(content)
                         .title_bar(title_bar)
-                        .style(theme_state.theme)
+                        .style(theme_state.theme.panel())
                         .into()
                 }
                 PaneType::Blank => {
@@ -155,11 +152,11 @@ impl Program for Panes {
                         .padding(10)
                         .style(theme_state.theme);
 
-                    let content = Container::new(Row::with_children(vec![]).padding(10));
+                    let content = Row::with_children(vec![]).padding(10);
 
                     pane_grid::Content::new(content)
                         .title_bar(title_bar)
-                        .style(theme_state.theme)
+                        .style(theme_state.theme.panel())
                         .into()
                 }
                 PaneType::None => pane_grid::Content::new(Row::new()).into(),

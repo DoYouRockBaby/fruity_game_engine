@@ -73,13 +73,30 @@ impl IntrospectObject for SerializedComponent {
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         self.fields
             .iter()
-            .map(|(key, _field)| {
+            .map(|(key, field)| {
                 let key1 = key.clone();
                 let key2 = key.clone();
 
                 FieldInfo {
                     name: key.clone(),
-                    ty: TypeId::of::<Serialized>(),
+                    // TODO: Complete that
+                    ty: match field {
+                        Serialized::U8(_) => TypeId::of::<u8>(),
+                        Serialized::U16(_) => TypeId::of::<u16>(),
+                        Serialized::U32(_) => TypeId::of::<u32>(),
+                        Serialized::U64(_) => TypeId::of::<u64>(),
+                        Serialized::USize(_) => TypeId::of::<usize>(),
+                        Serialized::I8(_) => TypeId::of::<i8>(),
+                        Serialized::I16(_) => TypeId::of::<i16>(),
+                        Serialized::I32(_) => TypeId::of::<i32>(),
+                        Serialized::I64(_) => TypeId::of::<i64>(),
+                        Serialized::ISize(_) => TypeId::of::<isize>(),
+                        Serialized::F32(_) => TypeId::of::<f32>(),
+                        Serialized::F64(_) => TypeId::of::<f64>(),
+                        Serialized::Bool(_) => TypeId::of::<bool>(),
+                        Serialized::String(_) => TypeId::of::<String>(),
+                        _ => TypeId::of::<u8>(),
+                    },
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<SerializedComponent>().unwrap();
                         this.fields.get(&key1).unwrap().clone()

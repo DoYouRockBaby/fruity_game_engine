@@ -1,3 +1,4 @@
+use crate::components::component::edit_component_component;
 use crate::hooks::use_global;
 use crate::state::entity::EntityState;
 use crate::ui_element::UIAlign;
@@ -9,7 +10,7 @@ pub fn entity_edit_component() -> UIElement {
     if let Some(entity) = &entity_state.selected_entity {
         let entity_reader = entity.read();
 
-        UIElement::Column {
+        let head = UIElement::Column {
             children: vec![UIElement::Row {
                 children: vec![
                     UIElement::Checkbox {
@@ -35,6 +36,28 @@ pub fn entity_edit_component() -> UIElement {
                 align: UIAlign::Center,
             }],
             align: UIAlign::default(),
+        };
+
+        let components = UIElement::Column {
+            children: entity
+                .iter_all_components()
+                .map(|component| {
+                    let component_reader = component.read();
+                    UIElement::Column {
+                        children: vec![
+                            UIElement::Text(component_reader.get_component_type()),
+                            edit_component_component(component.clone()),
+                        ],
+                        align: UIAlign::Start,
+                    }
+                })
+                .collect::<Vec<_>>(),
+            align: UIAlign::Start,
+        };
+
+        UIElement::Column {
+            children: vec![head, components],
+            align: UIAlign::Start,
         }
     } else {
         UIElement::Empty

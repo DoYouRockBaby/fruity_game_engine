@@ -81,10 +81,10 @@ pub fn log_introspect_error(err: &IntrospectError) {
 #[derive(Clone)]
 pub enum SetterCaller {
     /// Without mutability
-    Const(Arc<dyn Fn(&dyn Any, Serialized)>),
+    Const(Arc<dyn Fn(&dyn Any, Serialized) + Send + Sync>),
 
     /// With mutability
-    Mut(Arc<dyn Fn(&mut dyn Any, Serialized)>),
+    Mut(Arc<dyn Fn(&mut dyn Any, Serialized) + Send + Sync>),
 
     /// No setter
     None,
@@ -104,7 +104,7 @@ pub struct FieldInfo {
     /// # Arguments
     /// * `property` - The field name
     ///
-    pub getter: Arc<dyn Fn(&dyn Any) -> Serialized>,
+    pub getter: Arc<dyn Fn(&dyn Any) -> Serialized + Send + Sync>,
 
     /// Function to set one of the entry field
     ///

@@ -101,6 +101,12 @@ impl Theme {
             Theme::Dark => dark::ListItem.into(),
         }
     }
+
+    pub fn panel(&self) -> Box<dyn container::StyleSheet> {
+        match self {
+            Theme::Dark => dark::Panel.into(),
+        }
+    }
 }
 
 mod dark {
@@ -138,9 +144,6 @@ mod dark {
     impl container::StyleSheet for Container {
         fn style(&self) -> container::Style {
             container::Style {
-                background: Color::from_rgb8(0x36, 0x39, 0x3F).into(),
-                border_color: Color::from_rgb8(0x18, 0x19, 0x1B).into(),
-                border_width: 1.0,
                 text_color: Color::WHITE.into(),
                 ..container::Style::default()
             }
@@ -272,6 +275,20 @@ mod dark {
         fn style(&self) -> container::Style {
             container::Style {
                 background: SURFACE.into(),
+                text_color: Color::WHITE.into(),
+                ..container::Style::default()
+            }
+        }
+    }
+
+    pub struct Panel;
+
+    impl container::StyleSheet for Panel {
+        fn style(&self) -> container::Style {
+            container::Style {
+                background: Color::from_rgb8(0x36, 0x39, 0x3F).into(),
+                border_color: Color::from_rgb8(0x18, 0x19, 0x1B).into(),
+                border_width: 1.0,
                 text_color: Color::WHITE.into(),
                 ..container::Style::default()
             }

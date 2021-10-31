@@ -77,7 +77,7 @@ systemManager.addBeginSystem(() => {
         new Position({ x: -1, y: -1 }),
         new Size({ width: 2, height: 2 }),
         new Camera({}),
-        new Velocity({ x: 0.001, y: 0.000 }),
+        //new Velocity({ x: 0.001, y: 0.000 }),
     ]);
 
     console.log("ENTITIES CREATED");

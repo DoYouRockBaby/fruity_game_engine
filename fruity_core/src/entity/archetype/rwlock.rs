@@ -94,6 +94,12 @@ impl EntitySharedRwLock {
         reader.get_components().len()
     }
 
+    /// Get an iterator over all components list rwlock
+    pub fn iter_all_components(&self) -> impl Iterator<Item = ComponentRwLock> {
+        let this = self.clone();
+        (0..self.len()).map(move |index| ComponentRwLock::new(this.clone(), index))
+    }
+
     /// Get collections of components list reader
     /// Cause an entity can contain multiple component of the same type, can returns multiple readers
     /// All components are mapped to the provided component identifiers in the same order
