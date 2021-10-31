@@ -1,5 +1,6 @@
 use core::ffi::c_void;
 use fruity_any::*;
+use fruity_core::module::module_manager::ModuleManager;
 use fruity_core::service::service::Service;
 use fruity_core::service::service_rwlock::ServiceRwLock;
 use fruity_core::service::utils::cast_service;
@@ -26,6 +27,7 @@ use winit::window::WindowBuilder;
 #[derive(FruityAny)]
 pub struct WindowsManager {
     system_manager: ServiceRwLock<SystemManager>,
+    module_manager: ServiceRwLock<ModuleManager>,
     event_stack: Arc<RwLock<Vec<FruityWindowsEvent>>>,
     // TODO: Try to find a way to store it better
     window: RwLock<Option<Arc<RwLock<Window>>>>,
@@ -55,9 +57,11 @@ impl WindowsManager {
         let service_manager = world.service_manager.read().unwrap();
 
         let system_manager = service_manager.get::<SystemManager>().unwrap();
+        let module_manager = service_manager.get::<ModuleManager>().unwrap();
 
         WindowsManager {
             system_manager,
+            module_manager,
             event_stack: Arc::new(RwLock::new(Vec::new())),
             window: RwLock::new(None),
             on_windows_creation: Signal::new(),
@@ -94,6 +98,7 @@ impl WindowsManager {
 
         // Run the event loop
         let system_manager = self.system_manager.clone();
+        let module_manager = self.module_manager.clone();
         let event_stack = self.event_stack.clone();
         self.on_starting_event_loop.notify(());
 
@@ -120,6 +125,11 @@ impl WindowsManager {
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Wait;
 
+            // Hot reload if needed
+            let module_manager_reader = module_manager.read().unwrap();
+            module_manager_reader.update_modules();
+
+            // Handle events
             {
                 // TODO: Try to find a way to remove this
                 let event = &event as *const _ as *const c_void;
