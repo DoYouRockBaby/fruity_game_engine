@@ -69,7 +69,7 @@ where
         read_state_with_topo_id(self.id, func)
     }
 
-    pub fn get_with_mut<F: FnOnce(&mut T) -> R, R>(self, func: F) -> R {
+    pub fn get_with_mut<'a, F: FnOnce(&mut T) -> R, R>(self, func: F) -> R {
         read_mut_state_with_topo_id(self.id, func)
     }
 }

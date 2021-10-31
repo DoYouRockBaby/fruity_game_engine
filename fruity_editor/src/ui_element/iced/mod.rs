@@ -1,3 +1,4 @@
+use crate::hooks::topo;
 use crate::ui_element::display::Text;
 use crate::ui_element::iced::display::draw_text;
 use crate::ui_element::iced::input::draw_button;
@@ -28,6 +29,7 @@ pub mod input;
 pub mod layout;
 pub mod list;
 
+#[topo::nested]
 pub fn draw_element<'a>(elem: UIElement) -> Element<'a, Message, Renderer> {
     let type_id = elem.root.as_ref().type_id();
 
