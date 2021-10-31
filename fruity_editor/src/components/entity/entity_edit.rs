@@ -11,7 +11,6 @@ use crate::ui_element::UIAlign;
 use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
 use std::sync::Arc;
-use std::sync::Mutex;
 
 pub fn entity_edit_component() -> UIElement {
     let entity_state = use_global::<EntityState>();
@@ -25,22 +24,22 @@ pub fn entity_edit_component() -> UIElement {
                     Checkbox {
                         label: "".to_string(),
                         value: entity_reader.enabled,
-                        on_change: Arc::new(Mutex::new(move |value| {
+                        on_change: Arc::new(move |value| {
                             let entity = entity.clone();
                             let mut entity = entity.write();
                             entity.enabled = value;
-                        })),
+                        }),
                     }
                     .elem(),
                     Input {
                         label: "".to_string(),
                         value: entity_reader.name.to_string(),
                         placeholder: "Name ...".to_string(),
-                        on_change: Arc::new(Mutex::new(move |value: &str| {
+                        on_change: Arc::new(move |value: &str| {
                             let entity = entity.clone();
                             let mut entity = entity.write();
                             entity.name = value.to_string();
-                        })),
+                        }),
                     }
                     .elem(),
                 ],

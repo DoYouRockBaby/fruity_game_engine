@@ -13,9 +13,9 @@ pub mod world;
 pub enum Message {
     Empty,
     Panes(PanesMessage),
-    Callback(Arc<Mutex<dyn FnMut() + Send + Sync>>),
-    StringChanged(Arc<Mutex<dyn FnMut(&str) + Send + Sync>>, String),
-    BoolChanged(Arc<Mutex<dyn FnMut(bool) + Send + Sync>>, bool),
+    Callback(Arc<dyn Fn() + Send + Sync>),
+    StringChanged(Arc<dyn Fn(&str) + Send + Sync>, String),
+    BoolChanged(Arc<dyn Fn(bool) + Send + Sync>, bool),
     AnyChanged(
         Arc<Mutex<dyn FnMut(&dyn Any) + Send + Sync>>,
         Arc<dyn Any + Send + Sync>,
@@ -33,18 +33,9 @@ impl Debug for Message {
 
 pub fn handle_message(message: Message) {
     match message {
-        Message::Callback(callback) => {
-            let mut callback = callback.lock().unwrap();
-            callback()
-        }
-        Message::StringChanged(callback, value) => {
-            let mut callback = callback.lock().unwrap();
-            callback(&value)
-        }
-        Message::BoolChanged(callback, value) => {
-            let mut callback = callback.lock().unwrap();
-            callback(value)
-        }
+        Message::Callback(callback) => callback(),
+        Message::StringChanged(callback, value) => callback(&value),
+        Message::BoolChanged(callback, value) => callback(value),
         Message::AnyChanged(callback, value) => {
             let mut callback = callback.lock().unwrap();
             callback(value.deref())

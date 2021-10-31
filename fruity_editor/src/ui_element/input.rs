@@ -18,11 +18,10 @@ use iced_winit::Element;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
-use std::sync::Mutex;
 
 pub struct Button {
     pub label: String,
-    pub on_click: Arc<Mutex<dyn FnMut() + Send + Sync>>,
+    pub on_click: Arc<dyn Fn() + Send + Sync>,
 }
 
 impl UIWidget for Button {
@@ -59,7 +58,7 @@ pub struct Input {
     pub label: String,
     pub value: String,
     pub placeholder: String,
-    pub on_change: Arc<Mutex<dyn FnMut(&str) + Send + Sync>>,
+    pub on_change: Arc<dyn Fn(&str) + Send + Sync>,
 }
 
 impl UIWidget for Input {
@@ -115,7 +114,7 @@ impl UIWidget for Input {
 pub struct IntegerInput {
     pub label: String,
     pub value: i64,
-    pub on_change: Arc<Mutex<dyn FnMut(i64) + Send + Sync>>,
+    pub on_change: Arc<dyn Fn(i64) + Send + Sync>,
 }
 
 impl UIWidget for IntegerInput {
@@ -125,12 +124,11 @@ impl UIWidget for IntegerInput {
             label: self.label.clone(),
             value: self.value.to_string(),
             placeholder: "".to_string(),
-            on_change: Arc::new(Mutex::new(move |value: &str| {
+            on_change: Arc::new(move |value: &str| {
                 if let Ok(value) = value.parse::<i64>() {
-                    let mut on_change = on_change.lock().unwrap();
                     on_change(value)
                 }
-            })),
+            }),
         };
 
         input.draw()
@@ -146,7 +144,7 @@ impl UIWidget for IntegerInput {
 pub struct FloatInput {
     pub label: String,
     pub value: f64,
-    pub on_change: Arc<Mutex<dyn FnMut(f64) + Send + Sync>>,
+    pub on_change: Arc<dyn Fn(f64) + Send + Sync>,
 }
 
 impl UIWidget for FloatInput {
@@ -156,12 +154,11 @@ impl UIWidget for FloatInput {
             label: self.label.clone(),
             value: self.value.to_string(),
             placeholder: "".to_string(),
-            on_change: Arc::new(Mutex::new(move |value: &str| {
+            on_change: Arc::new(move |value: &str| {
                 if let Ok(value) = value.parse::<f64>() {
-                    let mut on_change = on_change.lock().unwrap();
                     on_change(value)
                 }
-            })),
+            }),
         };
 
         input.draw()
@@ -177,7 +174,7 @@ impl UIWidget for FloatInput {
 pub struct Checkbox {
     pub label: String,
     pub value: bool,
-    pub on_change: Arc<Mutex<dyn FnMut(bool) + Send + Sync>>,
+    pub on_change: Arc<dyn Fn(bool) + Send + Sync>,
 }
 
 impl UIWidget for Checkbox {

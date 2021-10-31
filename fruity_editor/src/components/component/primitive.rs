@@ -12,7 +12,6 @@ use fruity_introspect::SetterCaller;
 use std::any::TypeId;
 use std::convert::TryFrom;
 use std::sync::Arc;
-use std::sync::Mutex;
 
 macro_rules! impl_int_for_editable_component {
     ( $type:ident ) => {
@@ -35,7 +34,7 @@ macro_rules! impl_int_for_editable_component {
                 IntegerInput {
                     label: field_info.name.to_string(),
                     value: value as i64,
-                    on_change: Arc::new(Mutex::new(move |value| {
+                    on_change: Arc::new(move |value| {
                         let mut writer = component.write();
 
                         match &field_info.setter {
@@ -49,7 +48,7 @@ macro_rules! impl_int_for_editable_component {
                             ),
                             SetterCaller::None => (),
                         };
-                    })),
+                    }),
                 }
                 .elem()
             }
@@ -88,7 +87,7 @@ macro_rules! impl_float_for_editable_component {
                 FloatInput {
                     label: field_info.name.to_string(),
                     value: value as f64,
-                    on_change: Arc::new(Mutex::new(move |value| {
+                    on_change: Arc::new(move |value| {
                         let component = component.clone();
                         let mut writer = component.write();
 
@@ -103,7 +102,7 @@ macro_rules! impl_float_for_editable_component {
                             ),
                             SetterCaller::None => (),
                         };
-                    })),
+                    }),
                 }
                 .elem()
             }
@@ -132,7 +131,7 @@ impl EditableComponent for bool {
         Checkbox {
             label: field_info.name.to_string(),
             value: value,
-            on_change: Arc::new(Mutex::new(move |value| {
+            on_change: Arc::new(move |value| {
                 let mut writer = component.write();
 
                 match &field_info.setter {
@@ -144,7 +143,7 @@ impl EditableComponent for bool {
                     }
                     SetterCaller::None => (),
                 };
-            })),
+            }),
         }
         .elem()
     }
@@ -169,7 +168,7 @@ impl EditableComponent for String {
             label: field_info.name.to_string(),
             placeholder: "".to_string(),
             value: value,
-            on_change: Arc::new(Mutex::new(move |value: &str| {
+            on_change: Arc::new(move |value: &str| {
                 let mut writer = component.write();
 
                 match &field_info.setter {
@@ -183,7 +182,7 @@ impl EditableComponent for String {
                     ),
                     SetterCaller::None => (),
                 };
-            })),
+            }),
         }
         .elem()
     }
