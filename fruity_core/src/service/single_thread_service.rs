@@ -8,6 +8,7 @@ use std::sync::mpsc;
 use std::sync::Arc;
 use std::thread;
 
+// TODO: Use FnOnce instead
 type ServiceCallback<T> = dyn Fn(&mut T) + Send + Sync + 'static;
 
 struct CallInstruction<T: Debug + 'static> {
@@ -28,7 +29,7 @@ impl<T: Debug + 'static> SingleThreadService<T> {
     /// # Arguments
     /// * `constructor` - The function that will construct the inner service
     ///
-    pub fn initialize<F>(&self, constructor: F) -> SingleThreadService<T>
+    pub fn start<F>(constructor: F) -> SingleThreadService<T>
     where
         F: Fn() -> T + Send + Sync + 'static,
     {

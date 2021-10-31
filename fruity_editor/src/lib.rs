@@ -2,6 +2,9 @@ use crate::components::panes::Panes;
 use crate::editor_manager::EditorManager;
 use fruity_core::world::World;
 
+#[macro_use]
+extern crate lazy_static;
+
 pub mod components;
 pub mod editor_manager;
 pub mod hooks;

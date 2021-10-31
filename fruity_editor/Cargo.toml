@@ -12,6 +12,7 @@ iced = { git = "https://github.com/iced-rs/iced" }
 iced_winit = { git = "https://github.com/iced-rs/iced" }
 iced_wgpu = { git = "https://github.com/iced-rs/iced" }
 winit = "0.25.0"
+lazy_static = "1.4"
 comp_state = { path = "../deps/comp_state" }
 fruity_any = { path = "../fruity_any" }
 fruity_core = { path = "../fruity_core" }

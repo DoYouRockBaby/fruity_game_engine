@@ -27,21 +27,11 @@ fn main() {
 
     let module_manager = module_manager.read().unwrap();
 
-    module_manager
-        .load_module("./target/debug", "fruity_windows")
-        .unwrap();
-    module_manager
-        .load_module("./target/debug", "fruity_graphic")
-        .unwrap();
-    module_manager
-        .load_module("./target/debug", "fruity_graphic_2d")
-        .unwrap();
-    module_manager
-        .load_module("./target/debug", "fruity_editor")
-        .unwrap();
-    module_manager
-        .load_module("./target/debug", "fruity_javascript_scripting")
-        .unwrap();
+    module_manager.load_module("./target/debug", "fruity_windows");
+    module_manager.load_module("./target/debug", "fruity_graphic");
+    module_manager.load_module("./target/debug", "fruity_graphic_2d");
+    module_manager.load_module("./target/debug", "fruity_editor");
+    module_manager.load_module("./target/debug", "fruity_javascript_scripting");
     std::mem::drop(module_manager);
 
     // Run the engine

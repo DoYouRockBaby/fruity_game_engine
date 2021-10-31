@@ -980,6 +980,7 @@ dependencies = [
  "iced",
  "iced_wgpu",
  "iced_winit",
+ "lazy_static",
  "log",
  "pretty_env_logger",
  "winit 0.25.0 (registry+https://github.com/rust-lang/crates.io-index)",
