@@ -90,6 +90,12 @@ impl From<Theme> for Box<dyn rule::StyleSheet> {
 }
 
 impl Theme {
+    pub fn list_view(&self) -> Box<dyn container::StyleSheet> {
+        match self {
+            Theme::Dark => dark::ListView.into(),
+        }
+    }
+
     pub fn list_item(&self) -> Box<dyn button::StyleSheet> {
         match self {
             Theme::Dark => dark::ListItem.into(),
@@ -256,6 +262,18 @@ mod dark {
                 border_width: 1.0,
                 border_color: Color::WHITE,
                 ..self.hovered()
+            }
+        }
+    }
+
+    pub struct ListView;
+
+    impl container::StyleSheet for ListView {
+        fn style(&self) -> container::Style {
+            container::Style {
+                background: SURFACE.into(),
+                text_color: Color::WHITE.into(),
+                ..container::Style::default()
             }
         }
     }

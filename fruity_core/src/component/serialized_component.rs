@@ -8,6 +8,7 @@ use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
 use fruity_introspect::SetterCaller;
+use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -78,6 +79,7 @@ impl IntrospectObject for SerializedComponent {
 
                 FieldInfo {
                     name: key.clone(),
+                    ty: TypeId::of::<Serialized>(),
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<SerializedComponent>().unwrap();
                         this.fields.get(&key1).unwrap().clone()

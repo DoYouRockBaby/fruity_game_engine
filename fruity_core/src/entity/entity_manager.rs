@@ -17,6 +17,7 @@ use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use fruity_introspect::SetterCaller;
+use std::any::TypeId;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -223,6 +224,7 @@ impl IntrospectObject for EntityManager {
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![FieldInfo {
             name: "on_entity_created".to_string(),
+            ty: TypeId::of::<Signal<EntitySharedRwLock>>(),
             getter: Arc::new(|this| {
                 this.downcast_ref::<EntityManager>()
                     .unwrap()

@@ -115,6 +115,7 @@ pub fn derive_introspect_object_trait(input: TokenStream)  -> TokenStream {
                 quote! {
                     fruity_introspect::FieldInfo {
                         name: #name_as_string.to_string(),
+                        ty: std::any::TypeId::of::<#ty>(),
                         getter: std::sync::Arc::new(|this| this.downcast_ref::<#ident>().unwrap().#name.clone().into()),
                         setter: fruity_introspect::SetterCaller::Mut(std::sync::Arc::new(|this, value| {
                             fn convert<

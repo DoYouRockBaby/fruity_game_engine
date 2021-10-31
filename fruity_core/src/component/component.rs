@@ -98,6 +98,7 @@ impl IntrospectObject for AnyComponent {
 
                 FieldInfo {
                     name: field_info.name,
+                    ty: field_info.ty,
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<AnyComponent>().unwrap();
                         getter(this.component.as_ref().as_any_ref())

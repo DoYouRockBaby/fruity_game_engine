@@ -8,6 +8,7 @@
 use crate::serialized::Serialized;
 use fruity_any::FruityAny;
 use std::any::Any;
+use std::any::TypeId;
 use std::fmt::Debug;
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -95,6 +96,9 @@ pub struct FieldInfo {
     /// The name of the field
     pub name: String,
 
+    /// The type of the field
+    pub ty: TypeId,
+
     /// Function to get one of the entry field value as Any
     ///
     /// # Arguments
@@ -151,6 +155,7 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Box<T> {
 
                 FieldInfo {
                     name: field_info.name,
+                    ty: field_info.ty,
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<Box<T>>().unwrap();
 
@@ -214,6 +219,7 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Arc<T> {
 
                 FieldInfo {
                     name: field_info.name,
+                    ty: field_info.ty,
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<Arc<T>>().unwrap();
 
@@ -272,6 +278,7 @@ impl<T: IntrospectObject> IntrospectObject for RwLock<T> {
 
                 FieldInfo {
                     name: field_info.name,
+                    ty: field_info.ty,
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<RwLock<T>>().unwrap();
                         let reader = this.read().unwrap();

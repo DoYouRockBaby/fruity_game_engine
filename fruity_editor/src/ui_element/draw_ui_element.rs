@@ -14,6 +14,7 @@ use iced::Alignment;
 use iced::Button;
 use iced::Checkbox;
 use iced::Column;
+use iced::Container;
 use iced::Row;
 use iced::Scrollable;
 use iced::Text;
@@ -302,6 +303,7 @@ fn draw_listview<'a>(
         .iter()
         .map(|item| get_key(item.deref()))
         .collect::<Vec<_>>();
+
     let new_list_state = keys
         .into_iter()
         .fold(HashMap::new(), |mut new_list_state, key| {
@@ -321,38 +323,41 @@ fn draw_listview<'a>(
     let mut list_state = list_state.borrow_mut();
 
     let on_clicked = Arc::new(Mutex::new(on_clicked));
-    items
-        .into_iter()
-        .fold(
-            Scrollable::new(scroll_state)
-                .width(Length::Fill)
-                .height(Length::Units(500))
-                .style(theme_state.theme),
-            |scrollable, item| {
-                // TODO: Try to find a way to remove that
-                // Create a custom use_state for mutable references
-                let list_state = unsafe {
-                    std::mem::transmute::<
-                        &mut HashMap<usize, button::State>,
-                        &mut HashMap<usize, button::State>,
-                    >(&mut list_state)
-                };
+    let content = items.into_iter().fold(
+        Scrollable::new(scroll_state)
+            .width(Length::Fill)
+            .height(Length::Units(500))
+            .style(theme_state.theme),
+        |scrollable, item| {
+            // TODO: Try to find a way to remove that
+            // Create a custom use_state for mutable references
+            let list_state = unsafe {
+                std::mem::transmute::<
+                    &mut HashMap<usize, button::State>,
+                    &mut HashMap<usize, button::State>,
+                >(&mut list_state)
+            };
 
-                scrollable.push({
-                    let key = get_key(item.deref());
-                    let rendered_item = render_item(item.deref());
+            scrollable.push({
+                let key = get_key(item.deref());
+                let rendered_item = render_item(item.deref());
 
-                    let item_state = list_state.get_mut(&key).unwrap();
-                    let item: Element<Message, Renderer> =
-                        Button::new(item_state, draw_ui_element(rendered_item))
-                            .style(theme_state.theme.list_item())
-                            .on_press(Message::AnyChanged(on_clicked.clone(), item.into()))
-                            .width(Length::Fill)
-                            .into();
+                let item_state = list_state.get_mut(&key).unwrap();
+                let item: Element<Message, Renderer> =
+                    Button::new(item_state, draw_ui_element(rendered_item))
+                        .style(theme_state.theme.list_item())
+                        .on_press(Message::AnyChanged(on_clicked.clone(), item.into()))
+                        .width(Length::Fill)
+                        .into();
 
-                    item
-                })
-            },
-        )
+                item
+            })
+        },
+    );
+
+    Container::new(content)
+        .style(theme_state.theme.list_view())
+        .width(Length::Fill)
+        .height(Length::Fill)
         .into()
 }

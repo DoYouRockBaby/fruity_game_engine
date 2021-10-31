@@ -11,6 +11,7 @@ use crate::entity::archetype::EntityCellHead;
 use crate::entity::archetype::EntityTypeIdentifier;
 use crate::service::utils::cast_service;
 use crate::service::utils::ArgumentCaster;
+use crate::signal::Signal;
 use fruity_any::*;
 use fruity_introspect::serializable_object::SerializableObject;
 use fruity_introspect::serialized::Serialized;
@@ -20,6 +21,7 @@ use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use fruity_introspect::SetterCaller;
 use itertools::Itertools;
+use std::any::TypeId;
 use std::fmt::Debug;
 use std::fmt::Formatter;
 use std::ops::Deref;
@@ -310,6 +312,7 @@ impl IntrospectObject for EntitySharedRwLock {
         vec![
             FieldInfo {
                 name: "id".to_string(),
+                ty: TypeId::of::<u64>(),
                 getter: Arc::new(|this| {
                     let this = cast_service::<EntitySharedRwLock>(this);
                     let reader = this.read();
@@ -320,6 +323,7 @@ impl IntrospectObject for EntitySharedRwLock {
             },
             FieldInfo {
                 name: "on_updated".to_string(),
+                ty: TypeId::of::<Signal<()>>(),
                 getter: Arc::new(|this| {
                     let this = cast_service::<EntitySharedRwLock>(this);
                     let reader = this.read();

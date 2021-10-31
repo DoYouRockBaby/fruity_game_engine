@@ -80,6 +80,7 @@ impl IntrospectObject for ComponentRwLock {
 
                 FieldInfo {
                     name: field_info.name,
+                    ty: field_info.ty,
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<ComponentRwLock>().unwrap();
                         let reader = this.read();
