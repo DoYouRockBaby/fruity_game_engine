@@ -46,7 +46,7 @@ pub fn use_state<T: 'static, F: FnOnce() -> T>(data_fn: F) -> StateAccess<T> {
 ///
 ///
 pub fn use_state_current<T: 'static, F: FnOnce() -> T>(data_fn: F) -> StateAccess<T> {
-    let current_id = topo::Id::current();
+    let current_id = topo::CallId::current();
     if !state_exists_for_topo_id::<T>(current_id) {
         set_state_with_topo_id::<T>(data_fn(), current_id);
     }
@@ -58,11 +58,11 @@ pub fn use_state_current<T: 'static, F: FnOnce() -> T>(data_fn: F) -> StateAcces
 pub fn new_state<T: 'static, F: FnOnce() -> T>(data_fn: F) -> StateAccess<T> {
     let count = use_state(|| 0);
     count.update(|c| *c += 1);
-    topo::call_in_slot(count.get(), || use_state_current(data_fn))
+    topo::call_in_slot(&count.get(), || use_state_current(data_fn))
 }
 
 /// Sets the state of type T keyed to the given TopoId
-pub fn set_state_with_topo_id<T: 'static>(data: T, current_id: topo::Id) {
+pub fn set_state_with_topo_id<T: 'static>(data: T, current_id: topo::CallId) {
     STORE.with(|store_refcell| {
         store_refcell
             .borrow_mut()
@@ -70,16 +70,16 @@ pub fn set_state_with_topo_id<T: 'static>(data: T, current_id: topo::Id) {
     })
 }
 
-pub fn state_exists_for_topo_id<T: 'static>(id: topo::Id) -> bool {
+pub fn state_exists_for_topo_id<T: 'static>(id: topo::CallId) -> bool {
     STORE.with(|store_refcell| store_refcell.borrow().state_exists_with_topo_id::<T>(id))
 }
 
-pub fn mark_id_as_active(id: topo::Id) {
+pub fn mark_id_as_active(id: topo::CallId) {
     STORE.with(|store_refcell| store_refcell.borrow_mut().mark_id_as_active(id))
 }
 
 /// Clones the state of type T keyed to the given TopoId
-pub fn clone_state_with_topo_id<T: 'static + Clone>(id: topo::Id) -> Option<T> {
+pub fn clone_state_with_topo_id<T: 'static + Clone>(id: topo::CallId) -> Option<T> {
     STORE.with(|store_refcell| {
         store_refcell
             .borrow_mut()
@@ -88,7 +88,7 @@ pub fn clone_state_with_topo_id<T: 'static + Clone>(id: topo::Id) -> Option<T> {
     })
 }
 
-pub fn remove_state_with_topo_id<T: 'static>(id: topo::Id) -> Option<T> {
+pub fn remove_state_with_topo_id<T: 'static>(id: topo::CallId) -> Option<T> {
     STORE.with(|store_refcell| {
         store_refcell
             .borrow_mut()
@@ -101,21 +101,32 @@ pub fn remove_state_with_topo_id<T: 'static>(id: topo::Id) -> Option<T> {
 /// Example:
 ///
 /// ```
-/// update_state_with_topo_id::<Vec<String>>( topo::Id::current(), |v|
+/// update_state_with_topo_id::<Vec<String>>( topo::CallId::current(), |v|
 ///     v.push("foo".to_string()
 /// )
 ///
-pub fn update_state_with_topo_id<T: 'static, F: FnOnce(&mut T) -> ()>(id: topo::Id, func: F) {
+pub fn update_state_with_topo_id<T: 'static, F: FnOnce(&mut T) -> ()>(id: topo::CallId, func: F) {
     let mut item = remove_state_with_topo_id::<T>(id)
         .expect("You are trying to update a type state that doesnt exist in this context!");
     func(&mut item);
     set_state_with_topo_id(item, id);
 }
 
-pub fn read_state_with_topo_id<T: 'static, F: FnOnce(&T) -> R, R>(id: topo::Id, func: F) -> R {
+pub fn read_state_with_topo_id<T: 'static, F: FnOnce(&T) -> R, R>(id: topo::CallId, func: F) -> R {
     let item = remove_state_with_topo_id::<T>(id)
         .expect("You are trying to read a type state that doesnt exist in this context!");
     let read = func(&item);
+    set_state_with_topo_id(item, id);
+    read
+}
+
+pub fn read_mut_state_with_topo_id<T: 'static, F: FnOnce(&mut T) -> R, R>(
+    id: topo::CallId,
+    func: F,
+) -> R {
+    let mut item = remove_state_with_topo_id::<T>(id)
+        .expect("You are trying to read a type state that doesnt exist in this context!");
+    let read = func(&mut item);
     set_state_with_topo_id(item, id);
     read
 }
@@ -163,7 +174,7 @@ fn purge_unseen_ids() {
     })
 }
 
-pub fn unseen_ids() -> Vec<topo::Id> {
+pub fn unseen_ids() -> Vec<topo::CallId> {
     STORE.with(|store_refcell| {
         let store_mut = store_refcell.borrow_mut();
         store_mut.unseen_ids.iter().cloned().collect::<Vec<_>>()
@@ -171,7 +182,7 @@ pub fn unseen_ids() -> Vec<topo::Id> {
 }
 
 // pub fn state_getter<T: 'static + Clone>() -> Arc<dyn Fn() -> Option<T>> {
-//     let current_id = topo::Id::current();
+//     let current_id = topo::CallId::current();
 //     Arc::new(move || get_state_with_topo_id::<T>(current_id))
 // }
 

@@ -6,7 +6,7 @@ use std::marker::PhantomData;
 ///
 // #[derive(Debug)]
 pub struct StateAccess<T> {
-    pub id: topo::Id,
+    pub id: topo::CallId,
     _phantom_data: PhantomData<T>,
 }
 
@@ -30,7 +30,7 @@ impl<T> StateAccess<T>
 where
     T: 'static,
 {
-    pub fn new(id: topo::Id) -> StateAccess<T> {
+    pub fn new(id: topo::CallId) -> StateAccess<T> {
         StateAccess {
             id,
             _phantom_data: PhantomData,
@@ -67,6 +67,10 @@ where
 
     pub fn get_with<F: FnOnce(&T) -> R, R>(self, func: F) -> R {
         read_state_with_topo_id(self.id, func)
+    }
+
+    pub fn get_with_mut<F: FnOnce(&mut T) -> R, R>(self, func: F) -> R {
+        read_mut_state_with_topo_id(self.id, func)
     }
 }
 

@@ -7,10 +7,10 @@ use topo::*;
 
 #[derive(Debug)]
 pub struct Store {
-    pub id_to_key_map: HashMap<topo::Id, DefaultKey>,
-    pub primary_slotmap: SlotMap<DefaultKey, Id>,
+    pub id_to_key_map: HashMap<topo::CallId, DefaultKey>,
+    pub primary_slotmap: SlotMap<DefaultKey, CallId>,
     pub anymap: anymap::Map<dyn Any>,
-    pub unseen_ids: HashSet<topo::Id>,
+    pub unseen_ids: HashSet<topo::CallId>,
 }
 
 impl Store {
@@ -23,7 +23,7 @@ impl Store {
         }
     }
 
-    pub(crate) fn state_exists_with_topo_id<T: 'static>(&self, id: topo::Id) -> bool {
+    pub(crate) fn state_exists_with_topo_id<T: 'static>(&self, id: topo::CallId) -> bool {
         match (self.id_to_key_map.get(&id), self.get_secondarymap::<T>()) {
             (Some(existing_key), Some(existing_secondary_map)) => {
                 existing_secondary_map.contains_key(*existing_key)
@@ -34,7 +34,7 @@ impl Store {
 
     pub(crate) fn get_state_with_topo_id<T: 'static>(
         &mut self,
-        current_id: topo::Id,
+        current_id: topo::CallId,
     ) -> Option<&T> {
         self.unseen_ids.remove(&current_id);
         match (
@@ -48,13 +48,13 @@ impl Store {
         }
     }
 
-    pub fn mark_id_as_active(&mut self, id: topo::Id) {
+    pub fn mark_id_as_active(&mut self, id: topo::CallId) {
         self.unseen_ids.remove(&id);
     }
 
     pub(crate) fn remove_state_with_topo_id<T: 'static>(
         &mut self,
-        current_id: topo::Id,
+        current_id: topo::CallId,
     ) -> Option<T> {
         // /self.unseen_ids.remove(&current_id);
 
@@ -74,7 +74,7 @@ impl Store {
         }
     }
 
-    // pub(crate) fn remove_topo_id(&mut self, id: topo::Id) {
+    // pub(crate) fn remove_topo_id(&mut self, id: topo::CallId) {
     //     let key = self.id_to_key_map.get(&id).copied().unwrap_or_default();
     //     if !key.is_null() {
     //         self.primary_slotmap.remove(key);
@@ -82,7 +82,7 @@ impl Store {
     //     }
     // }
 
-    pub(crate) fn set_state_with_topo_id<T: 'static>(&mut self, data: T, current_id: topo::Id) {
+    pub(crate) fn set_state_with_topo_id<T: 'static>(&mut self, data: T, current_id: topo::CallId) {
         self.unseen_ids.remove(&current_id);
 
         //unwrap or default to keep borrow checker happy

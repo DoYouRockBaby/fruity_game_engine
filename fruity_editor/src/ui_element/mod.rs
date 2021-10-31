@@ -1,8 +1,8 @@
 use crate::state::Message;
-use iced_wgpu::Renderer;
-use iced_winit::Element;
+use std::any::Any;
 
 pub mod display;
+pub mod iced;
 pub mod input;
 pub mod layout;
 pub mod list;
@@ -34,17 +34,10 @@ impl Default for UISize {
     }
 }
 
-pub trait UIWidget {
-    fn draw<'a>(&self) -> Element<'a, Message, Renderer>;
+pub trait UIWidget: Any {
     fn elem(self) -> UIElement;
 }
 
 pub struct UIElement {
-    root: Box<dyn UIWidget>,
-}
-
-impl UIElement {
-    pub fn draw<'a>(&self) -> Element<'a, Message, Renderer> {
-        self.root.draw()
-    }
+    root: Box<dyn Any>,
 }
