@@ -57,6 +57,16 @@ impl<'s> ArgumentCaster<'s> {
         }
     }
 
+    /// Get all the remaining serialized arguments from an argument list
+    pub fn rest(&mut self) -> Vec<Serialized> {
+        let mut result = Vec::new();
+        while let Some(elem) = self.iter.next() {
+            result.push(elem.1);
+        }
+
+        result
+    }
+
     /// Cast a serialized argument from an argument list
     ///
     /// # Generic Arguments

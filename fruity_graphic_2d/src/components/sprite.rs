@@ -7,3 +7,11 @@ use fruity_graphic::resources::material_resource::MaterialResource;
 pub struct Sprite {
     pub material: ResourceReference<MaterialResource>,
 }
+
+impl Default for Sprite {
+    fn default() -> Self {
+        Self {
+            material: ResourceReference::new(),
+        }
+    }
+}

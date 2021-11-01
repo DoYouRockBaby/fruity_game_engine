@@ -1,7 +1,7 @@
 use crate::js_value::utils::inject_serialized_into_v8_return_value;
 use crate::serialize::deserialize::deserialize_v8;
 use crate::JsRuntime;
-use fruity_core::component::components_factory::ComponentsFactory;
+use fruity_core::object_factory::ObjectFactory;
 use fruity_core::service::service::Service;
 use fruity_core::service::service_manager::ServiceManager;
 use fruity_introspect::serialized::ObjectFields;
@@ -12,26 +12,29 @@ use std::convert::TryFrom;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-pub fn configure_components(runtime: &mut JsRuntime, service_manager: Arc<RwLock<ServiceManager>>) {
+pub fn configure_constructors(
+    runtime: &mut JsRuntime,
+    service_manager: Arc<RwLock<ServiceManager>>,
+) {
     let mut global_object = runtime.global_object();
     let scope = &mut runtime.handle_scope();
 
     let service_manager = service_manager.read().unwrap();
-    let components_factory = service_manager.get::<ComponentsFactory>().unwrap();
-    let components_factory_reader = components_factory.read().unwrap();
+    let object_factory = service_manager.get::<ObjectFactory>().unwrap();
+    let object_factory_reader = object_factory.read().unwrap();
 
-    components_factory_reader.iter().for_each(|(key, ..)| {
+    object_factory_reader.iter().for_each(|(key, ..)| {
         let mut data_fields = HashMap::new();
 
-        let components_factory = components_factory.inner_arc();
+        let object_factory = object_factory.inner_arc();
 
         data_fields.insert(
-            "components_factory".to_string(),
-            Serialized::NativeObject(Box::new(components_factory)),
+            "object_factory".to_string(),
+            Serialized::NativeObject(Box::new(object_factory)),
         );
 
         data_fields.insert(
-            "component_identifier".to_string(),
+            "object_identifier".to_string(),
             Serialized::String(key.clone()),
         );
 
@@ -50,25 +53,25 @@ pub fn configure_components(runtime: &mut JsRuntime, service_manager: Arc<RwLock
                 let data = deserialize_v8(scope, args.data().unwrap()).unwrap();
                 let data_fields = ObjectFields::try_from(data).unwrap();
 
-                // Get the components factory
-                let components_factory = Arc::<RwLock<Box<dyn Service>>>::try_from(
-                    data_fields.get("components_factory").unwrap().clone(),
+                // Get the object factory
+                let object_factory = Arc::<RwLock<Box<dyn Service>>>::try_from(
+                    data_fields.get("object_factory").unwrap().clone(),
                 )
                 .unwrap();
 
-                let components_factory = components_factory.read().unwrap();
-                let components_factory = components_factory
+                let object_factory = object_factory.read().unwrap();
+                let object_factory = object_factory
                     .as_any_ref()
-                    .downcast_ref::<ComponentsFactory>()
+                    .downcast_ref::<ObjectFactory>()
                     .unwrap();
 
-                // Get the components identifier
-                let component_identifier =
-                    String::try_from(data_fields.get("component_identifier").unwrap().clone())
+                // Get the object identifier
+                let object_identifier =
+                    String::try_from(data_fields.get("object_identifier").unwrap().clone())
                         .unwrap();
 
                 // Build the arguments
-                let mut deserialized_args = (0..args.length())
+                let deserialized_args = (0..args.length())
                     .filter_map(|index| deserialize_v8(scope, args.get(index)))
                     .collect::<Vec<_>>();
 
@@ -80,16 +83,14 @@ pub fn configure_components(runtime: &mut JsRuntime, service_manager: Arc<RwLock
                     return ();
                 }
 
-                let arg1 = deserialized_args.remove(0);
-
                 // Call the function
-                let result = components_factory.instantiate(&component_identifier, arg1);
+                let result = object_factory.instantiate(&object_identifier, deserialized_args);
 
                 // Return the result
                 if let Some(result) = result {
                     inject_serialized_into_v8_return_value(
                         scope,
-                        &Serialized::NativeObject(Box::new(result)),
+                        &Serialized::NativeObject(result),
                         &mut return_value,
                     );
                 }

@@ -14,12 +14,12 @@
 ## Editor
 
 [X] Base editor
-[P] Implement a basic hook system
-[ ] Create a pseudo DOM to abstract the interface creation
-[ ] Wrap the DOM system with iced
+[X] Implement a basic hook system
+[X] Create a pseudo DOM to abstract the interface creation
+[X] Wrap the DOM system with iced
 [ ] Expose the GUI API to javascript to create custom component editor
-[ ] Components visualization
-[ ] Entity hierarchy visualisation
+[P] Components visualization
+[P] Entity hierarchy visualisation
 [ ] Resources browser
 [ ] Resources visualisation, take the material as an example and try to make it easy to edit in sprite component
 [ ] Gizmos
@@ -68,4 +68,4 @@
 [ ] Tests everywhere
 [ ] Rust doc everywhere
 [ ] Remove as many unwrap as possible (ecs and javascript)
-[X] A lot of unsafe code were created to avoid lifetime issue in ecs, remove as many as possible
+[ ] A lot of unsafe code were created to avoid lifetime issue in ecs, remove as many as possible

@@ -1,4 +1,4 @@
-use crate::bridge::components::configure_components;
+use crate::bridge::constructors::configure_constructors;
 use crate::bridge::service::configure_services;
 use crate::javascript_engine::JavascriptEngine;
 use crate::js_value::object::JsObject;

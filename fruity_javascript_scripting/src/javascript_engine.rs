@@ -1,4 +1,4 @@
-use crate::configure_components;
+use crate::configure_constructors;
 use crate::configure_services;
 use crate::error::log_js_error;
 use crate::JsRuntime;
@@ -25,7 +25,7 @@ impl JavascriptEngine {
         let single_thread_service = SingleThreadService::<JsRuntime>::start(move || {
             let mut runtime = JsRuntime::new();
             configure_services(&mut runtime, service_manager.clone());
-            configure_components(&mut runtime, service_manager.clone());
+            configure_constructors(&mut runtime, service_manager.clone());
 
             runtime
         });

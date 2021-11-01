@@ -5,6 +5,7 @@
 //! Implements traits and macros to make a structure abe to list it's field and to get/set it with any
 //!
 
+use crate::serializable_object::SerializableObject;
 use crate::serialized::Serialized;
 use fruity_any::FruityAny;
 use std::any::Any;
@@ -78,6 +79,11 @@ pub fn log_introspect_error(err: &IntrospectError) {
 }
 
 /// A setter caller
+pub type Constructor = Arc<
+    dyn Fn(Vec<Serialized>) -> Result<Box<dyn SerializableObject>, IntrospectError> + Send + Sync,
+>;
+
+/// A setter caller
 #[derive(Clone)]
 pub enum SetterCaller {
     /// Without mutability
@@ -133,6 +139,12 @@ pub struct MethodInfo {
 
     /// Call for the method with any field
     pub call: MethodCaller,
+}
+
+/// Trait to implement static introspection to an object
+pub trait InstantiableObject {
+    /// Get a constructor to instantiate an introspect object
+    fn get_constructor() -> Constructor;
 }
 
 /// Trait to implement static introspection to an object

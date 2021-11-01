@@ -10,9 +10,9 @@
 //! - Entities represent any object stored in the ecs, entities are composed of components, in a game engine, a game object for example
 //! - Components are structure where the datas are stored
 
-use crate::component::components_factory::ComponentsFactory;
 use crate::entity::entity_manager::EntityManager;
 use crate::module::module_manager::ModuleManager;
+use crate::object_factory::ObjectFactory;
 use crate::resource::load_resources::load_resources;
 use crate::resource::resources_manager::ResourcesManager;
 use crate::service::service_manager::ServiceManager;
@@ -54,6 +54,10 @@ pub mod utils;
 /// Provides a main object for the game engine
 pub mod world;
 
+/// Provides a factory for the introspect object
+/// This will be used by the scripting language to expose object creation, especialy components
+pub mod object_factory;
+
 /// Create an entity, use it like entity![Box::new(component1), Box::new(component2)])
 #[macro_export]
 macro_rules! entity {
@@ -76,7 +80,7 @@ pub fn initialize(world: &World) {
     service_manager.register("module_manager", ModuleManager::new(world));
     service_manager.register("entity_manager", EntityManager::new());
     service_manager.register("system_manager", SystemManager::new(world));
-    service_manager.register("components_factory", ComponentsFactory::new());
+    service_manager.register("object_factory", ObjectFactory::new());
     service_manager.register("resources_manager", ResourcesManager::new(world));
 
     let mut resources_manager = service_manager.write::<ResourcesManager>();
