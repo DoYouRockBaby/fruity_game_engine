@@ -7,7 +7,6 @@ use fruity_introspect::serialized::Serialized;
 use fruity_introspect::Constructor;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::InstantiableObject;
-use fruity_introspect::IntrospectError;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
