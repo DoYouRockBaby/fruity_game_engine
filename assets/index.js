@@ -50,10 +50,7 @@ entityManager.onEntityCreated.addObserver((entity) => {
     }
 });
 
-
 systemManager.addBeginSystem(() => {
-    resourcesManager.readResourceSettings("assets/resources.yaml");
-
     entityManager.create("Image 1", [
         new Position({ x: 0.25, y: 0.25 }),
         new Size({ width: 0.5, height: 0.5 }),

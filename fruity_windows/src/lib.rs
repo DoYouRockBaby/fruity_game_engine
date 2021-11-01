@@ -2,6 +2,7 @@ use crate::windows_manager::WindowsManager;
 use core::ffi::c_void;
 use fruity_core::platform::Initializer;
 use fruity_core::service::service_manager::ServiceManager;
+use fruity_core::settings::Settings;
 use fruity_core::system::system_manager::SystemManager;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -14,7 +15,11 @@ use winit::window::WindowBuilder;
 
 pub mod windows_manager;
 
-pub fn platform(service_manager: &Arc<RwLock<ServiceManager>>, initializer: Initializer) {
+pub fn platform(
+    service_manager: &Arc<RwLock<ServiceManager>>,
+    initializer: Initializer,
+    settings: &Settings,
+) {
     /*let (run_callback, windows_manager) = WindowsManager::new(service_manager);
 
     let mut service_manager = service_manager.write().unwrap();
@@ -51,7 +56,7 @@ pub fn platform(service_manager: &Arc<RwLock<ServiceManager>>, initializer: Init
     std::mem::drop(service_manager_writer);
 
     // Initialize the engine
-    initializer(service_manager);
+    initializer(service_manager, settings);
 
     // Run the begin systems before everything
     let system_manager = system_manager.clone();

@@ -5,7 +5,9 @@ use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::io::Read;
 use yaml_rust::Yaml;
+use yaml_rust::YamlLoader;
 
 /// Settings collection
 #[derive(Debug, Clone, FruityAny)]
@@ -53,6 +55,21 @@ impl Settings {
             _ => default,
         }
     }
+
+    /// Get a field into the params as settings
+    ///
+    /// # Arguments
+    /// * `key` - The field identifier
+    ///
+    pub fn get_settings(&self, key: &str) -> Settings {
+        match self {
+            Settings::Object(fields) => match fields.get(key) {
+                Some(value) => value.clone(),
+                None => Settings::Object(HashMap::new()),
+            },
+            _ => Settings::Object(HashMap::new()),
+        }
+    }
 }
 
 impl Resource for Settings {}
@@ -64,6 +81,23 @@ impl IntrospectObject for Settings {
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![]
+    }
+}
+
+/// Build a Settings by reading a yaml document
+pub fn read_settings(reader: &mut dyn Read) -> Settings {
+    let mut buffer = String::new();
+    if let Err(err) = reader.read_to_string(&mut buffer) {
+        log::error!("{}", err.to_string());
+        return Settings::Object(HashMap::new());
+    }
+    let docs = YamlLoader::load_from_str(&buffer).unwrap();
+    let root = &docs[0];
+
+    if let Some(settings) = build_settings_from_yaml(root) {
+        settings
+    } else {
+        return Settings::Object(HashMap::new());
     }
 }
 

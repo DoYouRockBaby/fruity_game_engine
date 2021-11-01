@@ -9,6 +9,3 @@ pub mod resource_reference;
 
 /// The resource manager
 pub mod resources_manager;
-
-/// A resource loader that load other resources from a resource settings file
-pub mod load_resources;

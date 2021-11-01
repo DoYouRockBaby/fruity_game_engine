@@ -4,6 +4,7 @@ use crate::resources::material_resource::load_material;
 use crate::resources::shader_resource::load_shader;
 use fruity_core::resource::resources_manager::ResourcesManager;
 use fruity_core::service::service_manager::ServiceManager;
+use fruity_core::settings::Settings;
 use fruity_core::RunCallback;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -13,7 +14,10 @@ pub mod math;
 pub mod resources;
 
 // #[no_mangle]
-pub fn initialize(service_manager: &Arc<RwLock<ServiceManager>>) -> Option<RunCallback> {
+pub fn initialize(
+    service_manager: &Arc<RwLock<ServiceManager>>,
+    _settings: &Settings,
+) -> Option<RunCallback> {
     let graphics_manager = GraphicsManager::new(service_manager);
 
     let mut service_manager_writer = service_manager.write().unwrap();

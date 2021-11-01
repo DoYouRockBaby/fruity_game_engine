@@ -4,7 +4,6 @@ use crate::resource::error::RemoveResourceError;
 use crate::resource::resource::Resource;
 use crate::service::service::Service;
 use crate::service::utils::cast_service;
-use crate::service::utils::cast_service_mut;
 use crate::service::utils::ArgumentCaster;
 use crate::settings::Settings;
 use crate::ServiceManager;
@@ -18,6 +17,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fs::File;
 use std::io::Read;
+use std::path::Path;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -158,13 +158,55 @@ impl ResourcesManager {
         }
     }
 
-    /// Load a resource configuration file
+    /// Load many resources for settings
     ///
     /// # Arguments
-    /// * `path` - The path of the file
+    /// * `settings` - The settings of resources
     ///
-    pub fn read_resource_settings(&mut self, path: &str) -> Result<(), LoadResourceError> {
-        self.load_resource_file(path, "resource_settings")
+    pub fn load_resources_settings(&mut self, settings: Vec<Settings>) {
+        settings.into_iter().for_each(|settings| {
+            self.load_resource_settings(settings);
+        })
+    }
+
+    /// Load resources for settings
+    ///
+    /// # Arguments
+    /// * `settings` - The settings of resources
+    ///
+    pub fn load_resource_settings(&mut self, settings: Settings) -> Option<()> {
+        // Parse settings
+        let fields = if let Settings::Object(fields) = settings {
+            fields
+        } else {
+            return None;
+        };
+
+        // Get the resource path
+        let path = {
+            if let Settings::String(path) = fields.get("path")? {
+                path.clone()
+            } else {
+                return None;
+            }
+        };
+
+        // Deduce informations about the resource from the path
+        let resource_type = Path::new(&path).extension()?;
+        let resource_type = resource_type.to_str()?;
+        let resource_identifier = ResourceIdentifier(path.clone());
+        let mut resource_file = File::open(&path).ok()?;
+
+        // Load the resource
+        self.load_resource(
+            resource_identifier,
+            resource_type,
+            &mut resource_file,
+            Settings::Object(fields.clone()),
+        )
+        .ok()?;
+
+        Some(())
     }
 
     /// Add a resource into the collection
@@ -217,34 +259,19 @@ impl ResourcesManager {
 
 impl IntrospectObject for ResourcesManager {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
-        vec![
-            MethodInfo {
-                name: "get_resource".to_string(),
-                call: MethodCaller::Const(Arc::new(|this, args| {
-                    let this = cast_service::<ResourcesManager>(this);
+        vec![MethodInfo {
+            name: "get_resource".to_string(),
+            call: MethodCaller::Const(Arc::new(|this, args| {
+                let this = cast_service::<ResourcesManager>(this);
 
-                    let mut caster = ArgumentCaster::new("get_resource", args);
-                    let arg1 = caster.cast_next::<String>()?;
+                let mut caster = ArgumentCaster::new("get_resource", args);
+                let arg1 = caster.cast_next::<String>()?;
 
-                    let result = this.get_untyped_resource(ResourceIdentifier(arg1));
+                let result = this.get_untyped_resource(ResourceIdentifier(arg1));
 
-                    Ok(result.map(|result| Serialized::NativeObject(Box::new(result))))
-                })),
-            },
-            MethodInfo {
-                name: "read_resource_settings".to_string(),
-                call: MethodCaller::Mut(Arc::new(|this, args| {
-                    let this = cast_service_mut::<ResourcesManager>(this);
-
-                    let mut caster = ArgumentCaster::new("read_resource_settings", args);
-                    let arg1 = caster.cast_next::<String>()?;
-
-                    this.read_resource_settings(&arg1).unwrap();
-
-                    Ok(None)
-                })),
-            },
-        ]
+                Ok(result.map(|result| Serialized::NativeObject(Box::new(result))))
+            })),
+        }]
     }
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {

@@ -1,6 +1,8 @@
 use crate::initialize;
+use crate::platform::Initializer;
 use crate::platform::PlatformCallback;
 use crate::service::service_manager::ServiceManager;
+use crate::settings::Settings;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -35,9 +37,9 @@ impl<'s> World {
     }
 
     /// Run the world
-    pub fn run(&self, initialize_callback: fn(&Arc<RwLock<ServiceManager>>)) {
+    pub fn run(&self, initializer: Initializer, settings: &Settings) {
         if let Some(platform) = self.platform {
-            platform(&self.service_manager, initialize_callback);
+            platform(&self.service_manager, initializer, settings);
         }
     }
 

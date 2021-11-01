@@ -1,4 +1,5 @@
-use crate::RunCallback;
+use crate::platform::Initializer;
+use crate::settings::Settings;
 use crate::ServiceManager;
 use hot_reload_lib::load_symbol;
 use hot_reload_lib::HotReloadLib;
@@ -38,26 +39,19 @@ impl ModuleManager {
     /// * `folder` - The folder where the lib is stored
     /// * `lib` - The lib name
     ///
-    pub fn load_module(&mut self, folder: &str, lib_name: &str) -> Option<RunCallback> {
+    pub fn load_module(&mut self, folder: &str, lib_name: &str, settings: &Settings) {
         let service_manager = self.service_manager.clone();
 
+        let moved_settings = settings.clone();
         let lib = HotReloadLib::new(&folder, &lib_name, move |lib| {
             let service_manager = service_manager.clone();
-            load_symbol::<fn(&Arc<RwLock<ServiceManager>>) -> Option<RunCallback>>(
-                &lib,
-                "initialize",
-            )(&service_manager);
+            load_symbol::<Initializer>(&lib, "initialize")(&service_manager, &moved_settings);
         });
         log::debug!("Loaded {}", lib_name);
 
-        let initialize_result = lib
-            .load_symbol::<fn(&Arc<RwLock<ServiceManager>>) -> Option<RunCallback>>("initialize")(
-            &self.service_manager,
-        );
+        lib.load_symbol::<Initializer>("initialize")(&self.service_manager, settings);
 
         self.libs.insert(lib_name.to_string(), lib);
-
-        initialize_result
     }
 
     /// Hot reload all loaded modules if needed

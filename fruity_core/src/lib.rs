@@ -12,7 +12,6 @@
 
 use crate::entity::entity_manager::EntityManager;
 use crate::object_factory::ObjectFactory;
-use crate::resource::load_resources::load_resources;
 use crate::resource::resources_manager::ResourcesManager;
 use crate::service::service_manager::ServiceManager;
 use crate::system::system_manager::SystemManager;
@@ -93,9 +92,6 @@ pub fn initialize(service_manager: &Arc<RwLock<ServiceManager>>) -> Option<RunCa
     service_manager.register("system_manager", system_manager);
     service_manager.register("object_factory", object_factory);
     service_manager.register("resources_manager", resources_manager);
-
-    let mut resources_manager = service_manager.write::<ResourcesManager>();
-    resources_manager.add_resource_loader("resource_settings", load_resources);
 
     None
 }

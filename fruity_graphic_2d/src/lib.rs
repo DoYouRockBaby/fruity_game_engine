@@ -7,6 +7,7 @@ use crate::systems::draw_camera::draw_camera_untyped;
 use crate::systems::draw_sprite::draw_sprite_untyped;
 use fruity_core::object_factory::ObjectFactory;
 use fruity_core::service::service_manager::ServiceManager;
+use fruity_core::settings::Settings;
 use fruity_core::system::system_manager::SystemManager;
 use fruity_core::RunCallback;
 use std::sync::Arc;
@@ -17,7 +18,10 @@ pub mod graphics_2d_manager;
 pub mod systems;
 
 // #[no_mangle]
-pub fn initialize(service_manager: &Arc<RwLock<ServiceManager>>) -> Option<RunCallback> {
+pub fn initialize(
+    service_manager: &Arc<RwLock<ServiceManager>>,
+    _settings: &Settings,
+) -> Option<RunCallback> {
     let graphic_2d_manager = Graphics2dManager::new(service_manager);
 
     let mut service_manager_writer = service_manager.write().unwrap();

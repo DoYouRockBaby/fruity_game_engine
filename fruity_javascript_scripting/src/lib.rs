@@ -6,6 +6,7 @@ use crate::resources::load_js_script::load_js_script;
 use crate::runtime::JsRuntime;
 use fruity_core::resource::resources_manager::ResourcesManager;
 use fruity_core::service::service_manager::ServiceManager;
+use fruity_core::settings::Settings;
 use fruity_core::RunCallback;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -23,7 +24,10 @@ mod serialize;
 mod thread_scope_stack;
 
 // #[no_mangle]
-pub fn initialize(service_manager: &Arc<RwLock<ServiceManager>>) -> Option<RunCallback> {
+pub fn initialize(
+    service_manager: &Arc<RwLock<ServiceManager>>,
+    _settings: &Settings,
+) -> Option<RunCallback> {
     let javascript_engine = JavascriptEngine::new(service_manager);
 
     let mut service_manager_writer = service_manager.write().unwrap();
