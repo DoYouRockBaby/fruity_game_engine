@@ -1,8 +1,8 @@
 use crate::math::Matrix4;
 use fruity_any::*;
 use fruity_core::service::service::Service;
+use fruity_core::service::service_manager::ServiceManager;
 use fruity_core::signal::Signal;
-use fruity_core::world::World;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
@@ -32,46 +32,30 @@ pub struct State {
 
 #[derive(Debug, FruityAny)]
 pub struct GraphicsManager {
-    state: Option<State>,
+    state: State,
     current_output: Option<wgpu::SurfaceTexture>,
     current_encoder: Option<RwLock<wgpu::CommandEncoder>>,
-    pub on_initialized: Signal<()>,
     pub on_before_draw_end: Signal<()>,
     pub on_after_draw_end: Signal<()>,
 }
 
 impl GraphicsManager {
-    pub fn new(world: &World) -> GraphicsManager {
-        let service_manager = world.service_manager.read().unwrap();
-        let windows_manager = service_manager.read::<WindowsManager>();
+    pub fn new(service_manager: &Arc<RwLock<ServiceManager>>) -> GraphicsManager {
+        let service_manager_reader = service_manager.read().unwrap();
+        let windows_manager = service_manager_reader.read::<WindowsManager>();
 
         // Subscribe to windows observer to proceed the graphics when it's neededs
-        let service_manager = world.service_manager.clone();
-        windows_manager.on_windows_creation.add_observer(move |_| {
-            let service_manager = service_manager.read().unwrap();
-            let mut graphics_manager = service_manager.write::<GraphicsManager>();
-            let windows_manager = service_manager.read::<WindowsManager>();
-            let window = windows_manager.get_window().unwrap();
-
-            graphics_manager.initialize(window.clone());
-            std::mem::drop(graphics_manager);
-
-            // Dispatch initialized event
-            let graphics_manager = service_manager.read::<GraphicsManager>();
-            graphics_manager.on_initialized.notify(());
-        });
-
-        let service_manager = world.service_manager.clone();
+        let service_manager_2 = service_manager.clone();
         windows_manager.on_start_update.add_observer(move |_| {
-            let service_manager = service_manager.read().unwrap();
+            let service_manager = service_manager_2.read().unwrap();
             let mut graphics_manager = service_manager.write::<GraphicsManager>();
 
             graphics_manager.start_draw();
         });
 
-        let service_manager = world.service_manager.clone();
+        let service_manager_2 = service_manager.clone();
         windows_manager.on_end_update.add_observer(move |_| {
-            let service_manager = service_manager.read().unwrap();
+            let service_manager = service_manager_2.read().unwrap();
 
             // Send the event that we will end to draw
             let graphics_manager = service_manager.read::<GraphicsManager>();
@@ -89,7 +73,7 @@ impl GraphicsManager {
             std::mem::drop(graphics_manager);
         });
 
-        let service_manager = world.service_manager.clone();
+        let service_manager = service_manager.clone();
         windows_manager
             .on_resize
             .add_observer(move |(width, height)| {
@@ -99,20 +83,24 @@ impl GraphicsManager {
                 graphics_manager.resize(*width, *height);
             });
 
+        // Initialize the graphics
+        let state = GraphicsManager::initialize(windows_manager.get_window());
+
+        // Dispatch initialized event
+        let on_initialized = Signal::new();
+        on_initialized.notify(());
+
         GraphicsManager {
-            state: None,
+            state,
             current_encoder: None,
             current_output: None,
-            on_initialized: Signal::new(),
             on_before_draw_end: Signal::new(),
             on_after_draw_end: Signal::new(),
         }
     }
 
-    pub fn initialize(&mut self, window: Arc<RwLock<Window>>) {
+    pub fn initialize(window: &Window) -> State {
         let future = async {
-            let window = window.read().unwrap();
-
             // The instance is a handle to our GPU
             // Backends::all => Vulkan + Metal + DX12 + Browser WebGPU
             let instance = wgpu::Instance::new(wgpu::Backends::all());
@@ -161,7 +149,7 @@ impl GraphicsManager {
             let (camera_buffer, camera_bind_group_layout) = Self::initialize_camera(&device);
 
             // Update state
-            self.state = Some(State {
+            State {
                 surface,
                 device,
                 queue,
@@ -169,36 +157,35 @@ impl GraphicsManager {
                 rendering_view,
                 camera_buffer,
                 camera_bind_group_layout,
-            });
+            }
         };
 
         Builder::new_multi_thread()
             .enable_all()
             .build()
             .unwrap()
-            .block_on(future);
+            .block_on(future)
     }
 
     pub fn start_draw(&mut self) {
-        if let Some(state) = &mut self.state {
-            // Get the texture view where the scene will be rendered
-            let output = state.surface.get_current_texture().unwrap();
-            let rendering_view = output
-                .texture
-                .create_view(&wgpu::TextureViewDescriptor::default());
+        // Get the texture view where the scene will be rendered
+        let output = self.state.surface.get_current_texture().unwrap();
+        let rendering_view = output
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
 
-            self.current_output = Some(output);
-            state.rendering_view = rendering_view;
+        self.current_output = Some(output);
+        self.state.rendering_view = rendering_view;
 
-            let encoder = state
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Render Encoder"),
-                });
+        let encoder = self
+            .state
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
 
-            // Store the handles about this frame
-            self.current_encoder = Some(RwLock::new(encoder))
-        }
+        // Store the handles about this frame
+        self.current_encoder = Some(RwLock::new(encoder))
     }
 
     pub fn end_draw(&mut self) {
@@ -214,50 +201,46 @@ impl GraphicsManager {
             return;
         };
 
-        let queue = self.get_queue().unwrap();
-
         // Submit will accept anything that implements IntoIter
-        queue.submit(std::iter::once(encoder.finish()));
+        self.get_queue().submit(std::iter::once(encoder.finish()));
         output.present();
     }
 
     pub fn resize(&mut self, width: usize, height: usize) {
-        if let Some(state) = &mut self.state {
-            state.config.width = width as u32;
-            state.config.height = height as u32;
+        self.state.config.width = width as u32;
+        self.state.config.height = height as u32;
 
-            state.surface.configure(&state.device, &state.config)
-        }
-    }
-
-    pub fn get_device(&self) -> Option<&wgpu::Device> {
-        self.state.as_ref().map(|state| &state.device)
-    }
-
-    pub fn get_queue(&self) -> Option<&wgpu::Queue> {
-        self.state.as_ref().map(|state| &state.queue)
-    }
-
-    pub fn get_surface(&self) -> Option<&wgpu::Surface> {
-        self.state.as_ref().map(|state| &state.surface)
-    }
-
-    pub fn get_config(&self) -> Option<&wgpu::SurfaceConfiguration> {
-        self.state.as_ref().map(|state| &state.config)
-    }
-
-    pub fn get_rendering_view(&self) -> Option<&wgpu::TextureView> {
-        self.state.as_ref().map(|state| &state.rendering_view)
-    }
-
-    pub fn get_camera_buffer(&self) -> Option<&wgpu::Buffer> {
-        self.state.as_ref().map(|state| &state.camera_buffer)
-    }
-
-    pub fn get_camera_bind_group_layout(&self) -> Option<&wgpu::BindGroupLayout> {
         self.state
-            .as_ref()
-            .map(|state| &state.camera_bind_group_layout)
+            .surface
+            .configure(&self.state.device, &self.state.config)
+    }
+
+    pub fn get_device(&self) -> &wgpu::Device {
+        &self.state.device
+    }
+
+    pub fn get_queue(&self) -> &wgpu::Queue {
+        &self.state.queue
+    }
+
+    pub fn get_surface(&self) -> &wgpu::Surface {
+        &self.state.surface
+    }
+
+    pub fn get_config(&self) -> &wgpu::SurfaceConfiguration {
+        &self.state.config
+    }
+
+    pub fn get_rendering_view(&self) -> &wgpu::TextureView {
+        &self.state.rendering_view
+    }
+
+    pub fn get_camera_buffer(&self) -> &wgpu::Buffer {
+        &self.state.camera_buffer
+    }
+
+    pub fn get_camera_bind_group_layout(&self) -> &wgpu::BindGroupLayout {
+        &self.state.camera_bind_group_layout
     }
 
     pub fn get_encoder(&self) -> Option<&RwLock<wgpu::CommandEncoder>> {
@@ -266,9 +249,8 @@ impl GraphicsManager {
 
     pub fn update_camera(&mut self, view_proj: Matrix4) {
         let camera_uniform = CameraUniform(view_proj.into());
-        let state = self.state.as_mut().unwrap();
-        state.queue.write_buffer(
-            &state.camera_buffer,
+        self.state.queue.write_buffer(
+            &self.state.camera_buffer,
             0,
             bytemuck::cast_slice(&[camera_uniform]),
         );

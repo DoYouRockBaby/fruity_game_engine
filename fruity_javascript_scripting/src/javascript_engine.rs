@@ -4,12 +4,14 @@ use crate::error::log_js_error;
 use crate::JsRuntime;
 use fruity_any::*;
 use fruity_core::service::service::Service;
+use fruity_core::service::service_manager::ServiceManager;
 use fruity_core::service::single_thread_service::SingleThreadService;
-use fruity_core::world::World;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 #[derive(Clone, Copy)]
 pub struct CallbackIdentifier(pub i32);
@@ -20,8 +22,8 @@ pub struct JavascriptEngine {
 }
 
 impl JavascriptEngine {
-    pub fn new(world: &World) -> JavascriptEngine {
-        let service_manager = world.service_manager.clone();
+    pub fn new(service_manager: &Arc<RwLock<ServiceManager>>) -> JavascriptEngine {
+        let service_manager = service_manager.clone();
         let single_thread_service = SingleThreadService::<JsRuntime>::start(move || {
             let mut runtime = JsRuntime::new();
             configure_services(&mut runtime, service_manager.clone());
@@ -60,10 +62,6 @@ impl JavascriptEngine {
             runtime.run_stored_callback(identifier, args.clone());
         });
     }
-}
-
-impl Drop for JavascriptEngine {
-    fn drop(&mut self) {}
 }
 
 impl IntrospectObject for JavascriptEngine {

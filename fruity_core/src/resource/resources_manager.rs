@@ -8,7 +8,6 @@ use crate::service::utils::cast_service_mut;
 use crate::service::utils::ArgumentCaster;
 use crate::settings::Settings;
 use crate::ServiceManager;
-use crate::World;
 use fruity_any::*;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
@@ -54,11 +53,11 @@ impl Debug for ResourcesManager {
 
 impl ResourcesManager {
     /// Returns a ResourcesManager
-    pub fn new(world: &World) -> ResourcesManager {
+    pub fn new(service_manager: &Arc<RwLock<ServiceManager>>) -> ResourcesManager {
         ResourcesManager {
             resources: HashMap::new(),
             resource_loaders: HashMap::new(),
-            service_manager: world.service_manager.clone(),
+            service_manager: service_manager.clone(),
         }
     }
 

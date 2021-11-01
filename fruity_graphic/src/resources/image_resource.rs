@@ -61,8 +61,8 @@ pub fn load_image(
         // Get the graphic manager state
         let service_manager = service_manager.read().unwrap();
         let graphics_manager = service_manager.read::<GraphicsManager>();
-        let device = graphics_manager.get_device().unwrap();
-        let queue = graphics_manager.get_queue().unwrap();
+        let device = graphics_manager.get_device();
+        let queue = graphics_manager.get_queue();
 
         // Create the texture
         let resource = if let Ok(value) =

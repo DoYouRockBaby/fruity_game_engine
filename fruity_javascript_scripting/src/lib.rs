@@ -5,7 +5,10 @@ use crate::js_value::object::JsObject;
 use crate::resources::load_js_script::load_js_script;
 use crate::runtime::JsRuntime;
 use fruity_core::resource::resources_manager::ResourcesManager;
-use fruity_core::world::World;
+use fruity_core::service::service_manager::ServiceManager;
+use fruity_core::RunCallback;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 mod bridge;
 pub mod error;
@@ -19,28 +22,30 @@ mod runtime;
 mod serialize;
 mod thread_scope_stack;
 
-#[no_mangle]
-pub fn initialize(world: &World) {
-    let javascript_engine = JavascriptEngine::new(world);
+// #[no_mangle]
+pub fn initialize(service_manager: &Arc<RwLock<ServiceManager>>) -> Option<RunCallback> {
+    let javascript_engine = JavascriptEngine::new(service_manager);
 
-    let mut service_manager = world.service_manager.write().unwrap();
-    service_manager.register("javascript_engine", javascript_engine);
+    let mut service_manager_writer = service_manager.write().unwrap();
+    service_manager_writer.register("javascript_engine", javascript_engine);
 
-    let mut resources_manager = service_manager.write::<ResourcesManager>();
+    let mut resources_manager = service_manager_writer.write::<ResourcesManager>();
     resources_manager.add_resource_loader("js", load_js_script);
 
     std::mem::drop(resources_manager);
-    std::mem::drop(service_manager);
+    std::mem::drop(service_manager_writer);
 
     // Load index script
     // TODO: Make it configurable
     {
         let javascript_engine = {
-            let service_manager = world.service_manager.read().unwrap();
-            service_manager.get::<JavascriptEngine>().unwrap()
+            let service_manager_reader = service_manager.read().unwrap();
+            service_manager_reader.get::<JavascriptEngine>().unwrap()
         };
 
         let javascript_engine = javascript_engine.read().unwrap();
         javascript_engine.run_module("assets/index.js");
     };
+
+    None
 }

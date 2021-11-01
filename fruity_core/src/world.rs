@@ -1,8 +1,8 @@
+use crate::initialize;
+use crate::platform::PlatformCallback;
 use crate::service::service_manager::ServiceManager;
 use std::fmt::Debug;
-use std::ops::DerefMut;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::sync::RwLock;
 
 /// The main container of the ECS
@@ -10,7 +10,7 @@ use std::sync::RwLock;
 pub struct World {
     /// The services container
     pub service_manager: Arc<RwLock<ServiceManager>>,
-    run_callback: Arc<Mutex<Option<Box<dyn Fn() + Sync + Send + 'static>>>>,
+    platform: Option<PlatformCallback>,
 }
 
 impl Debug for World {
@@ -25,17 +25,19 @@ impl Debug for World {
 impl<'s> World {
     /// Returns a World
     pub fn new() -> World {
+        let service_manager = Arc::new(RwLock::new(ServiceManager::new()));
+        initialize(&service_manager);
+
         World {
-            service_manager: Arc::new(RwLock::new(ServiceManager::new())),
-            run_callback: Arc::new(Mutex::new(None)),
+            service_manager,
+            platform: None,
         }
     }
 
     /// Run the world
-    pub fn run(&self) {
-        let run_callback = self.run_callback.lock().unwrap();
-        if let Some(run_callback) = run_callback.as_ref() {
-            run_callback();
+    pub fn run(&self, initialize_callback: fn(&Arc<RwLock<ServiceManager>>)) {
+        if let Some(platform) = self.platform {
+            platform(&self.service_manager, initialize_callback);
         }
     }
 
@@ -47,12 +49,7 @@ impl<'s> World {
     /// # Arguments
     /// * `F` - The callback closure type
     ///
-    pub fn set_run_callback<F>(&self, callback: F)
-    where
-        F: Fn() + Sync + Send + 'static,
-    {
-        let mut run_callback = self.run_callback.lock().unwrap();
-        let run_callback = run_callback.deref_mut();
-        *run_callback = Some(Box::new(callback));
+    pub fn set_platform(&mut self, platform: PlatformCallback) {
+        self.platform = Some(platform);
     }
 }

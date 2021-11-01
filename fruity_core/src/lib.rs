@@ -11,13 +11,13 @@
 //! - Components are structure where the datas are stored
 
 use crate::entity::entity_manager::EntityManager;
-use crate::module::module_manager::ModuleManager;
 use crate::object_factory::ObjectFactory;
 use crate::resource::load_resources::load_resources;
 use crate::resource::resources_manager::ResourcesManager;
 use crate::service::service_manager::ServiceManager;
 use crate::system::system_manager::SystemManager;
-use crate::world::World;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 pub use fruity_core_derive::Component;
 
@@ -48,6 +48,9 @@ pub mod settings;
 /// Provides collection for systems
 pub mod system;
 
+/// Provides collection for a platform in wich the engine will be run
+pub mod platform;
+
 /// Provides some utils for the game engine
 pub mod utils;
 
@@ -74,15 +77,25 @@ macro_rules! entity_type {
     };
 }
 
+/// A callback that is used to run the game engine
+pub type RunCallback = Box<dyn FnOnce()>;
+
 /// Initialize this extension
-pub fn initialize(world: &World) {
-    let mut service_manager = world.service_manager.write().unwrap();
-    service_manager.register("module_manager", ModuleManager::new(world));
-    service_manager.register("entity_manager", EntityManager::new());
-    service_manager.register("system_manager", SystemManager::new(world));
-    service_manager.register("object_factory", ObjectFactory::new());
-    service_manager.register("resources_manager", ResourcesManager::new(world));
+pub fn initialize(service_manager: &Arc<RwLock<ServiceManager>>) -> Option<RunCallback> {
+    //let module_manager = ModuleManager::new(service_manager);
+    let entity_manager = EntityManager::new(service_manager);
+    let system_manager = SystemManager::new(service_manager);
+    let object_factory = ObjectFactory::new(service_manager);
+    let resources_manager = ResourcesManager::new(service_manager);
+
+    let mut service_manager = service_manager.write().unwrap();
+    service_manager.register("entity_manager", entity_manager);
+    service_manager.register("system_manager", system_manager);
+    service_manager.register("object_factory", object_factory);
+    service_manager.register("resources_manager", resources_manager);
 
     let mut resources_manager = service_manager.write::<ResourcesManager>();
     resources_manager.add_resource_loader("resource_settings", load_resources);
+
+    None
 }

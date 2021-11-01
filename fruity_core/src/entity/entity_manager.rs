@@ -10,6 +10,7 @@ use crate::service::utils::cast_service;
 use crate::service::utils::cast_service_mut;
 use crate::service::utils::ArgumentCaster;
 use crate::signal::Signal;
+use crate::ServiceManager;
 use fruity_any::*;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
@@ -42,7 +43,7 @@ pub struct EntityManager {
 
 impl EntityManager {
     /// Returns an EntityManager
-    pub fn new() -> EntityManager {
+    pub fn new(_service_manager: &Arc<RwLock<ServiceManager>>) -> EntityManager {
         EntityManager {
             id_incrementer: 0,
             archetypes: Vec::new(),

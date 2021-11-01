@@ -8,7 +8,7 @@ use crate::state::theme::ThemeState;
 use crate::state::world::WorldState;
 use crate::state::Message;
 use crate::ui_element::iced::draw_element;
-use crate::World;
+use fruity_core::service::service_manager::ServiceManager;
 use iced::Container;
 use iced_wgpu::Renderer;
 use iced_winit::pane_grid;
@@ -19,6 +19,8 @@ use iced_winit::PaneGrid;
 use iced_winit::Program;
 use iced_winit::Row;
 use iced_winit::Text;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 #[derive(PartialEq)]
 enum PaneType {
@@ -43,8 +45,8 @@ pub enum PanesMessage {
 }
 
 impl Panes {
-    pub fn new(world: &World) -> Self {
-        declare_global(WorldState::new(world));
+    pub fn new(service_manager: &Arc<RwLock<ServiceManager>>) -> Self {
+        declare_global(WorldState::new(service_manager));
         declare_global(ThemeState::default());
         declare_global(EntityState::default());
 

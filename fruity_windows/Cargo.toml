@@ -4,9 +4,6 @@ version = "0.1.0"
 edition = "2018"
 resolver = "2"
 
-[lib]
-crate-type = ["dylib"]
-
 [dependencies]
 winit = "0.25.0"
 fruity_any = { path = "../fruity_any" }

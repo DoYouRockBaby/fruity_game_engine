@@ -97,10 +97,6 @@ impl<T: Debug + 'static> FruityAny for SingleThreadService<T> {
     }
 }
 
-impl<T: Debug + 'static> Drop for SingleThreadService<T> {
-    fn drop(&mut self) {}
-}
-
 impl<T: Debug + 'static> IntrospectObject for SingleThreadService<T> {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]

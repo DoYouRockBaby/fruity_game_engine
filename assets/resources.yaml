@@ -1,3 +1,9 @@
+# inputs:
+# - "Jump": "Up"
+# - "Run Right": "Right"
+# - "Run Left": "Left"
+# - "Down": "Down"
+# resources:
 - path: "assets/logo.png"
   type: texture
 - path: "assets/shader.wgsl"

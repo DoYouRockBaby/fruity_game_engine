@@ -1,7 +1,7 @@
 use fruity_any::*;
 use fruity_core::service::service::Service;
+use fruity_core::service::service_manager::ServiceManager;
 use fruity_core::service::service_rwlock::ServiceRwLock;
-use fruity_core::world::World;
 use fruity_graphic::graphics_manager::GraphicsManager;
 use fruity_graphic::math::Matrix4;
 use fruity_graphic::resources::material_resource::MaterialResource;
@@ -9,6 +9,8 @@ use fruity_graphic::resources::material_resource::Vertex;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
+use std::sync::Arc;
+use std::sync::RwLock;
 use wgpu::util::DeviceExt;
 
 #[derive(Debug, FruityAny)]
@@ -17,8 +19,8 @@ pub struct Graphics2dManager {
 }
 
 impl Graphics2dManager {
-    pub fn new(world: &World) -> Graphics2dManager {
-        let service_manager = world.service_manager.read().unwrap();
+    pub fn new(service_manager: &Arc<RwLock<ServiceManager>>) -> Graphics2dManager {
+        let service_manager = service_manager.read().unwrap();
         let graphics_manager = service_manager.get::<GraphicsManager>().unwrap();
 
         Graphics2dManager { graphics_manager }
@@ -30,7 +32,7 @@ impl Graphics2dManager {
         // Create the camera buffer for the camera transform
         graphics_manager.update_camera(view_proj);
 
-        let rendering_view = graphics_manager.get_rendering_view().unwrap();
+        let rendering_view = graphics_manager.get_rendering_view();
         let mut encoder = graphics_manager.get_encoder().unwrap().write().unwrap();
 
         // Display the background
@@ -56,8 +58,8 @@ impl Graphics2dManager {
     pub fn draw_square(&self, x: f32, y: f32, w: f32, h: f32, material: &MaterialResource) {
         let graphics_manager = self.graphics_manager.read().unwrap();
 
-        let device = graphics_manager.get_device().unwrap();
-        let rendering_view = graphics_manager.get_rendering_view().unwrap();
+        let device = graphics_manager.get_device();
+        let rendering_view = graphics_manager.get_rendering_view();
 
         // Create the main render pipeline
         let vertices: &[Vertex] = &[

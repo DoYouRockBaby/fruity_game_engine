@@ -2,7 +2,6 @@ use crate::service::service::Service;
 use crate::service::service_manager::ServiceManager;
 use crate::service::utils::cast_service_mut;
 use crate::service::utils::ArgumentCaster;
-use crate::World;
 use fruity_any::*;
 use fruity_introspect::log_introspect_error;
 use fruity_introspect::serialized::Callback;
@@ -56,12 +55,12 @@ impl Debug for SystemManager {
 
 impl<'s> SystemManager {
     /// Returns a SystemManager
-    pub fn new(world: &World) -> SystemManager {
+    pub fn new(service_manager: &Arc<RwLock<ServiceManager>>) -> SystemManager {
         SystemManager {
             system_pools: HashMap::new(),
             begin_system_pools: HashMap::new(),
             end_system_pools: HashMap::new(),
-            service_manager: world.service_manager.clone(),
+            service_manager: service_manager.clone(),
         }
     }
 

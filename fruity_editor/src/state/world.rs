@@ -1,5 +1,4 @@
 use fruity_core::service::service_manager::ServiceManager;
-use fruity_core::world::World;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -9,9 +8,9 @@ pub struct WorldState {
 }
 
 impl WorldState {
-    pub fn new(world: &World) -> Self {
+    pub fn new(service_manager: &Arc<RwLock<ServiceManager>>) -> Self {
         WorldState {
-            service_manager: world.service_manager.clone(),
+            service_manager: service_manager.clone(),
         }
     }
 }

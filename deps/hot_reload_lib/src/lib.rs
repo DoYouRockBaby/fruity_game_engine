@@ -32,7 +32,6 @@ impl HotReloadLib {
         let lib_path = Path::new(&lib_path_string).canonicalize().unwrap();
         let (tx, rx) = channel();
         let (library, loaded_path) = copy_and_load_library(&lib_path_string);
-        on_updated(&library);
 
         let mut watcher = raw_watcher(tx).unwrap();
         watcher.watch(folder, RecursiveMode::NonRecursive).unwrap();

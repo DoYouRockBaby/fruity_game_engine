@@ -31,7 +31,7 @@ const service2 = services.get("service2");
 
 console.log("ICI8");
 
-console.log("JS System", windowsManager.getSize());
+// console.log("JS System", windowsManager.getSize());
 service2.hello("World");
 
 entityManager.onEntityCreated.addObserver((entity) => {

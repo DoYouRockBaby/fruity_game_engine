@@ -84,8 +84,8 @@ impl MaterialResource {
         material_params: MaterialParams,
         graphics_manager: ServiceReadGuard<GraphicsManager>,
     ) -> MaterialResource {
-        let surface_config = graphics_manager.get_config().unwrap();
-        let device = graphics_manager.get_device().unwrap();
+        let surface_config = graphics_manager.get_config();
+        let device = graphics_manager.get_device();
         let shader = material_params.shader.clone();
 
         // Create the bind groups
@@ -95,16 +95,12 @@ impl MaterialResource {
             .map(|binding_group| {
                 let bind_group = match binding_group.ty {
                     MaterialParamsBindingGroupType::Camera => {
-                        let bind_group_layout =
-                            graphics_manager.get_camera_bind_group_layout().unwrap();
+                        let bind_group_layout = graphics_manager.get_camera_bind_group_layout();
                         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                            layout: &graphics_manager.get_camera_bind_group_layout().unwrap(),
+                            layout: &graphics_manager.get_camera_bind_group_layout(),
                             entries: &[wgpu::BindGroupEntry {
                                 binding: 0,
-                                resource: graphics_manager
-                                    .get_camera_buffer()
-                                    .unwrap()
-                                    .as_entire_binding(),
+                                resource: graphics_manager.get_camera_buffer().as_entire_binding(),
                             }],
                             label: Some("camera_bind_group"),
                         });

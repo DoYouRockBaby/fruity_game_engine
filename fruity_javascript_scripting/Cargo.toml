@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2018"
 resolver = "2"
 
-[lib]
-crate-type = ["dylib"]
+# [lib]
+# crate-type = ["dylib"]
 
 [dependencies]
 log = "0.4.14"

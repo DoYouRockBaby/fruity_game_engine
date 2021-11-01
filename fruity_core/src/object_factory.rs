@@ -1,6 +1,7 @@
 use crate::service::service::Service;
 use crate::service::utils::cast_service;
 use crate::service::utils::ArgumentCaster;
+use crate::ServiceManager;
 use fruity_any::*;
 use fruity_introspect::serializable_object::SerializableObject;
 use fruity_introspect::serialized::Serialized;
@@ -13,6 +14,7 @@ use fruity_introspect::MethodInfo;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
+use std::sync::RwLock;
 
 /// Provides a factory for the introspect types
 /// This will be used by the scripting language to expose object creation
@@ -29,7 +31,7 @@ impl Debug for ObjectFactory {
 
 impl ObjectFactory {
     /// Returns an ObjectFactory
-    pub fn new() -> ObjectFactory {
+    pub fn new(_service_manager: &Arc<RwLock<ServiceManager>>) -> ObjectFactory {
         ObjectFactory {
             factories: HashMap::new(),
         }

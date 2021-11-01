@@ -6,7 +6,7 @@
 [X] Make the archetype able to store datas in plain array for performances
 [X] Add a "field changed" signal on every entities
 [P] Implement entity hierarchy
-[ ] Put a get_constructor function into introspect
+[X] Put a get_constructor function into introspect
 [ ] There should be some memory leak in archetype
 [ ] Make macros for native systems
 [ ] Test and stabilize ECS
@@ -45,6 +45,7 @@
 ## Scripting
 
 [ ] Find a better way to store SerializedComponent, to have something more effective on read
+[ ] Allow to handle size variations of SerializedComponent
 [ ] There should be some memory leak when a js object is released
 [X] Javascript module is highly unsafe cause i force to put a one thread runtime into a multi thread host
 [ ] Implement web workers in js

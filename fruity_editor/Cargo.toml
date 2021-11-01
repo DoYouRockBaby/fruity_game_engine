@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2018"
 resolver = "2"
 
-[lib]
-crate-type = ["dylib"]
+# [lib]
+# crate-type = ["dylib"]
 
 [dependencies]
 iced = { git = "https://github.com/iced-rs/iced" }
