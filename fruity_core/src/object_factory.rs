@@ -3,7 +3,6 @@ use crate::service::utils::cast_service;
 use crate::service::utils::ArgumentCaster;
 use crate::ServiceManager;
 use fruity_any::*;
-use fruity_introspect::serializable_object::SerializableObject;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::Constructor;
 use fruity_introspect::FieldInfo;
@@ -59,11 +58,7 @@ impl ObjectFactory {
     /// * `object_type` - The object type identifier
     /// * `serialized` - A serialized value that will populate the new component
     ///
-    pub fn instantiate(
-        &self,
-        object_type: &str,
-        args: Vec<Serialized>,
-    ) -> Option<Box<dyn SerializableObject>> {
+    pub fn instantiate(&self, object_type: &str, args: Vec<Serialized>) -> Option<Serialized> {
         let factory = self.factories.get(object_type)?;
         let instantied = factory(args).ok()?;
         Some(instantied)
@@ -87,11 +82,7 @@ impl IntrospectObject for ObjectFactory {
                 let rest = caster.rest();
 
                 let new_object = this.instantiate(&arg1, rest);
-                if let Some(new_object) = new_object {
-                    Ok(Some(Serialized::NativeObject(new_object)))
-                } else {
-                    Ok(None)
-                }
+                Ok(new_object)
             })),
         }]
     }

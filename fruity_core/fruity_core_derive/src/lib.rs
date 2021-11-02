@@ -185,6 +185,7 @@ fn derive_component_instantiable_object_trait(input: TokenStream)  -> TokenStrea
         impl fruity_introspect::InstantiableObject for #ident {
             fn get_constructor() -> fruity_introspect::Constructor {
                 use fruity_introspect::IntrospectObject;
+
                 std::sync::Arc::new(|mut args: Vec<fruity_introspect::serialized::Serialized>| {
                     let serialized = args.remove(0);
                     let mut new_object = #ident::default();
@@ -196,6 +197,7 @@ fn derive_component_instantiable_object_trait(input: TokenStream)  -> TokenStrea
                             let field_info = new_object_fields
                                 .iter()
                                 .find(|field_info| field_info.name == *key);
+
                             if let Some(field_info) = field_info {
                                 match &field_info.setter {
                                     fruity_introspect::SetterCaller::Const(call) => {
@@ -210,7 +212,7 @@ fn derive_component_instantiable_object_trait(input: TokenStream)  -> TokenStrea
                         })
                     };
         
-                    Ok(Box::new(fruity_core::component::component::AnyComponent::new(new_object)))
+                    Ok(fruity_introspect::serialized::Serialized::NativeObject(Box::new(fruity_core::component::component::AnyComponent::new(new_object))))
                 })
             }
         }
@@ -227,10 +229,12 @@ pub fn derive_instantiable_object_trait(input: TokenStream)  -> TokenStream {
         impl fruity_introspect::InstantiableObject for #ident {
             fn get_constructor() -> fruity_introspect::Constructor {
                 use fruity_introspect::IntrospectObject;
+
                 std::sync::Arc::new(|mut args: Vec<fruity_introspect::serialized::Serialized>| {
                     let serialized = args.remove(0);
                     let mut new_object = #ident::default();
                     let new_object_fields = new_object.get_field_infos();
+
                     if let fruity_introspect::serialized::Serialized::SerializedObject { fields, .. } =
                         serialized
                     {
@@ -238,6 +242,7 @@ pub fn derive_instantiable_object_trait(input: TokenStream)  -> TokenStream {
                             let field_info = new_object_fields
                                 .iter()
                                 .find(|field_info| field_info.name == *key);
+
                             if let Some(field_info) = field_info {
                                 match &field_info.setter {
                                     fruity_introspect::SetterCaller::Const(call) => {
@@ -252,7 +257,7 @@ pub fn derive_instantiable_object_trait(input: TokenStream)  -> TokenStream {
                         })
                     };
         
-                    Ok(Box::new(new_object))
+                    Ok(new_object.into())
                 })
             }
         }

@@ -1,12 +1,10 @@
 use fruity_any::*;
 use fruity_core::service::utils::cast_service;
 use fruity_core::service::utils::ArgumentCaster;
+use fruity_core::*;
 use fruity_introspect::serializable_object::SerializableObject;
 use fruity_introspect::serialized::Serialized;
-use fruity_introspect::serialized::Serialized::SerializedObject;
-use fruity_introspect::Constructor;
 use fruity_introspect::FieldInfo;
-use fruity_introspect::InstantiableObject;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
@@ -25,7 +23,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 /// A vector in 2D dimension
-#[derive(Debug, Clone, Copy, Default, FruityAny)]
+#[derive(Debug, Clone, Copy, Default, FruityAny, InstantiableObject)]
 pub struct Vector2d {
     /// Horizontal component
     pub x: f32,
@@ -404,38 +402,6 @@ impl IntrospectObject for Vector2d {
                 })),
             },
         ]
-    }
-}
-
-impl InstantiableObject for Vector2d {
-    fn get_constructor() -> Constructor {
-        Arc::new(|mut args: Vec<Serialized>| {
-            let serialized = args.remove(0);
-            let mut new_object = Vector2d::default();
-            let new_object_fields = new_object.get_field_infos();
-
-            if let SerializedObject { fields, .. } = serialized {
-                fields.into_iter().for_each(|(key, value)| {
-                    let field_info = new_object_fields
-                        .iter()
-                        .find(|field_info| field_info.name == *key);
-
-                    if let Some(field_info) = field_info {
-                        match &field_info.setter {
-                            SetterCaller::Const(call) => {
-                                call(new_object.as_any_ref(), value);
-                            }
-                            SetterCaller::Mut(call) => {
-                                call(new_object.as_any_mut(), value);
-                            }
-                            SetterCaller::None => (),
-                        }
-                    }
-                })
-            };
-
-            Ok(Box::new(Arc::new(RwLock::new(new_object))))
-        })
     }
 }
 

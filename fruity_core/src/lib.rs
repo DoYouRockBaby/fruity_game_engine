@@ -19,6 +19,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 pub use fruity_core_derive::Component;
+pub use fruity_core_derive::InstantiableObject;
 
 #[macro_use]
 extern crate lazy_static;

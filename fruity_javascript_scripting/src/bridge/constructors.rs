@@ -88,11 +88,7 @@ pub fn configure_constructors(
 
                 // Return the result
                 if let Some(result) = result {
-                    inject_serialized_into_v8_return_value(
-                        scope,
-                        &Serialized::NativeObject(result),
-                        &mut return_value,
-                    );
+                    inject_serialized_into_v8_return_value(scope, &result, &mut return_value);
                 }
             },
             Some(data),

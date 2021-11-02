@@ -5,7 +5,6 @@
 //! Implements traits and macros to make a structure abe to list it's field and to get/set it with any
 //!
 
-use crate::serializable_object::SerializableObject;
 use crate::serialized::Serialized;
 use fruity_any::FruityAny;
 use std::any::Any;
@@ -79,9 +78,8 @@ pub fn log_introspect_error(err: &IntrospectError) {
 }
 
 /// A setter caller
-pub type Constructor = Arc<
-    dyn Fn(Vec<Serialized>) -> Result<Box<dyn SerializableObject>, IntrospectError> + Send + Sync,
->;
+pub type Constructor =
+    Arc<dyn Fn(Vec<Serialized>) -> Result<Serialized, IntrospectError> + Send + Sync>;
 
 /// A setter caller
 #[derive(Clone)]
