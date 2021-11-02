@@ -106,15 +106,15 @@ systemManager.addSystem(() => {
             let vel = new Vector2d({ x: 0, y: 0 });
 
             if (inputManager.isPressed("Run Left")) {
-                vel.x = components.get(1).velocity;
+                vel.x -= components.get(1).velocity;
             }
 
             if (inputManager.isPressed("Run Right")) {
-                vel.x = components.get(1).velocity;
+                vel.x += components.get(1).velocity;
             }
 
             if (inputManager.isPressed("Jump")) {
-                vel.y = components.get(1).velocity;
+                vel.y += components.get(1).velocity;
             }
 
             if (inputManager.isPressed("Down")) {

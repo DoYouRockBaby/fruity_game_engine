@@ -22,6 +22,7 @@ use std::ops::MulAssign;
 use std::ops::Sub;
 use std::ops::SubAssign;
 use std::sync::Arc;
+use std::sync::RwLock;
 
 /// A vector in 2D dimension
 #[derive(Debug, Clone, Copy, Default, FruityAny)]
@@ -202,10 +203,15 @@ impl TryFrom<Serialized> for Vector2d {
 
     fn try_from(value: Serialized) -> Result<Self, Self::Error> {
         match value {
-            Serialized::NativeObject(value) => match value.as_any_box().downcast::<Vector2d>() {
-                Ok(value) => Ok(*value),
-                Err(_) => Err(format!("Couldn't convert a Vector2d to native object")),
-            },
+            Serialized::NativeObject(value) => {
+                match value.as_any_box().downcast::<Arc<RwLock<Vector2d>>>() {
+                    Ok(value) => {
+                        let value = value.read().unwrap();
+                        Ok(*value)
+                    }
+                    Err(_) => Err(format!("Couldn't convert a Vector2d to native object")),
+                }
+            }
             _ => Err(format!("Couldn't convert {:?} to native object", value)),
         }
     }
@@ -213,7 +219,7 @@ impl TryFrom<Serialized> for Vector2d {
 
 impl Into<Serialized> for Vector2d {
     fn into(self) -> Serialized {
-        Serialized::NativeObject(Box::new(self))
+        Serialized::NativeObject(Box::new(Arc::new(RwLock::new(self))))
     }
 }
 
@@ -428,7 +434,7 @@ impl InstantiableObject for Vector2d {
                 })
             };
 
-            Ok(Box::new(new_object))
+            Ok(Box::new(Arc::new(RwLock::new(new_object))))
         })
     }
 }
