@@ -9,6 +9,7 @@ use fruity_graphic::initialize as initialize_graphic;
 use fruity_graphic_2d::initialize as initialize_graphic_2d;
 use fruity_input::initialize as initialize_input;
 use fruity_javascript_scripting::initialize as initialize_javascript;
+use fruity_windows::initialize as initialize_window;
 use fruity_windows::platform;
 use pretty_env_logger::formatted_builder;
 use std::fs::File;
@@ -38,6 +39,7 @@ fn main() {
             let mut resource_manager = service_manager_reader.get::<ResourcesManager>().unwrap();
             std::mem::drop(service_manager_reader);
 
+            initialize_window(service_manager, settings);
             initialize_input(service_manager, settings);
             initialize_graphic(service_manager, settings);
             initialize_graphic_2d(service_manager, settings);

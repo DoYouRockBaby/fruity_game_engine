@@ -30,6 +30,7 @@ const windowsManager = services.get("windows_manager");
 const resourcesManager = services.get("resources_manager");
 const service2 = services.get("service2");
 const inputManager = services.get("input_manager");
+const frameManager = services.get("frame_manager");
 
 console.log("ICI8");
 
@@ -77,14 +78,14 @@ systemManager.addBeginSystem(() => {
             texture: resourcesManager.getResource("assets/logo.png"),
             material: resourcesManager.getResource("assets/material.material"),
         }),
-        new Move({ velocity: 0.001 }),
+        new Move({ velocity: 0.2 }),
     ]);
 
     entityManager.create("Camera", [
         new Position({ x: -1, y: -1 }),
         new Size({ width: 2, height: 2 }),
         new Camera({}),
-        //new Velocity({ x: 0.001, y: 0.000 }),
+        //new Velocity({ x: 0.05, y: 0.000 }),
     ]);
 
     console.log("ENTITIES CREATED");
@@ -94,8 +95,8 @@ systemManager.addSystem(() => {
     entityManager
         .iterComponents(["Position", "Velocity"])
         .forEach(components => {
-            components.get(0).x += components.get(1).x;
-            components.get(0).y += components.get(1).y;
+            components.get(0).x += components.get(1).x * frameManager.delta;
+            components.get(0).y += components.get(1).y * frameManager.delta;
         });
 });
 
@@ -104,19 +105,19 @@ systemManager.addSystem(() => {
         .iterComponents(["Position", "Move"])
         .forEach(components => {
             if (inputManager.isPressed("Run Left")) {
-                components.get(0).x -= components.get(1).velocity;
+                components.get(0).x -= components.get(1).velocity * frameManager.delta;
             }
 
             if (inputManager.isPressed("Run Right")) {
-                components.get(0).x += components.get(1).velocity;
+                components.get(0).x += components.get(1).velocity * frameManager.delta;
             }
 
             if (inputManager.isPressed("Jump")) {
-                components.get(0).y += components.get(1).velocity;
+                components.get(0).y += components.get(1).velocity * frameManager.delta;
             }
 
             if (inputManager.isPressed("Down")) {
-                components.get(0).y -= components.get(1).velocity;
+                components.get(0).y -= components.get(1).velocity * frameManager.delta;
             }
         });
 });

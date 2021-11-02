@@ -17,7 +17,7 @@ use winit::window::Window;
 #[derive(FruityAny)]
 pub struct WindowsManager {
     window: Window,
-    // event_loop_proxy: EventLoopProxy<()>,
+    pub on_enter_loop: Signal<()>,
     pub on_start_update: Signal<()>,
     pub on_end_update: Signal<()>,
     pub on_resize: Signal<(usize, usize)>,
@@ -36,6 +36,7 @@ impl WindowsManager {
     pub fn new(window: Window) -> WindowsManager {
         WindowsManager {
             window,
+            on_enter_loop: Signal::new(),
             on_start_update: Signal::new(),
             on_end_update: Signal::new(),
             on_resize: Signal::new(),

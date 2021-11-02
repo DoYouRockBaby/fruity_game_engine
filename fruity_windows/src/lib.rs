@@ -1,3 +1,4 @@
+use crate::frame_manager::FrameManager;
 use crate::windows_manager::WindowsManager;
 use core::ffi::c_void;
 use fruity_core::platform::Initializer;
@@ -13,6 +14,7 @@ use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
 use winit::window::WindowBuilder;
 
+pub mod frame_manager;
 pub mod windows_manager;
 
 struct WindowSettings {
@@ -22,11 +24,19 @@ struct WindowSettings {
     resizable: bool,
 }
 
+pub fn initialize(service_manager: &Arc<RwLock<ServiceManager>>, _settings: &Settings) {
+    let frame_manager = FrameManager::new(service_manager);
+
+    let mut service_manager_writer = service_manager.write().unwrap();
+    service_manager_writer.register("frame_manager", frame_manager);
+}
+
 pub fn platform(
     service_manager: &Arc<RwLock<ServiceManager>>,
     initializer: Initializer,
     settings: &Settings,
 ) {
+    // Get dependencies
     let service_manager_reader = service_manager.read().unwrap();
     let system_manager = service_manager_reader.get::<SystemManager>().unwrap();
     std::mem::drop(service_manager_reader);
@@ -72,6 +82,12 @@ pub fn platform(
     std::mem::drop(system_manager_reader);
 
     // Run the render loop
+    let service_manager_reader = service_manager.read().unwrap();
+    let windows_manager = service_manager_reader.get::<WindowsManager>().unwrap();
+    let windows_manager = windows_manager.read().unwrap();
+    windows_manager.on_enter_loop.notify(());
+    std::mem::drop(windows_manager);
+    std::mem::drop(service_manager_reader);
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
