@@ -84,7 +84,6 @@ impl ShaderResource {
 impl Resource for ShaderResource {}
 
 pub fn load_shader(
-    resources_manager: &mut ResourcesManager,
     identifier: ResourceIdentifier,
     reader: &mut dyn Read,
     settings: Settings,
@@ -93,6 +92,7 @@ pub fn load_shader(
     // Get the graphic manager state
     let service_manager = service_manager.read().unwrap();
     let graphics_manager = service_manager.read::<GraphicsManager>();
+    let mut resources_manager = service_manager.write::<ResourcesManager>();
     let device = graphics_manager.get_device();
 
     // read the whole file

@@ -30,12 +30,14 @@ impl ImageResource {
 impl Resource for ImageResource {}
 
 pub fn load_image(
-    resources_manager: &mut ResourcesManager,
     identifier: ResourceIdentifier,
     reader: &mut dyn Read,
     settings: Settings,
     service_manager: Arc<RwLock<ServiceManager>>,
 ) {
+    let service_manager = service_manager.read().unwrap();
+    let mut resources_manager = service_manager.write::<ResourcesManager>();
+
     let load_type = settings.get::<String>("type", "image".to_string());
 
     // read the whole file
@@ -59,7 +61,6 @@ pub fn load_image(
         let image = load_from_memory(&buffer).unwrap();
 
         // Get the graphic manager state
-        let service_manager = service_manager.read().unwrap();
         let graphics_manager = service_manager.read::<GraphicsManager>();
         let device = graphics_manager.get_device();
         let queue = graphics_manager.get_queue();

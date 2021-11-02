@@ -35,7 +35,7 @@ fn main() {
     world.run(
         |service_manager, settings| {
             let service_manager_reader = service_manager.read().unwrap();
-            let resource_manager = service_manager_reader.get::<ResourcesManager>().unwrap();
+            let mut resource_manager = service_manager_reader.get::<ResourcesManager>().unwrap();
             std::mem::drop(service_manager_reader);
 
             initialize_input(service_manager, settings);
@@ -45,7 +45,6 @@ fn main() {
             initialize_javascript(service_manager, settings);
 
             // Load resources
-            let mut resource_manager = resource_manager.write().unwrap();
             let resource_settings = settings.get::<Vec<Settings>>("resources", Vec::new());
             resource_manager.load_resources_settings(resource_settings);
 

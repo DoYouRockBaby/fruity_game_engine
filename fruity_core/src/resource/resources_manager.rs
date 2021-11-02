@@ -3,6 +3,7 @@ use crate::resource::error::LoadResourceError;
 use crate::resource::error::RemoveResourceError;
 use crate::resource::resource::Resource;
 use crate::service::service::Service;
+use crate::service::service_rwlock::ServiceRwLock;
 use crate::service::utils::cast_service;
 use crate::service::utils::ArgumentCaster;
 use crate::settings::Settings;
@@ -22,13 +23,8 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 /// A a function that is used to load a resource
-pub type ResourceLoader = fn(
-    &mut ResourcesManager,
-    ResourceIdentifier,
-    &mut dyn Read,
-    Settings,
-    Arc<RwLock<ServiceManager>>,
-);
+pub type ResourceLoader =
+    fn(ResourceIdentifier, &mut dyn Read, Settings, Arc<RwLock<ServiceManager>>);
 
 /// A unique resource identifier
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -106,6 +102,55 @@ impl ResourcesManager {
         self.resources.contains_key(&identifier)
     }
 
+    /// Add a resource into the collection
+    ///
+    /// # Arguments
+    /// * `identifier` - The resource identifier
+    /// * `resource` - The resource object
+    ///
+    pub fn add_resource<T: Resource>(
+        &mut self,
+        identifier: ResourceIdentifier,
+        resource: T,
+    ) -> Result<(), AddResourceError> {
+        if self.resources.contains_key(&identifier) {
+            Err(AddResourceError::ResourceAlreadyExists(identifier))
+        } else {
+            self.resources.insert(identifier, Arc::new(resource));
+            Ok(())
+        }
+    }
+
+    /// Remove a resource of the collection
+    ///
+    /// # Arguments
+    /// * `identifier` - The resource identifier
+    ///
+    pub fn remove_resource(
+        &mut self,
+        identifier: ResourceIdentifier,
+    ) -> Result<(), RemoveResourceError> {
+        if self.resources.contains_key(&identifier) {
+            self.resources.remove(&identifier);
+            Ok(())
+        } else {
+            Err(RemoveResourceError::ResourceNotFound(identifier))
+        }
+    }
+
+    /// Add a resource loader that will be used to load resources
+    ///
+    /// # Arguments
+    /// * `resource_type` - The resource loader type
+    /// * `loader` - The resource loader
+    ///
+    pub fn add_resource_loader(&mut self, resource_type: &str, loader: ResourceLoader) {
+        self.resource_loaders
+            .insert(resource_type.to_string(), loader);
+    }
+}
+
+impl ServiceRwLock<ResourcesManager> {
     /// Load an any resource file
     ///
     /// # Arguments
@@ -142,20 +187,23 @@ impl ResourcesManager {
         reader: &mut dyn Read,
         settings: Settings,
     ) -> Result<(), LoadResourceError> {
-        if let Some(resource_loader) = self.resource_loaders.get(resource_type) {
-            resource_loader(
-                self,
-                identifier,
-                reader,
-                settings,
-                self.service_manager.clone(),
-            );
-            Ok(())
-        } else {
-            Err(LoadResourceError::ResourceTypeNotKnown(
-                resource_type.to_string(),
-            ))
-        }
+        let resources_manager = self.read().unwrap();
+        let service_manager = resources_manager.service_manager.clone();
+
+        let resource_loader =
+            if let Some(resource_loader) = resources_manager.resource_loaders.get(resource_type) {
+                Ok(resource_loader)
+            } else {
+                Err(LoadResourceError::ResourceTypeNotKnown(
+                    resource_type.to_string(),
+                ))
+            }?;
+
+        let resource_loader = resource_loader.clone();
+        std::mem::drop(resources_manager);
+
+        resource_loader(identifier, reader, settings, service_manager);
+        Ok(())
     }
 
     /// Load many resources for settings
@@ -207,53 +255,6 @@ impl ResourcesManager {
         .ok()?;
 
         Some(())
-    }
-
-    /// Add a resource into the collection
-    ///
-    /// # Arguments
-    /// * `identifier` - The resource identifier
-    /// * `resource` - The resource object
-    ///
-    pub fn add_resource<T: Resource>(
-        &mut self,
-        identifier: ResourceIdentifier,
-        resource: T,
-    ) -> Result<(), AddResourceError> {
-        if self.resources.contains_key(&identifier) {
-            Err(AddResourceError::ResourceAlreadyExists(identifier))
-        } else {
-            self.resources.insert(identifier, Arc::new(resource));
-            Ok(())
-        }
-    }
-
-    /// Remove a resource of the collection
-    ///
-    /// # Arguments
-    /// * `identifier` - The resource identifier
-    ///
-    pub fn remove_resource(
-        &mut self,
-        identifier: ResourceIdentifier,
-    ) -> Result<(), RemoveResourceError> {
-        if self.resources.contains_key(&identifier) {
-            self.resources.remove(&identifier);
-            Ok(())
-        } else {
-            Err(RemoveResourceError::ResourceNotFound(identifier))
-        }
-    }
-
-    /// Add a resource loader that will be used to load resources
-    ///
-    /// # Arguments
-    /// * `resource_type` - The resource loader type
-    /// * `loader` - The resource loader
-    ///
-    pub fn add_resource_loader(&mut self, resource_type: &str, loader: ResourceLoader) {
-        self.resource_loaders
-            .insert(resource_type.to_string(), loader);
     }
 }
 

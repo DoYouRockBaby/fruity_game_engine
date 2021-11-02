@@ -216,15 +216,15 @@ impl MaterialResource {
 impl Resource for MaterialResource {}
 
 pub fn load_material(
-    resources_manager: &mut ResourcesManager,
     identifier: ResourceIdentifier,
     reader: &mut dyn Read,
     _settings: Settings,
     service_manager: Arc<RwLock<ServiceManager>>,
 ) {
-    // Get the graphic manager state
+    // Get the dependencies
     let service_manager = service_manager.read().unwrap();
     let graphics_manager = service_manager.read::<GraphicsManager>();
+    let mut resources_manager = service_manager.write::<ResourcesManager>();
 
     // read the whole file
     let mut buffer = String::new();
@@ -242,7 +242,7 @@ pub fn load_material(
 
     // Parse settings
     let material_settings =
-        if let Some(material_settings) = build_material_params(resources_manager, &settings) {
+        if let Some(material_settings) = build_material_params(&resources_manager, &settings) {
             material_settings
         } else {
             return;
