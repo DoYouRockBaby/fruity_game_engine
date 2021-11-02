@@ -20,13 +20,6 @@ pub fn platform(
     initializer: Initializer,
     settings: &Settings,
 ) {
-    /*let (run_callback, windows_manager) = WindowsManager::new(service_manager);
-
-    let mut service_manager = service_manager.write().unwrap();
-    service_manager.register("windows_manager", windows_manager);
-
-    Some(run_callback)*/
-
     let service_manager_reader = service_manager.read().unwrap();
     let system_manager = service_manager_reader.get::<SystemManager>().unwrap();
     std::mem::drop(service_manager_reader);

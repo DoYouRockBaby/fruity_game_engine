@@ -16,5 +16,6 @@ mini-redis = "0.4"
 fruity_editor = { path = "fruity_editor" }
 fruity_graphic = { path = "fruity_graphic" }
 fruity_graphic_2d = { path = "fruity_graphic_2d" }
+fruity_input = { path = "fruity_input" }
 fruity_javascript_scripting = { path = "fruity_javascript_scripting" }
 fruity_windows = { path = "fruity_windows" }

@@ -1020,6 +1020,7 @@ dependencies = [
  "fruity_editor",
  "fruity_graphic",
  "fruity_graphic_2d",
+ "fruity_input",
  "fruity_introspect",
  "fruity_javascript_scripting",
  "fruity_windows",
@@ -1062,6 +1063,17 @@ dependencies = [
  "log",
  "rayon",
  "wgpu",
+ "winit 0.25.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "fruity_input"
+version = "0.1.0"
+dependencies = [
+ "fruity_any",
+ "fruity_core",
+ "fruity_introspect",
+ "fruity_windows",
  "winit 0.25.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

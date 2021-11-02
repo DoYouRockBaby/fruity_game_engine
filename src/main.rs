@@ -7,6 +7,7 @@ use fruity_core::world::World;
 use fruity_editor::initialize as initialize_editor;
 use fruity_graphic::initialize as initialize_graphic;
 use fruity_graphic_2d::initialize as initialize_graphic_2d;
+use fruity_input::initialize as initialize_input;
 use fruity_javascript_scripting::initialize as initialize_javascript;
 use fruity_windows::platform;
 use pretty_env_logger::formatted_builder;
@@ -33,19 +34,25 @@ fn main() {
     // Run the engine
     world.run(
         |service_manager, settings| {
+            let service_manager_reader = service_manager.read().unwrap();
+            let resource_manager = service_manager_reader.get::<ResourcesManager>().unwrap();
+            std::mem::drop(service_manager_reader);
+
+            initialize_input(service_manager, settings);
             initialize_graphic(service_manager, settings);
             initialize_graphic_2d(service_manager, settings);
             initialize_editor(service_manager, settings);
+            initialize_javascript(service_manager, settings);
 
             // Load resources
-            {
-                let service_manager = service_manager.read().unwrap();
-                let mut resource_manager = service_manager.write::<ResourcesManager>();
-                let resource_settings = settings.get::<Vec<Settings>>("resources", Vec::new());
-                resource_manager.load_resources_settings(resource_settings);
-            }
+            let mut resource_manager = resource_manager.write().unwrap();
+            let resource_settings = settings.get::<Vec<Settings>>("resources", Vec::new());
+            resource_manager.load_resources_settings(resource_settings);
 
-            initialize_javascript(service_manager, settings);
+            // Load js script
+            resource_manager
+                .load_resource_file("assets/index.js", "js")
+                .unwrap();
 
             /*let mut module_manager = ModuleManager::new(&service_manager);
             module_manager.load_module("./target/debug", "fruity_graphic");

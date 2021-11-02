@@ -7,7 +7,6 @@ use crate::runtime::JsRuntime;
 use fruity_core::resource::resources_manager::ResourcesManager;
 use fruity_core::service::service_manager::ServiceManager;
 use fruity_core::settings::Settings;
-use fruity_core::RunCallback;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -24,10 +23,7 @@ mod serialize;
 mod thread_scope_stack;
 
 // #[no_mangle]
-pub fn initialize(
-    service_manager: &Arc<RwLock<ServiceManager>>,
-    _settings: &Settings,
-) -> Option<RunCallback> {
+pub fn initialize(service_manager: &Arc<RwLock<ServiceManager>>, _settings: &Settings) {
     let javascript_engine = JavascriptEngine::new(service_manager);
 
     let mut service_manager_writer = service_manager.write().unwrap();
@@ -35,21 +31,4 @@ pub fn initialize(
 
     let mut resources_manager = service_manager_writer.write::<ResourcesManager>();
     resources_manager.add_resource_loader("js", load_js_script);
-
-    std::mem::drop(resources_manager);
-    std::mem::drop(service_manager_writer);
-
-    // Load index script
-    // TODO: Make it configurable
-    {
-        let javascript_engine = {
-            let service_manager_reader = service_manager.read().unwrap();
-            service_manager_reader.get::<JavascriptEngine>().unwrap()
-        };
-
-        let javascript_engine = javascript_engine.read().unwrap();
-        javascript_engine.run_module("assets/index.js");
-    };
-
-    None
 }

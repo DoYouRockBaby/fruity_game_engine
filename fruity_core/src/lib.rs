@@ -76,11 +76,8 @@ macro_rules! entity_type {
     };
 }
 
-/// A callback that is used to run the game engine
-pub type RunCallback = Box<dyn FnOnce()>;
-
 /// Initialize this extension
-pub fn initialize(service_manager: &Arc<RwLock<ServiceManager>>) -> Option<RunCallback> {
+pub fn initialize(service_manager: &Arc<RwLock<ServiceManager>>) {
     //let module_manager = ModuleManager::new(service_manager);
     let entity_manager = EntityManager::new(service_manager);
     let system_manager = SystemManager::new(service_manager);
@@ -92,6 +89,4 @@ pub fn initialize(service_manager: &Arc<RwLock<ServiceManager>>) -> Option<RunCa
     service_manager.register("system_manager", system_manager);
     service_manager.register("object_factory", object_factory);
     service_manager.register("resources_manager", resources_manager);
-
-    None
 }

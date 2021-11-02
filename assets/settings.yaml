@@ -1,8 +1,8 @@
 inputs:
-- "Jump": "Up"
-- "Run Right": "Right"
-- "Run Left": "Left"
-- "Down": "Down"
+- "Jump": "Keyboard/Up"
+- "Run Right": "Keyboard/Right"
+- "Run Left": "Keyboard/Left"
+- "Down": "Keyboard/Down"
 resources:
 - path: "assets/logo.png"
   type: texture
