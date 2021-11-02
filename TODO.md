@@ -27,7 +27,7 @@
 ## Game tools
 
 [X] Inputs
-[ ] Time service
+[X] Time service
 [ ] Animations everywhere (including sprite animations)
 [ ] State manager
 [ ] Basic 2D physics (collision only)
