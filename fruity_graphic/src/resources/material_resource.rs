@@ -1,3 +1,4 @@
+use crate::math::GREEN;
 use crate::resources::shader_resource::ShaderResource;
 use crate::resources::texture_resource::TextureResource;
 use crate::GraphicsManager;
@@ -12,9 +13,11 @@ use fruity_core::settings::Settings;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
+use std::collections::HashMap;
 use std::io::Read;
 use std::sync::Arc;
 use std::sync::RwLock;
+use wgpu::util::DeviceExt;
 use yaml_rust::YamlLoader;
 
 #[repr(C)]
@@ -49,6 +52,7 @@ impl Vertex {
 #[derive(Debug, FruityAny)]
 pub struct MaterialResource {
     pub shader: Arc<ShaderResource>,
+    pub param_buffers: HashMap<String, wgpu::Buffer>,
     pub bind_groups: Vec<(u32, wgpu::BindGroup)>,
     pub render_pipeline: wgpu::RenderPipeline,
 }
@@ -71,6 +75,7 @@ struct MaterialParamsBinding {
 enum MaterialParamsBindingType {
     Texture { texture: Arc<TextureResource> },
     Sampler { texture: Arc<TextureResource> },
+    Uniform,
 }
 
 enum MaterialParamsBindingGroupType {
@@ -87,6 +92,7 @@ impl MaterialResource {
         let surface_config = graphics_manager.get_config();
         let device = graphics_manager.get_device();
         let shader = material_params.shader.clone();
+        let mut param_buffers: HashMap<String, wgpu::Buffer> = HashMap::new();
 
         // Create the bind groups
         let bind_groups = material_params
@@ -137,6 +143,32 @@ impl MaterialResource {
                                                 &texture.sampler,
                                             ),
                                         }
+                                    }
+                                    MaterialParamsBindingType::Uniform => {
+                                        let color = GREEN;
+                                        let color_buffer = device.create_buffer_init(
+                                            &wgpu::util::BufferInitDescriptor {
+                                                label: Some("Color Buffer"),
+                                                contents: bytemuck::cast_slice(&[color.clone()]),
+                                                usage: wgpu::BufferUsages::UNIFORM
+                                                    | wgpu::BufferUsages::COPY_DST,
+                                            },
+                                        );
+
+                                        param_buffers.insert("Color".to_string(), color_buffer);
+                                        let buffer = param_buffers.get("Color").unwrap();
+                                        let buffer = unsafe {
+                                            std::mem::transmute::<&wgpu::Buffer, &wgpu::Buffer>(
+                                                &buffer,
+                                            )
+                                        };
+
+                                        let bind_group = wgpu::BindGroupEntry {
+                                            binding: 0,
+                                            resource: buffer.as_entire_binding(),
+                                        };
+
+                                        bind_group
                                     }
                                 })
                                 .collect::<Vec<_>>(),
@@ -204,6 +236,7 @@ impl MaterialResource {
 
         MaterialResource {
             shader: material_params.shader,
+            param_buffers,
             bind_groups: bind_groups
                 .into_iter()
                 .map(|bind_group| (bind_group.0, bind_group.1 .0))
@@ -343,6 +376,7 @@ fn build_material_bind_params(
                 None
             }
         }
+        "uniform" => Some(MaterialParamsBindingType::Uniform),
         _ => None,
     }
     .map(|ty| MaterialParamsBinding {

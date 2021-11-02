@@ -26,6 +26,7 @@ pub enum ShaderBindingVisibility {
 pub enum ShaderBindingType {
     Texture,
     Sampler,
+    Uniform,
 }
 
 pub struct ShaderBinding {
@@ -66,6 +67,11 @@ impl ShaderResource {
                         ShaderBindingType::Sampler => wgpu::BindingType::Sampler {
                             comparison: false,
                             filtering: true,
+                        },
+                        ShaderBindingType::Uniform => wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
                         },
                     },
                     count: None,
@@ -116,6 +122,7 @@ pub fn load_shader(
             ty: match &params.get::<String>("type", String::default()) as &str {
                 "texture" => ShaderBindingType::Texture,
                 "sampler" => ShaderBindingType::Sampler,
+                "uniform" => ShaderBindingType::Uniform,
                 _ => ShaderBindingType::Texture,
             },
         })

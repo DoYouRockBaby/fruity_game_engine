@@ -82,8 +82,8 @@ systemManager.addBeginSystem(() => {
     ]);
 
     entityManager.create("Camera", [
-        new Position({ x: -1, y: -1 }),
-        new Size({ width: 2, height: 2 }),
+        new Position({ x: -1.5, y: -1 }),
+        new Size({ width: 3, height: 2 }),
         new Camera({}),
         //new Velocity({ x: 0.05, y: 0.000 }),
     ]);

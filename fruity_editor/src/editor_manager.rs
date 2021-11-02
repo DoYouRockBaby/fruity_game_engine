@@ -1,12 +1,19 @@
+use crate::hooks::use_global;
+use crate::state::entity::EntityState;
 use crate::Panes;
 use core::ffi::c_void;
 use fruity_any::*;
+use fruity_core::entity::entity::EntityId;
 use fruity_core::service::service::Service;
 use fruity_core::service::service_manager::ServiceManager;
 use fruity_core::service::service_rwlock::ServiceRwLock;
+use fruity_core::service::utils::cast_service;
+use fruity_core::service::utils::ArgumentCaster;
 use fruity_graphic::graphics_manager::GraphicsManager;
+use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
+use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use fruity_windows::windows_manager::WindowsManager;
 use iced::futures::task::SpawnExt;
@@ -235,6 +242,16 @@ impl EditorManager {
         window.set_cursor_icon(iced_winit::conversion::mouse_interaction(mouse_interaction));
     }
 
+    fn is_entity_selected(&self, entity_id: &EntityId) -> bool {
+        let entity_state = use_global::<EntityState>();
+        if let Some(selected_entity) = &entity_state.selected_entity {
+            let entity = selected_entity.read();
+            entity.entity_id == *entity_id
+        } else {
+            false
+        }
+    }
+
     fn handle_cursor_move(&mut self, x: &usize, y: &usize) {
         self.state.cursor_position = PhysicalPosition::new(*x as f64, *y as f64);
     }
@@ -313,7 +330,18 @@ impl EditorManager {
 
 impl IntrospectObject for EditorManager {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
-        vec![]
+        vec![MethodInfo {
+            name: "is_entity_selected".to_string(),
+            call: MethodCaller::Const(Arc::new(|this, args| {
+                let this = cast_service::<EditorManager>(this);
+
+                let mut caster = ArgumentCaster::new("is_entity_selected", args);
+                let arg1 = caster.cast_next::<EntityId>()?;
+
+                let result = this.is_entity_selected(&arg1);
+                Ok(Some(Serialized::Bool(result)))
+            })),
+        }]
     }
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
