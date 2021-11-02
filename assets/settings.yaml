@@ -1,3 +1,8 @@
+window:
+  title: "Fruity Example"
+  width: 1200
+  height: 800
+  resizable: true
 inputs:
 - "Jump": "Keyboard/Up"
 - "Run Right": "Keyboard/Right"

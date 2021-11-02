@@ -15,6 +15,13 @@ use winit::window::WindowBuilder;
 
 pub mod windows_manager;
 
+struct WindowSettings {
+    title: String,
+    width: usize,
+    height: usize,
+    resizable: bool,
+}
+
 pub fn platform(
     service_manager: &Arc<RwLock<ServiceManager>>,
     initializer: Initializer,
@@ -24,14 +31,21 @@ pub fn platform(
     let system_manager = service_manager_reader.get::<SystemManager>().unwrap();
     std::mem::drop(service_manager_reader);
 
+    // Read settings
+    let window_settings = read_window_settings(settings);
+
     // Build the window
     let event_loop = EventLoop::<()>::with_user_event();
     let window = WindowBuilder::new()
-        .with_title("Hit space to toggle resizability.")
-        .with_inner_size(LogicalSize::new(800, 800))
-        .with_resizable(true)
+        .with_title(window_settings.title)
+        .with_inner_size(LogicalSize::new(
+            window_settings.width as u32,
+            window_settings.height as u32,
+        ))
+        .with_resizable(window_settings.resizable)
         .build(&event_loop)
         .unwrap();
+
     let window_id = window.id();
 
     // Build and inject the windows service
@@ -123,4 +137,15 @@ pub fn platform(
         // End the update
         on_end_update.notify(());
     });
+}
+
+fn read_window_settings(settings: &Settings) -> WindowSettings {
+    let settings = settings.get_settings("window");
+
+    WindowSettings {
+        title: settings.get("title", "".to_string()),
+        width: settings.get("width", 512),
+        height: settings.get("height", 512),
+        resizable: settings.get("resizable", true),
+    }
 }
