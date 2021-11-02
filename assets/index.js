@@ -8,6 +8,12 @@ class Service2 {
     }
 }
 
+class Move {
+    constructor(args) {
+        Object.assign(this, args);
+    }
+}
+
 class Velocity {
     constructor(args) {
         Object.assign(this, args);
@@ -18,21 +24,25 @@ console.log("ICI1");
 services.register("service2", new Service2());
 console.log("ICI2");
 const systemManager = services.get("system_manager");
-console.log("ICI3");
 const entityManager = services.get("entity_manager");
-console.log("ICI4");
 const componentFactory = services.get("components_factory");
-console.log("ICI5");
 const windowsManager = services.get("windows_manager");
-console.log("ICI6");
 const resourcesManager = services.get("resources_manager");
-console.log("ICI7");
 const service2 = services.get("service2");
+const inputManager = services.get("input_manager");
 
 console.log("ICI8");
 
 // console.log("JS System", windowsManager.getSize());
 service2.hello("World");
+
+inputManager.onPressed.addObserver((key) => {
+    console.log("Pressed", key);
+});
+
+inputManager.onReleased.addObserver((key) => {
+    console.log("Released", key);
+});
 
 entityManager.onEntityCreated.addObserver((entity) => {
     if (entity.contains(["Position", "Camera"])) {
@@ -58,16 +68,16 @@ systemManager.addBeginSystem(() => {
             texture: resourcesManager.getResource("assets/logo.png"),
             material: resourcesManager.getResource("assets/material.material"),
         }),
-        new Velocity({ x: 0.001, y: 0.001 }),
     ]);
 
-    entityManager.create("Image 2", [
+    entityManager.create("Player", [
         new Position({ x: -0.25, y: 0.25 }),
         new Size({ width: 0.3, height: 0.3 }),
         new Sprite({
             texture: resourcesManager.getResource("assets/logo.png"),
             material: resourcesManager.getResource("assets/material.material"),
         }),
+        new Move({ velocity: 0.001 }),
     ]);
 
     entityManager.create("Camera", [
@@ -86,5 +96,27 @@ systemManager.addSystem(() => {
         .forEach(components => {
             components.get(0).x += components.get(1).x;
             components.get(0).y += components.get(1).y;
+        });
+});
+
+systemManager.addSystem(() => {
+    entityManager
+        .iterComponents(["Position", "Move"])
+        .forEach(components => {
+            if (inputManager.isPressed("Run Left")) {
+                components.get(0).x -= components.get(1).velocity;
+            }
+
+            if (inputManager.isPressed("Run Right")) {
+                components.get(0).x += components.get(1).velocity;
+            }
+
+            if (inputManager.isPressed("Jump")) {
+                components.get(0).y += components.get(1).velocity;
+            }
+
+            if (inputManager.isPressed("Down")) {
+                components.get(0).y -= components.get(1).velocity;
+            }
         });
 });

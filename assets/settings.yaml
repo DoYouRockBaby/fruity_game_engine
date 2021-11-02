@@ -3,11 +3,15 @@ window:
   width: 1200
   height: 800
   resizable: true
-inputs:
-- "Jump": "Keyboard/Up"
-- "Run Right": "Keyboard/Right"
-- "Run Left": "Keyboard/Left"
-- "Down": "Keyboard/Down"
+input:
+  "Jump":
+  - "Keyboard/Up"
+  "Run Right":
+  - "Keyboard/Right"
+  "Run Left":
+  - "Keyboard/Left"
+  "Down":
+  - "Keyboard/Down"
 resources:
 - path: "assets/logo.png"
   type: texture
