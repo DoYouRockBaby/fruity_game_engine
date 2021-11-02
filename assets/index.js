@@ -63,8 +63,8 @@ entityManager.onEntityCreated.addObserver((entity) => {
 
 systemManager.addBeginSystem(() => {
     entityManager.create("Image 1", [
-        new Position({ x: 0.25, y: 0.25 }),
-        new Size({ width: 0.5, height: 0.5 }),
+        new Position({ pos: new Vector2d({ x: 0.25, y: 0.25 }) }),
+        new Size({ size: new Vector2d({ x: 0.5, y: 0.5 }) }),
         new Sprite({
             texture: resourcesManager.getResource("assets/logo.png"),
             material: resourcesManager.getResource("assets/material.material"),
@@ -72,8 +72,8 @@ systemManager.addBeginSystem(() => {
     ]);
 
     entityManager.create("Player", [
-        new Position({ x: -0.25, y: 0.25 }),
-        new Size({ width: 0.3, height: 0.3 }),
+        new Position({ pos: new Vector2d({ x: -0.25, y: 0.25 }) }),
+        new Size({ size: new Vector2d({ x: 0.3, y: 0.3 }) }),
         new Sprite({
             texture: resourcesManager.getResource("assets/logo.png"),
             material: resourcesManager.getResource("assets/material.material"),
@@ -82,10 +82,10 @@ systemManager.addBeginSystem(() => {
     ]);
 
     entityManager.create("Camera", [
-        new Position({ x: -1.5, y: -1 }),
-        new Size({ width: 3, height: 2 }),
+        new Position({ pos: new Vector2d({ x: -1.5, y: -1 }) }),
+        new Size({ size: new Vector2d({ x: 3, y: 2 }) }),
         new Camera({}),
-        //new Velocity({ x: 0.05, y: 0.000 }),
+        // new Velocity({ vel: new Vector2d({ x: 0.05, y: 0.05 }) }),
     ]);
 
     console.log("ENTITIES CREATED");
@@ -95,8 +95,7 @@ systemManager.addSystem(() => {
     entityManager
         .iterComponents(["Position", "Velocity"])
         .forEach(components => {
-            components.get(0).x += components.get(1).x * frameManager.delta;
-            components.get(0).y += components.get(1).y * frameManager.delta;
+            components.get(0).pos = components.get(0).pos.add(components.get(1).vel.mul(frameManager.delta));
         });
 });
 
@@ -104,20 +103,24 @@ systemManager.addSystem(() => {
     entityManager
         .iterComponents(["Position", "Move"])
         .forEach(components => {
+            let vel = new Vector2d({ x: 0, y: 0 });
+
             if (inputManager.isPressed("Run Left")) {
-                components.get(0).x -= components.get(1).velocity * frameManager.delta;
+                vel.x = components.get(1).velocity;
             }
 
             if (inputManager.isPressed("Run Right")) {
-                components.get(0).x += components.get(1).velocity * frameManager.delta;
+                vel.x = components.get(1).velocity;
             }
 
             if (inputManager.isPressed("Jump")) {
-                components.get(0).y += components.get(1).velocity * frameManager.delta;
+                vel.y = components.get(1).velocity;
             }
 
             if (inputManager.isPressed("Down")) {
-                components.get(0).y -= components.get(1).velocity * frameManager.delta;
+                vel.y -= components.get(1).velocity;
             }
+
+            components.get(0).pos = components.get(0).pos.add(vel.mul(frameManager.delta));
         });
 });

@@ -19,7 +19,7 @@ pub fn draw_camera(
      graphics_2d_manager: ServiceReadGuard<Graphics2dManager>,
     system_manager: ServiceReadGuard<SystemManager>,
 ) {
-    let view_proj = Matrix4::from_rect(position.x, position.x + size.width, position.y, position.y + size.height, camera.near, camera.far);
+    let view_proj = Matrix4::from_rect(position.pos.x, position.pos.x + size.size.x, position.pos.y, position.pos.y + size.size.y, camera.near, camera.far);
     graphics_2d_manager.start_rendering(view_proj);
     std::mem::drop(graphics_2d_manager);
 

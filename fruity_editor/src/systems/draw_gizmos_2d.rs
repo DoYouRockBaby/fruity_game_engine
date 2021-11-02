@@ -2,7 +2,6 @@ use fruity_core::entity::entity_manager::EntityManager;
 use fruity_core::entity_type;
 use fruity_core::service::service_guard::ServiceReadGuard;
 use fruity_core::service::service_manager::ServiceManager;
-use fruity_graphic::math::RED;
 use fruity_graphic_2d::components::position::Position;
 use fruity_graphic_2d::components::size::Size;
 use fruity_graphic_2d::graphics_2d_manager::Graphics2dManager;
@@ -11,18 +10,18 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 pub fn draw_gizmos_2d(
-    position: &Position,
-    size: &Size,
-    graphics_2d_manager: ServiceReadGuard<Graphics2dManager>,
+    _position: &Position,
+    _size: &Size,
+    _graphics_2d_manager: ServiceReadGuard<Graphics2dManager>,
 ) {
-    graphics_2d_manager.draw_line(
+    /*graphics_2d_manager.draw_line(
         position.x,
         position.y,
         position.x + size.width,
         position.y + size.height,
         3.0,
         &RED,
-    );
+    );*/
 }
 
 pub fn draw_gizmos_2d_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
