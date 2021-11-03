@@ -122,6 +122,22 @@ impl Vector2d {
     pub fn angle(self) -> f32 {
         self.y.atan2(self.x)
     }
+
+    /// Check if the point is in a triangle
+    pub fn in_triangle(&self, p1: &Vector2d, p2: &Vector2d, p3: &Vector2d) -> bool {
+        pub fn sign(p1: &Vector2d, p2: &Vector2d, p3: &Vector2d) -> f32 {
+            (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y)
+        }
+
+        let d1 = sign(self, p1, p2);
+        let d2 = sign(self, p2, p3);
+        let d3 = sign(self, p3, p1);
+
+        let has_neg = (d1 < 0.0) || (d2 < 0.0) || (d3 < 0.0);
+        let has_pos = (d1 > 0.0) || (d2 > 0.0) || (d3 > 0.0);
+
+        return !(has_neg && has_pos);
+    }
 }
 
 // Ops Implementations

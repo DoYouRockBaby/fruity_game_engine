@@ -1,4 +1,7 @@
 use crate::gizmos_service::GizmosService;
+use crate::hooks::use_global;
+use crate::state::entity::EntityState;
+use fruity_core::entity::entity::EntityId;
 use fruity_core::entity::entity_manager::EntityManager;
 use fruity_core::entity_type;
 use fruity_core::service::service_guard::ServiceReadGuard;
@@ -12,11 +15,22 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 pub fn draw_gizmos_2d(
+    entity_id: &EntityId,
     position: &Position,
     size: &Size,
     gizmos_service: ServiceReadGuard<GizmosService>,
 ) {
-    gizmos_service.draw_square_helper(position.pos, position.pos + size.size, GREEN, RED);
+    let entity = use_global::<EntityState>();
+
+    if let Some(selected_entity) = &entity.selected_entity {
+        let selected_entity = selected_entity.read();
+        let selected_entity_id = selected_entity.entity_id;
+
+        if selected_entity_id == *entity_id {
+            gizmos_service.draw_square_helper(position.pos, position.pos + size.size, GREEN, RED);
+            gizmos_service.draw_resize_helper(position.pos, position.pos + size.size, GREEN, RED);
+        }
+    }
 }
 
 pub fn draw_gizmos_2d_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
@@ -67,7 +81,7 @@ pub fn draw_gizmos_2d_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
             };
 
             let service1 = service_manager.read::<GizmosService>();
-            draw_gizmos_2d(position, size, service1);
+            draw_gizmos_2d(&components.get_entity_id(), position, size, service1);
         },
     );
 }

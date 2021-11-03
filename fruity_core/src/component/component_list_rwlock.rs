@@ -2,6 +2,7 @@ use crate::component::component_list_guard::ComponentListReadGuard;
 use crate::component::component_list_guard::ComponentListWriteGuard;
 use crate::component::component_rwlock::ComponentRwLock;
 use crate::entity::archetype::rwlock::EntitySharedRwLock;
+use crate::entity::entity::EntityId;
 use crate::service::utils::cast_service;
 use crate::service::utils::ArgumentCaster;
 use fruity_any::*;
@@ -65,6 +66,12 @@ impl ComponentListRwLock {
     ///
     pub fn write(&self) -> ComponentListWriteGuard {
         ComponentListWriteGuard::new(self.entity.write(), self.component_indexes.clone())
+    }
+
+    /// Returns the associated entity id
+    pub fn get_entity_id(&self) -> EntityId {
+        let entity = self.entity.read();
+        entity.entity_id
     }
 
     /// Returns a RwLock for a specific component
