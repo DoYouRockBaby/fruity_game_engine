@@ -24,7 +24,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 /// A vector in 2D dimension
-#[derive(Debug, Clone, Copy, Default, FruityAny, InstantiableObject)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, FruityAny, InstantiableObject)]
 pub struct Vector2d {
     /// Horizontal component
     pub x: f32,

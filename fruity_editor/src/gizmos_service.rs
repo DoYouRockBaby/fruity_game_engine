@@ -6,14 +6,20 @@ use fruity_graphic::graphics_manager::GraphicsManager;
 use fruity_graphic::math::Color;
 use fruity_graphic_2d::graphics_2d_manager::Graphics2dManager;
 use fruity_graphic_2d::math::vector2d::Vector2d;
+use fruity_input::input_manager::InputManager;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
+use std::fmt::Debug;
 use std::sync::Arc;
 use std::sync::RwLock;
+use std::thread::sleep;
+use std::thread::spawn;
+use std::time::Duration;
 
 #[derive(Debug, FruityAny)]
 pub struct GizmosService {
+    input_manager: ServiceRwLock<InputManager>,
     graphics_manager: ServiceRwLock<GraphicsManager>,
     graphics_2d_manager: ServiceRwLock<Graphics2dManager>,
 }
@@ -21,10 +27,12 @@ pub struct GizmosService {
 impl GizmosService {
     pub fn new(service_manager: &Arc<RwLock<ServiceManager>>) -> GizmosService {
         let service_manager = service_manager.read().unwrap();
+        let input_manager = service_manager.get::<InputManager>().unwrap();
         let graphics_manager = service_manager.get::<GraphicsManager>().unwrap();
         let graphics_2d_manager = service_manager.get::<Graphics2dManager>().unwrap();
 
         GizmosService {
+            input_manager,
             graphics_manager,
             graphics_2d_manager,
         }
@@ -50,7 +58,7 @@ impl GizmosService {
         let top_left = Vector2d::new(bottom_left.x, top_right.y);
 
         let is_hover = self.is_cursor_hover(&bottom_left, &top_right);
-        let color = if is_hover { color } else { hover_color };
+        let color = if is_hover { hover_color } else { color };
 
         let graphics_2d_manager = self.graphics_2d_manager.read().unwrap();
         graphics_2d_manager.draw_line(bottom_left, bottom_right, 3, &color);
@@ -73,7 +81,7 @@ impl GizmosService {
         let cursor_pos = graphics_2d_manager.get_cursor_position();
 
         let is_hover = cursor_pos.in_triangle(&p1, &p2, &p3);
-        let color = if is_hover { color } else { hover_color };
+        let color = if is_hover { hover_color } else { color };
 
         graphics_2d_manager.draw_line(p1, p2, 3, &color);
         graphics_2d_manager.draw_line(p2, p3, 3, &color);
@@ -101,19 +109,24 @@ impl GizmosService {
             hover_color,
         );
 
-        let color = if is_hover { color } else { hover_color };
+        let color = if is_hover { hover_color } else { color };
         graphics_2d_manager.draw_line(from, to - normalise * 0.05, 3, &color);
 
         is_hover
     }
 
-    pub fn draw_resize_helper(
+    pub fn draw_resize_helper<FMove, FResize>(
         &self,
         corner1: Vector2d,
         corner2: Vector2d,
         color: Color,
         hover_color: Color,
-    ) {
+        on_move: FMove,
+        _on_resize: FResize,
+    ) where
+        FMove: Fn(DragAction) + Send + Sync + 'static,
+        FResize: Fn(DragAction) + Send + Sync + 'static,
+    {
         let bottom_left = Vector2d::new(
             f32::min(corner1.x, corner2.x),
             f32::min(corner1.y, corner2.y),
@@ -127,6 +140,9 @@ impl GizmosService {
         let top_left = Vector2d::new(bottom_left.x, top_right.y);
         let center = (bottom_left + top_right) / 2.0;
         let resize_handle_size = Vector2d::new(0.025, 0.025);
+
+        // Draw the boundings
+        let is_hover_bounds = self.draw_square_helper(bottom_left, top_right, color, hover_color);
 
         // Draw bottom left
         self.draw_square_helper(
@@ -169,6 +185,21 @@ impl GizmosService {
         let from = (center + Vector2d::new(center.x, top_right.y)) / 2.0;
         let to = Vector2d::new(center.x, top_left.y + 0.1);
         self.draw_arrow_helper(from, to, color, hover_color);
+
+        // Implement the logic
+        let input_manager = self.input_manager.read().unwrap();
+        let graphics_2d_manager = self.graphics_2d_manager.read().unwrap();
+        let cursor_pos = graphics_2d_manager.get_cursor_position();
+
+        // Handle when stop dragging
+        if is_hover_bounds && input_manager.is_source_pressed_this_frame("Mouse/Left") {
+            DragAction::start(
+                on_move,
+                cursor_pos,
+                self.input_manager.clone(),
+                self.graphics_2d_manager.clone(),
+            );
+        }
     }
 
     fn is_cursor_hover(&self, bottom_left: &Vector2d, top_right: &Vector2d) -> bool {
@@ -180,6 +211,64 @@ impl GizmosService {
             && cursor_pos.x <= top_right.x
             && bottom_left.y <= cursor_pos.y
             && cursor_pos.y <= top_right.y
+    }
+}
+
+pub struct DragAction {
+    start_pos: Vector2d,
+    is_dragging: Arc<RwLock<bool>>,
+    graphics_2d_manager: ServiceRwLock<Graphics2dManager>,
+}
+
+impl DragAction {
+    fn start<F>(
+        callback: F,
+        start_pos: Vector2d,
+        input_manager: ServiceRwLock<InputManager>,
+        graphics_2d_manager: ServiceRwLock<Graphics2dManager>,
+    ) where
+        F: Fn(DragAction) + Send + Sync + 'static,
+    {
+        let is_dragging = Arc::new(RwLock::new(true));
+        let is_dragging_2 = is_dragging.clone();
+
+        // This thread will observe if were still dragging
+        spawn(move || {
+            let is_dragging = is_dragging.clone();
+            let mut is_mouse_pressed = true;
+            while is_mouse_pressed {
+                sleep(Duration::from_millis(20));
+                let input_manager = input_manager.read().unwrap();
+                is_mouse_pressed = input_manager.is_source_pressed("Mouse/Left");
+            }
+
+            let mut is_dragging = is_dragging.write().unwrap();
+            *is_dragging = false;
+        });
+
+        // Create the darg action structure
+        let drag_action = DragAction {
+            start_pos,
+            is_dragging: is_dragging_2,
+            graphics_2d_manager,
+        };
+
+        // Start the action in a specific thread
+        spawn(move || callback(drag_action));
+    }
+
+    pub fn start_pos(&self) -> Vector2d {
+        self.start_pos
+    }
+
+    pub fn is_dragging(&self) -> bool {
+        let is_dragging = self.is_dragging.read().unwrap();
+        *is_dragging
+    }
+
+    pub fn get_cursor_position(&self) -> Vector2d {
+        let graphics_2d_manager = self.graphics_2d_manager.read().unwrap();
+        graphics_2d_manager.get_cursor_position()
     }
 }
 

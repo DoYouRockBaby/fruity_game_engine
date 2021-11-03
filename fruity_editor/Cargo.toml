@@ -17,6 +17,7 @@ lazy_static = "1.4"
 comp_state = { path = "../deps/comp_state" }
 fruity_any = { path = "../fruity_any" }
 fruity_core = { path = "../fruity_core" }
+fruity_input = { path = "../fruity_input" }
 fruity_introspect = { path = "../fruity_introspect" }
 fruity_graphic = { path = "../fruity_graphic" }
 fruity_graphic_2d = { path = "../fruity_graphic_2d" }

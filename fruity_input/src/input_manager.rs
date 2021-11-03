@@ -21,6 +21,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use winit::event::ElementState;
 use winit::event::Event;
+use winit::event::MouseButton;
 use winit::event::VirtualKeyCode;
 use winit::event::WindowEvent;
 
@@ -28,6 +29,11 @@ use winit::event::WindowEvent;
 pub struct InputManager {
     pub input_map: HashMap<String, String>,
     pub pressed_inputs: HashSet<String>,
+    pub pressed_sources: HashSet<String>,
+    pub pressed_this_frame_inputs: HashSet<String>,
+    pub pressed_this_frame_sources: HashSet<String>,
+    pub released_this_frame_inputs: HashSet<String>,
+    pub released_this_frame_sources: HashSet<String>,
     pub on_pressed: Signal<String>,
     pub on_released: Signal<String>,
 }
@@ -43,17 +49,30 @@ impl InputManager {
         let service_manager_reader = service_manager.read().unwrap();
         let windows_manager = service_manager_reader.read::<WindowsManager>();
 
-        let service_manager = service_manager.clone();
+        let service_manager_2 = service_manager.clone();
         windows_manager.on_event.add_observer(move |event| {
-            let service_manager = service_manager.read().unwrap();
+            let service_manager = service_manager_2.read().unwrap();
             let mut input_manager = service_manager.write::<InputManager>();
 
             input_manager.handle_keyboard_input(event);
         });
 
+        let service_manager = service_manager.clone();
+        windows_manager.on_end_update.add_observer(move |_| {
+            let service_manager = service_manager.read().unwrap();
+            let mut input_manager = service_manager.write::<InputManager>();
+
+            input_manager.handle_frame_end();
+        });
+
         InputManager {
             input_map: HashMap::new(),
             pressed_inputs: HashSet::new(),
+            pressed_sources: HashSet::new(),
+            pressed_this_frame_inputs: HashSet::new(),
+            pressed_this_frame_sources: HashSet::new(),
+            released_this_frame_inputs: HashSet::new(),
+            released_this_frame_sources: HashSet::new(),
             on_pressed: Signal::new(),
             on_released: Signal::new(),
         }
@@ -82,19 +101,47 @@ impl InputManager {
         self.pressed_inputs.contains(input)
     }
 
+    pub fn is_source_pressed(&self, source: &str) -> bool {
+        self.pressed_sources.contains(source)
+    }
+
+    pub fn is_pressed_this_frame(&self, input: &str) -> bool {
+        self.pressed_this_frame_inputs.contains(input)
+    }
+
+    pub fn is_source_pressed_this_frame(&self, source: &str) -> bool {
+        self.pressed_this_frame_sources.contains(source)
+    }
+
+    pub fn is_released_this_frame(&self, input: &str) -> bool {
+        self.released_this_frame_inputs.contains(input)
+    }
+
+    pub fn is_source_released_this_frame(&self, source: &str) -> bool {
+        self.released_this_frame_sources.contains(source)
+    }
+
     pub fn notify_pressed(&mut self, source: &str) {
+        self.pressed_sources.insert(source.to_string());
+        self.pressed_this_frame_sources.insert(source.to_string());
+
         if let Some(input) = self.input_map.get(source) {
             if !self.pressed_inputs.contains(input) {
                 self.pressed_inputs.insert(input.clone());
+                self.pressed_this_frame_inputs.insert(input.to_string());
                 self.on_pressed.notify(input.clone());
             }
         }
     }
 
     pub fn notify_released(&mut self, source: &str) {
+        self.pressed_sources.remove(source);
+        self.released_this_frame_sources.insert(source.to_string());
+
         if let Some(input) = self.input_map.get(source) {
             if self.pressed_inputs.contains(input) {
                 self.pressed_inputs.remove(input);
+                self.released_this_frame_inputs.insert(input.to_string());
                 self.on_released.notify(input.clone());
             }
         }
@@ -102,7 +149,21 @@ impl InputManager {
 
     fn handle_keyboard_input(&mut self, event: &Event<()>) {
         if let Event::WindowEvent { event, .. } = event {
-            if let WindowEvent::KeyboardInput { input, .. } = event {
+            if let WindowEvent::MouseInput { state, button, .. } = event {
+                let source = match button {
+                    MouseButton::Left => "Mouse/Left",
+                    MouseButton::Right => "Mouse/Right",
+                    MouseButton::Middle => "Mouse/Middle",
+                    _ => "Mouse/Unknown",
+                };
+
+                // Detect if pressed or released
+                if ElementState::Pressed == *state {
+                    self.notify_pressed(source);
+                } else {
+                    self.notify_released(source);
+                }
+            } else if let WindowEvent::KeyboardInput { input, .. } = event {
                 if let Some(key) = input.virtual_keycode {
                     // Get the key source
                     let source = match key {
@@ -280,6 +341,13 @@ impl InputManager {
                 }
             }
         }
+    }
+
+    fn handle_frame_end(&mut self) {
+        self.pressed_this_frame_sources.clear();
+        self.pressed_this_frame_inputs.clear();
+        self.released_this_frame_sources.clear();
+        self.released_this_frame_inputs.clear();
     }
 }
 

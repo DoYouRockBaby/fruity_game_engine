@@ -45,7 +45,7 @@ entityManager.onEntityCreated.addObserver((entity) => {
         let position = entity.getComponent("Position");
         let camera = entity.getComponent("Camera");
         console.log("New camera");
-        console.log("Position", position.x, position.y);
+        console.log("Position", position.pos.x, position.pos.y);
         console.log("Camera", camera.near, camera.far);
         console.log("Unknown", entity.getComponent("Unknown"));
 

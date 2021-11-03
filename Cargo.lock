@@ -1008,6 +1008,7 @@ dependencies = [
  "fruity_core",
  "fruity_graphic",
  "fruity_graphic_2d",
+ "fruity_input",
  "fruity_introspect",
  "fruity_javascript_scripting",
  "fruity_windows",
