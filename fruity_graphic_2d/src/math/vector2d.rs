@@ -2,6 +2,7 @@ use fruity_any::*;
 use fruity_core::service::utils::cast_service;
 use fruity_core::service::utils::ArgumentCaster;
 use fruity_core::*;
+use fruity_graphic::math::Matrix4;
 use fruity_introspect::serializable_object::SerializableObject;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
@@ -167,6 +168,17 @@ impl Mul<f32> for Vector2d {
         Vector2d {
             x: self.x * rhs,
             y: self.y * rhs,
+        }
+    }
+}
+
+impl Mul<Vector2d> for Matrix4 {
+    type Output = Vector2d;
+
+    fn mul(self, rhs: Vector2d) -> Self::Output {
+        Vector2d {
+            x: self.0[0][0] * rhs.x + self.0[0][1] * rhs.y,
+            y: self.0[1][0] * rhs.x + self.0[1][1] * rhs.y,
         }
     }
 }

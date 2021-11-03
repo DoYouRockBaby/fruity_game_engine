@@ -20,9 +20,7 @@ class Velocity {
     }
 }
 
-console.log("ICI1");
 services.register("service2", new Service2());
-console.log("ICI2");
 const systemManager = services.get("system_manager");
 const entityManager = services.get("entity_manager");
 const componentFactory = services.get("components_factory");
@@ -32,9 +30,6 @@ const service2 = services.get("service2");
 const inputManager = services.get("input_manager");
 const frameManager = services.get("frame_manager");
 
-console.log("ICI8");
-
-// console.log("JS System", windowsManager.getSize());
 service2.hello("World");
 
 inputManager.onPressed.addObserver((key) => {

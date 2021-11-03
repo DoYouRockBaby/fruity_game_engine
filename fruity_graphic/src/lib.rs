@@ -1,5 +1,4 @@
 use crate::graphics_manager::GraphicsManager;
-use crate::resources::default_resources::load_default_resources;
 use crate::resources::image_resource::load_image;
 use crate::resources::material_resource::load_material;
 use crate::resources::shader_resource::load_shader;
@@ -8,8 +7,6 @@ use fruity_core::service::service_manager::ServiceManager;
 use fruity_core::settings::Settings;
 use std::sync::Arc;
 use std::sync::RwLock;
-
-extern crate maplit;
 
 pub mod graphics_manager;
 pub mod math;
@@ -32,10 +29,4 @@ pub fn initialize(service_manager: &Arc<RwLock<ServiceManager>>, _settings: &Set
     resources_manager.add_resource_loader("tiff", load_image);
     resources_manager.add_resource_loader("wgsl", load_shader);
     resources_manager.add_resource_loader("material", load_material);
-    std::mem::drop(resources_manager);
-
-    let resources_manager = service_manager_writer.get::<ResourcesManager>().unwrap();
-    std::mem::drop(service_manager_writer);
-
-    load_default_resources(resources_manager);
 }

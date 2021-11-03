@@ -1,4 +1,4 @@
-use crate::math::GREEN;
+use crate::math::RED;
 use crate::resources::shader_resource::ShaderResource;
 use crate::resources::texture_resource::TextureResource;
 use crate::GraphicsManager;
@@ -49,10 +49,13 @@ impl Vertex {
     }
 }
 
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub struct BufferIdentifier(pub u32, pub u32);
+
 #[derive(Debug, FruityAny)]
 pub struct MaterialResource {
     pub shader: Arc<ShaderResource>,
-    pub param_buffers: HashMap<String, wgpu::Buffer>,
+    pub uniform_buffers: HashMap<BufferIdentifier, wgpu::Buffer>,
     pub bind_groups: Vec<(u32, wgpu::BindGroup)>,
     pub render_pipeline: wgpu::RenderPipeline,
 }
@@ -92,90 +95,109 @@ impl MaterialResource {
         let surface_config = graphics_manager.get_config();
         let device = graphics_manager.get_device();
         let shader = material_params.shader.clone();
-        let mut param_buffers: HashMap<String, wgpu::Buffer> = HashMap::new();
+        let mut uniform_buffers: HashMap<BufferIdentifier, wgpu::Buffer> = HashMap::new();
 
         // Create the bind groups
         let bind_groups = material_params
             .binding_groups
             .into_iter()
             .map(|binding_group| {
-                let bind_group = match binding_group.ty {
-                    MaterialParamsBindingGroupType::Camera => {
-                        let bind_group_layout = graphics_manager.get_camera_bind_group_layout();
-                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                            layout: &graphics_manager.get_camera_bind_group_layout(),
-                            entries: &[wgpu::BindGroupEntry {
-                                binding: 0,
-                                resource: graphics_manager.get_camera_buffer().as_entire_binding(),
-                            }],
-                            label: Some("camera_bind_group"),
-                        });
+                let bind_group = {
+                    let bind_group_index = binding_group.index;
+                    match binding_group.ty {
+                        MaterialParamsBindingGroupType::Camera => {
+                            let bind_group_layout = graphics_manager.get_camera_bind_group_layout();
+                            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                                layout: &graphics_manager.get_camera_bind_group_layout(),
+                                entries: &[wgpu::BindGroupEntry {
+                                    binding: 0,
+                                    resource: graphics_manager
+                                        .get_camera_buffer()
+                                        .as_entire_binding(),
+                                }],
+                                label: Some("camera_bind_group"),
+                            });
 
-                        (bind_group, bind_group_layout)
-                    }
-                    MaterialParamsBindingGroupType::Custom(bindings) => {
-                        let bind_group_layout = &shader.bind_group_layout;
-                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                            layout: &shader.bind_group_layout,
-                            entries: &bindings
-                                .into_iter()
-                                .map(|binding| match binding.ty {
-                                    MaterialParamsBindingType::Texture { texture } => {
-                                        // TODO: Find a way to remove it
-                                        let texture = Arc::as_ptr(&texture);
-                                        let texture = unsafe { &*texture };
+                            (bind_group, bind_group_layout)
+                        }
+                        MaterialParamsBindingGroupType::Custom(bindings) => {
+                            let bind_group_layout = &shader.bind_group_layout;
+                            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                                layout: &shader.bind_group_layout,
+                                entries: &bindings
+                                    .into_iter()
+                                    .map(|binding| {
+                                        let buffer_identifier =
+                                            BufferIdentifier(bind_group_index, binding.index);
 
-                                        wgpu::BindGroupEntry {
-                                            binding: binding.index,
-                                            resource: wgpu::BindingResource::TextureView(
-                                                &texture.view,
-                                            ),
+                                        match binding.ty {
+                                            MaterialParamsBindingType::Texture { texture } => {
+                                                // TODO: Find a way to remove it
+                                                let texture = Arc::as_ptr(&texture);
+                                                let texture = unsafe { &*texture };
+
+                                                wgpu::BindGroupEntry {
+                                                    binding: binding.index,
+                                                    resource: wgpu::BindingResource::TextureView(
+                                                        &texture.view,
+                                                    ),
+                                                }
+                                            }
+                                            MaterialParamsBindingType::Sampler { texture } => {
+                                                // TODO: Find a way to remove it
+                                                let texture = Arc::as_ptr(&texture);
+                                                let texture = unsafe { &*texture };
+
+                                                wgpu::BindGroupEntry {
+                                                    binding: binding.index,
+                                                    resource: wgpu::BindingResource::Sampler(
+                                                        &texture.sampler,
+                                                    ),
+                                                }
+                                            }
+                                            MaterialParamsBindingType::Uniform => {
+                                                let color = RED;
+                                                let color_buffer = device.create_buffer_init(
+                                                    &wgpu::util::BufferInitDescriptor {
+                                                        label: Some("Uniform Buffer"),
+                                                        contents: bytemuck::cast_slice(&[
+                                                            color.clone()
+                                                        ]),
+                                                        usage: wgpu::BufferUsages::UNIFORM
+                                                            | wgpu::BufferUsages::COPY_DST,
+                                                    },
+                                                );
+
+                                                uniform_buffers
+                                                    .insert(buffer_identifier, color_buffer);
+                                                let buffer = uniform_buffers
+                                                    .get(&buffer_identifier)
+                                                    .unwrap();
+
+                                                let buffer = unsafe {
+                                                    std::mem::transmute::<
+                                                        &wgpu::Buffer,
+                                                        &wgpu::Buffer,
+                                                    >(
+                                                        &buffer
+                                                    )
+                                                };
+
+                                                let bind_group = wgpu::BindGroupEntry {
+                                                    binding: 0,
+                                                    resource: buffer.as_entire_binding(),
+                                                };
+
+                                                bind_group
+                                            }
                                         }
-                                    }
-                                    MaterialParamsBindingType::Sampler { texture } => {
-                                        // TODO: Find a way to remove it
-                                        let texture = Arc::as_ptr(&texture);
-                                        let texture = unsafe { &*texture };
+                                    })
+                                    .collect::<Vec<_>>(),
+                                label: Some(label),
+                            });
 
-                                        wgpu::BindGroupEntry {
-                                            binding: binding.index,
-                                            resource: wgpu::BindingResource::Sampler(
-                                                &texture.sampler,
-                                            ),
-                                        }
-                                    }
-                                    MaterialParamsBindingType::Uniform => {
-                                        let color = GREEN;
-                                        let color_buffer = device.create_buffer_init(
-                                            &wgpu::util::BufferInitDescriptor {
-                                                label: Some("Color Buffer"),
-                                                contents: bytemuck::cast_slice(&[color.clone()]),
-                                                usage: wgpu::BufferUsages::UNIFORM
-                                                    | wgpu::BufferUsages::COPY_DST,
-                                            },
-                                        );
-
-                                        param_buffers.insert("Color".to_string(), color_buffer);
-                                        let buffer = param_buffers.get("Color").unwrap();
-                                        let buffer = unsafe {
-                                            std::mem::transmute::<&wgpu::Buffer, &wgpu::Buffer>(
-                                                &buffer,
-                                            )
-                                        };
-
-                                        let bind_group = wgpu::BindGroupEntry {
-                                            binding: 0,
-                                            resource: buffer.as_entire_binding(),
-                                        };
-
-                                        bind_group
-                                    }
-                                })
-                                .collect::<Vec<_>>(),
-                            label: Some(label),
-                        });
-
-                        (bind_group, bind_group_layout)
+                            (bind_group, bind_group_layout)
+                        }
                     }
                 };
 
@@ -236,12 +258,18 @@ impl MaterialResource {
 
         MaterialResource {
             shader: material_params.shader,
-            param_buffers,
+            uniform_buffers,
             bind_groups: bind_groups
                 .into_iter()
                 .map(|bind_group| (bind_group.0, bind_group.1 .0))
                 .collect(),
             render_pipeline,
+        }
+    }
+
+    pub fn write_buffer(&self, buffer_id: &BufferIdentifier, queue: &wgpu::Queue, data: &[u8]) {
+        if let Some(buffer) = self.uniform_buffers.get(buffer_id) {
+            queue.write_buffer(buffer, 0, data);
         }
     }
 }

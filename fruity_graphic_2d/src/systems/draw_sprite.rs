@@ -18,7 +18,7 @@ pub fn draw_sprite(
 ) {
     let material = sprite.material.as_ref().unwrap();
 
-    graphics_2d_manager.draw_square(position.pos.x, position.pos.y, size.size.x, size.size.y, material.deref());
+    graphics_2d_manager.draw_square(position.pos, size.size, material.deref());
 }
 
 pub fn draw_sprite_untyped(service_manager: Arc<RwLock<ServiceManager>>) {

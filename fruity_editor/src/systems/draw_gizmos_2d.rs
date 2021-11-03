@@ -1,27 +1,22 @@
+use crate::gizmos_service::GizmosService;
 use fruity_core::entity::entity_manager::EntityManager;
 use fruity_core::entity_type;
 use fruity_core::service::service_guard::ServiceReadGuard;
 use fruity_core::service::service_manager::ServiceManager;
+use fruity_graphic::math::GREEN;
+use fruity_graphic::math::RED;
 use fruity_graphic_2d::components::position::Position;
 use fruity_graphic_2d::components::size::Size;
-use fruity_graphic_2d::graphics_2d_manager::Graphics2dManager;
 use rayon::prelude::*;
 use std::sync::Arc;
 use std::sync::RwLock;
 
 pub fn draw_gizmos_2d(
-    _position: &Position,
-    _size: &Size,
-    _graphics_2d_manager: ServiceReadGuard<Graphics2dManager>,
+    position: &Position,
+    size: &Size,
+    gizmos_service: ServiceReadGuard<GizmosService>,
 ) {
-    /*graphics_2d_manager.draw_line(
-        position.x,
-        position.y,
-        position.x + size.width,
-        position.y + size.height,
-        3.0,
-        &RED,
-    );*/
+    gizmos_service.draw_square_helper(position.pos, position.pos + size.size, GREEN, RED);
 }
 
 pub fn draw_gizmos_2d_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
@@ -71,7 +66,7 @@ pub fn draw_gizmos_2d_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
                 }
             };
 
-            let service1 = service_manager.read::<Graphics2dManager>();
+            let service1 = service_manager.read::<GizmosService>();
             draw_gizmos_2d(position, size, service1);
         },
     );

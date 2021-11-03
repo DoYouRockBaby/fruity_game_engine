@@ -6,7 +6,7 @@ use std::convert::TryFrom;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy)]
-pub struct Matrix4([[f32; 4]; 4]);
+pub struct Matrix4(pub [[f32; 4]; 4]);
 
 impl Matrix4 {
     pub fn identity() -> Matrix4 {
@@ -15,6 +15,10 @@ impl Matrix4 {
 
     pub fn from_rect(left: f32, right: f32, bottom: f32, top: f32, near: f32, far: f32) -> Matrix4 {
         Matrix4(cgmath::ortho(left, right, bottom, top, near, far).into())
+    }
+
+    pub fn invert(&self) -> Matrix4 {
+        Matrix4(cgmath::Matrix4::from(self.0).invert().unwrap().into())
     }
 }
 

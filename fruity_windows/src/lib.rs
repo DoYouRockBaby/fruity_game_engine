@@ -84,9 +84,9 @@ pub fn platform(
     // Run the render loop
     let service_manager_reader = service_manager.read().unwrap();
     let windows_manager = service_manager_reader.get::<WindowsManager>().unwrap();
-    let windows_manager = windows_manager.read().unwrap();
-    windows_manager.on_enter_loop.notify(());
-    std::mem::drop(windows_manager);
+    let windows_manager_reader = windows_manager.read().unwrap();
+    windows_manager_reader.on_enter_loop.notify(());
+    std::mem::drop(windows_manager_reader);
     std::mem::drop(service_manager_reader);
 
     event_loop.run(move |event, _, control_flow| {
@@ -126,6 +126,10 @@ pub fn platform(
                 event: WindowEvent::CursorMoved { position, .. },
                 ..
             } => {
+                let mut windows_manager_writer = windows_manager.write().unwrap();
+                windows_manager_writer.cursor_position = (position.x as usize, position.y as usize);
+                std::mem::drop(windows_manager_writer);
+
                 on_cursor_moved.notify((position.x as usize, position.y as usize));
             }
             Event::WindowEvent {

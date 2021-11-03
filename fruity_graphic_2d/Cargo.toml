@@ -15,7 +15,9 @@ image = "0.23.14"
 log = "0.4.14"
 rayon = "1.5"
 cgmath = "0.18"
+maplit = "1.0.2"
 fruity_any = { path = "../fruity_any" }
 fruity_core = { path = "../fruity_core" }
 fruity_introspect = { path = "../fruity_introspect" }
 fruity_graphic = { path = "../fruity_graphic" }
+fruity_windows = { path = "../fruity_windows" }

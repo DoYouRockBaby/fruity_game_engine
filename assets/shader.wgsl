@@ -11,7 +11,7 @@ struct VertexInput {
 };
 
 struct VertexOutput {
-    [[builtin(position)]] clip_position: vec4<f32>;
+    [[builtin(position)]] position: vec4<f32>;
     [[location(0)]] tex_coords: vec2<f32>;
 };
 
@@ -24,7 +24,7 @@ fn main(
 ) -> VertexOutput {
     var out: VertexOutput;
     out.tex_coords = model.tex_coords;
-    out.clip_position = camera.view_proj * vec4<f32>(model.position, 1.0);
+    out.position = camera.view_proj * vec4<f32>(model.position, 1.0);
     return out;
 }
 

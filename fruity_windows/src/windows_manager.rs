@@ -17,6 +17,7 @@ use winit::window::Window;
 #[derive(FruityAny)]
 pub struct WindowsManager {
     window: Window,
+    pub(crate) cursor_position: (usize, usize),
     pub on_enter_loop: Signal<()>,
     pub on_start_update: Signal<()>,
     pub on_end_update: Signal<()>,
@@ -36,6 +37,7 @@ impl WindowsManager {
     pub fn new(window: Window) -> WindowsManager {
         WindowsManager {
             window,
+            cursor_position: Default::default(),
             on_enter_loop: Signal::new(),
             on_start_update: Signal::new(),
             on_end_update: Signal::new(),
@@ -68,6 +70,10 @@ impl WindowsManager {
 
     pub fn get_scale_factor(&self) -> f64 {
         self.window.scale_factor()
+    }
+
+    pub fn get_cursor_position(&self) -> (usize, usize) {
+        self.cursor_position.clone()
     }
 
     pub fn set_size(&self, width: usize, height: usize) {
@@ -109,6 +115,18 @@ impl IntrospectObject for WindowsManager {
                 call: MethodCaller::Const(Arc::new(|this, _args| {
                     let this = cast_service::<WindowsManager>(this);
                     let result = this.get_size();
+
+                    Ok(Some(Serialized::Array(vec![
+                        Serialized::USize(result.0),
+                        Serialized::USize(result.1),
+                    ])))
+                })),
+            },
+            MethodInfo {
+                name: "get_cursor_position".to_string(),
+                call: MethodCaller::Const(Arc::new(|this, _args| {
+                    let this = cast_service::<WindowsManager>(this);
+                    let result = this.get_cursor_position();
 
                     Ok(Some(Serialized::Array(vec![
                         Serialized::USize(result.0),

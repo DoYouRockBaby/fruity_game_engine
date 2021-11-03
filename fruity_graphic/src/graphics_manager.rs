@@ -26,6 +26,7 @@ pub struct State {
     pub queue: wgpu::Queue,
     pub config: wgpu::SurfaceConfiguration,
     pub rendering_view: wgpu::TextureView,
+    pub camera_transform: Matrix4,
     pub camera_buffer: wgpu::Buffer,
     pub camera_bind_group_layout: wgpu::BindGroupLayout,
 }
@@ -155,6 +156,7 @@ impl GraphicsManager {
                 queue,
                 config,
                 rendering_view,
+                camera_transform: Matrix4::identity(),
                 camera_buffer,
                 camera_bind_group_layout,
             }
@@ -235,6 +237,10 @@ impl GraphicsManager {
         &self.state.rendering_view
     }
 
+    pub fn get_camera_transform(&self) -> &Matrix4 {
+        &self.state.camera_transform
+    }
+
     pub fn get_camera_buffer(&self) -> &wgpu::Buffer {
         &self.state.camera_buffer
     }
@@ -248,6 +254,7 @@ impl GraphicsManager {
     }
 
     pub fn update_camera(&mut self, view_proj: Matrix4) {
+        self.state.camera_transform = view_proj.clone();
         let camera_uniform = CameraUniform(view_proj.into());
         self.state.queue.write_buffer(
             &self.state.camera_buffer,
