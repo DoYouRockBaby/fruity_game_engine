@@ -7,9 +7,11 @@
 [X] Add a "field changed" signal on every entities
 [P] Implement entity hierarchy
 [X] Put a get_constructor function into introspect
+[ ] Implements entity deletion
 [ ] There should be some memory leak in archetype
 [ ] Make macros for native systems
 [ ] Test and stabilize ECS
+[ ] Join resources and services, i think it can be considered as the same
 
 ## Editor
 
@@ -22,7 +24,7 @@
 [P] Entity hierarchy visualisation
 [ ] Resources browser
 [ ] Resources visualisation, take the material as an example and try to make it easy to edit in sprite component
-[ ] Gizmos
+[X] Sprite gizmos
 
 ## Game tools
 
