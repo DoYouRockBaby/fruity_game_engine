@@ -32,7 +32,7 @@ pub fn draw_gizmos_2d(
         };
 
         if selected_entity_id == *entity_id {
-            let pos = {
+            let bottom_left = {
                 let position = position.read();
                 position
                     .as_any_ref()
@@ -41,38 +41,137 @@ pub fn draw_gizmos_2d(
                     .pos
             };
 
-            let size = {
+            let top_right = {
                 let size = size.read();
-                size.as_any_ref().downcast_ref::<Size>().unwrap().size
+                bottom_left + size.as_any_ref().downcast_ref::<Size>().unwrap().size
             };
 
+            let position_2 = position.clone();
             gizmos_service.draw_resize_helper(
-                pos,
-                pos + size,
+                bottom_left,
+                top_right,
                 GREEN,
                 RED,
-                move |drag_action| {
+                move |move_x, move_y, drag_action| {
                     let position = position.clone();
-                    let drag_origin = {
+                    let position_origin = {
                         let position = position.read();
-                        let position = position
+                        position
                             .as_any_ref()
                             .downcast_ref::<Position>()
                             .unwrap()
-                            .pos;
-
-                        position - drag_action.start_pos()
+                            .pos
                     };
 
                     while drag_action.is_dragging() {
                         sleep(Duration::from_millis(20));
+                        let cursor_movement =
+                            drag_action.get_cursor_position() - drag_action.start_pos();
 
                         let mut position = position.write();
                         let position = position.as_any_mut().downcast_mut::<Position>().unwrap();
-                        position.pos = drag_action.get_cursor_position() + drag_origin;
+
+                        if move_x {
+                            position.pos.x = position_origin.x + cursor_movement.x;
+                        }
+
+                        if move_y {
+                            position.pos.y = position_origin.y + cursor_movement.y;
+                        }
                     }
                 },
-                move |_drag_action| {},
+                move |fixed_x, fixed_y, drag_action| {
+                    let position = position_2.clone();
+                    let position_origin = {
+                        let position = position.read();
+                        position
+                            .as_any_ref()
+                            .downcast_ref::<Position>()
+                            .unwrap()
+                            .pos
+                    };
+
+                    let size_origin = {
+                        let size = size.read();
+                        size.as_any_ref().downcast_ref::<Size>().unwrap().size
+                    };
+
+                    while drag_action.is_dragging() {
+                        sleep(Duration::from_millis(100));
+                        let cursor_movement =
+                            drag_action.get_cursor_position() - drag_action.start_pos();
+
+                        let mut position_writer = position.write();
+                        let position = position_writer
+                            .as_any_mut()
+                            .downcast_mut::<Position>()
+                            .unwrap();
+
+                        position.pos.x = if fixed_x {
+                            position_origin.x
+                        } else {
+                            position_origin.x + cursor_movement.x
+                        };
+
+                        position.pos.y = if fixed_y {
+                            position_origin.y
+                        } else {
+                            position_origin.y + cursor_movement.y
+                        };
+
+                        std::mem::drop(position_writer);
+
+                        let mut size = size.write();
+                        let size = size.as_any_mut().downcast_mut::<Size>().unwrap();
+
+                        size.size.x = if fixed_x {
+                            size_origin.x + cursor_movement.x
+                        } else {
+                            size_origin.x - cursor_movement.x
+                        };
+
+                        size.size.y = if fixed_y {
+                            size_origin.y + cursor_movement.y
+                        } else {
+                            size_origin.y - cursor_movement.y
+                        };
+                    }
+                },
+                /*move |_fixed_x, _fixed_y, drag_action| {
+                    let position = position_2.clone();
+                    let position_origin = {
+                        let position = position.read();
+                        position
+                            .as_any_ref()
+                            .downcast_ref::<Position>()
+                            .unwrap()
+                            .pos
+                    };
+
+                    let size_origin = {
+                        let size = size.read();
+                        size.as_any_ref().downcast_ref::<Size>().unwrap().size
+                    };
+
+                    while drag_action.is_dragging() {
+                        sleep(Duration::from_millis(20));
+                        let cursor_movement =
+                            drag_action.get_cursor_position() - drag_action.start_pos();
+
+                        let mut position_writer = position.write();
+                        let position = position_writer
+                            .as_any_mut()
+                            .downcast_mut::<Position>()
+                            .unwrap();
+
+                        position.pos = position_origin + cursor_movement;
+                        std::mem::drop(position_writer);
+
+                        let mut size = size.write();
+                        let size = size.as_any_mut().downcast_mut::<Size>().unwrap();
+                        size.size = size_origin - cursor_movement;
+                    }
+                },*/
             );
         }
     }

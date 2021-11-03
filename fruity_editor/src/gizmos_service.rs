@@ -122,10 +122,10 @@ impl GizmosService {
         color: Color,
         hover_color: Color,
         on_move: FMove,
-        _on_resize: FResize,
+        on_resize: FResize,
     ) where
-        FMove: Fn(DragAction) + Send + Sync + 'static,
-        FResize: Fn(DragAction) + Send + Sync + 'static,
+        FMove: Fn(bool, bool, DragAction) + Send + Sync + 'static,
+        FResize: Fn(bool, bool, DragAction) + Send + Sync + 'static,
     {
         let bottom_left = Vector2d::new(
             f32::min(corner1.x, corner2.x),
@@ -145,7 +145,7 @@ impl GizmosService {
         let is_hover_bounds = self.draw_square_helper(bottom_left, top_right, color, hover_color);
 
         // Draw bottom left
-        self.draw_square_helper(
+        let is_hover_resize_bottom_left = self.draw_square_helper(
             bottom_left,
             bottom_left + resize_handle_size,
             color,
@@ -153,7 +153,7 @@ impl GizmosService {
         );
 
         // Draw bottom right
-        self.draw_square_helper(
+        let is_hover_resize_bottom_right = self.draw_square_helper(
             bottom_right,
             bottom_right + Vector2d::new(-resize_handle_size.x, resize_handle_size.y),
             color,
@@ -161,7 +161,7 @@ impl GizmosService {
         );
 
         // Draw top left
-        self.draw_square_helper(
+        let is_hover_resize_top_left = self.draw_square_helper(
             top_left,
             top_left + Vector2d::new(resize_handle_size.x, -resize_handle_size.y),
             color,
@@ -169,7 +169,7 @@ impl GizmosService {
         );
 
         // Draw top right
-        self.draw_square_helper(
+        let is_hover_resize_top_right = self.draw_square_helper(
             top_right,
             top_right - resize_handle_size,
             color,
@@ -179,22 +179,95 @@ impl GizmosService {
         // Draw the X arrow
         let from = (center + Vector2d::new(top_right.x, center.y)) / 2.0;
         let to = Vector2d::new(bottom_right.x + 0.1, center.y);
-        self.draw_arrow_helper(from, to, color, hover_color);
+        let is_hover_x_arrow = self.draw_arrow_helper(from, to, color, hover_color);
 
         // Draw the Y arrow
         let from = (center + Vector2d::new(center.x, top_right.y)) / 2.0;
         let to = Vector2d::new(center.x, top_left.y + 0.1);
-        self.draw_arrow_helper(from, to, color, hover_color);
+        let is_hover_y_arrow = self.draw_arrow_helper(from, to, color, hover_color);
 
         // Implement the logic
         let input_manager = self.input_manager.read().unwrap();
         let graphics_2d_manager = self.graphics_2d_manager.read().unwrap();
         let cursor_pos = graphics_2d_manager.get_cursor_position();
 
-        // Handle when stop dragging
-        if is_hover_bounds && input_manager.is_source_pressed_this_frame("Mouse/Left") {
+        // Handle moving
+        let on_move = Arc::new(on_move);
+        if is_hover_bounds
+            && !is_hover_resize_top_right
+            && !is_hover_resize_bottom_right
+            && !is_hover_resize_top_left
+            && !is_hover_resize_bottom_left
+            && input_manager.is_source_pressed_this_frame("Mouse/Left")
+        {
+            let on_move = on_move.clone();
             DragAction::start(
-                on_move,
+                move |action| on_move(true, true, action),
+                cursor_pos,
+                self.input_manager.clone(),
+                self.graphics_2d_manager.clone(),
+            );
+        }
+
+        if is_hover_x_arrow && input_manager.is_source_pressed_this_frame("Mouse/Left") {
+            let on_move = on_move.clone();
+            DragAction::start(
+                move |action| on_move(true, false, action),
+                cursor_pos,
+                self.input_manager.clone(),
+                self.graphics_2d_manager.clone(),
+            );
+        }
+
+        if is_hover_y_arrow && input_manager.is_source_pressed_this_frame("Mouse/Left") {
+            let on_move = on_move.clone();
+            DragAction::start(
+                move |action| on_move(false, true, action),
+                cursor_pos,
+                self.input_manager.clone(),
+                self.graphics_2d_manager.clone(),
+            );
+        }
+
+        // Handle resize
+        let on_resize = Arc::new(on_resize);
+        if is_hover_resize_top_right && input_manager.is_source_pressed_this_frame("Mouse/Left") {
+            let on_resize = on_resize.clone();
+            DragAction::start(
+                move |action| on_resize(true, true, action),
+                cursor_pos,
+                self.input_manager.clone(),
+                self.graphics_2d_manager.clone(),
+            );
+        }
+
+        let on_resize = Arc::new(on_resize);
+        if is_hover_resize_top_left && input_manager.is_source_pressed_this_frame("Mouse/Left") {
+            let on_resize = on_resize.clone();
+            DragAction::start(
+                move |action| on_resize(false, true, action),
+                cursor_pos,
+                self.input_manager.clone(),
+                self.graphics_2d_manager.clone(),
+            );
+        }
+
+        let on_resize = Arc::new(on_resize);
+        if is_hover_resize_bottom_right && input_manager.is_source_pressed_this_frame("Mouse/Left")
+        {
+            let on_resize = on_resize.clone();
+            DragAction::start(
+                move |action| on_resize(true, false, action),
+                cursor_pos,
+                self.input_manager.clone(),
+                self.graphics_2d_manager.clone(),
+            );
+        }
+
+        if is_hover_resize_bottom_left && input_manager.is_source_pressed_this_frame("Mouse/Left") {
+            let on_resize = on_resize.clone();
+            DragAction::start(
+                move |action| on_resize(false, false, action),
                 cursor_pos,
                 self.input_manager.clone(),
                 self.graphics_2d_manager.clone(),
@@ -237,7 +310,7 @@ impl DragAction {
             let is_dragging = is_dragging.clone();
             let mut is_mouse_pressed = true;
             while is_mouse_pressed {
-                sleep(Duration::from_millis(20));
+                sleep(Duration::from_millis(100));
                 let input_manager = input_manager.read().unwrap();
                 is_mouse_pressed = input_manager.is_source_pressed("Mouse/Left");
             }
