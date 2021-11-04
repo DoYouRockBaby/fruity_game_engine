@@ -1,4 +1,3 @@
-use crate::components::panes::PanesMessage;
 use std::any::Any;
 use std::fmt::Debug;
 use std::ops::Deref;
@@ -12,7 +11,6 @@ pub mod world;
 #[derive(Clone)]
 pub enum Message {
     Empty,
-    Panes(PanesMessage),
     Callback(Arc<dyn Fn() + Send + Sync>),
     StringChanged(Arc<dyn Fn(&str) + Send + Sync>, String),
     BoolChanged(Arc<dyn Fn(bool) + Send + Sync>, bool),

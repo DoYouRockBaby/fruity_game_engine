@@ -6,6 +6,7 @@ pub mod iced;
 pub mod input;
 pub mod layout;
 pub mod list;
+pub mod pane;
 
 #[derive(Debug, Clone)]
 pub enum UIAlign {

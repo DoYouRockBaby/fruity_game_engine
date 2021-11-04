@@ -1,4 +1,3 @@
-use crate::components::panes::Panes;
 use crate::editor_manager::EditorManager;
 use crate::gizmos_service::GizmosService;
 use crate::systems::draw_gizmos_2d::draw_gizmos_2d_untyped;

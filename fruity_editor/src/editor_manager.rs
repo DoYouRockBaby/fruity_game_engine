@@ -1,6 +1,6 @@
 use crate::hooks::use_global;
 use crate::state::entity::EntityState;
-use crate::Panes;
+use crate::ui_element::iced::program::Program;
 use core::ffi::c_void;
 use fruity_any::*;
 use fruity_core::entity::entity::EntityId;
@@ -42,7 +42,7 @@ use std::sync::RwLock;
 pub struct EditorManagerState {
     debug: IcedDebug,
     renderer: Renderer,
-    state: State<Panes>,
+    state: State<Program>,
     viewport: Viewport,
     staging_belt: wgpu::util::StagingBelt,
     modifiers: ModifiersState,
@@ -142,7 +142,7 @@ impl EditorManager {
             });
 
         // Create the base UI
-        let panes = Panes::new(service_manager);
+        let panes = Program::new(service_manager);
 
         // Connect to the window
         let state =
@@ -156,7 +156,7 @@ impl EditorManager {
     }
 
     pub fn initialize(
-        program: Panes,
+        program: Program,
         windows_manager: &WindowsManager,
         graphic_manager: &GraphicsManager,
     ) -> EditorManagerState {

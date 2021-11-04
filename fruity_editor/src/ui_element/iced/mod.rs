@@ -10,6 +10,7 @@ use crate::ui_element::iced::layout::draw_column;
 use crate::ui_element::iced::layout::draw_empty;
 use crate::ui_element::iced::layout::draw_row;
 use crate::ui_element::iced::list::draw_list_view;
+use crate::ui_element::iced::pane::draw_pane_grid;
 use crate::ui_element::input::Button;
 use crate::ui_element::input::Checkbox;
 use crate::ui_element::input::FloatInput;
@@ -18,6 +19,7 @@ use crate::ui_element::input::IntegerInput;
 use crate::ui_element::layout::Column;
 use crate::ui_element::layout::Row;
 use crate::ui_element::list::ListView;
+use crate::ui_element::pane::PaneGrid;
 use crate::ui_element::Message;
 use crate::ui_element::UIElement;
 use iced_wgpu::Renderer;
@@ -28,6 +30,8 @@ pub mod display;
 pub mod input;
 pub mod layout;
 pub mod list;
+pub mod pane;
+pub mod program;
 
 #[topo::nested]
 pub fn draw_element<'a>(elem: UIElement) -> Element<'a, Message, Renderer> {
@@ -51,6 +55,8 @@ pub fn draw_element<'a>(elem: UIElement) -> Element<'a, Message, Renderer> {
         draw_row(*elem.root.downcast::<Row>().unwrap())
     } else if type_id == TypeId::of::<ListView>() {
         draw_list_view(*elem.root.downcast::<ListView>().unwrap())
+    } else if type_id == TypeId::of::<PaneGrid>() {
+        draw_pane_grid(*elem.root.downcast::<PaneGrid>().unwrap())
     } else {
         draw_empty()
     }
