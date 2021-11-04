@@ -25,6 +25,7 @@
 [ ] Resources browser
 [ ] Resources visualisation, take the material as an example and try to make it easy to edit in sprite component
 [X] Sprite gizmos
+[ ] Run/Pause
 
 ## Game tools
 
