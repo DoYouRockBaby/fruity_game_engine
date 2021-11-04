@@ -64,7 +64,8 @@ pub(crate) struct ComponentDecodingInfos {
 /// | head: [’EntityHead’]                          | Contains the main properties of the entity
 /// | - entity_id: [’EntityId’]                     |
 /// | - deleted: bool                               |
-/// | - enabled: bool                               |
+/// | - enabled: bool     
+/// | - ...                          |
 /// |-----------------------------------------------|
 /// | component 1 infos: [’ComponentDecodingInfos’] | Theses structures store informations about how to
 /// | component 2 infos: [’ComponentDecodingInfos’] | encode/decode components
@@ -81,6 +82,7 @@ pub(crate) struct ComponentDecodingInfos {
 pub(crate) struct InnerArchetype {
     identifiers: EntityTypeIdentifier,
     index_map: HashMap<EntityId, usize>,
+    removed_entities: Vec<usize>,
     pub(crate) buffer: Vec<u8>,
     pub(crate) components_per_entity: usize,
     pub(crate) entity_size: usize,
@@ -102,6 +104,7 @@ impl InnerArchetype {
         InnerArchetype {
             identifiers: identifier,
             index_map: HashMap::new(),
+            removed_entities: Vec::new(),
             buffer: Vec::with_capacity(entity_size),
             components_per_entity,
             entity_size,
@@ -113,19 +116,45 @@ impl InnerArchetype {
         &self.identifiers
     }
 
+    /// Add an entity into the archetype
+    ///
+    /// # Arguments
+    /// * `entity_id` - The entity id
+    /// * `entity` - The entity datas
+    ///
+    pub(crate) fn add(&mut self, entity_id: EntityId, name: String, components: Vec<AnyComponent>) {
+        // Use an existing entity cell if possible
+        if let Some(free_cell) = self.removed_entities.pop() {
+            // Write directly into the entity buffer
+            let mut entity_buffer = &mut self.buffer[free_cell..(free_cell + self.entity_size)];
+            encode_entity(entity_id, name, &mut entity_buffer, components);
+            self.index_map.insert(entity_id, free_cell);
+        } else {
+            // Create then entity buffer
+            let entity_index = self.buffer.len();
+            let mut entity_buffer: Vec<u8> = vec![0; self.entity_size];
+            encode_entity(entity_id, name, &mut entity_buffer, components);
+            // Store the entity
+            self.buffer.append(&mut entity_buffer);
+            // Store the id of the entity
+            self.index_map.insert(entity_id, entity_index);
+        }
+    }
+
     /// Get a locked entity
     ///
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
     pub(crate) fn get(
-        &self,
         this: Arc<RwLock<InnerArchetype>>,
         entity_id: EntityId,
     ) -> Option<EntitySharedRwLock> {
-        self.index_map
+        let this_reader = this.read().unwrap();
+        this_reader
+            .index_map
             .get(&entity_id)
-            .map(|index| self.get_by_index(this, *index))
+            .map(|index| InnerArchetype::get_by_index(this.clone(), *index))
     }
 
     /// Get a locked entity by first component index
@@ -134,30 +163,10 @@ impl InnerArchetype {
     /// * `entity_id` - The entity id
     ///
     pub(crate) fn get_by_index(
-        &self,
         this: Arc<RwLock<InnerArchetype>>,
         index: usize,
     ) -> EntitySharedRwLock {
         EntitySharedRwLock::new(this, index)
-    }
-
-    /// Add an entity into the archetype
-    ///
-    /// # Arguments
-    /// * `entity_id` - The entity id
-    /// * `entity` - The entity datas
-    ///
-    pub(crate) fn add(&mut self, entity_id: EntityId, name: String, components: Vec<AnyComponent>) {
-        // Create then entity buffer
-        let entity_index = self.buffer.len();
-        let mut entity_buffer: Vec<u8> = vec![0; self.entity_size];
-        encode_entity(entity_id, name, &mut entity_buffer, components);
-
-        // Store the entity
-        self.buffer.append(&mut entity_buffer);
-
-        // Store the id of the entity
-        self.index_map.insert(entity_id, entity_index);
     }
 
     /// Remove an entity based on its id
@@ -166,31 +175,30 @@ impl InnerArchetype {
     /// * `entity_id` - The entity id
     ///
     pub(crate) fn remove(
-        &mut self,
-        _entity_id: EntityId,
-    ) -> Result<EntityCellHead, RemoveEntityError> {
-        /*if let Some(entity_head) = self.get(entity_id) {
-            let entity_head = entity_head.clone();
+        this: Arc<RwLock<InnerArchetype>>,
+        entity_id: EntityId,
+    ) -> Result<(), RemoveEntityError> {
+        let mut this_writer = this.write().unwrap();
+        if let Some(entity_index) = this_writer.index_map.remove(&entity_id) {
+            std::mem::drop(this_writer);
 
-            // Find the entity index in the entity array
-            let index = match self.index_map.remove(&entity_id) {
-                Some(index) => Ok(index),
-                None => Err(RemoveEntityError::NotFound),
-            }?;
+            // Get the write lock on the entity
+            let entity = InnerArchetype::get_by_index(this.clone(), entity_index);
+            let mut entity_writer = entity.write();
+            entity_writer.deleted = true;
+            std::mem::drop(entity_writer);
 
-            // Remove old stored entity
-            self.entities.remove(index);
+            // Remember that the old entity cell is now free
+            // so we will be able to erase it
+            let mut this_writer = this.write().unwrap();
+            this_writer.removed_entities.push(entity_index);
+            std::mem::drop(this_writer);
 
-            // Gap all existing indexes
-            self.index_map.iter_mut().for_each(|index_2| {
-                if *index_2.1 > index {
-                    *index_2.1 -= 1;
-                }
-            });
+            // TODO: Notify all the shared lock that the referenced entity has been removed
 
-            Ok(entity_head)
-        } else {*/
-        Err(RemoveEntityError::NotFound)
-        //}
+            Ok(())
+        } else {
+            Err(RemoveEntityError::NotFound)
+        }
     }
 }

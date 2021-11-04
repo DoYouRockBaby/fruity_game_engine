@@ -177,19 +177,6 @@ impl IntrospectObject for EntityManager {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![
             MethodInfo {
-                name: "create".to_string(),
-                call: MethodCaller::Mut(Arc::new(move |this, args| {
-                    let this = cast_service_mut::<EntityManager>(this);
-
-                    let mut caster = ArgumentCaster::new("create", args);
-                    let arg1 = caster.cast_next::<String>()?;
-                    let arg2 = caster.cast_next::<Vec<AnyComponent>>()?;
-                    this.create(arg1, arg2);
-
-                    Ok(None)
-                })),
-            },
-            MethodInfo {
                 name: "iter_entities".to_string(),
                 call: MethodCaller::Const(Arc::new(move |this, args| {
                     let this = cast_service::<EntityManager>(this);
@@ -217,6 +204,31 @@ impl IntrospectObject for EntityManager {
                         .map(|component| Serialized::NativeObject(Box::new(component)));
 
                     Ok(Some(Serialized::Iterator(Arc::new(RwLock::new(iterator)))))
+                })),
+            },
+            MethodInfo {
+                name: "create".to_string(),
+                call: MethodCaller::Mut(Arc::new(move |this, args| {
+                    let this = cast_service_mut::<EntityManager>(this);
+
+                    let mut caster = ArgumentCaster::new("create", args);
+                    let arg1 = caster.cast_next::<String>()?;
+                    let arg2 = caster.cast_next::<Vec<AnyComponent>>()?;
+                    let id = this.create(arg1, arg2);
+
+                    Ok(Some(id.into()))
+                })),
+            },
+            MethodInfo {
+                name: "remove".to_string(),
+                call: MethodCaller::Mut(Arc::new(move |this, args| {
+                    let this = cast_service_mut::<EntityManager>(this);
+
+                    let mut caster = ArgumentCaster::new("remove", args);
+                    let arg1 = caster.cast_next::<EntityId>()?;
+                    this.remove(arg1);
+
+                    Ok(None)
                 })),
             },
         ]

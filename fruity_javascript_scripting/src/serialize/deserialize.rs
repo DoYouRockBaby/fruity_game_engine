@@ -25,7 +25,8 @@ pub fn deserialize_v8<'a>(
     }
 
     if v8_value.is_big_int() {
-        return Some(Serialized::I64(v8_value.integer_value(scope).unwrap()));
+        let big_int = v8_value.to_big_int(scope).unwrap();
+        return Some(Serialized::I64(big_int.i64_value().0));
     }
 
     if v8_value.is_number() {

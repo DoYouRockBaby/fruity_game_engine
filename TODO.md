@@ -7,11 +7,11 @@
 [X] Add a "field changed" signal on every entities
 [P] Implement entity hierarchy
 [X] Put a get_constructor function into introspect
-[ ] Implements entity deletion
+[X] Implements entity deletion
+[ ] Add an exception when you try to access a deleted entity, propagate it into js
 [ ] There should be some memory leak in archetype
 [ ] Make macros for native systems
 [ ] Test and stabilize ECS
-[ ] Join resources and services, i think it can be considered as the same
 
 ## Editor
 
@@ -61,7 +61,7 @@
 ## Others
 
 [ ] Implement a basic sound features
-[ ] Dynamic libraries rust
+[X] Dynamic libraries rust
 [ ] Hot reload js
 [ ] Hot reload rust
 

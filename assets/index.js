@@ -56,8 +56,10 @@ entityManager.onEntityCreated.addObserver((entity) => {
     }
 });
 
+let player_entity_id = 0;
 systemManager.addBeginSystem(() => {
-    entityManager.create("Image 1", [
+    console.log("1");
+    let image_entity_id = entityManager.create("Image 1", [
         new Position({ pos: new Vector2d({ x: 0.25, y: 0.25 }) }),
         new Size({ size: new Vector2d({ x: 0.5, y: 0.5 }) }),
         new Sprite({
@@ -66,7 +68,21 @@ systemManager.addBeginSystem(() => {
         }),
     ]);
 
-    entityManager.create("Player", [
+    console.log("2");
+    entityManager.remove(image_entity_id);
+    console.log("3");
+
+    entityManager.create("Image 3", [
+        new Position({ pos: new Vector2d({ x: 0.25, y: 0.25 }) }),
+        new Size({ size: new Vector2d({ x: 0.75, y: 0.5 }) }),
+        new Sprite({
+            texture: resourcesManager.getResource("assets/logo.png"),
+            material: resourcesManager.getResource("assets/material.material"),
+        }),
+    ]);
+    console.log("4");
+
+    player_entity_id = entityManager.create("Player", [
         new Position({ pos: new Vector2d({ x: -0.25, y: 0.25 }) }),
         new Size({ size: new Vector2d({ x: 0.3, y: 0.3 }) }),
         new Sprite({
@@ -75,6 +91,7 @@ systemManager.addBeginSystem(() => {
         }),
         new Move({ velocity: 0.2 }),
     ]);
+    console.log("5");
 
     entityManager.create("Camera", [
         new Position({ pos: new Vector2d({ x: -1.5, y: -1 }) }),
@@ -114,7 +131,9 @@ systemManager.addSystem(() => {
 
             if (inputManager.isPressed("Down")) {
                 vel.y -= components.get(1).velocity;
+                entityManager.remove(player_entity_id);
             }
+
 
             components.get(0).pos = components.get(0).pos.add(vel.mul(frameManager.delta));
         });

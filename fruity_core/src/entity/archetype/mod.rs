@@ -73,8 +73,7 @@ impl Archetype {
     /// * `entity_id` - The entity id
     ///
     pub fn get(&self, entity_id: EntityId) -> Option<EntitySharedRwLock> {
-        let inner_archetype = self.inner_archetype.read().unwrap();
-        inner_archetype.get(self.inner_archetype.clone(), entity_id)
+        InnerArchetype::get(self.inner_archetype.clone(), entity_id)
     }
 
     /// Get a locked entity by first component index
@@ -83,8 +82,7 @@ impl Archetype {
     /// * `entity_id` - The entity id
     ///
     pub fn get_by_index(&self, index: usize) -> EntitySharedRwLock {
-        let inner_archetype = self.inner_archetype.read().unwrap();
-        inner_archetype.get_by_index(self.inner_archetype.clone(), index)
+        InnerArchetype::get_by_index(self.inner_archetype.clone(), index)
     }
 
     /// Iterate over all entities of the archetype
@@ -114,9 +112,8 @@ impl Archetype {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn remove(&self, entity_id: EntityId) -> Result<EntityCellHead, RemoveEntityError> {
-        let mut inner_archetype = self.inner_archetype.write().unwrap();
-        inner_archetype.remove(entity_id)
+    pub fn remove(&self, entity_id: EntityId) -> Result<(), RemoveEntityError> {
+        InnerArchetype::remove(self.inner_archetype.clone(), entity_id)
     }
 }
 
@@ -135,10 +132,22 @@ impl Iterator for Iter {
     fn next(&mut self) -> Option<EntitySharedRwLock> {
         let reader = self.inner_archetype.read().unwrap();
         if self.current_index < reader.buffer.len() {
-            let result = reader.get_by_index(self.inner_archetype.clone(), self.current_index);
+            let result =
+                InnerArchetype::get_by_index(self.inner_archetype.clone(), self.current_index);
+
             self.current_index += reader.entity_size;
 
-            Some(result)
+            // Skip if removed
+            let entity_reader = result.read();
+            if entity_reader.deleted {
+                std::mem::drop(entity_reader);
+                std::mem::drop(reader);
+
+                self.next()
+            } else {
+                std::mem::drop(entity_reader);
+                Some(result)
+            }
         } else {
             None
         }

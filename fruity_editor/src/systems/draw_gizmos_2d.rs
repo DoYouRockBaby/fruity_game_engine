@@ -137,41 +137,6 @@ pub fn draw_gizmos_2d(
                         };
                     }
                 },
-                /*move |_fixed_x, _fixed_y, drag_action| {
-                    let position = position_2.clone();
-                    let position_origin = {
-                        let position = position.read();
-                        position
-                            .as_any_ref()
-                            .downcast_ref::<Position>()
-                            .unwrap()
-                            .pos
-                    };
-
-                    let size_origin = {
-                        let size = size.read();
-                        size.as_any_ref().downcast_ref::<Size>().unwrap().size
-                    };
-
-                    while drag_action.is_dragging() {
-                        sleep(Duration::from_millis(20));
-                        let cursor_movement =
-                            drag_action.get_cursor_position() - drag_action.start_pos();
-
-                        let mut position_writer = position.write();
-                        let position = position_writer
-                            .as_any_mut()
-                            .downcast_mut::<Position>()
-                            .unwrap();
-
-                        position.pos = position_origin + cursor_movement;
-                        std::mem::drop(position_writer);
-
-                        let mut size = size.write();
-                        let size = size.as_any_mut().downcast_mut::<Size>().unwrap();
-                        size.size = size_origin - cursor_movement;
-                    }
-                },*/
             );
         }
     }
@@ -202,6 +167,6 @@ pub fn draw_gizmos_2d_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
             };
 
             let service1 = service_manager.read::<GizmosService>();
-            draw_gizmos_2d(&components.get_entity_id(), position, size, service1);
+            draw_gizmos_2d(&components.entity_id(), position, size, service1);
         });
 }

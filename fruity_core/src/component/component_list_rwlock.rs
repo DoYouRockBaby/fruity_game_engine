@@ -69,7 +69,7 @@ impl ComponentListRwLock {
     }
 
     /// Returns the associated entity id
-    pub fn get_entity_id(&self) -> EntityId {
+    pub fn entity_id(&self) -> EntityId {
         let entity = self.entity.read();
         entity.entity_id
     }
@@ -93,19 +93,28 @@ impl ComponentListRwLock {
 
 impl IntrospectObject for ComponentListRwLock {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
-        vec![MethodInfo {
-            name: "get".to_string(),
-            call: MethodCaller::Const(Arc::new(move |this, args| {
-                let this = cast_service::<ComponentListRwLock>(this);
+        vec![
+            MethodInfo {
+                name: "get".to_string(),
+                call: MethodCaller::Const(Arc::new(move |this, args| {
+                    let this = cast_service::<ComponentListRwLock>(this);
 
-                let mut caster = ArgumentCaster::new("get", args);
-                let arg1 = caster.cast_next::<usize>()?;
+                    let mut caster = ArgumentCaster::new("get", args);
+                    let arg1 = caster.cast_next::<usize>()?;
 
-                Ok(this
-                    .get(arg1)
-                    .map(|result| Serialized::NativeObject(Box::new(result))))
-            })),
-        }]
+                    Ok(this
+                        .get(arg1)
+                        .map(|result| Serialized::NativeObject(Box::new(result))))
+                })),
+            },
+            MethodInfo {
+                name: "entity_id".to_string(),
+                call: MethodCaller::Const(Arc::new(move |this, _args| {
+                    let this = cast_service::<ComponentListRwLock>(this);
+                    Ok(Some(this.entity_id().into()))
+                })),
+            },
+        ]
     }
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
