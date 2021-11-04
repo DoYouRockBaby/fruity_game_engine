@@ -30,7 +30,7 @@ impl Into<[[f32; 4]; 4]> for Matrix4 {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Pod, Zeroable)]
-pub struct Color([f32; 4]);
+pub struct Color(pub [f32; 4]);
 
 impl FromStr for Color {
     type Err = String;

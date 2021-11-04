@@ -1,14 +1,14 @@
 use crate::gizmos_service::GizmosService;
 use crate::hooks::use_global;
 use crate::state::entity::EntityState;
+use crate::state::theme::ThemeState;
 use fruity_core::component::component_rwlock::ComponentRwLock;
 use fruity_core::entity::entity::EntityId;
 use fruity_core::entity::entity_manager::EntityManager;
 use fruity_core::entity_type;
 use fruity_core::service::service_guard::ServiceReadGuard;
 use fruity_core::service::service_manager::ServiceManager;
-use fruity_graphic::math::GREEN;
-use fruity_graphic::math::RED;
+use fruity_graphic::math::Color;
 use fruity_graphic_2d::components::position::Position;
 use fruity_graphic_2d::components::size::Size;
 use rayon::prelude::*;
@@ -24,6 +24,23 @@ pub fn draw_gizmos_2d(
     gizmos_service: ServiceReadGuard<GizmosService>,
 ) {
     let entity = use_global::<EntityState>();
+    let theme_state = use_global::<ThemeState>();
+
+    let handle_color = theme_state.theme.surface_color();
+    let handle_color = Color([
+        handle_color.r,
+        handle_color.g,
+        handle_color.b,
+        handle_color.a,
+    ]);
+
+    let handle_hover_color = theme_state.theme.hovered_color();
+    let handle_hover_color = Color([
+        handle_hover_color.r,
+        handle_hover_color.g,
+        handle_hover_color.b,
+        handle_hover_color.a,
+    ]);
 
     if let Some(selected_entity) = &entity.selected_entity {
         let selected_entity_id = {
@@ -50,8 +67,8 @@ pub fn draw_gizmos_2d(
             gizmos_service.draw_resize_helper(
                 bottom_left,
                 top_right,
-                GREEN,
-                RED,
+                handle_color,
+                handle_hover_color,
                 move |move_x, move_y, drag_action| {
                     let position = position.clone();
                     let position_origin = {

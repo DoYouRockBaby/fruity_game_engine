@@ -1,5 +1,5 @@
 use iced::{
-    button, checkbox, container, progress_bar, radio, rule, scrollable, slider, text_input,
+    button, checkbox, container, progress_bar, radio, rule, scrollable, slider, text_input, Color,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -90,6 +90,30 @@ impl From<Theme> for Box<dyn rule::StyleSheet> {
 }
 
 impl Theme {
+    pub fn surface_color(&self) -> Color {
+        match self {
+            Theme::Dark => dark::SURFACE,
+        }
+    }
+
+    pub fn accent_color(&self) -> Color {
+        match self {
+            Theme::Dark => dark::ACCENT,
+        }
+    }
+
+    pub fn active_color(&self) -> Color {
+        match self {
+            Theme::Dark => dark::ACTIVE,
+        }
+    }
+
+    pub fn hovered_color(&self) -> Color {
+        match self {
+            Theme::Dark => dark::HOVERED,
+        }
+    }
+
     pub fn list_view(&self) -> Box<dyn container::StyleSheet> {
         match self {
             Theme::Dark => dark::ListView.into(),
@@ -115,25 +139,25 @@ mod dark {
         Color,
     };
 
-    const SURFACE: Color = Color::from_rgb(
+    pub const SURFACE: Color = Color::from_rgb(
         0x40 as f32 / 255.0,
         0x44 as f32 / 255.0,
         0x4B as f32 / 255.0,
     );
 
-    const ACCENT: Color = Color::from_rgb(
+    pub const ACCENT: Color = Color::from_rgb(
         0x6F as f32 / 255.0,
         0xFF as f32 / 255.0,
         0xE9 as f32 / 255.0,
     );
 
-    const ACTIVE: Color = Color::from_rgb(
+    pub const ACTIVE: Color = Color::from_rgb(
         0x72 as f32 / 255.0,
         0x89 as f32 / 255.0,
         0xDA as f32 / 255.0,
     );
 
-    const HOVERED: Color = Color::from_rgb(
+    pub const HOVERED: Color = Color::from_rgb(
         0x67 as f32 / 255.0,
         0x7B as f32 / 255.0,
         0xC4 as f32 / 255.0,
