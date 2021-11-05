@@ -1,7 +1,12 @@
 use crate::hooks::use_global;
 use crate::state::entity::EntityState;
-use crate::ui_element::iced::program::Program;
-use core::ffi::c_void;
+use crate::ui_element::egui::app::Application;
+use egui::FontDefinitions;
+use egui_wgpu_backend::RenderPass;
+use egui_wgpu_backend::ScreenDescriptor;
+use egui_winit_platform::Platform;
+use egui_winit_platform::PlatformDescriptor;
+use epi::*;
 use fruity_any::*;
 use fruity_core::entity::entity::EntityId;
 use fruity_core::service::service::Service;
@@ -16,39 +21,18 @@ use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use fruity_windows::windows_manager::WindowsManager;
-use iced::futures::task::SpawnExt;
-use iced_wgpu::wgpu;
-use iced_wgpu::Backend;
-use iced_wgpu::Renderer;
-use iced_wgpu::Settings;
-use iced_winit::conversion;
-use iced_winit::futures::executor::LocalPool;
-use iced_winit::program;
-use iced_winit::program::State;
-use iced_winit::winit::dpi::PhysicalPosition;
-use iced_winit::winit::event::Event;
-use iced_winit::winit::event::ModifiersState;
-use iced_winit::winit::event::WindowEvent;
-use iced_winit::winit::window::Window;
-use iced_winit::Clipboard;
-use iced_winit::Debug as IcedDebug;
-use iced_winit::Size;
-use iced_winit::Viewport;
 use std::fmt::Debug;
-use std::ops::Deref;
 use std::sync::Arc;
 use std::sync::RwLock;
+use std::time::Instant;
+use winit::event::Event;
 
 pub struct EditorManagerState {
-    debug: IcedDebug,
-    renderer: Renderer,
-    state: State<Program>,
-    viewport: Viewport,
-    staging_belt: wgpu::util::StagingBelt,
-    modifiers: ModifiersState,
-    clipboard: Clipboard,
-    cursor_position: PhysicalPosition<f64>,
-    local_pool: LocalPool,
+    platform: Platform,
+    egui_rpass: RenderPass,
+    start_time: Instant,
+    previous_frame_time: Option<f32>,
+    application: Application,
 }
 
 #[derive(FruityAny)]
@@ -90,63 +74,22 @@ impl EditorManager {
             });
 
         let service_manager_2 = service_manager.clone();
-        graphic_manager_reader
-            .on_after_draw_end
-            .add_observer(move |_| {
-                let service_manager = service_manager_2.read().unwrap();
-                let mut editor_manager = service_manager.write::<EditorManager>();
-
-                editor_manager.call_staging_buffer();
-            });
-
-        let service_manager_2 = service_manager.clone();
         windows_manager_reader.on_event.add_observer(move |event| {
             let service_manager = service_manager_2.read().unwrap();
             let mut editor_manager = service_manager.write::<EditorManager>();
 
-            // TODO: Wait the release of the next version of iced to remove it
-            let event =
-                unsafe { std::mem::transmute::<winit::event::Event<()>, Event<()>>(event.clone()) };
-
             editor_manager.handle_event(&event);
         });
 
-        let service_manager_2 = service_manager.clone();
-        windows_manager_reader
-            .on_events_cleared
-            .add_observer(move |_| {
-                let service_manager = service_manager_2.read().unwrap();
-                let mut editor_manager = service_manager.write::<EditorManager>();
-
-                editor_manager.process_event_queue();
-            });
-
-        let service_manager_2 = service_manager.clone();
-        windows_manager_reader
-            .on_resize
-            .add_observer(move |(width, height)| {
-                let service_manager = service_manager_2.read().unwrap();
-                let mut editor_manager = service_manager.write::<EditorManager>();
-
-                editor_manager.handle_viewport_resize(width, height);
-            });
-
-        let service_manager_2 = service_manager.clone();
-        windows_manager_reader
-            .on_cursor_moved
-            .add_observer(move |(x, y)| {
-                let service_manager = service_manager_2.read().unwrap();
-                let mut editor_manager = service_manager.write::<EditorManager>();
-
-                editor_manager.handle_cursor_move(x, y);
-            });
-
         // Create the base UI
-        let panes = Program::new(service_manager);
+        let application = Application::new(service_manager);
 
         // Connect to the window
-        let state =
-            EditorManager::initialize(panes, &windows_manager_reader, &graphic_manager_reader);
+        let state = EditorManager::initialize(
+            application,
+            windows_manager.clone(),
+            &graphic_manager_reader,
+        );
 
         EditorManager {
             windows_manager: windows_manager.clone(),
@@ -156,90 +99,96 @@ impl EditorManager {
     }
 
     pub fn initialize(
-        program: Program,
-        windows_manager: &WindowsManager,
+        application: Application,
+        windows_manager: ServiceRwLock<WindowsManager>,
         graphic_manager: &GraphicsManager,
     ) -> EditorManagerState {
+        let windows_manager_reader = windows_manager.read().unwrap();
+
         // Get all what we need to initialize
         let device = graphic_manager.get_device();
         let config = graphic_manager.get_config();
 
-        // Initialize the renderer
-        let mut debug = IcedDebug::new();
-        let mut renderer = Renderer::new(Backend::new(device, Settings::default(), config.format));
-        let size = windows_manager.get_size();
-        let cursor_position = PhysicalPosition::new(-1.0, -1.0);
-        let clipboard = {
-            let window = windows_manager.get_window();
+        // We use the egui_winit_platform crate as the platform.
+        let size = windows_manager_reader.get_size();
+        let platform = Platform::new(PlatformDescriptor {
+            physical_width: size.0 as u32,
+            physical_height: size.1 as u32,
+            scale_factor: windows_manager_reader.get_scale_factor(),
+            font_definitions: FontDefinitions::default(),
+            style: Default::default(),
+        });
 
-            // TODO: Wait the release of the next version of iced to remove it
-            let window = window.deref() as *const _ as *const c_void;
-            let window = window as *const Window;
-            let window = unsafe { &*window as &Window };
-            Clipboard::connect(window)
-        };
-
-        // Initialize staging belt and local pool
-        let staging_belt = wgpu::util::StagingBelt::new(5 * 1024);
-        let local_pool = LocalPool::new();
-
-        // Initialize viewport
-        let viewport = Viewport::with_physical_size(
-            Size::new(size.0 as u32, size.1 as u32),
-            windows_manager.get_scale_factor(),
-        );
-
-        // Create the UI State that will be used to manage the UI
-        let modifiers = ModifiersState::default();
-        let state = program::State::new(
-            program,
-            viewport.logical_size(),
-            conversion::cursor_position(cursor_position, windows_manager.get_scale_factor()),
-            &mut renderer,
-            &mut debug,
-        );
+        // We use the egui_wgpu_backend crate as the render backend.
+        let egui_rpass = RenderPass::new(&device, config.format, 1);
 
         EditorManagerState {
-            debug,
-            renderer,
-            state,
-            viewport,
-            staging_belt,
-            modifiers,
-            clipboard,
-            cursor_position,
-            local_pool,
+            platform,
+            egui_rpass,
+            start_time: Instant::now(),
+            previous_frame_time: None,
+            application,
         }
     }
 
     fn draw(&mut self) {
-        // Get all what we need to draw
         let graphic_manager = self.graphic_manager.read().unwrap();
-        let device = graphic_manager.get_device();
-        let rendering_view = graphic_manager.get_rendering_view();
-        let mut encoder = graphic_manager.get_encoder().unwrap().write().unwrap();
-
-        let mouse_interaction = self.state.renderer.backend_mut().draw(
-            &device,
-            &mut self.state.staging_belt,
-            &mut encoder,
-            &rendering_view,
-            &self.state.viewport,
-            self.state.state.primitive(),
-            &self.state.debug.overlay(),
-        );
-
-        self.state.staging_belt.finish();
-
-        // Update the cursor
         let windows_manager = self.windows_manager.read().unwrap();
-        let window = windows_manager.get_window();
+        let device = graphic_manager.get_device();
+        let config = graphic_manager.get_config();
+        let queue = graphic_manager.get_queue();
+        let rendering_view = graphic_manager.get_rendering_view();
+        let encoder = graphic_manager.get_encoder().unwrap();
 
-        // TODO: Wait the release of the next version of iced to remove it
-        let window = window.deref() as *const _ as *const c_void;
-        let window = window as *const Window;
-        let window = unsafe { &*window as &Window };
-        window.set_cursor_icon(iced_winit::conversion::mouse_interaction(mouse_interaction));
+        self.state
+            .platform
+            .update_time(self.state.start_time.elapsed().as_secs_f64());
+
+        // Begin to draw the UI frame.
+        let egui_start = Instant::now();
+        self.state.platform.begin_frame();
+
+        // Draw the demo application
+        self.state.application.draw(&self.state.platform);
+
+        // End the UI frame. We could now handle the output and draw the UI with the backend.
+        let (_output, paint_commands) = self
+            .state
+            .platform
+            .end_frame(Some(windows_manager.get_window()));
+        let paint_jobs = self.state.platform.context().tessellate(paint_commands);
+
+        let frame_time = (Instant::now() - egui_start).as_secs_f64() as f32;
+        self.state.previous_frame_time = Some(frame_time);
+
+        // Upload all resources for the GPU.
+        let screen_descriptor = ScreenDescriptor {
+            physical_width: config.width,
+            physical_height: config.height,
+            scale_factor: windows_manager.get_scale_factor() as f32,
+        };
+        self.state.egui_rpass.update_texture(
+            &device,
+            &queue,
+            &self.state.platform.context().texture(),
+        );
+        self.state.egui_rpass.update_user_textures(&device, &queue);
+        self.state
+            .egui_rpass
+            .update_buffers(&device, &queue, &paint_jobs, &screen_descriptor);
+
+        // Record all render passes.
+        let mut encoder = encoder.write().unwrap();
+        self.state
+            .egui_rpass
+            .execute(
+                &mut encoder,
+                &rendering_view,
+                &paint_jobs,
+                &screen_descriptor,
+                None,
+            )
+            .unwrap();
     }
 
     fn is_entity_selected(&self, entity_id: &EntityId) -> bool {
@@ -252,79 +201,8 @@ impl EditorManager {
         }
     }
 
-    fn handle_cursor_move(&mut self, x: &usize, y: &usize) {
-        self.state.cursor_position = PhysicalPosition::new(*x as f64, *y as f64);
-    }
-
-    fn handle_viewport_resize(&mut self, width: &usize, height: &usize) {
-        // and request a redraw
-        let windows_manager = self.windows_manager.read().unwrap();
-        let window = windows_manager.get_window();
-
-        // TODO: Wait the release of the next version of iced to remove it
-        let window = window.deref() as *const _ as *const c_void;
-        let window = window as *const Window;
-        let window = unsafe { &*window as &Window };
-        window.request_redraw();
-
-        self.state.viewport = Viewport::with_physical_size(
-            Size::new(*width as u32, *height as u32),
-            window.scale_factor(),
-        );
-    }
-
     fn handle_event(&mut self, event: &Event<'static, ()>) {
-        let windows_manager = self.windows_manager.read().unwrap();
-
-        if let Event::WindowEvent { event, .. } = &event {
-            if let WindowEvent::ModifiersChanged(new_modifiers) = event {
-                self.state.modifiers = *new_modifiers;
-            } else if let Some(event) = iced_winit::conversion::window_event(
-                &event,
-                windows_manager.get_scale_factor(),
-                self.state.modifiers,
-            ) {
-                self.state.state.queue_event(event);
-            }
-        }
-    }
-
-    fn process_event_queue(&mut self) {
-        let windows_manager = self.windows_manager.read().unwrap();
-
-        // If there are events pending
-        if !self.state.state.is_queue_empty() {
-            // We update iced
-            self.state.state.update(
-                self.state.viewport.logical_size(),
-                conversion::cursor_position(
-                    self.state.cursor_position,
-                    windows_manager.get_scale_factor(),
-                ),
-                &mut self.state.renderer,
-                &mut self.state.clipboard,
-                &mut self.state.debug,
-            );
-
-            // and request a redraw
-            let window = windows_manager.get_window();
-
-            // TODO: Wait the release of the next version of iced to remove it
-            let window = window.deref() as *const _ as *const c_void;
-            let window = window as *const Window;
-            let window = unsafe { &*window as &Window };
-            window.request_redraw();
-        }
-    }
-
-    fn call_staging_buffer(&mut self) {
-        self.state
-            .local_pool
-            .spawner()
-            .spawn(self.state.staging_belt.recall())
-            .expect("Recall staging buffers");
-
-        self.state.local_pool.run_until_stalled();
+        self.state.platform.handle_event(&event);
     }
 }
 

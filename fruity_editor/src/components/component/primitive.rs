@@ -1,8 +1,10 @@
 use crate::components::component::EditableComponent;
+use crate::ui_element::display::Text;
 use crate::ui_element::input::Checkbox;
 use crate::ui_element::input::FloatInput;
 use crate::ui_element::input::Input;
 use crate::ui_element::input::IntegerInput;
+use crate::ui_element::layout::Row;
 use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
 use fruity_core::component::component_rwlock::ComponentRwLock;
@@ -31,24 +33,32 @@ macro_rules! impl_int_for_editable_component {
 
                 let field_info = field_info.clone();
                 let component = component.clone();
-                IntegerInput {
-                    label: field_info.name.to_string(),
-                    value: value as i64,
-                    on_change: Arc::new(move |value| {
-                        let mut writer = component.write();
-
-                        match &field_info.setter {
-                            SetterCaller::Const(setter) => setter(
-                                writer.as_any_ref(),
-                                Serialized::try_from(value as $type).unwrap(),
-                            ),
-                            SetterCaller::Mut(setter) => setter(
-                                writer.as_any_mut(),
-                                Serialized::try_from(value as $type).unwrap(),
-                            ),
-                            SetterCaller::None => (),
-                        };
-                    }),
+                Row {
+                    children: vec![
+                        Text {
+                            text: field_info.name.to_string(),
+                        }
+                        .elem(),
+                        IntegerInput {
+                            value: value as i64,
+                            on_change: Arc::new(move |value| {
+                                let mut writer = component.write();
+                                match &field_info.setter {
+                                    SetterCaller::Const(setter) => setter(
+                                        writer.as_any_ref(),
+                                        Serialized::try_from(value as $type).unwrap(),
+                                    ),
+                                    SetterCaller::Mut(setter) => setter(
+                                        writer.as_any_mut(),
+                                        Serialized::try_from(value as $type).unwrap(),
+                                    ),
+                                    SetterCaller::None => (),
+                                };
+                            }),
+                        }
+                        .elem(),
+                    ],
+                    ..Default::default()
                 }
                 .elem()
             }
@@ -84,25 +94,33 @@ macro_rules! impl_float_for_editable_component {
 
                 let field_info = field_info.clone();
                 let component = component.clone();
-                FloatInput {
-                    label: field_info.name.to_string(),
-                    value: value as f64,
-                    on_change: Arc::new(move |value| {
-                        let component = component.clone();
-                        let mut writer = component.write();
-
-                        match &field_info.setter {
-                            SetterCaller::Const(setter) => setter(
-                                writer.as_any_ref(),
-                                Serialized::try_from(value as $type).unwrap(),
-                            ),
-                            SetterCaller::Mut(setter) => setter(
-                                writer.as_any_mut(),
-                                Serialized::try_from(value as $type).unwrap(),
-                            ),
-                            SetterCaller::None => (),
-                        };
-                    }),
+                Row {
+                    children: vec![
+                        Text {
+                            text: field_info.name.to_string(),
+                        }
+                        .elem(),
+                        FloatInput {
+                            value: value as f64,
+                            on_change: Arc::new(move |value| {
+                                let component = component.clone();
+                                let mut writer = component.write();
+                                match &field_info.setter {
+                                    SetterCaller::Const(setter) => setter(
+                                        writer.as_any_ref(),
+                                        Serialized::try_from(value as $type).unwrap(),
+                                    ),
+                                    SetterCaller::Mut(setter) => setter(
+                                        writer.as_any_mut(),
+                                        Serialized::try_from(value as $type).unwrap(),
+                                    ),
+                                    SetterCaller::None => (),
+                                };
+                            }),
+                        }
+                        .elem(),
+                    ],
+                    ..Default::default()
                 }
                 .elem()
             }
@@ -164,25 +182,34 @@ impl EditableComponent for String {
 
         let field_info = field_info.clone();
         let component = component.clone();
-        Input {
-            label: field_info.name.to_string(),
-            placeholder: "".to_string(),
-            value: value,
-            on_change: Arc::new(move |value: &str| {
-                let mut writer = component.write();
+        Row {
+            children: vec![
+                Text {
+                    text: field_info.name.to_string(),
+                }
+                .elem(),
+                Input {
+                    placeholder: "".to_string(),
+                    value: value,
+                    on_change: Arc::new(move |value: &str| {
+                        let mut writer = component.write();
 
-                match &field_info.setter {
-                    SetterCaller::Const(setter) => setter(
-                        writer.as_any_ref(),
-                        Serialized::try_from(value.to_string()).unwrap(),
-                    ),
-                    SetterCaller::Mut(setter) => setter(
-                        writer.as_any_mut(),
-                        Serialized::try_from(value.to_string()).unwrap(),
-                    ),
-                    SetterCaller::None => (),
-                };
-            }),
+                        match &field_info.setter {
+                            SetterCaller::Const(setter) => setter(
+                                writer.as_any_ref(),
+                                Serialized::try_from(value.to_string()).unwrap(),
+                            ),
+                            SetterCaller::Mut(setter) => setter(
+                                writer.as_any_mut(),
+                                Serialized::try_from(value.to_string()).unwrap(),
+                            ),
+                            SetterCaller::None => (),
+                        };
+                    }),
+                }
+                .elem(),
+            ],
+            ..Default::default()
         }
         .elem()
     }

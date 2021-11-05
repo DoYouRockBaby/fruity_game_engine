@@ -71,8 +71,6 @@ impl JsObject {
 
         let field_value = value.as_v8(scope);
         v8_value.set(scope, key.into(), field_value.into());
-        // TODO: try to remove
-        self.v8_value = v8::Global::new(scope, v8_value);
     }
 
     pub fn add_property(
@@ -101,8 +99,6 @@ impl JsObject {
         let key = v8::String::new(scope, name).unwrap();
         let v8_value = v8::Local::new(scope, &self.v8_value);
         v8_value.set_accessor_with_setter(scope, key.into(), getter, setter);
-        // TODO: try to remove
-        self.v8_value = v8::Global::new(scope, v8_value);
     }
 
     pub fn set_func(

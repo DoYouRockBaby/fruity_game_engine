@@ -8,12 +8,14 @@ resolver = "2"
 # crate-type = ["dylib"]
 
 [dependencies]
-iced = { git = "https://github.com/iced-rs/iced" }
-iced_winit = { git = "https://github.com/iced-rs/iced" }
-iced_wgpu = { git = "https://github.com/iced-rs/iced" }
 winit = "0.25.0"
 rayon = "1.5"
 lazy_static = "1.4"
+egui_wgpu_backend = "0.14"
+egui = "0.15"
+epi = "0.15"
+egui_winit_platform = "0.11"
+wgpu = "0.11.0"
 comp_state = { path = "../deps/comp_state" }
 fruity_any = { path = "../fruity_any" }
 fruity_core = { path = "../fruity_core" }

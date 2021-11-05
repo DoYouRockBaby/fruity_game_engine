@@ -1,7 +1,7 @@
 use crate::hooks::use_global;
 use crate::state::entity::EntityState;
 use crate::state::world::WorldState;
-use crate::ui_element::display::Text;
+use crate::ui_element::input::Button;
 use crate::ui_element::list::ListView;
 use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
@@ -25,25 +25,21 @@ pub fn entity_list_component() -> UIElement {
 
     ListView {
         items,
-        get_key: Box::new(|item: &dyn Any| {
+        render_item: Arc::new(|item: &dyn Any| {
             let item = item.downcast_ref::<EntitySharedRwLock>().unwrap();
-            let item = item.read();
-            item.entity_id as usize
-        }),
-        render_item: Box::new(|item: &dyn Any| {
-            let item = item.downcast_ref::<EntitySharedRwLock>().unwrap();
-            let item = item.read();
-            Text {
-                text: item.name.clone(),
-                ..Text::default()
+            let item_reader = item.read();
+
+            let item = item.clone();
+            Button {
+                label: item_reader.name.clone(),
+                on_click: Arc::new(move || {
+                    let entity_state = use_global::<EntityState>();
+                    let item = item.clone();
+
+                    entity_state.selected_entity = Some(item.clone());
+                }),
             }
             .elem()
-        }),
-        on_clicked: Arc::new(move |item: &dyn Any| {
-            let entity_state = use_global::<EntityState>();
-
-            let item = item.downcast_ref::<EntitySharedRwLock>().unwrap();
-            entity_state.selected_entity = Some(item.clone());
         }),
     }
     .elem()

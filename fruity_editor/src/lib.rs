@@ -15,7 +15,6 @@ pub mod editor_manager;
 pub mod gizmos_service;
 pub mod hooks;
 pub mod state;
-pub mod style;
 pub mod systems;
 pub mod ui_element;
 

@@ -16,7 +16,6 @@ impl UIWidget for Button {
 }
 
 pub struct Input {
-    pub label: String,
     pub value: String,
     pub placeholder: String,
     pub on_change: Arc<dyn Fn(&str) + Send + Sync>,
@@ -31,7 +30,6 @@ impl UIWidget for Input {
 }
 
 pub struct IntegerInput {
-    pub label: String,
     pub value: i64,
     pub on_change: Arc<dyn Fn(i64) + Send + Sync>,
 }
@@ -45,7 +43,6 @@ impl UIWidget for IntegerInput {
 }
 
 pub struct FloatInput {
-    pub label: String,
     pub value: f64,
     pub on_change: Arc<dyn Fn(f64) + Send + Sync>,
 }

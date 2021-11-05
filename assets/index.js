@@ -131,7 +131,6 @@ systemManager.addSystem(() => {
 
             if (inputManager.isPressed("Down")) {
                 vel.y -= components.get(1).velocity;
-                entityManager.remove(player_entity_id);
             }
 
 

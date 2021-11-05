@@ -3,7 +3,7 @@ use crate::ui_element::UIWidget;
 use std::sync::Arc;
 
 #[derive(Clone)]
-pub struct Menu {
+pub struct MenuBar {
     pub sections: Vec<MenuSection>,
 }
 
@@ -16,10 +16,10 @@ pub struct MenuSection {
 #[derive(Clone)]
 pub struct MenuItem {
     pub label: String,
-    pub on_clicked: Arc<dyn Fn() + Send + Sync>,
+    pub on_click: Arc<dyn Fn() + Send + Sync>,
 }
 
-impl UIWidget for Menu {
+impl UIWidget for MenuBar {
     fn elem(self) -> UIElement {
         UIElement {
             root: Box::new(self),

@@ -32,7 +32,6 @@ pub fn entity_edit_component() -> UIElement {
                     }
                     .elem(),
                     Input {
-                        label: "".to_string(),
                         value: entity_reader.name.to_string(),
                         placeholder: "Name ...".to_string(),
                         on_change: Arc::new(move |value: &str| {

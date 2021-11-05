@@ -23,7 +23,6 @@ fn main() {
     builder.filter_module("mio", log::LevelFilter::Off);
     builder.filter_module("wgpu_core", log::LevelFilter::Off);
     builder.filter_module("wgpu_hal", log::LevelFilter::Off);
-    builder.filter_module("iced_wgpu", log::LevelFilter::Off);
     builder.try_init().unwrap();
 
     let mut file = File::open("assets/settings.yaml").unwrap();
