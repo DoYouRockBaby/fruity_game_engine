@@ -131,6 +131,12 @@ impl Theme {
             Theme::Dark => dark::Panel.into(),
         }
     }
+
+    pub fn tooltip(&self) -> Box<dyn container::StyleSheet> {
+        match self {
+            Theme::Dark => dark::Tooltip.into(),
+        }
+    }
 }
 
 mod dark {
@@ -296,6 +302,18 @@ mod dark {
     pub struct ListView;
 
     impl container::StyleSheet for ListView {
+        fn style(&self) -> container::Style {
+            container::Style {
+                background: SURFACE.into(),
+                text_color: Color::WHITE.into(),
+                ..container::Style::default()
+            }
+        }
+    }
+
+    pub struct Tooltip;
+
+    impl container::StyleSheet for Tooltip {
         fn style(&self) -> container::Style {
             container::Style {
                 background: SURFACE.into(),

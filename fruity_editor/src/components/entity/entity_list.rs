@@ -9,11 +9,9 @@ use fruity_core::entity::archetype::rwlock::EntitySharedRwLock;
 use fruity_core::entity::entity_manager::EntityManager;
 use std::any::Any;
 use std::sync::Arc;
-use std::sync::Mutex;
 
 pub fn entity_list_component() -> UIElement {
     let world_state = use_global::<WorldState>();
-    let entity_state = use_global::<EntityState>();
 
     let service_manager = world_state.service_manager.clone();
     let service_manager = service_manager.read().unwrap();
@@ -41,10 +39,12 @@ pub fn entity_list_component() -> UIElement {
             }
             .elem()
         }),
-        on_clicked: Arc::new(Mutex::new(move |item: &dyn Any| {
+        on_clicked: Arc::new(move |item: &dyn Any| {
+            let entity_state = use_global::<EntityState>();
+
             let item = item.downcast_ref::<EntitySharedRwLock>().unwrap();
             entity_state.selected_entity = Some(item.clone());
-        })),
+        }),
     }
     .elem()
 }

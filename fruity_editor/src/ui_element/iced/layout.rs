@@ -2,6 +2,7 @@ use crate::hooks::use_global;
 use crate::state::theme::ThemeState;
 use crate::ui_element::iced::draw_element;
 use crate::ui_element::layout::Column;
+use crate::ui_element::layout::Container;
 use crate::ui_element::layout::Row;
 use crate::ui_element::Message;
 use iced::Column as IcedColumn;
@@ -12,6 +13,16 @@ use iced_winit::Element;
 
 pub fn draw_empty<'a>() -> Element<'a, Message, Renderer> {
     IcedRow::new().into()
+}
+
+pub fn draw_container<'a>(elem: Container) -> Element<'a, Message, Renderer> {
+    let theme_state = use_global::<ThemeState>();
+
+    IcedContainer::new(draw_element(elem.child))
+        .style(theme_state.theme.panel())
+        .width(elem.width.into())
+        .height(elem.height.into())
+        .into()
 }
 
 pub fn draw_row<'a>(elem: Row) -> Element<'a, Message, Renderer> {

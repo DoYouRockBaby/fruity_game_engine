@@ -18,6 +18,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::rc::Rc;
+use std::sync::Arc;
 
 #[topo::nested]
 pub fn draw_list_view<'a>(elem: ListView) -> Element<'a, Message, Renderer> {
@@ -81,6 +82,7 @@ pub fn draw_list_view<'a>(elem: ListView) -> Element<'a, Message, Renderer> {
                 >(&mut list_state)
             };
 
+            let on_clicked = on_clicked.clone();
             scrollable.push({
                 let key = get_key(item.deref());
                 let rendered_item = render_item(item.deref());
@@ -88,7 +90,9 @@ pub fn draw_list_view<'a>(elem: ListView) -> Element<'a, Message, Renderer> {
                 let item: Element<Message, Renderer> =
                     IcedButton::new(item_state, draw_element(rendered_item))
                         .style(theme_state.theme.list_item())
-                        .on_press(Message::AnyChanged(on_clicked.clone(), item.clone()))
+                        .on_press(Message::Callback(Arc::new(move || {
+                            on_clicked(item.deref())
+                        })))
                         .width(IcedLength::Fill)
                         .into();
                 item

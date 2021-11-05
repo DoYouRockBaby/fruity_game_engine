@@ -1,6 +1,70 @@
 use crate::components::panes::panes_component;
+use crate::ui_element::layout::Column;
+use crate::ui_element::menu::Menu;
+use crate::ui_element::menu::MenuItem;
+use crate::ui_element::menu::MenuSection;
 use crate::ui_element::UIElement;
+use crate::ui_element::UIWidget;
+use std::sync::Arc;
 
 pub fn root_component() -> UIElement {
-    panes_component()
+    Column {
+        children: vec![
+            Menu {
+                sections: vec![
+                    MenuSection {
+                        label: "File".to_string(),
+                        items: vec![
+                            MenuItem {
+                                label: "Open".to_string(),
+                                on_clicked: Arc::new(|| ()),
+                            },
+                            MenuItem {
+                                label: "Save".to_string(),
+                                on_clicked: Arc::new(|| ()),
+                            },
+                            MenuItem {
+                                label: "Save as".to_string(),
+                                on_clicked: Arc::new(|| ()),
+                            },
+                        ],
+                    },
+                    MenuSection {
+                        label: "Project".to_string(),
+                        items: vec![
+                            MenuItem {
+                                label: "Settings".to_string(),
+                                on_clicked: Arc::new(|| ()),
+                            },
+                            MenuItem {
+                                label: "Platforms".to_string(),
+                                on_clicked: Arc::new(|| ()),
+                            },
+                            MenuItem {
+                                label: "Inputs".to_string(),
+                                on_clicked: Arc::new(|| ()),
+                            },
+                        ],
+                    },
+                    MenuSection {
+                        label: "Tools".to_string(),
+                        items: vec![
+                            MenuItem {
+                                label: "Grid".to_string(),
+                                on_clicked: Arc::new(|| ()),
+                            },
+                            MenuItem {
+                                label: "Appearance".to_string(),
+                                on_clicked: Arc::new(|| ()),
+                            },
+                        ],
+                    },
+                ],
+            }
+            .elem(),
+            panes_component(),
+        ],
+        ..Default::default()
+    }
+    .elem()
 }

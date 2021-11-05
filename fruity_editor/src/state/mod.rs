@@ -1,8 +1,5 @@
-use std::any::Any;
 use std::fmt::Debug;
-use std::ops::Deref;
 use std::sync::Arc;
-use std::sync::Mutex;
 
 pub mod entity;
 pub mod theme;
@@ -14,10 +11,6 @@ pub enum Message {
     Callback(Arc<dyn Fn() + Send + Sync>),
     StringChanged(Arc<dyn Fn(&str) + Send + Sync>, String),
     BoolChanged(Arc<dyn Fn(bool) + Send + Sync>, bool),
-    AnyChanged(
-        Arc<Mutex<dyn FnMut(&dyn Any) + Send + Sync>>,
-        Arc<dyn Any + Send + Sync>,
-    ),
 }
 
 impl Debug for Message {
@@ -34,10 +27,6 @@ pub fn handle_message(message: Message) {
         Message::Callback(callback) => callback(),
         Message::StringChanged(callback, value) => callback(&value),
         Message::BoolChanged(callback, value) => callback(value),
-        Message::AnyChanged(callback, value) => {
-            let mut callback = callback.lock().unwrap();
-            callback(value.deref())
-        }
         _ => (),
     }
 }
