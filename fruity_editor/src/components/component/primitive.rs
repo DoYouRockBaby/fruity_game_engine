@@ -1,4 +1,4 @@
-use crate::components::component::EditableComponent;
+use crate::components::component::ComponentFieldEditor;
 use crate::ui_element::display::Text;
 use crate::ui_element::input::Checkbox;
 use crate::ui_element::input::FloatInput;
@@ -11,18 +11,13 @@ use fruity_core::component::component_rwlock::ComponentRwLock;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::SetterCaller;
-use std::any::TypeId;
 use std::convert::TryFrom;
 use std::sync::Arc;
 
 macro_rules! impl_int_for_editable_component {
     ( $type:ident ) => {
-        impl EditableComponent for $type {
-            fn type_id() -> TypeId {
-                TypeId::of::<$type>()
-            }
-
-            fn render_edit(component: ComponentRwLock, field_info: &FieldInfo) -> UIElement {
+        impl ComponentFieldEditor for $type {
+            fn draw_editor(component: ComponentRwLock, field_info: &FieldInfo) -> UIElement {
                 let reader = component.read();
                 let value = (field_info.getter)(reader.as_any_ref());
                 let value = if let Ok(value) = $type::try_from(value) {
@@ -79,11 +74,8 @@ impl_int_for_editable_component!(isize);
 
 macro_rules! impl_float_for_editable_component {
     ( $type:ident ) => {
-        impl EditableComponent for $type {
-            fn type_id() -> TypeId {
-                TypeId::of::<$type>()
-            }
-            fn render_edit(component: ComponentRwLock, field_info: &FieldInfo) -> UIElement {
+        impl ComponentFieldEditor for $type {
+            fn draw_editor(component: ComponentRwLock, field_info: &FieldInfo) -> UIElement {
                 let reader = component.read();
                 let value = (field_info.getter)(reader.as_any_ref());
                 let value = if let Ok(value) = $type::try_from(value) {
@@ -131,11 +123,8 @@ macro_rules! impl_float_for_editable_component {
 impl_float_for_editable_component!(f32);
 impl_float_for_editable_component!(f64);
 
-impl EditableComponent for bool {
-    fn type_id() -> TypeId {
-        TypeId::of::<bool>()
-    }
-    fn render_edit(component: ComponentRwLock, field_info: &FieldInfo) -> UIElement {
+impl ComponentFieldEditor for bool {
+    fn draw_editor(component: ComponentRwLock, field_info: &FieldInfo) -> UIElement {
         let reader = component.read();
         let value = (field_info.getter)(reader.as_any_ref());
         let value = if let Ok(value) = bool::try_from(value) {
@@ -167,11 +156,8 @@ impl EditableComponent for bool {
     }
 }
 
-impl EditableComponent for String {
-    fn type_id() -> TypeId {
-        TypeId::of::<String>()
-    }
-    fn render_edit(component: ComponentRwLock, field_info: &FieldInfo) -> UIElement {
+impl ComponentFieldEditor for String {
+    fn draw_editor(component: ComponentRwLock, field_info: &FieldInfo) -> UIElement {
         let reader = component.read();
         let value = (field_info.getter)(reader.as_any_ref());
         let value = if let Ok(value) = String::try_from(value) {

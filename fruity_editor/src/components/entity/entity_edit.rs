@@ -1,4 +1,4 @@
-use crate::components::component::edit_component_component;
+use crate::components::component::edit_component_fields;
 use crate::hooks::use_global;
 use crate::state::entity::EntityState;
 use crate::ui_element::display::Text;
@@ -61,7 +61,7 @@ pub fn entity_edit_component() -> UIElement {
                                 ..Text::default()
                             }
                             .elem(),
-                            edit_component_component(component.clone()),
+                            edit_component_fields(component.clone()),
                         ],
                         align: UIAlign::Start,
                     }

@@ -14,10 +14,3 @@ impl WorldState {
         }
     }
 }
-
-#[derive(Debug, Clone)]
-pub enum WorldMessage {}
-
-pub fn update_world(_state: &mut WorldState, message: WorldMessage) {
-    match message {}
-}
