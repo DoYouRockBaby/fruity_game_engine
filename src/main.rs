@@ -5,6 +5,7 @@ use fruity_core::settings::read_settings;
 use fruity_core::settings::Settings;
 use fruity_core::world::World;
 use fruity_editor::initialize as initialize_editor;
+use fruity_editor_graphic_2d::initialize as initialize_editor_graphic_2d;
 use fruity_graphic::initialize as initialize_graphic;
 use fruity_graphic_2d::initialize as initialize_graphic_2d;
 use fruity_input::initialize as initialize_input;
@@ -43,6 +44,7 @@ fn main() {
             initialize_graphic(service_manager, settings);
             initialize_graphic_2d(service_manager, settings);
             initialize_editor(service_manager, settings);
+            initialize_editor_graphic_2d(service_manager, settings);
             initialize_javascript(service_manager, settings);
 
             // Load resources

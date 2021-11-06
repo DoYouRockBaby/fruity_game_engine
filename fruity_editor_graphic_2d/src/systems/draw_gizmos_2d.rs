@@ -1,12 +1,12 @@
 use crate::gizmos_service::GizmosService;
-use crate::hooks::use_global;
-use crate::state::entity::EntityState;
 use fruity_core::component::component_rwlock::ComponentRwLock;
 use fruity_core::entity::entity::EntityId;
 use fruity_core::entity::entity_manager::EntityManager;
 use fruity_core::entity_type;
 use fruity_core::service::service_guard::ServiceReadGuard;
 use fruity_core::service::service_manager::ServiceManager;
+use fruity_editor::hooks::use_global;
+use fruity_editor::state::entity::EntityState;
 use fruity_graphic::math::GREEN;
 use fruity_graphic::math::RED;
 use fruity_graphic_2d::components::position::Position;

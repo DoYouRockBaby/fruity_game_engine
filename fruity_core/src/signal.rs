@@ -154,25 +154,6 @@ impl<T: Into<Serialized> + Debug + Clone + 'static> FruityAny for Signal<T> {
     }
 }
 
-/*impl<T: Into<Serialized> + Debug + Clone + 'static> TryFrom<Serialized> for Signal<T> {
-    type Error = String;
-
-    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
-        match value {
-            Serialized::NativeObject(value) => {
-                match value.clone().as_any_box().downcast::<Arc<Signal<T>>>() {
-                    Ok(value) => match value.as_any_arc().downcast::<T>() {
-                        Ok(value) => Ok(ResourceReference::from_resource(value)),
-                        _ => Err(format!("Couldn't convert a Serialized to native object")),
-                    },
-                    _ => Err(format!("Couldn't convert a Serialized to native object")),
-                }
-            }
-            _ => Err(format!("Couldn't convert {:?} to native object", value)),
-        }
-    }
-}*/
-
 impl<T: Into<Serialized> + Debug + Clone + 'static> Into<Serialized> for Signal<T> {
     fn into(self) -> Serialized {
         Serialized::NativeObject(Box::new(self))

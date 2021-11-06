@@ -854,17 +854,26 @@ dependencies = [
  "fruity_any",
  "fruity_core",
  "fruity_graphic",
- "fruity_graphic_2d",
- "fruity_input",
  "fruity_introspect",
- "fruity_javascript_scripting",
  "fruity_windows",
  "lazy_static 1.4.0",
  "log",
- "pretty_env_logger",
- "rayon",
- "wgpu",
  "winit",
+]
+
+[[package]]
+name = "fruity_editor_graphic_2d"
+version = "0.1.0"
+dependencies = [
+ "fruity_any",
+ "fruity_core",
+ "fruity_editor",
+ "fruity_graphic",
+ "fruity_graphic_2d",
+ "fruity_input",
+ "fruity_introspect",
+ "log",
+ "rayon",
 ]
 
 [[package]]
@@ -874,6 +883,7 @@ dependencies = [
  "fruity_any",
  "fruity_core",
  "fruity_editor",
+ "fruity_editor_graphic_2d",
  "fruity_graphic",
  "fruity_graphic_2d",
  "fruity_input",

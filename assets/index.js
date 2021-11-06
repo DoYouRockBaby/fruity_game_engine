@@ -20,6 +20,12 @@ class Velocity {
     }
 }
 
+class TestVec {
+    constructor(args) {
+        Object.assign(this, args);
+    }
+}
+
 services.register("service2", new Service2());
 const systemManager = services.get("system_manager");
 const entityManager = services.get("entity_manager");
@@ -58,29 +64,15 @@ entityManager.onEntityCreated.addObserver((entity) => {
 
 let player_entity_id = 0;
 systemManager.addBeginSystem(() => {
-    console.log("1");
-    let image_entity_id = entityManager.create("Image 1", [
+    entityManager.create("Image 1", [
         new Position({ pos: new Vector2d({ x: 0.25, y: 0.25 }) }),
         new Size({ size: new Vector2d({ x: 0.5, y: 0.5 }) }),
         new Sprite({
             texture: resourcesManager.getResource("assets/logo.png"),
             material: resourcesManager.getResource("assets/material.material"),
         }),
+        new TestVec({ size: new Vector2d({ x: 0.5, y: 0.5 }) }),
     ]);
-
-    console.log("2");
-    entityManager.remove(image_entity_id);
-    console.log("3");
-
-    entityManager.create("Image 3", [
-        new Position({ pos: new Vector2d({ x: 0.25, y: 0.25 }) }),
-        new Size({ size: new Vector2d({ x: 0.75, y: 0.5 }) }),
-        new Sprite({
-            texture: resourcesManager.getResource("assets/logo.png"),
-            material: resourcesManager.getResource("assets/material.material"),
-        }),
-    ]);
-    console.log("4");
 
     player_entity_id = entityManager.create("Player", [
         new Position({ pos: new Vector2d({ x: -0.25, y: 0.25 }) }),

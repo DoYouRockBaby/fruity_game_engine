@@ -14,6 +14,7 @@ log = "0.4.14"
 rayon = "1.5"
 mini-redis = "0.4"
 fruity_editor = { path = "fruity_editor" }
+fruity_editor_graphic_2d = { path = "fruity_editor_graphic_2d" }
 fruity_graphic = { path = "fruity_graphic" }
 fruity_graphic_2d = { path = "fruity_graphic_2d" }
 fruity_input = { path = "fruity_input" }

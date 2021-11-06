@@ -10,6 +10,7 @@ use fruity_introspect::MethodInfo;
 use fruity_introspect::SetterCaller;
 use std::any::TypeId;
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::sync::Arc;
 
 /// A wrapper for components that come from scripting languages as serialized
@@ -95,7 +96,8 @@ impl IntrospectObject for SerializedComponent {
                         Serialized::F64(_) => TypeId::of::<f64>(),
                         Serialized::Bool(_) => TypeId::of::<bool>(),
                         Serialized::String(_) => TypeId::of::<String>(),
-                        _ => TypeId::of::<u8>(),
+                        Serialized::NativeObject(value) => value.deref().type_id(),
+                        _ => TypeId::of::<()>(),
                     },
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<SerializedComponent>().unwrap();

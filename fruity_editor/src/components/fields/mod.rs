@@ -7,13 +7,8 @@ use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
 use crate::ComponentEditorManager;
 use fruity_core::component::component_rwlock::ComponentRwLock;
-use fruity_introspect::FieldInfo;
 
 pub mod primitive;
-
-pub trait ComponentFieldEditor {
-    fn draw_editor(component: ComponentRwLock, field_info: &FieldInfo) -> UIElement;
-}
 
 pub fn edit_component_fields(component: ComponentRwLock) -> UIElement {
     let service_manager = use_global::<WorldState>().service_manager.clone();

@@ -1,4 +1,3 @@
-use crate::components::component::ComponentFieldEditor;
 use crate::ui_element::UIElement;
 use fruity_any::*;
 use fruity_core::component::component_rwlock::ComponentRwLock;
@@ -13,9 +12,12 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use std::sync::RwLock;
 
+pub type ComponentFieldEditor =
+    Arc<dyn Fn(ComponentRwLock, &FieldInfo) -> UIElement + Send + Sync + 'static>;
+
 #[derive(FruityAny)]
 pub struct ComponentEditorManager {
-    component_field_editors: HashMap<TypeId, fn(ComponentRwLock, &FieldInfo) -> UIElement>,
+    component_field_editors: HashMap<TypeId, ComponentFieldEditor>,
 }
 
 impl ComponentEditorManager {
@@ -25,19 +27,20 @@ impl ComponentEditorManager {
         }
     }
 
-    pub fn register_component_field_editor<T>(&mut self)
+    pub fn register_component_field_editor<T, F>(&mut self, editor: F)
     where
-        T: ComponentFieldEditor + 'static,
+        T: 'static,
+        F: Fn(ComponentRwLock, &FieldInfo) -> UIElement + Send + Sync + 'static,
     {
+        let editor = Arc::new(editor);
         self.component_field_editors
-            .insert(TypeId::of::<T>(), T::draw_editor);
+            .insert(TypeId::of::<T>(), editor.clone());
     }
 
-    pub fn get_component_field_editor(
-        &self,
-        type_id: TypeId,
-    ) -> Option<fn(ComponentRwLock, &FieldInfo) -> UIElement> {
-        self.component_field_editors.get(&type_id).map(|draw| *draw)
+    pub fn get_component_field_editor(&self, type_id: TypeId) -> Option<ComponentFieldEditor> {
+        self.component_field_editors
+            .get(&type_id)
+            .map(|draw| draw.clone())
     }
 }
 
