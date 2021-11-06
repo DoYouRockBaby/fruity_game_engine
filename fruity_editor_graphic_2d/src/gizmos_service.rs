@@ -61,10 +61,10 @@ impl GizmosService {
         let color = if is_hover { hover_color } else { color };
 
         let graphics_2d_manager = self.graphics_2d_manager.read().unwrap();
-        graphics_2d_manager.draw_line(bottom_left, bottom_right, 3, &color);
-        graphics_2d_manager.draw_line(bottom_right, top_right, 3, &color);
-        graphics_2d_manager.draw_line(top_right, top_left, 3, &color);
-        graphics_2d_manager.draw_line(top_left, bottom_left, 3, &color);
+        graphics_2d_manager.draw_line(bottom_left, bottom_right, 3, color);
+        graphics_2d_manager.draw_line(bottom_right, top_right, 3, color);
+        graphics_2d_manager.draw_line(top_right, top_left, 3, color);
+        graphics_2d_manager.draw_line(top_left, bottom_left, 3, color);
 
         is_hover
     }
@@ -83,9 +83,9 @@ impl GizmosService {
         let is_hover = cursor_pos.in_triangle(&p1, &p2, &p3);
         let color = if is_hover { hover_color } else { color };
 
-        graphics_2d_manager.draw_line(p1, p2, 3, &color);
-        graphics_2d_manager.draw_line(p2, p3, 3, &color);
-        graphics_2d_manager.draw_line(p3, p1, 3, &color);
+        graphics_2d_manager.draw_line(p1, p2, 3, color);
+        graphics_2d_manager.draw_line(p2, p3, 3, color);
+        graphics_2d_manager.draw_line(p3, p1, 3, color);
 
         is_hover
     }
@@ -110,7 +110,7 @@ impl GizmosService {
         );
 
         let color = if is_hover { hover_color } else { color };
-        graphics_2d_manager.draw_line(from, to - normalise * 0.05, 3, &color);
+        graphics_2d_manager.draw_line(from, to - normalise * 0.05, 3, color);
 
         is_hover
     }

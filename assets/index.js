@@ -70,6 +70,7 @@ systemManager.addBeginSystem(() => {
         new Sprite({
             texture: resourcesManager.getResource("assets/logo.png"),
             material: resourcesManager.getResource("assets/material.material"),
+            z_index: 1,
         }),
         new TestVec({ size: new Vector2d({ x: 0.5, y: 0.5 }) }),
     ]);
@@ -80,6 +81,7 @@ systemManager.addBeginSystem(() => {
         new Sprite({
             texture: resourcesManager.getResource("assets/logo.png"),
             material: resourcesManager.getResource("assets/material.material"),
+            z_index: 0,
         }),
         new Move({ velocity: 0.2 }),
     ]);

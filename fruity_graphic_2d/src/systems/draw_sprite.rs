@@ -7,7 +7,7 @@ use fruity_core::entity_type;
 use fruity_core::service::service_guard::ServiceReadGuard;
 use fruity_core::service::service_manager::ServiceManager;
 use std::sync::Arc;
-use std::sync::RwLock;use std::ops::Deref;
+use std::sync::RwLock;
 use rayon::prelude::*;
 
 pub fn draw_sprite(
@@ -16,9 +16,7 @@ pub fn draw_sprite(
     sprite: &Sprite,
     graphics_2d_manager: ServiceReadGuard<Graphics2dManager>,
 ) {
-    let material = sprite.material.as_ref().unwrap();
-
-    graphics_2d_manager.draw_square(position.pos, size.size, material.deref());
+    graphics_2d_manager.draw_square(position.pos, size.size, sprite.z_index, sprite.material.clone());
 }
 
 pub fn draw_sprite_untyped(service_manager: Arc<RwLock<ServiceManager>>) {

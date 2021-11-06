@@ -5,14 +5,12 @@ use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
 use std::fmt::Debug;
 use std::sync::mpsc;
-use std::sync::Arc;
 use std::thread;
 
-// TODO: Use FnOnce instead
-type ServiceCallback<T> = dyn Fn(&mut T) + Send + Sync + 'static;
+type ServiceCallback<T> = dyn FnOnce(&mut T) + Send + Sync + 'static;
 
 struct CallInstruction<T: Debug + 'static> {
-    callback: Arc<ServiceCallback<T>>,
+    callback: Box<ServiceCallback<T>>,
     notify_done_sender: mpsc::Sender<()>,
 }
 
@@ -31,7 +29,7 @@ impl<T: Debug + 'static> SingleThreadService<T> {
     ///
     pub fn start<F>(constructor: F) -> SingleThreadService<T>
     where
-        F: Fn() -> T + Send + Sync + 'static,
+        F: FnOnce() -> T + Send + Sync + 'static,
     {
         // TODO: think about a good number for sync channel
         let (sender, receiver) = mpsc::sync_channel::<CallInstruction<T>>(10);
@@ -69,7 +67,7 @@ impl<T: Debug + 'static> SingleThreadService<T> {
 
         self.channel_sender
             .send(CallInstruction {
-                callback: Arc::new(callback),
+                callback: Box::new(callback),
                 notify_done_sender,
             })
             .unwrap();

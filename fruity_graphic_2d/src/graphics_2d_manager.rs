@@ -1,5 +1,6 @@
 use crate::Vector2d;
 use fruity_any::*;
+use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::resource::resources_manager::ResourceIdentifier;
 use fruity_core::resource::resources_manager::ResourcesManager;
 use fruity_core::service::service::Service;
@@ -16,6 +17,7 @@ use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
 use fruity_windows::windows_manager::WindowsManager;
+use std::ops::Deref;
 use std::sync::Arc;
 use std::sync::RwLock;
 use wgpu::util::DeviceExt;
@@ -46,205 +48,174 @@ impl Graphics2dManager {
 
         // Create the camera buffer for the camera transform
         graphics_manager.update_camera(view_proj);
-
-        let rendering_view = graphics_manager.get_rendering_view();
-        let mut encoder = graphics_manager.get_encoder().unwrap().write().unwrap();
-
-        // Display the background
-        encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("Render Pass"),
-            color_attachments: &[wgpu::RenderPassColorAttachment {
-                view: rendering_view,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color {
-                        r: 0.1,
-                        g: 0.2,
-                        b: 0.3,
-                        a: 1.0,
-                    }),
-                    store: true,
-                },
-            }],
-            depth_stencil_attachment: None,
-        });
+        graphics_manager.start_pass();
     }
 
-    pub fn draw_square(&self, pos: Vector2d, size: Vector2d, material: &MaterialResource) {
-        let graphics_manager = self.graphics_manager.read().unwrap();
+    pub fn draw_square(
+        &self,
+        pos: Vector2d,
+        size: Vector2d,
+        z_index: usize,
+        material: ResourceReference<MaterialResource>,
+    ) {
+        let graphics_manager = self.graphics_manager.clone();
+        let graphics_manager_reader = self.graphics_manager.read().unwrap();
 
-        let device = graphics_manager.get_device();
-        let rendering_view = graphics_manager.get_rendering_view();
-
-        // Create the main render pipeline
-        let vertices: &[Vertex] = &[
-            Vertex {
-                position: [pos.x, pos.y, 0.0],
-                tex_coords: [0.0, 1.0],
-            },
-            Vertex {
-                position: [pos.x + size.x, pos.y, 0.0],
-                tex_coords: [1.0, 1.0],
-            },
-            Vertex {
-                position: [pos.x + size.x, pos.y + size.y, 0.0],
-                tex_coords: [1.0, 0.0],
-            },
-            Vertex {
-                position: [pos.x, pos.y + size.y, 0.0],
-                tex_coords: [0.0, 0.0],
-            },
-        ];
-
-        let indices: &[u16] = &[0, 1, 2, 3, 0, 2, /* padding */ 0];
-        let num_indices = indices.len() as u32;
-
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(vertices),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-
-        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Index Buffer"),
-            contents: bytemuck::cast_slice(indices),
-            usage: wgpu::BufferUsages::INDEX,
-        });
-
-        let mut encoder = graphics_manager.get_encoder().unwrap().write().unwrap();
-        let mut render_pass = {
-            encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render Pass"),
-                color_attachments: &[wgpu::RenderPassColorAttachment {
-                    view: rendering_view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Load,
-                        store: true,
-                    },
-                }],
-                depth_stencil_attachment: None,
-            })
+        let material = if let Some(material) = material.deref() {
+            material.clone()
+        } else {
+            return;
         };
 
-        render_pass.set_pipeline(&material.render_pipeline);
-        material.bind_groups.iter().for_each(|(index, bind_group)| {
-            render_pass.set_bind_group(*index, &bind_group, &[]);
-        });
-        render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
-        render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-        render_pass.draw_indexed(0..num_indices, 0, 0..1);
+        graphics_manager_reader.with_render_pass(move |render_pass| {
+            let graphics_manager = graphics_manager.read().unwrap();
+            let device = graphics_manager.get_device();
+            let material = material.clone();
+
+            // Create the main render pipeline
+            let vertices: &[Vertex] = &[
+                Vertex {
+                    position: [pos.x, pos.y, z_index as f32],
+                    tex_coords: [0.0, 1.0],
+                },
+                Vertex {
+                    position: [pos.x + size.x, pos.y, z_index as f32],
+                    tex_coords: [1.0, 1.0],
+                },
+                Vertex {
+                    position: [pos.x + size.x, pos.y + size.y, z_index as f32],
+                    tex_coords: [1.0, 0.0],
+                },
+                Vertex {
+                    position: [pos.x, pos.y + size.y, z_index as f32],
+                    tex_coords: [0.0, 0.0],
+                },
+            ];
+
+            let indices: &[u16] = &[0, 1, 2, 3, 0, 2, /* padding */ 0];
+            let num_indices = indices.len() as u32;
+
+            let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Vertex Buffer"),
+                contents: bytemuck::cast_slice(vertices),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+
+            let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Index Buffer"),
+                contents: bytemuck::cast_slice(indices),
+                usage: wgpu::BufferUsages::INDEX,
+            });
+
+            render_pass.set_pipeline(&material.render_pipeline);
+            material.bind_groups.iter().for_each(|(index, bind_group)| {
+                render_pass.set_bind_group(*index, &bind_group, &[]);
+            });
+            render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+            render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            render_pass.draw_indexed(0..num_indices, 0, 0..1);
+        })
     }
 
-    pub fn draw_line(&self, pos1: Vector2d, pos2: Vector2d, width: u32, color: &Color) {
-        let windows_manager = self.windows_manager.read().unwrap();
-        let graphics_manager = self.graphics_manager.read().unwrap();
-        let resource_manager = self.resource_manager.read().unwrap();
+    pub fn draw_line(&self, pos1: Vector2d, pos2: Vector2d, width: u32, color: Color) {
+        let windows_manager = self.windows_manager.clone();
+        let graphics_manager = self.graphics_manager.clone();
+        let resource_manager = self.resource_manager.clone();
+        let graphics_manager_reader = self.graphics_manager.read().unwrap();
 
-        let queue = graphics_manager.get_queue();
-        let device = graphics_manager.get_device();
-        let rendering_view = graphics_manager.get_rendering_view();
-        let camera_transform = graphics_manager.get_camera_transform().clone();
-        let viewport_size = windows_manager.get_size().clone();
+        graphics_manager_reader.with_render_pass(move |render_pass| {
+            let windows_manager = windows_manager.read().unwrap();
+            let graphics_manager = graphics_manager.read().unwrap();
+            let resource_manager = resource_manager.read().unwrap();
 
-        // Get resources
-        let material = resource_manager
-            .get_resource::<MaterialResource>(ResourceIdentifier("Materials/Draw Line".to_string()))
-            .unwrap();
+            let queue = graphics_manager.get_queue();
+            let device = graphics_manager.get_device();
+            let camera_transform = graphics_manager.get_camera_transform().clone();
+            let viewport_size = windows_manager.get_size().clone();
 
-        let shader = resource_manager
-            .get_resource::<ShaderResource>(ResourceIdentifier("Shaders/Draw Line".to_string()))
-            .unwrap();
+            // Get resources
+            let material = resource_manager
+                .get_resource::<MaterialResource>(ResourceIdentifier(
+                    "Materials/Draw Line".to_string(),
+                ))
+                .unwrap();
 
-        // Calculate the geometry
-        let diff = pos2 - pos1;
-        let mut thick_vec = diff.normal().normalise() * width as f32;
-        thick_vec.x /= viewport_size.0 as f32;
-        thick_vec.y /= viewport_size.1 as f32;
+            let shader = resource_manager
+                .get_resource::<ShaderResource>(ResourceIdentifier("Shaders/Draw Line".to_string()))
+                .unwrap();
 
-        let pos1 = camera_transform * pos1;
-        let pos2 = camera_transform * pos2;
+            // Calculate the geometry
+            let diff = pos2 - pos1;
+            let mut thick_vec = diff.normal().normalise() * width as f32;
+            thick_vec.x /= viewport_size.0 as f32;
+            thick_vec.y /= viewport_size.1 as f32;
 
-        let vertices: &[Vertex] = &[
-            Vertex {
-                position: [pos1.x - thick_vec.x, pos1.y - thick_vec.y, 0.0],
-                tex_coords: [0.0, 1.0],
-            },
-            Vertex {
-                position: [pos1.x + thick_vec.x, pos1.y + thick_vec.y, 0.0],
-                tex_coords: [1.0, 0.0],
-            },
-            Vertex {
-                position: [pos2.x + thick_vec.x, pos2.y + thick_vec.y, 0.0],
-                tex_coords: [1.0, 1.0],
-            },
-            Vertex {
-                position: [pos2.x - thick_vec.x, pos2.y - thick_vec.y, 0.0],
-                tex_coords: [0.0, 0.0],
-            },
-        ];
+            let pos1 = camera_transform * pos1;
+            let pos2 = camera_transform * pos2;
 
-        let indices: &[u16] = &[2, 1, 0, 2, 0, 3, /* padding */ 0];
-        let num_indices = indices.len() as u32;
-
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(&vertices),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-
-        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Index Buffer"),
-            contents: bytemuck::cast_slice(indices),
-            usage: wgpu::BufferUsages::INDEX,
-        });
-
-        let mut encoder = graphics_manager.get_encoder().unwrap().write().unwrap();
-        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("Render Pass"),
-            color_attachments: &[wgpu::RenderPassColorAttachment {
-                view: rendering_view,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Load,
-                    store: true,
+            let vertices: &[Vertex] = &[
+                Vertex {
+                    position: [pos1.x - thick_vec.x, pos1.y - thick_vec.y, 0.0],
+                    tex_coords: [0.0, 1.0],
                 },
-            }],
-            depth_stencil_attachment: None,
+                Vertex {
+                    position: [pos1.x + thick_vec.x, pos1.y + thick_vec.y, 0.0],
+                    tex_coords: [1.0, 0.0],
+                },
+                Vertex {
+                    position: [pos2.x + thick_vec.x, pos2.y + thick_vec.y, 0.0],
+                    tex_coords: [1.0, 1.0],
+                },
+                Vertex {
+                    position: [pos2.x - thick_vec.x, pos2.y - thick_vec.y, 0.0],
+                    tex_coords: [0.0, 0.0],
+                },
+            ];
+
+            let indices: &[u16] = &[2, 1, 0, 2, 0, 3, /* padding */ 0];
+            let num_indices = indices.len() as u32;
+
+            let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Vertex Buffer"),
+                contents: bytemuck::cast_slice(&vertices),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+
+            let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Index Buffer"),
+                contents: bytemuck::cast_slice(indices),
+                usage: wgpu::BufferUsages::INDEX,
+            });
+
+            // Update material color
+            material.write_buffer(
+                &BufferIdentifier(0, 0),
+                queue,
+                bytemuck::cast_slice(&[color.clone()]),
+            );
+
+            let color_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Uniform Buffer"),
+                contents: bytemuck::cast_slice(&[color.clone()]),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            });
+
+            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Color buffer"),
+                layout: &shader.bind_group_layout,
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: color_buffer.as_entire_binding(),
+                }],
+            });
+
+            // Draw
+            render_pass.set_pipeline(&material.render_pipeline);
+            render_pass.set_bind_group(0, &bind_group, &[]);
+            render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+            render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            render_pass.draw_indexed(0..num_indices, 0, 0..1);
         });
-
-        // Update material color
-        material.write_buffer(
-            &BufferIdentifier(0, 0),
-            queue,
-            bytemuck::cast_slice(&[color.clone()]),
-        );
-
-        let color_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Uniform Buffer"),
-            contents: bytemuck::cast_slice(&[color.clone()]),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
-
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Color buffer"),
-            layout: &shader.bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: color_buffer.as_entire_binding(),
-            }],
-        });
-
-        // Draw
-        // TODO: Find a way to remove that
-        let bind_group =
-            unsafe { std::mem::transmute::<&wgpu::BindGroup, &wgpu::BindGroup>(&bind_group) };
-        render_pass.set_pipeline(&material.render_pipeline);
-        render_pass.set_bind_group(0, &bind_group, &[]);
-        render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
-        render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-        render_pass.draw_indexed(0..num_indices, 0, 0..1);
-        std::mem::drop(render_pass);
     }
 
     /// Get the cursor position in the 2D world, take in care the camera transform
