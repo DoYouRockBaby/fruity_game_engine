@@ -180,10 +180,8 @@ fn setter_callback(
             SetterCaller::Const(call) => {
                 call(introspect_object.as_any_ref(), deserialized_arg);
             }
-            SetterCaller::Mut(_call) => {
-                // Mutable methods are handled by impl<T: SerializableObject> SerializableObject for RwLock<T>
-                // This should not be reached, if it's happen, it means that you try yo access with mutability
-                // something that is not protected by a lock
+            SetterCaller::Mut(call) => {
+                call(introspect_object.as_any_mut(), deserialized_arg);
             }
             SetterCaller::None => (),
         };

@@ -83,7 +83,6 @@ systemManager.addBeginSystem(() => {
         }),
         new Move({ velocity: 0.2 }),
     ]);
-    console.log("5");
 
     entityManager.create("Camera", [
         new Position({ pos: new Vector2d({ x: -1.5, y: -1 }) }),
@@ -124,7 +123,6 @@ systemManager.addSystem(() => {
             if (inputManager.isPressed("Down")) {
                 vel.y -= components.get(1).velocity;
             }
-
 
             components.get(0).pos = components.get(0).pos.add(vel.mul(frameManager.delta));
         });

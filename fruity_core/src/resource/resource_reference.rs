@@ -96,7 +96,7 @@ impl<T: Resource> TryFrom<Serialized> for ResourceReference<T> {
 impl<T: Resource> Into<Serialized> for ResourceReference<T> {
     fn into(self) -> Serialized {
         match self.0 {
-            Some(value) => Serialized::NativeObject(Box::new(value.clone())),
+            Some(value) => Serialized::NativeObject(Box::new(value)),
             None => Serialized::Null,
         }
     }
