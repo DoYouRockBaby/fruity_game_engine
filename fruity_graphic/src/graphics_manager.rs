@@ -239,6 +239,8 @@ impl GraphicsManager {
         };
 
         let mut render_bundle_queue = self.render_bundle_queue.lock().unwrap();
+
+        // TODO: There is probably a way to optimize that with an ordered list
         render_bundle_queue.sort_by(|a, b| a.z_index.cmp(&b.z_index));
 
         // TODO: Try to remove that

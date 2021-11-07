@@ -70,7 +70,7 @@ systemManager.addBeginSystem(() => {
         new Sprite({
             texture: resourcesManager.getResource("assets/logo.png"),
             material: resourcesManager.getResource("assets/material.material"),
-            z_index: 1,
+            z_index: 0,
         }),
         new TestVec({ size: new Vector2d({ x: 0.5, y: 0.5 }) }),
     ]);
@@ -81,13 +81,13 @@ systemManager.addBeginSystem(() => {
         new Sprite({
             texture: resourcesManager.getResource("assets/logo.png"),
             material: resourcesManager.getResource("assets/material.material"),
-            z_index: 0,
+            z_index: 1,
         }),
         new Move({ velocity: 0.2 }),
     ]);
 
     entityManager.create("Camera", [
-        new Position({ pos: new Vector2d({ x: -1.5, y: -1 }) }),
+        new Position({ pos: new Vector2d({ x: -1.5, y: -1.3 }) }),
         new Size({ size: new Vector2d({ x: 3, y: 2 }) }),
         new Camera({}),
         // new Velocity({ vel: new Vector2d({ x: 0.05, y: 0.05 }) }),

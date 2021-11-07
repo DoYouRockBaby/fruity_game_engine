@@ -129,7 +129,14 @@ impl Graphics2dManager {
         graphics_manager.push_render_bundle(bundle, z_index);
     }
 
-    pub fn draw_line(&self, pos1: Vector2d, pos2: Vector2d, width: u32, color: Color) {
+    pub fn draw_line(
+        &self,
+        pos1: Vector2d,
+        pos2: Vector2d,
+        width: u32,
+        color: Color,
+        z_index: usize,
+    ) {
         let windows_manager = self.windows_manager.read().unwrap();
         let graphics_manager = self.graphics_manager.read().unwrap();
         let resource_manager = self.resource_manager.read().unwrap();
@@ -232,7 +239,7 @@ impl Graphics2dManager {
             label: Some("main"),
         });
 
-        graphics_manager.push_render_bundle(bundle, 0);
+        graphics_manager.push_render_bundle(bundle, z_index);
     }
 
     /// Get the cursor position in the 2D world, take in care the camera transform
