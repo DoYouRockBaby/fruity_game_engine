@@ -25,7 +25,9 @@ pub fn draw_sprite_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
 
     entity_manager.iter_components(
         entity_type!["Position", "Size", "Sprite"],
-    ).par_bridge().for_each(| components| {
+    )
+    .par_bridge()
+    .for_each(| components| {
             let position = match components.get(0) {
                 Some(component) => component,
                 None => {

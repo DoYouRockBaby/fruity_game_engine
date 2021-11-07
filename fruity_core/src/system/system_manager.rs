@@ -10,7 +10,7 @@ use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use rayon::prelude::*;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -41,9 +41,9 @@ pub struct SystemPool {
 ///
 #[derive(FruityAny)]
 pub struct SystemManager {
-    system_pools: HashMap<usize, SystemPool>,
-    begin_system_pools: HashMap<usize, SystemPool>,
-    end_system_pools: HashMap<usize, SystemPool>,
+    system_pools: BTreeMap<usize, SystemPool>,
+    begin_system_pools: BTreeMap<usize, SystemPool>,
+    end_system_pools: BTreeMap<usize, SystemPool>,
     service_manager: Arc<RwLock<ServiceManager>>,
 }
 
@@ -57,9 +57,9 @@ impl<'s> SystemManager {
     /// Returns a SystemManager
     pub fn new(service_manager: &Arc<RwLock<ServiceManager>>) -> SystemManager {
         SystemManager {
-            system_pools: HashMap::new(),
-            begin_system_pools: HashMap::new(),
-            end_system_pools: HashMap::new(),
+            system_pools: BTreeMap::new(),
+            begin_system_pools: BTreeMap::new(),
+            end_system_pools: BTreeMap::new(),
             service_manager: service_manager.clone(),
         }
     }

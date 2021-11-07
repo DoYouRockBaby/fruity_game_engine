@@ -9,14 +9,14 @@ use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
 use fruity_windows::windows_manager::WindowsManager;
 use std::fmt::Debug;
+use std::iter;
 use std::ops::Deref;
-use std::sync::mpsc;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::RwLock;
-use std::thread;
-use std::thread::JoinHandle;
 use tokio::runtime::Builder;
 use wgpu::util::DeviceExt;
+use wgpu::RenderBundle;
 use winit::window::Window;
 
 #[repr(C)]
@@ -26,21 +26,22 @@ pub struct CameraUniform(pub [[f32; 4]; 4]);
 #[derive(Debug)]
 pub struct State {
     pub surface: wgpu::Surface,
-    pub device: Arc<wgpu::Device>,
-    pub queue: Arc<wgpu::Queue>,
+    pub device: wgpu::Device,
+    pub queue: wgpu::Queue,
     pub config: wgpu::SurfaceConfiguration,
-    pub rendering_view: Arc<wgpu::TextureView>,
+    pub rendering_view: wgpu::TextureView,
     pub camera_transform: Matrix4,
     pub camera_buffer: wgpu::Buffer,
     pub camera_bind_group_layout: wgpu::BindGroupLayout,
-    pub depth_texture: Arc<RwLock<TextureResource>>,
+    pub depth_texture: TextureResource,
 }
 
 #[derive(Debug, FruityAny)]
 pub struct GraphicsManager {
     state: State,
     current_output: Option<wgpu::SurfaceTexture>,
-    current_render_pass: Option<RenderPassService>,
+    render_bundle_queue: Mutex<Vec<RenderBundle>>,
+    current_encoder: Option<RwLock<wgpu::CommandEncoder>>,
     pub on_before_draw_end: Signal<()>,
     pub on_after_draw_end: Signal<()>,
 }
@@ -99,7 +100,8 @@ impl GraphicsManager {
         GraphicsManager {
             state,
             current_output: None,
-            current_render_pass: None,
+            render_bundle_queue: Mutex::new(Vec::new()),
+            current_encoder: None,
             on_before_draw_end: Signal::new(),
             on_after_draw_end: Signal::new(),
         }
@@ -147,27 +149,22 @@ impl GraphicsManager {
 
             // Get the texture view where the scene will be rendered
             let output = surface.get_current_texture().unwrap();
-            let rendering_view = Arc::new(
-                output
-                    .texture
-                    .create_view(&wgpu::TextureViewDescriptor::default()),
-            );
+            let rendering_view = output
+                .texture
+                .create_view(&wgpu::TextureViewDescriptor::default());
 
             // Create camera bind group
             let (camera_buffer, camera_bind_group_layout) = Self::initialize_camera(&device);
 
             // Create the depth texture
-            let depth_texture = Arc::new(RwLock::new(TextureResource::new_depth_texture(
-                &device,
-                &config,
-                "depth_texture",
-            )));
+            let depth_texture =
+                TextureResource::new_depth_texture(&device, &config, "depth_texture");
 
             // Update state
             State {
                 surface,
-                device: Arc::new(device),
-                queue: Arc::new(queue),
+                device,
+                queue,
                 config,
                 rendering_view,
                 camera_transform: Matrix4::identity(),
@@ -192,43 +189,88 @@ impl GraphicsManager {
             .create_view(&wgpu::TextureViewDescriptor::default());
 
         self.current_output = Some(output);
-        self.state.rendering_view = Arc::new(rendering_view);
+        self.state.rendering_view = rendering_view;
+
+        let encoder = self
+            .state
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
+
+        // Store the handles about this frame
+        self.current_encoder = Some(RwLock::new(encoder));
     }
 
-    pub fn start_pass(&mut self) {
-        let device = self.state.device.clone();
-        let rendering_view = self.state.rendering_view.clone();
-        let depth_view = self.state.rendering_view.clone();
-        let queue = self.state.queue.clone();
-
-        self.current_render_pass = Some(RenderPassService::new(
-            device,
-            rendering_view,
-            depth_view,
-            queue,
-        ));
+    pub fn start_pass(&self) {
+        let mut render_bundle_queue = self.render_bundle_queue.lock().unwrap();
+        render_bundle_queue.clear();
     }
 
-    pub fn execute_with_pass<F>(&mut self, callback: F)
-    where
-        F: FnOnce(&mut wgpu::RenderPass) + Send + Sync + 'static,
-    {
-        if let Some(render_pass) = self.current_render_pass.as_ref() {
-            render_pass.call(callback);
-        }
+    pub fn push_render_bundle(&self, bundle: RenderBundle) {
+        let mut render_bundle_queue = self.render_bundle_queue.lock().unwrap();
+        render_bundle_queue.push(bundle);
+    }
+
+    pub fn end_pass(&self) {
+        let mut encoder = if let Some(encoder) = self.current_encoder.as_ref() {
+            encoder.write().unwrap()
+        } else {
+            return;
+        };
+
+        let mut render_pass = {
+            encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Render Pass"),
+                color_attachments: &[wgpu::RenderPassColorAttachment {
+                    view: &self.state.rendering_view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: 0.1,
+                            g: 0.2,
+                            b: 0.3,
+                            a: 1.0,
+                        }),
+                        store: true,
+                    },
+                }],
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: &self.state.depth_texture.view,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: true,
+                    }),
+                    stencil_ops: None,
+                }),
+            })
+        };
+
+        // TODO: Try to remove that
+        let render_bundle_queue = self.render_bundle_queue.lock().unwrap();
+        let render_bundle_queue = render_bundle_queue.deref();
+        let render_bundle_queue =
+            unsafe { &*(render_bundle_queue as *const _) } as &Vec<wgpu::RenderBundle>;
+
+        render_bundle_queue.iter().for_each(|bundle| {
+            render_pass.execute_bundles(iter::once(bundle));
+        });
     }
 
     pub fn end_draw(&mut self) {
+        let encoder = if let Some(encoder) = self.current_encoder.take() {
+            encoder.into_inner().unwrap()
+        } else {
+            return;
+        };
+
         let output = if let Some(output) = self.current_output.take() {
             output
         } else {
             return;
         };
 
-        if let Some(render_pass) = self.current_render_pass.take() {
-            render_pass.end_pass();
-        }
-
+        self.get_queue().submit(std::iter::once(encoder.finish()));
         output.present();
     }
 
@@ -240,11 +282,11 @@ impl GraphicsManager {
             .surface
             .configure(&self.state.device, &self.state.config);
 
-        self.state.depth_texture = Arc::new(RwLock::new(TextureResource::new_depth_texture(
+        self.state.depth_texture = TextureResource::new_depth_texture(
             &self.state.device,
             &self.state.config,
             "depth_texture",
-        )));
+        );
     }
 
     pub fn get_device(&self) -> &wgpu::Device {
@@ -275,17 +317,12 @@ impl GraphicsManager {
         &self.state.camera_buffer
     }
 
-    pub fn get_camera_bind_group_layout(&self) -> &wgpu::BindGroupLayout {
-        &self.state.camera_bind_group_layout
+    pub fn get_encoder(&self) -> Option<&RwLock<wgpu::CommandEncoder>> {
+        self.current_encoder.as_ref()
     }
 
-    pub fn with_render_pass<F>(&self, callback: F)
-    where
-        F: FnOnce(&mut wgpu::RenderPass) + Send + Sync + 'static,
-    {
-        if let Some(render_pass) = self.current_render_pass.as_ref() {
-            render_pass.call(callback);
-        }
+    pub fn get_camera_bind_group_layout(&self) -> &wgpu::BindGroupLayout {
+        &self.state.camera_bind_group_layout
     }
 
     pub fn update_camera(&mut self, view_proj: Matrix4) {
@@ -337,100 +374,3 @@ impl IntrospectObject for GraphicsManager {
 }
 
 impl Service for GraphicsManager {}
-
-type RenderPassCallback = dyn FnOnce(&mut wgpu::RenderPass) + Send + Sync + 'static;
-
-struct RenderPassInstruction {
-    callback: Box<RenderPassCallback>,
-    notify_done_sender: mpsc::Sender<()>,
-}
-
-#[derive(Debug)]
-struct RenderPassService {
-    channel_sender: mpsc::SyncSender<RenderPassInstruction>,
-    join_handle: JoinHandle<()>,
-}
-
-impl RenderPassService {
-    pub fn new(
-        device: Arc<wgpu::Device>,
-        rendering_view: Arc<wgpu::TextureView>,
-        depth_view: Arc<wgpu::TextureView>,
-        queue: Arc<wgpu::Queue>,
-    ) -> Self {
-        // TODO: think about a good number for sync channel
-        let (sender, receiver) = mpsc::sync_channel::<RenderPassInstruction>(10);
-        let (loading_sender, loading_receiver) = mpsc::channel::<()>();
-
-        // Create a thread that will be dedicated to the inner service
-        // An event channel will be used to send instruction to the service
-        let join_handle = thread::spawn(move || {
-            let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Render Encoder"),
-            });
-
-            {
-                let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: Some("Render Pass"),
-                    color_attachments: &[wgpu::RenderPassColorAttachment {
-                        view: &rendering_view,
-                        resolve_target: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(wgpu::Color {
-                                r: 0.1,
-                                g: 0.2,
-                                b: 0.3,
-                                a: 1.0,
-                            }),
-                            store: true,
-                        },
-                    }],
-                    depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                        view: &depth_view,
-                        depth_ops: Some(wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(1.0),
-                            store: true,
-                        }),
-                        stencil_ops: None,
-                    }),
-                });
-                loading_sender.send(()).unwrap();
-
-                for received in receiver {
-                    (received.callback)(&mut render_pass);
-                    (received.notify_done_sender).send(()).unwrap();
-                }
-            }
-
-            queue.submit(std::iter::once(encoder.finish()));
-        });
-
-        loading_receiver.recv().unwrap();
-
-        Self {
-            channel_sender: sender,
-            join_handle,
-        }
-    }
-
-    pub fn call<F>(&self, callback: F)
-    where
-        F: FnOnce(&mut wgpu::RenderPass) + Send + Sync + 'static,
-    {
-        let (notify_done_sender, notify_done_receiver) = mpsc::channel::<()>();
-
-        self.channel_sender
-            .send(RenderPassInstruction {
-                callback: Box::new(callback),
-                notify_done_sender,
-            })
-            .unwrap();
-
-        notify_done_receiver.recv().unwrap()
-    }
-
-    pub fn end_pass(self) {
-        std::mem::drop(self.channel_sender);
-        self.join_handle.join().unwrap();
-    }
-}

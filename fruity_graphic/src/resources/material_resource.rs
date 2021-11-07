@@ -241,11 +241,8 @@ impl MaterialResource {
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
                 cull_mode: Some(wgpu::Face::Back),
-                // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
                 polygon_mode: wgpu::PolygonMode::Fill,
-                // Requires Features::DEPTH_CLAMPING
                 clamp_depth: false,
-                // Requires Features::CONSERVATIVE_RASTERIZATION
                 conservative: false,
             },
             depth_stencil: Some(wgpu::DepthStencilState {
@@ -257,8 +254,7 @@ impl MaterialResource {
             }),
             multisample: wgpu::MultisampleState {
                 count: 1,
-                mask: !0,
-                alpha_to_coverage_enabled: false,
+                ..Default::default()
             },
         });
 
