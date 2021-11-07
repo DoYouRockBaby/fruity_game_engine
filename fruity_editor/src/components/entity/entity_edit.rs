@@ -1,12 +1,13 @@
 use crate::components::fields::edit_component_fields;
 use crate::hooks::use_global;
 use crate::state::entity::EntityState;
-use crate::ui_element::display::Text;
 use crate::ui_element::input::Checkbox;
 use crate::ui_element::input::Input;
+use crate::ui_element::layout::Collapsible;
 use crate::ui_element::layout::Column;
 use crate::ui_element::layout::Empty;
 use crate::ui_element::layout::Row;
+use crate::ui_element::layout::Scroll;
 use crate::ui_element::UIAlign;
 use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
@@ -42,7 +43,7 @@ pub fn entity_edit_component() -> UIElement {
                     }
                     .elem(),
                 ],
-                align: UIAlign::Center,
+                ..Default::default()
             }
             .elem()],
             align: UIAlign::default(),
@@ -54,16 +55,9 @@ pub fn entity_edit_component() -> UIElement {
                 .iter_all_components()
                 .map(|component| {
                     let component_reader = component.read();
-                    Column {
-                        children: vec![
-                            Text {
-                                text: component_reader.get_component_type(),
-                                ..Text::default()
-                            }
-                            .elem(),
-                            edit_component_fields(component.clone()),
-                        ],
-                        align: UIAlign::Start,
+                    Collapsible {
+                        title: component_reader.get_component_type(),
+                        child: edit_component_fields(component.clone()),
                     }
                     .elem()
                 })
@@ -72,9 +66,13 @@ pub fn entity_edit_component() -> UIElement {
         }
         .elem();
 
-        Column {
-            children: vec![head, components],
-            align: UIAlign::Start,
+        Scroll {
+            child: Column {
+                children: vec![head, components],
+                align: UIAlign::Start,
+            }
+            .elem(),
+            ..Default::default()
         }
         .elem()
     } else {

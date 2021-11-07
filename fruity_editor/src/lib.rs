@@ -14,6 +14,8 @@ use crate::components::fields::primitive::draw_editor_u64;
 use crate::components::fields::primitive::draw_editor_u8;
 use crate::components::fields::primitive::draw_editor_usize;
 use crate::editor_manager::EditorManager;
+use crate::resources::default_resources::load_default_resources;
+use fruity_core::resource::resources_manager::ResourcesManager;
 use fruity_core::service::service_manager::ServiceManager;
 use fruity_core::settings::Settings;
 use std::sync::Arc;
@@ -26,6 +28,7 @@ pub mod component_editor_manager;
 pub mod components;
 pub mod editor_manager;
 pub mod hooks;
+pub mod resources;
 pub mod state;
 pub mod ui_element;
 
@@ -53,4 +56,10 @@ pub fn initialize(service_manager: &Arc<RwLock<ServiceManager>>, _settings: &Set
     component_editor_manager.register_component_field_editor::<f64, _>(draw_editor_f64);
     component_editor_manager.register_component_field_editor::<bool, _>(draw_editor_bool);
     component_editor_manager.register_component_field_editor::<String, _>(draw_editor_string);
+
+    let resources_manager = service_manager_writer.get::<ResourcesManager>().unwrap();
+    std::mem::drop(component_editor_manager);
+    std::mem::drop(service_manager_writer);
+
+    load_default_resources(resources_manager);
 }

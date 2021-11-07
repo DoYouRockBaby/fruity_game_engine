@@ -1,6 +1,6 @@
 use crate::components::entity::entity_edit::entity_edit_component;
 use crate::components::entity::entity_list::entity_list_component;
-use crate::ui_element::layout::Empty;
+use crate::components::file_explorer::file_explorer_component;
 use crate::ui_element::pane::Pane;
 use crate::ui_element::pane::PaneGrid;
 use crate::ui_element::pane::UIPaneSide;
@@ -22,9 +22,9 @@ pub fn panes_component() -> UIElement {
                 render: Arc::new(|| entity_edit_component()),
             },
             Pane {
-                title: "Unkown".to_string(),
+                title: "File explorer".to_string(),
                 default_side: UIPaneSide::Bottom,
-                render: Arc::new(|| Empty {}.elem()),
+                render: Arc::new(|| file_explorer_component()),
             },
         ],
     }

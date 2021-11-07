@@ -1,14 +1,21 @@
 use crate::ui_element::UIElement;
+use crate::ui_element::UISize;
 use crate::ui_element::UIWidget;
+
+pub enum ImageSource {
+    Local { path: String },
+}
 
 pub struct Text {
     pub text: String,
+    pub width: UISize,
 }
 
 impl Default for Text {
     fn default() -> Self {
         Text {
             text: "".to_string(),
+            width: UISize::Shrink,
         }
     }
 }

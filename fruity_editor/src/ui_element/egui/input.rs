@@ -1,22 +1,43 @@
 use crate::hooks::topo;
 use crate::hooks::use_state;
+use crate::ui_element::egui::app::DrawContext;
 use crate::ui_element::input::Button;
 use crate::ui_element::input::Checkbox;
 use crate::ui_element::input::FloatInput;
+use crate::ui_element::input::ImageButton;
 use crate::ui_element::input::Input;
 use crate::ui_element::input::IntegerInput;
 use comp_state::CloneState;
 use std::sync::Arc;
 
 #[topo::nested]
-pub fn draw_button<'a>(elem: Button, ui: &mut egui::Ui) {
+pub fn draw_button<'a>(elem: Button, ui: &mut egui::Ui, _ctx: &mut DrawContext) {
     if ui.button(elem.label).clicked() {
         (elem.on_click)()
     }
 }
 
 #[topo::nested]
-pub fn draw_input<'a>(elem: Input, ui: &mut egui::Ui) {
+pub fn draw_image_button<'a>(elem: ImageButton, ui: &mut egui::Ui, ctx: &mut DrawContext) {
+    let egui_texture_id = ctx.egui_rpass.egui_texture_from_wgpu_texture(
+        ctx.device,
+        &elem.image.texture,
+        wgpu::FilterMode::Linear,
+    );
+
+    if ui
+        .add(egui::ImageButton::new(
+            egui_texture_id,
+            egui::Vec2::new(elem.width, elem.height),
+        ))
+        .clicked()
+    {
+        (elem.on_click)()
+    }
+}
+
+#[topo::nested]
+pub fn draw_input<'a>(elem: Input, ui: &mut egui::Ui, _ctx: &mut DrawContext) {
     let input_value = use_state(|| String::default());
 
     let mut new_value = input_value.get();
@@ -35,7 +56,7 @@ pub fn draw_input<'a>(elem: Input, ui: &mut egui::Ui) {
     }
 }
 
-pub fn draw_integer_input<'a>(elem: IntegerInput, ui: &mut egui::Ui) {
+pub fn draw_integer_input<'a>(elem: IntegerInput, ui: &mut egui::Ui, ctx: &mut DrawContext) {
     let input = Input {
         value: elem.value.to_string(),
         placeholder: "".to_string(),
@@ -46,10 +67,10 @@ pub fn draw_integer_input<'a>(elem: IntegerInput, ui: &mut egui::Ui) {
         }),
     };
 
-    draw_input(input, ui)
+    draw_input(input, ui, ctx)
 }
 
-pub fn draw_float_input<'a>(elem: FloatInput, ui: &mut egui::Ui) {
+pub fn draw_float_input<'a>(elem: FloatInput, ui: &mut egui::Ui, ctx: &mut DrawContext) {
     let input = Input {
         value: elem.value.to_string(),
         placeholder: "".to_string(),
@@ -60,10 +81,10 @@ pub fn draw_float_input<'a>(elem: FloatInput, ui: &mut egui::Ui) {
         }),
     };
 
-    draw_input(input, ui)
+    draw_input(input, ui, ctx)
 }
 
-pub fn draw_checkbox<'a>(elem: Checkbox, ui: &mut egui::Ui) {
+pub fn draw_checkbox<'a>(elem: Checkbox, ui: &mut egui::Ui, _ctx: &mut DrawContext) {
     let mut new_value = elem.value;
     ui.checkbox(&mut new_value, &elem.label);
 

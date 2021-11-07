@@ -856,8 +856,11 @@ dependencies = [
  "fruity_graphic",
  "fruity_introspect",
  "fruity_windows",
+ "image",
  "lazy_static 1.4.0",
  "log",
+ "maplit",
+ "wgpu",
  "winit",
 ]
 

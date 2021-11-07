@@ -30,6 +30,7 @@ macro_rules! impl_int_for_editable_component {
                 children: vec![
                     Text {
                         text: field_info.name.to_string(),
+                        ..Default::default()
                     }
                     .elem(),
                     IntegerInput {
@@ -86,6 +87,7 @@ macro_rules! impl_float_for_editable_component {
                 children: vec![
                     Text {
                         text: field_info.name.to_string(),
+                        ..Default::default()
                     }
                     .elem(),
                     FloatInput {
@@ -164,6 +166,7 @@ pub fn draw_editor_string(component: ComponentRwLock, field_info: &FieldInfo) ->
         children: vec![
             Text {
                 text: field_info.name.to_string(),
+                ..Default::default()
             }
             .elem(),
             Input {

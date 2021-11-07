@@ -11,9 +11,12 @@ resolver = "2"
 winit = "0.25.0"
 lazy_static = "1.4"
 egui_wgpu_backend = "0.14"
+wgpu = "0.11.0"
 egui = "0.15"
 epi = "0.15"
+image = { version = "0.23", default-features = false, features = ["png", "jpeg", "gif", "bmp", "ico", "tiff"] }
 egui_winit_platform = "0.11"
+maplit = "1.0.2"
 comp_state = { path = "../deps/comp_state" }
 fruity_any = { path = "../fruity_any" }
 fruity_core = { path = "../fruity_core" }

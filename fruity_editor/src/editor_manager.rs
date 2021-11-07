@@ -1,6 +1,7 @@
 use crate::hooks::use_global;
 use crate::state::entity::EntityState;
 use crate::ui_element::egui::app::Application;
+use crate::ui_element::egui::app::DrawContext;
 use egui::FontDefinitions;
 use egui_wgpu_backend::RenderPass;
 use egui_wgpu_backend::ScreenDescriptor;
@@ -149,7 +150,11 @@ impl EditorManager {
         self.state.platform.begin_frame();
 
         // Draw the demo application
-        self.state.application.draw(&self.state.platform);
+        self.state.application.draw(&mut DrawContext {
+            device: device,
+            platform: &self.state.platform,
+            egui_rpass: &mut self.state.egui_rpass,
+        });
 
         // End the UI frame. We could now handle the output and draw the UI with the backend.
         let (_output, paint_commands) = self
@@ -193,6 +198,7 @@ impl EditorManager {
 
     fn is_entity_selected(&self, entity_id: &EntityId) -> bool {
         let entity_state = use_global::<EntityState>();
+
         if let Some(selected_entity) = &entity_state.selected_entity {
             let entity = selected_entity.read();
             entity.entity_id == *entity_id
@@ -203,6 +209,10 @@ impl EditorManager {
 
     fn handle_event(&mut self, event: &Event<'static, ()>) {
         self.state.platform.handle_event(&event);
+    }
+
+    pub fn get_egui_rpass(&mut self) -> &mut RenderPass {
+        &mut self.state.egui_rpass
     }
 }
 
