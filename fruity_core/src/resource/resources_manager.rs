@@ -230,6 +230,15 @@ impl ServiceRwLock<ResourcesManager> {
             return None;
         };
 
+        // Get the resource name
+        let name = {
+            if let Settings::String(name) = fields.get("name")? {
+                name.clone()
+            } else {
+                return None;
+            }
+        };
+
         // Get the resource path
         let path = {
             if let Settings::String(path) = fields.get("path")? {
@@ -242,7 +251,7 @@ impl ServiceRwLock<ResourcesManager> {
         // Deduce informations about the resource from the path
         let resource_type = Path::new(&path).extension()?;
         let resource_type = resource_type.to_str()?;
-        let resource_identifier = ResourceIdentifier(path.clone());
+        let resource_identifier = ResourceIdentifier(name.clone());
         let mut resource_file = File::open(&path).ok()?;
 
         // Load the resource

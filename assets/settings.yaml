@@ -13,9 +13,11 @@ input:
   "Down":
   - "Keyboard/Down"
 resources:
-- path: "assets/logo.png"
+- name: "assets/logo.png"
+  path: "assets/logo.png"
   type: texture
-- path: "assets/shader.wgsl"
+- name: "assets/shader.wgsl"
+  path: "assets/shader.wgsl"
   bindings:
   - id: 0
     visibility: fragment
@@ -23,4 +25,5 @@ resources:
   - id: 1
     visibility: fragment
     type: sampler
-- path: "assets/material.material"
+- name: "assets/material.material"
+  path: "assets/material.material"
