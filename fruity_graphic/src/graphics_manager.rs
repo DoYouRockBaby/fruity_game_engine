@@ -1,5 +1,4 @@
 use crate::math::Matrix4;
-use crate::resources::texture_resource::TextureResource;
 use fruity_any::*;
 use fruity_core::service::service::Service;
 use fruity_core::service::service_manager::ServiceManager;
@@ -33,14 +32,19 @@ pub struct State {
     pub camera_transform: Matrix4,
     pub camera_buffer: wgpu::Buffer,
     pub camera_bind_group_layout: wgpu::BindGroupLayout,
-    pub depth_texture: TextureResource,
+}
+
+#[derive(Debug)]
+struct RenderBundleEntry {
+    bundle: RenderBundle,
+    z_index: usize,
 }
 
 #[derive(Debug, FruityAny)]
 pub struct GraphicsManager {
     state: State,
     current_output: Option<wgpu::SurfaceTexture>,
-    render_bundle_queue: Mutex<Vec<RenderBundle>>,
+    render_bundle_queue: Mutex<Vec<RenderBundleEntry>>,
     current_encoder: Option<RwLock<wgpu::CommandEncoder>>,
     pub on_before_draw_end: Signal<()>,
     pub on_after_draw_end: Signal<()>,
@@ -156,10 +160,6 @@ impl GraphicsManager {
             // Create camera bind group
             let (camera_buffer, camera_bind_group_layout) = Self::initialize_camera(&device);
 
-            // Create the depth texture
-            let depth_texture =
-                TextureResource::new_depth_texture(&device, &config, "depth_texture");
-
             // Update state
             State {
                 surface,
@@ -170,7 +170,6 @@ impl GraphicsManager {
                 camera_transform: Matrix4::identity(),
                 camera_buffer,
                 camera_bind_group_layout,
-                depth_texture,
             }
         };
 
@@ -207,9 +206,9 @@ impl GraphicsManager {
         render_bundle_queue.clear();
     }
 
-    pub fn push_render_bundle(&self, bundle: RenderBundle) {
+    pub fn push_render_bundle(&self, bundle: RenderBundle, z_index: usize) {
         let mut render_bundle_queue = self.render_bundle_queue.lock().unwrap();
-        render_bundle_queue.push(bundle);
+        render_bundle_queue.push(RenderBundleEntry { bundle, z_index });
     }
 
     pub fn end_pass(&self) {
@@ -235,25 +234,20 @@ impl GraphicsManager {
                         store: true,
                     },
                 }],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &self.state.depth_texture.view,
-                    depth_ops: Some(wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(1.0),
-                        store: true,
-                    }),
-                    stencil_ops: None,
-                }),
+                depth_stencil_attachment: None,
             })
         };
 
+        let mut render_bundle_queue = self.render_bundle_queue.lock().unwrap();
+        render_bundle_queue.sort_by(|a, b| a.z_index.cmp(&b.z_index));
+
         // TODO: Try to remove that
-        let render_bundle_queue = self.render_bundle_queue.lock().unwrap();
         let render_bundle_queue = render_bundle_queue.deref();
         let render_bundle_queue =
-            unsafe { &*(render_bundle_queue as *const _) } as &Vec<wgpu::RenderBundle>;
+            unsafe { &*(render_bundle_queue as *const _) } as &Vec<RenderBundleEntry>;
 
         render_bundle_queue.iter().for_each(|bundle| {
-            render_pass.execute_bundles(iter::once(bundle));
+            render_pass.execute_bundles(iter::once(&bundle.bundle));
         });
     }
 
@@ -281,12 +275,6 @@ impl GraphicsManager {
         self.state
             .surface
             .configure(&self.state.device, &self.state.config);
-
-        self.state.depth_texture = TextureResource::new_depth_texture(
-            &self.state.device,
-            &self.state.config,
-            "depth_texture",
-        );
     }
 
     pub fn get_device(&self) -> &wgpu::Device {

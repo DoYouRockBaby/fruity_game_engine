@@ -18,7 +18,11 @@ impl Matrix4 {
     }
 
     pub fn invert(&self) -> Matrix4 {
-        Matrix4(cgmath::Matrix4::from(self.0).invert().unwrap().into())
+        if let Some(result) = cgmath::Matrix4::from(self.0).invert() {
+            Matrix4(result.into())
+        } else {
+            Matrix4::identity()
+        }
     }
 }
 

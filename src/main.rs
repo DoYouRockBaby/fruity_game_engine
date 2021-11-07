@@ -43,8 +43,8 @@ fn main() {
             initialize_input(service_manager, settings);
             initialize_graphic(service_manager, settings);
             initialize_graphic_2d(service_manager, settings);
-            /*initialize_editor(service_manager, settings);
-            initialize_editor_graphic_2d(service_manager, settings);*/
+            initialize_editor(service_manager, settings);
+            initialize_editor_graphic_2d(service_manager, settings);
             initialize_javascript(service_manager, settings);
 
             // Load resources

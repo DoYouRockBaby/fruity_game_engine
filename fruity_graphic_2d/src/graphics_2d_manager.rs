@@ -13,7 +13,6 @@ use fruity_graphic::resources::material_resource::BufferIdentifier;
 use fruity_graphic::resources::material_resource::MaterialResource;
 use fruity_graphic::resources::material_resource::Vertex;
 use fruity_graphic::resources::shader_resource::ShaderResource;
-use fruity_graphic::resources::texture_resource::TextureResource;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
@@ -22,7 +21,6 @@ use std::ops::Deref;
 use std::sync::Arc;
 use std::sync::RwLock;
 use wgpu::util::DeviceExt;
-use wgpu::RenderBundleDepthStencil;
 
 #[derive(Debug, FruityAny)]
 pub struct Graphics2dManager {
@@ -77,19 +75,19 @@ impl Graphics2dManager {
         // Create the main render pipeline
         let vertices: &[Vertex] = &[
             Vertex {
-                position: [pos.x, pos.y, z_index as f32],
+                position: [pos.x, pos.y, 0.0],
                 tex_coords: [0.0, 1.0],
             },
             Vertex {
-                position: [pos.x + size.x, pos.y, z_index as f32],
+                position: [pos.x + size.x, pos.y, 0.0],
                 tex_coords: [1.0, 1.0],
             },
             Vertex {
-                position: [pos.x + size.x, pos.y + size.y, z_index as f32],
+                position: [pos.x + size.x, pos.y + size.y, 0.0],
                 tex_coords: [1.0, 0.0],
             },
             Vertex {
-                position: [pos.x, pos.y + size.y, z_index as f32],
+                position: [pos.x, pos.y + size.y, 0.0],
                 tex_coords: [0.0, 0.0],
             },
         ];
@@ -113,11 +111,7 @@ impl Graphics2dManager {
             device.create_render_bundle_encoder(&wgpu::RenderBundleEncoderDescriptor {
                 label: Some("draw_square_bundle"),
                 color_formats: &[config.format],
-                depth_stencil: Some(RenderBundleDepthStencil {
-                    format: TextureResource::DEPTH_FORMAT,
-                    depth_read_only: false,
-                    stencil_read_only: true,
-                }),
+                depth_stencil: None,
                 sample_count: 1,
             });
 
@@ -132,7 +126,7 @@ impl Graphics2dManager {
             label: Some("main"),
         });
 
-        graphics_manager.push_render_bundle(bundle);
+        graphics_manager.push_render_bundle(bundle, z_index);
     }
 
     pub fn draw_line(&self, pos1: Vector2d, pos2: Vector2d, width: u32, color: Color) {
@@ -225,11 +219,7 @@ impl Graphics2dManager {
             device.create_render_bundle_encoder(&wgpu::RenderBundleEncoderDescriptor {
                 label: None,
                 color_formats: &[config.format],
-                depth_stencil: Some(RenderBundleDepthStencil {
-                    format: TextureResource::DEPTH_FORMAT,
-                    depth_read_only: false,
-                    stencil_read_only: true,
-                }),
+                depth_stencil: None,
                 sample_count: 1,
             });
 
@@ -242,7 +232,7 @@ impl Graphics2dManager {
             label: Some("main"),
         });
 
-        graphics_manager.push_render_bundle(bundle);
+        graphics_manager.push_render_bundle(bundle, 0);
     }
 
     /// Get the cursor position in the 2D world, take in care the camera transform

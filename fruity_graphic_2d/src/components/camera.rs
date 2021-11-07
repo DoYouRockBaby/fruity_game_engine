@@ -10,8 +10,8 @@ pub struct Camera {
 impl Default for Camera {
     fn default() -> Self {
         Self {
-            near: f32::MIN,
-            far: f32::MAX,
+            near: -1.0,
+            far: 1.0,
         }
     }
 }
