@@ -25,12 +25,7 @@ pub fn draw_row<'a>(elem: Row, ui: &mut egui::Ui, ctx: &mut DrawContext) {
                 .for_each(|(index, child)| draw_element(child, &mut ui[index], ctx));
         });
     } else if elem.wrapped {
-        flex_row_layout(ui, 70.0, 90.0, elem.children.len(), |ui| {
-            elem.children
-                .into_iter()
-                .enumerate()
-                .for_each(|(index, child)| draw_element(child, &mut ui[index], ctx));
-        });
+        flex_row_layout(elem.children, ui, ctx);
     } else {
         ui.horizontal(|ui| {
             elem.children
