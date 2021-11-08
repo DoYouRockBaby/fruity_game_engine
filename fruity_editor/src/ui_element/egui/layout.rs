@@ -1,4 +1,5 @@
 use crate::ui_element::egui::app::DrawContext;
+use crate::ui_element::egui::custom_layout::flex_row_layout;
 use crate::ui_element::egui::draw_element;
 use crate::ui_element::layout::Collapsible;
 use crate::ui_element::layout::Column;
@@ -24,10 +25,11 @@ pub fn draw_row<'a>(elem: Row, ui: &mut egui::Ui, ctx: &mut DrawContext) {
                 .for_each(|(index, child)| draw_element(child, &mut ui[index], ctx));
         });
     } else if elem.wrapped {
-        ui.horizontal_wrapped(|ui| {
+        flex_row_layout(ui, 70.0, 90.0, elem.children.len(), |ui| {
             elem.children
                 .into_iter()
-                .for_each(|child| draw_element(child, ui, ctx));
+                .enumerate()
+                .for_each(|(index, child)| draw_element(child, &mut ui[index], ctx));
         });
     } else {
         ui.horizontal(|ui| {

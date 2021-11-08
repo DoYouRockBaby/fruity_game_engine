@@ -35,6 +35,7 @@ use crate::ui_element::UIElement;
 use std::any::TypeId;
 
 pub mod app;
+pub mod custom_layout;
 pub mod display;
 pub mod input;
 pub mod layout;
