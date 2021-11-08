@@ -6,7 +6,7 @@ use crate::ui_element::pane::PaneGrid;
 use crate::ui_element::pane::UIPaneSide;
 use comp_state::CloneState;
 
-pub fn draw_pane_grid<'a>(elem: PaneGrid, ui: &mut egui::Ui, ctx: &mut DrawContext) {
+pub fn draw_pane_grid<'a>(elem: PaneGrid, _ui: &mut egui::Ui, ctx: &mut DrawContext) {
     // Initialize the pane grid state
     let panes = elem.panes.clone();
     let left_panes = use_state(|| {
@@ -35,21 +35,21 @@ pub fn draw_pane_grid<'a>(elem: PaneGrid, ui: &mut egui::Ui, ctx: &mut DrawConte
     egui::SidePanel::left("left_panel")
         .resizable(true)
         .default_width(150.0)
-        .show_inside(ui, |ui| {
+        .show(&ctx.platform.context(), |ui| {
             draw_pane(left_panes.get(), ui, ctx);
         });
 
     egui::SidePanel::right("right_panel")
         .resizable(true)
         .default_width(150.0)
-        .show_inside(ui, |ui| {
+        .show(&ctx.platform.context(), |ui| {
             draw_pane(right_panes.get(), ui, ctx);
         });
 
     egui::TopBottomPanel::bottom("bottom_panel")
         .resizable(true)
         .default_height(150.0)
-        .show_inside(ui, |ui| {
+        .show(&ctx.platform.context(), |ui| {
             draw_pane(bottom_panes.get(), ui, ctx);
         });
 }

@@ -33,7 +33,9 @@ pub struct DrawContext<'s> {
 impl Application {
     pub fn draw(&mut self, ctx: &mut DrawContext) {
         egui::Area::new("root").show(&ctx.platform.context(), |ui| {
-            draw_element(root_component(), ui, ctx);
+            root_component()
+                .into_iter()
+                .for_each(|child| draw_element(child, ui, ctx));
         });
     }
 }
