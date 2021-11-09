@@ -880,6 +880,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "fruity_editor_javascript"
+version = "0.1.0"
+dependencies = [
+ "fruity_any",
+ "fruity_core",
+ "fruity_editor",
+ "fruity_graphic",
+ "fruity_introspect",
+ "log",
+ "maplit",
+ "rayon",
+]
+
+[[package]]
 name = "fruity_game_engine"
 version = "0.1.0"
 dependencies = [
@@ -887,11 +901,12 @@ dependencies = [
  "fruity_core",
  "fruity_editor",
  "fruity_editor_graphic_2d",
+ "fruity_editor_javascript",
  "fruity_graphic",
  "fruity_graphic_2d",
  "fruity_input",
  "fruity_introspect",
- "fruity_javascript_scripting",
+ "fruity_javascript",
  "fruity_windows",
  "hot_reload_lib",
  "log",
@@ -959,7 +974,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fruity_javascript_scripting"
+name = "fruity_javascript"
 version = "0.1.0"
 dependencies = [
  "convert_case",

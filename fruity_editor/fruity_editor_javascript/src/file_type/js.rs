@@ -1,0 +1,19 @@
+use fruity_core::resource::resources_manager::ResourceIdentifier;
+use fruity_core::resource::resources_manager::ResourcesManager;
+use fruity_editor::hooks::use_global;
+use fruity_editor::state::world::WorldState;
+use fruity_graphic::resources::texture_resource::TextureResource;
+use std::sync::Arc;
+
+pub fn get_thumbnail_js(_file_path: &str) -> Option<Arc<TextureResource>> {
+    let world_state = use_global::<WorldState>();
+    let service_manager = world_state.service_manager.read().unwrap();
+    let resource_manager = service_manager.read::<ResourcesManager>();
+
+    resource_manager
+        .get_resource::<TextureResource>(ResourceIdentifier("Editor/Icons/js".to_string()))
+}
+
+pub fn on_selected_js(_file_path: &str) {
+    //TODO: Open file in your favorite editor
+}

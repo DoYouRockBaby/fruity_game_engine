@@ -6,10 +6,11 @@ use fruity_core::settings::Settings;
 use fruity_core::world::World;
 use fruity_editor::initialize as initialize_editor;
 use fruity_editor_graphic_2d::initialize as initialize_editor_graphic_2d;
+use fruity_editor_javascript::initialize as initialize_editor_javascript;
 use fruity_graphic::initialize as initialize_graphic;
 use fruity_graphic_2d::initialize as initialize_graphic_2d;
 use fruity_input::initialize as initialize_input;
-use fruity_javascript_scripting::initialize as initialize_javascript;
+use fruity_javascript::initialize as initialize_javascript;
 use fruity_windows::initialize as initialize_window;
 use fruity_windows::platform;
 use pretty_env_logger::formatted_builder;
@@ -46,6 +47,7 @@ fn main() {
             initialize_editor(service_manager, settings);
             initialize_editor_graphic_2d(service_manager, settings);
             initialize_javascript(service_manager, settings);
+            initialize_editor_javascript(service_manager, settings);
 
             // Load resources
             let resource_settings = settings.get::<Vec<Settings>>("resources", Vec::new());
@@ -60,7 +62,7 @@ fn main() {
             module_manager.load_module("./target/debug", "fruity_graphic");
             module_manager.load_module("./target/debug", "fruity_graphic_2d");
             module_manager.load_module("./target/debug", "fruity_editor");
-            module_manager.load_module("./target/debug", "fruity_javascript_scripting");*/
+            module_manager.load_module("./target/debug", "fruity_javascript");*/
         },
         &settings,
     );

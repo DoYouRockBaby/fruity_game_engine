@@ -11,36 +11,8 @@ pub fn load_default_resources(resources_manager: ServiceRwLock<ResourcesManager>
 
 pub fn load_default_icons(resources_manager: ServiceRwLock<ResourcesManager>) {
     load_icon(
-        "Editor/Icons/unknown",
-        include_bytes!("unknown_thumbnail.png"),
-        "png",
-        resources_manager.clone(),
-    );
-
-    load_icon(
-        "Editor/Icons/folder",
-        include_bytes!("folder_thumbnail.png"),
-        "png",
-        resources_manager.clone(),
-    );
-
-    load_icon(
-        "Editor/Icons/material",
-        include_bytes!("material_thumbnail.png"),
-        "png",
-        resources_manager.clone(),
-    );
-
-    load_icon(
-        "Editor/Icons/settings",
-        include_bytes!("settings_thumbnail.png"),
-        "png",
-        resources_manager.clone(),
-    );
-
-    load_icon(
-        "Editor/Icons/shader",
-        include_bytes!("shader_thumbnail.png"),
+        "Editor/Icons/js",
+        include_bytes!("js_thumbnail.png"),
         "png",
         resources_manager.clone(),
     );

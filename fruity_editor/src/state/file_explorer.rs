@@ -9,7 +9,7 @@ pub struct FileExplorerState {
 impl Default for FileExplorerState {
     fn default() -> Self {
         FileExplorerState {
-            current_dir: ".".to_string(),
+            current_dir: "./assets".to_string(),
         }
     }
 }

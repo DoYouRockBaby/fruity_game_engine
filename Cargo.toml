@@ -15,8 +15,9 @@ rayon = "1.5"
 mini-redis = "0.4"
 fruity_editor = { path = "fruity_editor" }
 fruity_editor_graphic_2d = { path = "fruity_editor/fruity_editor_graphic_2d" }
+fruity_editor_javascript = { path = "fruity_editor/fruity_editor_javascript" }
 fruity_graphic = { path = "fruity_engine/fruity_graphic" }
 fruity_graphic_2d = { path = "fruity_engine/fruity_graphic_2d" }
 fruity_input = { path = "fruity_engine/fruity_input" }
-fruity_javascript_scripting = { path = "fruity_engine/fruity_javascript_scripting" }
+fruity_javascript = { path = "fruity_engine/fruity_javascript" }
 fruity_windows = { path = "fruity_engine/fruity_windows" }
