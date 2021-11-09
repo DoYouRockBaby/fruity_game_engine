@@ -37,8 +37,8 @@ pub fn initialize(service_manager: &Arc<RwLock<ServiceManager>>, _settings: &Set
     object_factory.register::<Vector2d>("Vector2d");
 
     let mut system_manager = service_manager_writer.write::<SystemManager>();
-    system_manager.add_system(draw_camera_untyped, Some(97));
-    system_manager.add_system(draw_sprite_untyped, Some(98));
+    system_manager.add_system_that_ignore_pause(draw_camera_untyped, Some(97));
+    system_manager.add_system_that_ignore_pause(draw_sprite_untyped, Some(98));
 
     let resources_manager = service_manager_writer.get::<ResourcesManager>().unwrap();
     std::mem::drop(object_factory);

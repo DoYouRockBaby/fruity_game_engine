@@ -1,5 +1,6 @@
 use crate::service::service::Service;
 use crate::service::service_manager::ServiceManager;
+use crate::service::utils::cast_service;
 use crate::service::utils::cast_service_mut;
 use crate::service::utils::ArgumentCaster;
 use fruity_any::*;
@@ -12,18 +13,33 @@ use fruity_introspect::MethodInfo;
 use rayon::prelude::*;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-type System = dyn Fn(Arc<RwLock<ServiceManager>>) + Sync + Send + 'static;
+type SystemCallback = dyn Fn(Arc<RwLock<ServiceManager>>) + Sync + Send + 'static;
+
+struct BeginSystem {
+    callback: Box<SystemCallback>,
+}
+
+struct EndSystem {
+    callback: Box<SystemCallback>,
+}
+
+struct FrameSystem {
+    callback: Box<SystemCallback>,
+    ignore_pause: bool,
+}
 
 /// A system pool, see [‘SystemManager‘] for more informations
-pub struct SystemPool {
+pub struct SystemPool<T> {
     /// Is the pool ignored, if it's not, it will not be launched when calling [‘SystemManager‘]::run
     ignore_once: RwLock<bool>,
 
     /// Systems of the pool
-    systems: Vec<Box<System>>,
+    systems: Vec<T>,
 }
 
 /// A systems collection
@@ -41,9 +57,10 @@ pub struct SystemPool {
 ///
 #[derive(FruityAny)]
 pub struct SystemManager {
-    system_pools: BTreeMap<usize, SystemPool>,
-    begin_system_pools: BTreeMap<usize, SystemPool>,
-    end_system_pools: BTreeMap<usize, SystemPool>,
+    pause: AtomicBool,
+    system_pools: BTreeMap<usize, SystemPool<FrameSystem>>,
+    begin_system_pools: BTreeMap<usize, SystemPool<BeginSystem>>,
+    end_system_pools: BTreeMap<usize, SystemPool<EndSystem>>,
     service_manager: Arc<RwLock<ServiceManager>>,
 }
 
@@ -57,6 +74,7 @@ impl<'s> SystemManager {
     /// Returns a SystemManager
     pub fn new(service_manager: &Arc<RwLock<ServiceManager>>) -> SystemManager {
         SystemManager {
+            pause: AtomicBool::new(false),
             system_pools: BTreeMap::new(),
             begin_system_pools: BTreeMap::new(),
             end_system_pools: BTreeMap::new(),
@@ -72,16 +90,56 @@ impl<'s> SystemManager {
     ///
     pub fn add_system<T: Fn(Arc<RwLock<ServiceManager>>) + Sync + Send + 'static>(
         &mut self,
-        system: T,
+        callback: T,
         pool_index: Option<usize>,
     ) {
         let pool_index = pool_index.unwrap_or(50);
 
+        let system = FrameSystem {
+            callback: Box::new(callback),
+            ignore_pause: false,
+        };
+
         if let Some(pool) = self.system_pools.get_mut(&pool_index) {
-            pool.systems.push(Box::new(system))
+            pool.systems.push(system)
         } else {
             // If the pool not exists, we create it
-            let systems = vec![Box::new(system) as Box<System>];
+            let systems = vec![system];
+            self.system_pools.insert(
+                pool_index,
+                SystemPool {
+                    ignore_once: RwLock::new(false),
+                    systems,
+                },
+            );
+        };
+    }
+
+    /// Add a system to the collection
+    ///
+    /// # Arguments
+    /// * `system` - A function that will compute the world
+    /// * `pool_index` - A pool identifier, all the systems of the same pool will be processed together in parallel
+    ///
+    pub fn add_system_that_ignore_pause<
+        T: Fn(Arc<RwLock<ServiceManager>>) + Sync + Send + 'static,
+    >(
+        &mut self,
+        callback: T,
+        pool_index: Option<usize>,
+    ) {
+        let pool_index = pool_index.unwrap_or(50);
+
+        let system = FrameSystem {
+            callback: Box::new(callback),
+            ignore_pause: true,
+        };
+
+        if let Some(pool) = self.system_pools.get_mut(&pool_index) {
+            pool.systems.push(system)
+        } else {
+            // If the pool not exists, we create it
+            let systems = vec![system];
             self.system_pools.insert(
                 pool_index,
                 SystemPool {
@@ -100,16 +158,20 @@ impl<'s> SystemManager {
     ///
     pub fn add_begin_system<T: Fn(Arc<RwLock<ServiceManager>>) + Sync + Send + 'static>(
         &mut self,
-        system: T,
+        callback: T,
         pool_index: Option<usize>,
     ) {
         let pool_index = pool_index.unwrap_or(50);
 
+        let system = BeginSystem {
+            callback: Box::new(callback),
+        };
+
         if let Some(pool) = self.begin_system_pools.get_mut(&pool_index) {
-            pool.systems.push(Box::new(system))
+            pool.systems.push(system)
         } else {
             // If the pool not exists, we create it
-            let systems = vec![Box::new(system) as Box<System>];
+            let systems = vec![system];
             self.begin_system_pools.insert(
                 pool_index,
                 SystemPool {
@@ -128,16 +190,20 @@ impl<'s> SystemManager {
     ///
     pub fn add_end_system<T: Fn(Arc<RwLock<ServiceManager>>) + Sync + Send + 'static>(
         &mut self,
-        system: T,
+        callback: T,
         pool_index: Option<usize>,
     ) {
         let pool_index = pool_index.unwrap_or(50);
 
+        let system = EndSystem {
+            callback: Box::new(callback),
+        };
+
         if let Some(pool) = self.end_system_pools.get_mut(&pool_index) {
-            pool.systems.push(Box::new(system))
+            pool.systems.push(system)
         } else {
             // If the pool not exists, we create it
-            let systems = vec![Box::new(system) as Box<System>];
+            let systems = vec![system];
             self.end_system_pools.insert(
                 pool_index,
                 SystemPool {
@@ -149,33 +215,36 @@ impl<'s> SystemManager {
     }
 
     /// Iter over all the systems pools
-    fn iter_system_pools(&self) -> impl Iterator<Item = &SystemPool> {
+    fn iter_system_pools(&self) -> impl Iterator<Item = &SystemPool<FrameSystem>> {
         self.system_pools.iter().map(|pool| pool.1)
     }
 
     /// Iter over all the begin systems pools
-    fn iter_begin_system_pools(&self) -> impl Iterator<Item = &SystemPool> {
+    fn iter_begin_system_pools(&self) -> impl Iterator<Item = &SystemPool<BeginSystem>> {
         self.begin_system_pools.iter().map(|pool| pool.1)
     }
 
     /// Iter over all the end systems pools
-    fn iter_end_system_pools(&self) -> impl Iterator<Item = &SystemPool> {
+    fn iter_end_system_pools(&self) -> impl Iterator<Item = &SystemPool<EndSystem>> {
         self.end_system_pools.iter().map(|pool| pool.1)
     }
 
     /// Run all the stored systems
     pub fn run(&self) {
         let service_manager = self.service_manager.clone();
+        let is_paused = self.is_paused();
+
         self.iter_system_pools().for_each(|pool| {
             let pool_ignore_reader = pool.ignore_once.read().unwrap();
             let pool_ignore = pool_ignore_reader.clone();
             std::mem::drop(pool_ignore_reader);
 
             if !pool_ignore {
-                pool.systems
-                    .iter()
-                    .par_bridge()
-                    .for_each(|system| system(service_manager.clone()));
+                pool.systems.iter().par_bridge().for_each(|system| {
+                    if !is_paused || system.ignore_pause {
+                        (system.callback)(service_manager.clone());
+                    }
+                });
             } else {
                 let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
                 *pool_ignore_writer = false;
@@ -195,7 +264,7 @@ impl<'s> SystemManager {
                 pool.systems
                     .iter()
                     .par_bridge()
-                    .for_each(|system| system(service_manager.clone()));
+                    .for_each(|system| (system.callback)(service_manager.clone()));
             } else {
                 let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
                 *pool_ignore_writer = false;
@@ -215,7 +284,7 @@ impl<'s> SystemManager {
                 pool.systems
                     .iter()
                     .par_bridge()
-                    .for_each(|system| system(service_manager.clone()));
+                    .for_each(|system| (system.callback)(service_manager.clone()));
             } else {
                 let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
                 *pool_ignore_writer = false;
@@ -229,7 +298,7 @@ impl<'s> SystemManager {
             pool.systems
                 .iter()
                 .par_bridge()
-                .for_each(|system| system(self.service_manager.clone()));
+                .for_each(|system| (system.callback)(self.service_manager.clone()));
         }
     }
 
@@ -239,7 +308,7 @@ impl<'s> SystemManager {
             pool.systems
                 .iter()
                 .par_bridge()
-                .for_each(|system| system(self.service_manager.clone()));
+                .for_each(|system| (system.callback)(self.service_manager.clone()));
         }
     }
 
@@ -249,7 +318,7 @@ impl<'s> SystemManager {
             pool.systems
                 .iter()
                 .par_bridge()
-                .for_each(|system| system(self.service_manager.clone()));
+                .for_each(|system| (system.callback)(self.service_manager.clone()));
         }
     }
 
@@ -287,6 +356,20 @@ impl<'s> SystemManager {
             let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
             *pool_ignore_writer = true;
         }
+    }
+
+    /// Is systems paused
+    pub fn is_paused(&self) -> bool {
+        self.pause.load(Ordering::Relaxed)
+    }
+
+    /// Set if systems are paused, only systems that ignore pause will be executed
+    ///
+    /// # Arguments
+    /// * `paused` - The paused value
+    ///
+    pub fn set_paused(&self, paused: bool) {
+        self.pause.store(paused, Ordering::Relaxed);
     }
 }
 
@@ -355,6 +438,51 @@ impl IntrospectObject for SystemManager {
                         },
                         arg2,
                     );
+
+                    Ok(None)
+                })),
+            },
+            MethodInfo {
+                name: "add_end_system".to_string(),
+                call: MethodCaller::Mut(Arc::new(|this, args| {
+                    let this = cast_service_mut::<SystemManager>(this);
+
+                    let mut caster = ArgumentCaster::new("add_end_system", args);
+                    let arg1 = caster.cast_next::<Callback>()?;
+                    let arg2 = caster.cast_next_optional::<usize>();
+
+                    this.add_end_system(
+                        move |_| {
+                            match arg1(vec![]) {
+                                Ok(_) => (),
+                                Err(err) => log_introspect_error(&err),
+                            };
+                        },
+                        arg2,
+                    );
+
+                    Ok(None)
+                })),
+            },
+            MethodInfo {
+                name: "is_paused".to_string(),
+                call: MethodCaller::Const(Arc::new(|this, _args| {
+                    let this = cast_service::<SystemManager>(this);
+
+                    let result = this.is_paused();
+
+                    Ok(Some(result.into()))
+                })),
+            },
+            MethodInfo {
+                name: "set_paused".to_string(),
+                call: MethodCaller::Const(Arc::new(|this, args| {
+                    let this = cast_service::<SystemManager>(this);
+
+                    let mut caster = ArgumentCaster::new("set_paused", args);
+                    let arg1 = caster.cast_next::<bool>()?;
+
+                    this.set_paused(arg1);
 
                     Ok(None)
                 })),

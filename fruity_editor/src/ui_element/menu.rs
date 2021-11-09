@@ -2,24 +2,29 @@ use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
 use std::sync::Arc;
 
-#[derive(Clone)]
 pub struct MenuBar {
-    pub sections: Vec<MenuSection>,
+    pub children: Vec<UIElement>,
 }
 
-#[derive(Clone)]
 pub struct MenuSection {
     pub label: String,
     pub items: Vec<MenuItem>,
 }
 
-#[derive(Clone)]
 pub struct MenuItem {
     pub label: String,
     pub on_click: Arc<dyn Fn() + Send + Sync>,
 }
 
 impl UIWidget for MenuBar {
+    fn elem(self) -> UIElement {
+        UIElement {
+            root: Box::new(self),
+        }
+    }
+}
+
+impl UIWidget for MenuSection {
     fn elem(self) -> UIElement {
         UIElement {
             root: Box::new(self),

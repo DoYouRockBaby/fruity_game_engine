@@ -38,6 +38,7 @@ pub fn entity_list_component() -> UIElement {
 
                     entity_state.selected_entity = Some(item.clone());
                 }),
+                ..Default::default()
             }
             .elem()
         }),

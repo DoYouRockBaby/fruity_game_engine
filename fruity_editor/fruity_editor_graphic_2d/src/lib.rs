@@ -21,7 +21,7 @@ pub fn initialize(service_manager: &Arc<RwLock<ServiceManager>>, _settings: &Set
     service_manager_writer.register("gizmos_service", gizmos_service);
 
     let mut system_manager = service_manager_writer.write::<SystemManager>();
-    system_manager.add_system(draw_gizmos_2d_untyped, Some(98));
+    system_manager.add_system_that_ignore_pause(draw_gizmos_2d_untyped, Some(98));
 
     let mut component_editor_manager = service_manager_writer.write::<ComponentEditorManager>();
     component_editor_manager.register_component_field_editor::<Vector2d, _>(draw_editor_vector_2d);

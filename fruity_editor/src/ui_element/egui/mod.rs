@@ -15,6 +15,7 @@ use crate::ui_element::egui::layout::draw_row;
 use crate::ui_element::egui::layout::draw_scroll;
 use crate::ui_element::egui::list::draw_list_view;
 use crate::ui_element::egui::menu::draw_menu_bar;
+use crate::ui_element::egui::menu::draw_menu_section;
 use crate::ui_element::egui::pane::draw_pane_grid;
 use crate::ui_element::input::Button;
 use crate::ui_element::input::Checkbox;
@@ -28,6 +29,7 @@ use crate::ui_element::layout::Row;
 use crate::ui_element::layout::Scroll;
 use crate::ui_element::list::ListView;
 use crate::ui_element::menu::MenuBar;
+use crate::ui_element::menu::MenuSection;
 use crate::ui_element::pane::PaneGrid;
 use crate::ui_element::UIElement;
 use std::any::TypeId;
@@ -72,6 +74,8 @@ pub fn draw_element<'a>(elem: UIElement, ui: &mut egui::Ui, ctx: &mut DrawContex
         draw_pane_grid(*elem.root.downcast::<PaneGrid>().unwrap(), ui, ctx)
     } else if type_id == TypeId::of::<MenuBar>() {
         draw_menu_bar(*elem.root.downcast::<MenuBar>().unwrap(), ui, ctx)
+    } else if type_id == TypeId::of::<MenuSection>() {
+        draw_menu_section(*elem.root.downcast::<MenuSection>().unwrap(), ui, ctx)
     } else {
         draw_empty(ui)
     }

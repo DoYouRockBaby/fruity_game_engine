@@ -5,7 +5,18 @@ use std::sync::Arc;
 
 pub struct Button {
     pub label: String,
+    pub enabled: bool,
     pub on_click: Arc<dyn Fn() + Send + Sync>,
+}
+
+impl Default for Button {
+    fn default() -> Self {
+        Button {
+            label: Default::default(),
+            enabled: true,
+            on_click: Arc::new(|| {}),
+        }
+    }
 }
 
 impl UIWidget for Button {
