@@ -14,8 +14,6 @@ use fruity_graphic_2d::components::size::Size;
 use rayon::prelude::*;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::thread::sleep;
-use std::time::Duration;
 
 pub fn draw_gizmos_2d(
     entity_id: &EntityId,
@@ -24,22 +22,6 @@ pub fn draw_gizmos_2d(
     gizmos_service: ServiceReadGuard<GizmosService>,
 ) {
     let entity = use_global::<EntityState>();
-
-    /*let handle_color = theme_state.theme.surface_color();
-    let handle_color = Color([
-        handle_color.r,
-        handle_color.g,
-        handle_color.b,
-        handle_color.a,
-    ]);
-
-    let handle_hover_color = theme_state.theme.hovered_color();
-    let handle_hover_color = Color([
-        handle_hover_color.r,
-        handle_hover_color.g,
-        handle_hover_color.b,
-        handle_hover_color.a,
-    ]);*/
 
     if let Some(selected_entity) = &entity.selected_entity {
         let selected_entity_id = {
@@ -79,10 +61,8 @@ pub fn draw_gizmos_2d(
                             .pos
                     };
 
-                    while drag_action.is_dragging() {
-                        sleep(Duration::from_millis(20));
-                        let cursor_movement =
-                            drag_action.get_cursor_position() - drag_action.start_pos();
+                    drag_action.while_dragging(move |cursor_position, start_pos| {
+                        let cursor_movement = cursor_position - start_pos;
 
                         let mut position = position.write();
                         let position = position.as_any_mut().downcast_mut::<Position>().unwrap();
@@ -94,7 +74,7 @@ pub fn draw_gizmos_2d(
                         if move_y {
                             position.pos.y = position_origin.y + cursor_movement.y;
                         }
-                    }
+                    });
                 },
                 move |fixed_x, fixed_y, drag_action| {
                     let position = position_2.clone();
@@ -112,10 +92,9 @@ pub fn draw_gizmos_2d(
                         size.as_any_ref().downcast_ref::<Size>().unwrap().size
                     };
 
-                    while drag_action.is_dragging() {
-                        sleep(Duration::from_millis(100));
-                        let cursor_movement =
-                            drag_action.get_cursor_position() - drag_action.start_pos();
+                    let size = size.clone();
+                    drag_action.while_dragging(move |cursor_position, start_pos| {
+                        let cursor_movement = cursor_position - start_pos;
 
                         let mut position_writer = position.write();
                         let position = position_writer
@@ -151,7 +130,7 @@ pub fn draw_gizmos_2d(
                         } else {
                             size_origin.y - cursor_movement.y
                         };
-                    }
+                    });
                 },
             );
         }

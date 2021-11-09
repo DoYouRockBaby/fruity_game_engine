@@ -289,7 +289,7 @@ impl GizmosService {
 
 pub struct DragAction {
     start_pos: Vector2d,
-    is_dragging: Arc<RwLock<bool>>,
+    input_manager: ServiceRwLock<InputManager>,
     graphics_2d_manager: ServiceRwLock<Graphics2dManager>,
 }
 
@@ -302,41 +302,33 @@ impl DragAction {
     ) where
         F: Fn(DragAction) + Send + Sync + 'static,
     {
-        let is_dragging = Arc::new(RwLock::new(true));
-        let is_dragging_2 = is_dragging.clone();
-
-        // This thread will observe if were still dragging
-        spawn(move || {
-            let is_dragging = is_dragging.clone();
-            let mut is_mouse_pressed = true;
-            while is_mouse_pressed {
-                sleep(Duration::from_millis(100));
-                let input_manager = input_manager.read().unwrap();
-                is_mouse_pressed = input_manager.is_source_pressed("Mouse/Left");
-            }
-
-            let mut is_dragging = is_dragging.write().unwrap();
-            *is_dragging = false;
-        });
-
         // Create the darg action structure
         let drag_action = DragAction {
             start_pos,
-            is_dragging: is_dragging_2,
+            input_manager,
             graphics_2d_manager,
         };
 
         // Start the action in a specific thread
-        spawn(move || callback(drag_action));
+        callback(drag_action);
     }
 
     pub fn start_pos(&self) -> Vector2d {
         self.start_pos
     }
 
-    pub fn is_dragging(&self) -> bool {
-        let is_dragging = self.is_dragging.read().unwrap();
-        *is_dragging
+    pub fn while_dragging(self, callback: impl Fn(Vector2d, Vector2d) + Send + Sync + 'static) {
+        spawn(move || {
+            while self.is_dragging_button_pressed() {
+                sleep(Duration::from_millis(20));
+                callback(self.get_cursor_position(), self.start_pos());
+            }
+        });
+    }
+
+    fn is_dragging_button_pressed(&self) -> bool {
+        let input_manager = self.input_manager.read().unwrap();
+        input_manager.is_source_pressed("Mouse/Left")
     }
 
     pub fn get_cursor_position(&self) -> Vector2d {
