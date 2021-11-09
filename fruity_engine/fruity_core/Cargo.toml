@@ -12,7 +12,7 @@ yaml-rust = "0.4"
 lazy_static = "1.4"
 libloading = "0.7.1"
 topological-sort = "0.1.0"
-hot_reload_lib = { path = "../deps/hot_reload_lib" }
+hot_reload_lib = { path = "../../deps/hot_reload_lib" }
 fruity_any = { path = "../fruity_any" }
 fruity_core_derive = { path = "fruity_core_derive" }
 fruity_introspect = { path = "../fruity_introspect" }

@@ -5,18 +5,18 @@ edition = "2018"
 resolver = "2"
 
 [dependencies]
-fruity_any = { path = "fruity_any" }
-fruity_core = { path = "fruity_core" }
-fruity_introspect = { path = "fruity_introspect" }
+fruity_any = { path = "fruity_engine/fruity_any" }
+fruity_core = { path = "fruity_engine/fruity_core" }
+fruity_introspect = { path = "fruity_engine/fruity_introspect" }
 hot_reload_lib = { path = "deps/hot_reload_lib" }
 pretty_env_logger = "0.4.0"
 log = "0.4.14"
 rayon = "1.5"
 mini-redis = "0.4"
 fruity_editor = { path = "fruity_editor" }
-fruity_editor_graphic_2d = { path = "fruity_editor_graphic_2d" }
-fruity_graphic = { path = "fruity_graphic" }
-fruity_graphic_2d = { path = "fruity_graphic_2d" }
-fruity_input = { path = "fruity_input" }
-fruity_javascript_scripting = { path = "fruity_javascript_scripting" }
-fruity_windows = { path = "fruity_windows" }
+fruity_editor_graphic_2d = { path = "fruity_editor/fruity_editor_graphic_2d" }
+fruity_graphic = { path = "fruity_engine/fruity_graphic" }
+fruity_graphic_2d = { path = "fruity_engine/fruity_graphic_2d" }
+fruity_input = { path = "fruity_engine/fruity_input" }
+fruity_javascript_scripting = { path = "fruity_engine/fruity_javascript_scripting" }
+fruity_windows = { path = "fruity_engine/fruity_windows" }
