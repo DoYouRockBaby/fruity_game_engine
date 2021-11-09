@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 #[topo::nested]
 pub fn draw_button<'a>(elem: Button, ui: &mut egui::Ui, _ctx: &mut DrawContext) {
-    if ui.button(elem.label).clicked() {
+    if ui.add(egui::Button::new(elem.label)).clicked() {
         (elem.on_click)()
     }
 }
@@ -86,7 +86,7 @@ pub fn draw_float_input<'a>(elem: FloatInput, ui: &mut egui::Ui, ctx: &mut DrawC
 
 pub fn draw_checkbox<'a>(elem: Checkbox, ui: &mut egui::Ui, _ctx: &mut DrawContext) {
     let mut new_value = elem.value;
-    ui.checkbox(&mut new_value, &elem.label);
+    ui.add(egui::Checkbox::new(&mut new_value, &elem.label));
 
     if new_value != elem.value {
         (elem.on_change)(new_value);

@@ -4,7 +4,9 @@ use crate::ui_element::input::FloatInput;
 use crate::ui_element::input::Input;
 use crate::ui_element::input::IntegerInput;
 use crate::ui_element::layout::Row;
+use crate::ui_element::layout::RowItem;
 use crate::ui_element::UIElement;
+use crate::ui_element::UISize;
 use crate::ui_element::UIWidget;
 use fruity_core::component::component_rwlock::ComponentRwLock;
 use fruity_introspect::serialized::Serialized;
@@ -28,29 +30,35 @@ macro_rules! impl_int_for_editable_component {
             let component = component.clone();
             Row {
                 children: vec![
-                    Text {
-                        text: field_info.name.to_string(),
-                        ..Default::default()
-                    }
-                    .elem(),
-                    IntegerInput {
-                        value: value as i64,
-                        on_change: Arc::new(move |value| {
-                            let mut writer = component.write();
-                            match &field_info.setter {
-                                SetterCaller::Const(setter) => setter(
-                                    writer.as_any_ref(),
-                                    Serialized::try_from(value as $type).unwrap(),
-                                ),
-                                SetterCaller::Mut(setter) => setter(
-                                    writer.as_any_mut(),
-                                    Serialized::try_from(value as $type).unwrap(),
-                                ),
-                                SetterCaller::None => (),
-                            };
-                        }),
-                    }
-                    .elem(),
+                    RowItem {
+                        size: UISize::Units(40.0),
+                        child: Text {
+                            text: field_info.name.to_string(),
+                            ..Default::default()
+                        }
+                        .elem(),
+                    },
+                    RowItem {
+                        size: UISize::Fill,
+                        child: IntegerInput {
+                            value: value as i64,
+                            on_change: Arc::new(move |value| {
+                                let mut writer = component.write();
+                                match &field_info.setter {
+                                    SetterCaller::Const(setter) => setter(
+                                        writer.as_any_ref(),
+                                        Serialized::try_from(value as $type).unwrap(),
+                                    ),
+                                    SetterCaller::Mut(setter) => setter(
+                                        writer.as_any_mut(),
+                                        Serialized::try_from(value as $type).unwrap(),
+                                    ),
+                                    SetterCaller::None => (),
+                                };
+                            }),
+                        }
+                        .elem(),
+                    },
                 ],
                 ..Default::default()
             }
@@ -85,30 +93,36 @@ macro_rules! impl_float_for_editable_component {
             let component = component.clone();
             Row {
                 children: vec![
-                    Text {
-                        text: field_info.name.to_string(),
-                        ..Default::default()
-                    }
-                    .elem(),
-                    FloatInput {
-                        value: value as f64,
-                        on_change: Arc::new(move |value| {
-                            let component = component.clone();
-                            let mut writer = component.write();
-                            match &field_info.setter {
-                                SetterCaller::Const(setter) => setter(
-                                    writer.as_any_ref(),
-                                    Serialized::try_from(value as $type).unwrap(),
-                                ),
-                                SetterCaller::Mut(setter) => setter(
-                                    writer.as_any_mut(),
-                                    Serialized::try_from(value as $type).unwrap(),
-                                ),
-                                SetterCaller::None => (),
-                            };
-                        }),
-                    }
-                    .elem(),
+                    RowItem {
+                        size: UISize::Units(40.0),
+                        child: Text {
+                            text: field_info.name.to_string(),
+                            ..Default::default()
+                        }
+                        .elem(),
+                    },
+                    RowItem {
+                        size: UISize::Fill,
+                        child: FloatInput {
+                            value: value as f64,
+                            on_change: Arc::new(move |value| {
+                                let component = component.clone();
+                                let mut writer = component.write();
+                                match &field_info.setter {
+                                    SetterCaller::Const(setter) => setter(
+                                        writer.as_any_ref(),
+                                        Serialized::try_from(value as $type).unwrap(),
+                                    ),
+                                    SetterCaller::Mut(setter) => setter(
+                                        writer.as_any_mut(),
+                                        Serialized::try_from(value as $type).unwrap(),
+                                    ),
+                                    SetterCaller::None => (),
+                                };
+                            }),
+                        }
+                        .elem(),
+                    },
                 ],
                 ..Default::default()
             }
@@ -164,31 +178,37 @@ pub fn draw_editor_string(component: ComponentRwLock, field_info: &FieldInfo) ->
     let component = component.clone();
     Row {
         children: vec![
-            Text {
-                text: field_info.name.to_string(),
-                ..Default::default()
-            }
-            .elem(),
-            Input {
-                placeholder: "".to_string(),
-                value: value,
-                on_change: Arc::new(move |value: &str| {
-                    let mut writer = component.write();
+            RowItem {
+                size: UISize::Units(40.0),
+                child: Text {
+                    text: field_info.name.to_string(),
+                    ..Default::default()
+                }
+                .elem(),
+            },
+            RowItem {
+                size: UISize::Fill,
+                child: Input {
+                    placeholder: "".to_string(),
+                    value: value,
+                    on_change: Arc::new(move |value: &str| {
+                        let mut writer = component.write();
 
-                    match &field_info.setter {
-                        SetterCaller::Const(setter) => setter(
-                            writer.as_any_ref(),
-                            Serialized::try_from(value.to_string()).unwrap(),
-                        ),
-                        SetterCaller::Mut(setter) => setter(
-                            writer.as_any_mut(),
-                            Serialized::try_from(value.to_string()).unwrap(),
-                        ),
-                        SetterCaller::None => (),
-                    };
-                }),
-            }
-            .elem(),
+                        match &field_info.setter {
+                            SetterCaller::Const(setter) => setter(
+                                writer.as_any_ref(),
+                                Serialized::try_from(value.to_string()).unwrap(),
+                            ),
+                            SetterCaller::Mut(setter) => setter(
+                                writer.as_any_mut(),
+                                Serialized::try_from(value.to_string()).unwrap(),
+                            ),
+                            SetterCaller::None => (),
+                        };
+                    }),
+                }
+                .elem(),
+            },
         ],
         ..Default::default()
     }

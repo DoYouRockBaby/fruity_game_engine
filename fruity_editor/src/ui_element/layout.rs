@@ -15,26 +15,15 @@ impl UIWidget for Empty {
 }
 
 #[derive(Default)]
-pub struct Container {
+pub struct RowItem {
     pub child: UIElement,
-    pub width: UISize,
-    pub height: UISize,
-}
-
-impl UIWidget for Container {
-    fn elem(self) -> UIElement {
-        UIElement {
-            root: Box::new(self),
-        }
-    }
+    pub size: UISize,
 }
 
 #[derive(Default)]
 pub struct Row {
-    pub children: Vec<UIElement>,
+    pub children: Vec<RowItem>,
     pub align: UIAlign,
-    pub wrapped: bool,
-    pub children_with_same_width: bool,
 }
 
 impl UIWidget for Row {

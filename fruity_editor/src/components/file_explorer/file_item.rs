@@ -1,6 +1,7 @@
 use crate::components::file_explorer::ResourceIdentifier;
 use crate::components::file_explorer::TextureResource;
 use crate::hooks::use_global;
+use crate::state::file_explorer::FileExplorerState;
 use crate::state::world::WorldState;
 use crate::ui_element::display::Text;
 use crate::ui_element::input::ImageButton;
@@ -40,6 +41,7 @@ pub fn file_item_component(path: PathBuf) -> UIElement {
         }
         .elem()
     } else {
+        let path_2 = path.clone();
         Column {
             children: vec![
                 ImageButton {
@@ -48,7 +50,12 @@ pub fn file_item_component(path: PathBuf) -> UIElement {
                             "Editor/Icons/folder".to_string(),
                         ))
                         .unwrap(),
-                    on_click: Arc::new(move || {}),
+                    on_click: Arc::new(move || {
+                        let file_explorer_state = use_global::<FileExplorerState>();
+
+                        file_explorer_state.current_dir =
+                            path_2.to_path_buf().to_string_lossy().to_string();
+                    }),
                     width: 64.0,
                     height: 64.0,
                 }

@@ -25,9 +25,8 @@ impl Default for UIAlign {
 #[derive(Debug, Clone)]
 pub enum UISize {
     Fill,
-    FillPortion(u16),
-    Shrink,
-    Units(u16),
+    FillPortion(f32),
+    Units(f32),
 }
 
 impl Default for UISize {

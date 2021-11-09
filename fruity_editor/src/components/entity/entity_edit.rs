@@ -7,9 +7,11 @@ use crate::ui_element::layout::Collapsible;
 use crate::ui_element::layout::Column;
 use crate::ui_element::layout::Empty;
 use crate::ui_element::layout::Row;
+use crate::ui_element::layout::RowItem;
 use crate::ui_element::layout::Scroll;
 use crate::ui_element::UIAlign;
 use crate::ui_element::UIElement;
+use crate::ui_element::UISize;
 use crate::ui_element::UIWidget;
 use std::sync::Arc;
 
@@ -22,26 +24,32 @@ pub fn entity_edit_component() -> UIElement {
         let head = Column {
             children: vec![Row {
                 children: vec![
-                    Checkbox {
-                        label: "".to_string(),
-                        value: entity_reader.enabled,
-                        on_change: Arc::new(move |value| {
-                            let entity = entity.clone();
-                            let mut entity = entity.write();
-                            entity.enabled = value;
-                        }),
-                    }
-                    .elem(),
-                    Input {
-                        value: entity_reader.name.to_string(),
-                        placeholder: "Name ...".to_string(),
-                        on_change: Arc::new(move |value: &str| {
-                            let entity = entity.clone();
-                            let mut entity = entity.write();
-                            entity.name = value.to_string();
-                        }),
-                    }
-                    .elem(),
+                    RowItem {
+                        size: UISize::Units(50.0),
+                        child: Checkbox {
+                            label: "".to_string(),
+                            value: entity_reader.enabled,
+                            on_change: Arc::new(move |value| {
+                                let entity = entity.clone();
+                                let mut entity = entity.write();
+                                entity.enabled = value;
+                            }),
+                        }
+                        .elem(),
+                    },
+                    RowItem {
+                        size: UISize::Fill,
+                        child: Input {
+                            value: entity_reader.name.to_string(),
+                            placeholder: "Name ...".to_string(),
+                            on_change: Arc::new(move |value: &str| {
+                                let entity = entity.clone();
+                                let mut entity = entity.write();
+                                entity.name = value.to_string();
+                            }),
+                        }
+                        .elem(),
+                    },
                 ],
                 ..Default::default()
             }

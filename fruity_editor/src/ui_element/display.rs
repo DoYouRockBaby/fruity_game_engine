@@ -1,5 +1,4 @@
 use crate::ui_element::UIElement;
-use crate::ui_element::UISize;
 use crate::ui_element::UIWidget;
 
 pub enum ImageSource {
@@ -8,14 +7,12 @@ pub enum ImageSource {
 
 pub struct Text {
     pub text: String,
-    pub width: UISize,
 }
 
 impl Default for Text {
     fn default() -> Self {
         Text {
             text: "".to_string(),
-            width: UISize::Shrink,
         }
     }
 }

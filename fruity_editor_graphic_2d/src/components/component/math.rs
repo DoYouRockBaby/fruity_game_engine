@@ -2,7 +2,9 @@ use fruity_core::component::component_rwlock::ComponentRwLock;
 use fruity_editor::ui_element::display::Text;
 use fruity_editor::ui_element::input::FloatInput;
 use fruity_editor::ui_element::layout::Row;
+use fruity_editor::ui_element::layout::RowItem;
 use fruity_editor::ui_element::UIElement;
+use fruity_editor::ui_element::UISize;
 use fruity_editor::ui_element::UIWidget;
 use fruity_graphic_2d::math::vector2d::Vector2d;
 use fruity_introspect::serialized::Serialized;
@@ -25,14 +27,18 @@ pub fn draw_editor_vector_2d(component: ComponentRwLock, field_info: &FieldInfo)
     let component = component.clone();
     let component_2 = component.clone();
     Row {
-        children: vec![Row {
-            children: vec![
-                Text {
+        children: vec![
+            RowItem {
+                size: UISize::Units(40.0),
+                child: Text {
                     text: field_info.name.to_string(),
                     ..Default::default()
                 }
                 .elem(),
-                FloatInput {
+            },
+            RowItem {
+                size: UISize::FillPortion(0.5),
+                child: FloatInput {
                     value: value.x as f64,
                     on_change: Arc::new(move |new_x_value: f64| {
                         let mut writer = component.write();
@@ -52,7 +58,10 @@ pub fn draw_editor_vector_2d(component: ComponentRwLock, field_info: &FieldInfo)
                     }),
                 }
                 .elem(),
-                FloatInput {
+            },
+            RowItem {
+                size: UISize::FillPortion(0.5),
+                child: FloatInput {
                     value: value.y as f64,
                     on_change: Arc::new(move |new_y_value: f64| {
                         let mut writer = component_2.write();
@@ -72,11 +81,9 @@ pub fn draw_editor_vector_2d(component: ComponentRwLock, field_info: &FieldInfo)
                     }),
                 }
                 .elem(),
-            ],
-            ..Default::default()
-        }
-        .elem()],
-        children_with_same_width: true,
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
     .elem()

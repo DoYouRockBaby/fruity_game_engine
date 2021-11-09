@@ -10,7 +10,6 @@ use crate::ui_element::egui::input::draw_input;
 use crate::ui_element::egui::input::draw_integer_input;
 use crate::ui_element::egui::layout::draw_collapsible;
 use crate::ui_element::egui::layout::draw_column;
-use crate::ui_element::egui::layout::draw_container;
 use crate::ui_element::egui::layout::draw_empty;
 use crate::ui_element::egui::layout::draw_row;
 use crate::ui_element::egui::layout::draw_scroll;
@@ -25,7 +24,6 @@ use crate::ui_element::input::Input;
 use crate::ui_element::input::IntegerInput;
 use crate::ui_element::layout::Collapsible;
 use crate::ui_element::layout::Column;
-use crate::ui_element::layout::Container;
 use crate::ui_element::layout::Row;
 use crate::ui_element::layout::Scroll;
 use crate::ui_element::list::ListView;
@@ -35,7 +33,6 @@ use crate::ui_element::UIElement;
 use std::any::TypeId;
 
 pub mod app;
-pub mod custom_layout;
 pub mod display;
 pub mod input;
 pub mod layout;
@@ -61,8 +58,6 @@ pub fn draw_element<'a>(elem: UIElement, ui: &mut egui::Ui, ctx: &mut DrawContex
         draw_input(*elem.root.downcast::<Input>().unwrap(), ui, ctx)
     } else if type_id == TypeId::of::<IntegerInput>() {
         draw_integer_input(*elem.root.downcast::<IntegerInput>().unwrap(), ui, ctx)
-    } else if type_id == TypeId::of::<Container>() {
-        draw_container(*elem.root.downcast::<Container>().unwrap(), ui, ctx)
     } else if type_id == TypeId::of::<Column>() {
         draw_column(*elem.root.downcast::<Column>().unwrap(), ui, ctx)
     } else if type_id == TypeId::of::<Row>() {
