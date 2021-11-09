@@ -14,6 +14,7 @@ use crate::components::fields::primitive::draw_editor_u64;
 use crate::components::fields::primitive::draw_editor_u8;
 use crate::components::fields::primitive::draw_editor_usize;
 use crate::editor_manager::EditorManager;
+use crate::file_explorer_manager::FileExplorerManager;
 use crate::resources::default_resources::load_default_resources;
 use fruity_core::resource::resources_manager::ResourcesManager;
 use fruity_core::service::service_manager::ServiceManager;
@@ -27,6 +28,7 @@ extern crate lazy_static;
 pub mod component_editor_manager;
 pub mod components;
 pub mod editor_manager;
+pub mod file_explorer_manager;
 pub mod hooks;
 pub mod resources;
 pub mod state;
@@ -36,10 +38,12 @@ pub mod ui_element;
 pub fn initialize(service_manager: &Arc<RwLock<ServiceManager>>, _settings: &Settings) {
     let editor_manager = EditorManager::new(service_manager);
     let component_editor_manager = ComponentEditorManager::new(service_manager);
+    let file_explorer_manager = FileExplorerManager::new(service_manager);
 
     let mut service_manager_writer = service_manager.write().unwrap();
     service_manager_writer.register("editor_manager", editor_manager);
     service_manager_writer.register("component_editor_manager", component_editor_manager);
+    service_manager_writer.register("file_explorer_manager", file_explorer_manager);
 
     let mut component_editor_manager = service_manager_writer.write::<ComponentEditorManager>();
     component_editor_manager.register_component_field_editor::<i8, _>(draw_editor_i8);
