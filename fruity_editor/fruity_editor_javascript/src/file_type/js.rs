@@ -14,6 +14,7 @@ pub fn get_thumbnail_js(_file_path: &str) -> Option<Arc<TextureResource>> {
         .get_resource::<TextureResource>(ResourceIdentifier("Editor/Icons/js".to_string()))
 }
 
-pub fn on_selected_js(_file_path: &str) {
-    //TODO: Open file in your favorite editor
+pub fn on_selected_js(file_path: &str) {
+    // TODO: Display an error popup if failed
+    edit::edit_file(file_path).unwrap();
 }

@@ -10,6 +10,7 @@ resolver = "2"
 [dependencies]
 rayon = "1.5"
 maplit = "1.0.2"
+edit = "0.1.3"
 fruity_any = { path = "../../fruity_engine/fruity_any" }
 fruity_core = { path = "../../fruity_engine/fruity_core" }
 fruity_editor = { path = "../" }
