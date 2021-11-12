@@ -23,7 +23,7 @@ pub fn draw_sprite(
 }
 
 pub fn draw_sprite_untyped(resource_manager: Arc<ResourceManager>) {
-    let service1 = resource_manager
+    let resource1 = resource_manager
         .require::<dyn Graphic2dManager>("graphic_2d_manager");
 
     let entity_manager = resource_manager
@@ -95,7 +95,7 @@ pub fn draw_sprite_untyped(resource_manager: Arc<ResourceManager>) {
                 }
             };
 
-            draw_sprite(position, size, sprite, service1.clone());
+            draw_sprite(position, size, sprite, resource1.clone());
         },
     );
 }

@@ -8,11 +8,11 @@ use std::sync::Arc;
 /// Take as parameter a function that will be called to initialize the engine
 ///
 pub type PlatformCallback =
-    fn(service_manager: Arc<ResourceManager>, initialize_engine: Initializer, settings: &Settings);
+    fn(resource_manager: Arc<ResourceManager>, initialize_engine: Initializer, settings: &Settings);
 
 /// A platform implementation, is supposed to basicaly instantiate a Window
 /// and to run the engine
 ///
 /// Take as parameter a function that will be called to initialize the engine
 ///
-pub type Initializer = fn(service_manager: Arc<ResourceManager>, settings: &Settings);
+pub type Initializer = fn(resource_manager: Arc<ResourceManager>, settings: &Settings);

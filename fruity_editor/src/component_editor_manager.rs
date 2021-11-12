@@ -20,7 +20,7 @@ pub struct ComponentEditorManager {
 }
 
 impl ComponentEditorManager {
-    pub fn new(_service_manager: Arc<ResourceManager>) -> Self {
+    pub fn new(_resource_manager: Arc<ResourceManager>) -> Self {
         ComponentEditorManager {
             component_field_editors: HashMap::new(),
         }

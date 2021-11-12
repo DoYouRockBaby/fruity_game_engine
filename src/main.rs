@@ -65,7 +65,7 @@ fn main() {
                 .load_resource_file("assets/index.js", "js")
                 .unwrap();
 
-            /*let mut module_manager = ModuleManager::new(&service_manager);
+            /*let mut module_manager = ModuleManager::new(resource_manager.clone());
             module_manager.load_module("./target/debug", "fruity_graphic");
             module_manager.load_module("./target/debug", "fruity_graphic_2d");
             module_manager.load_module("./target/debug", "fruity_editor");

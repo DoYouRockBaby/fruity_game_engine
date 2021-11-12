@@ -240,7 +240,7 @@ impl Graphic2dManager for WgpuGraphics2dManager {
         let windows_manager = self.windows_manager.read();
         let graphic_manager = self.graphic_manager.read();
 
-        // Get informations from the services
+        // Get informations from the resource dependencies
         let cursor_position = windows_manager.get_cursor_position();
         let viewport_size = windows_manager.get_size();
         let camera_transform = graphic_manager.get_camera_transform().clone();

@@ -33,11 +33,11 @@ impl<T: Debug + 'static> SingleThreadWrapper<T> {
         // Create a thread that will be dedicated to the inner instance
         // An event channel will be used to send instruction to the instance
         thread::spawn(move || {
-            let mut inner_service = constructor();
+            let mut inner = constructor();
             loading_sender.send(()).unwrap();
 
             for received in receiver {
-                (received.callback)(&mut inner_service);
+                (received.callback)(&mut inner);
                 (received.notify_done_sender).send(()).unwrap();
             }
         });

@@ -138,7 +138,7 @@ pub fn draw_gizmos_2d(
 }
 
 pub fn draw_gizmos_2d_untyped(resource_manager: Arc<ResourceManager>) {
-    let service1 = resource_manager.require::<GizmosService>("gizmos_service");
+    let resource1 = resource_manager.require::<GizmosService>("gizmos_service");
 
     let entity_manager = resource_manager.require::<EntityManager>("entity_manager");
     let entity_manager = entity_manager.read();
@@ -163,6 +163,6 @@ pub fn draw_gizmos_2d_untyped(resource_manager: Arc<ResourceManager>) {
                 }
             };
 
-            draw_gizmos_2d(&components.entity_id(), position, size, service1.clone());
+            draw_gizmos_2d(&components.entity_id(), position, size, resource1.clone());
         });
 }

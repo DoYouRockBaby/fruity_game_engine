@@ -85,7 +85,7 @@ pub enum Serialized {
     /// Iterator over values
     Iterator(Arc<RwLock<dyn Iterator<Item = Serialized> + Send + Sync>>),
 
-    /// Service reference value
+    /// A callback
     Callback(
         Arc<
             dyn Fn(Vec<Serialized>) -> Result<Option<Serialized>, IntrospectError>

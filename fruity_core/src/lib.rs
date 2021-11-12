@@ -5,8 +5,8 @@
 //! Provide an ECS, this ECS has hierarchy between all the entities and is intended to be easely extended by a scripting engine
 //!
 //! The ECS is organized with the following structure
-//! - Services are object that can provide function, intended to be used by the systems, for example a log service can provide functionalities to log things, everything is a service including the entity storage and the system storage
-//! - Systems are function that do the logic part of the application, they can compute components and use services
+//! - Resources are object that are shared all over the application, it can store services to provide function, intended to be used by the systems, for example a log service can provide functionalities to log things, everything is a service including the entity storage and the system storage
+//! - Systems are function that do the logic part of the application, they can compute components and use resources
 //! - Entities represent any object stored in the ecs, entities are composed of components, in a game engine, a game object for example
 //! - Components are structure where the datas are stored
 
@@ -74,7 +74,7 @@ macro_rules! entity_type {
 
 /// Initialize this extension
 pub fn initialize(resource_manager: Arc<ResourceManager>) {
-    //let module_manager = ModuleManager::new(service_manager);
+    //let module_manager = ModuleManager::new(resource_manager.clone());
     let entity_manager = EntityManager::new(resource_manager.clone());
     let system_manager = SystemManager::new(resource_manager.clone());
     let object_factory = ObjectFactory::new(resource_manager.clone());

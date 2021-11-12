@@ -61,8 +61,8 @@ pub fn draw_camera(
 }
 
 pub fn draw_camera_untyped(resource_manager: Arc<ResourceManager>) {
-    let service1 = resource_manager.require::<dyn Graphic2dManager>("graphic_2d_manager");
-    let service2 = resource_manager.require::<SystemManager>("system_manager");
+    let resource1 = resource_manager.require::<dyn Graphic2dManager>("graphic_2d_manager");
+    let resource2 = resource_manager.require::<SystemManager>("system_manager");
 
     let entity_manager = resource_manager.require::<EntityManager>("entity_manager");
     let entity_manager = entity_manager.read();
@@ -94,6 +94,6 @@ pub fn draw_camera_untyped(resource_manager: Arc<ResourceManager>) {
                 }
             };
 
-            draw_camera(position, size, camera, service1.clone(), service2.clone());
+            draw_camera(position, size, camera, resource1.clone(), resource2.clone());
         });
 }
