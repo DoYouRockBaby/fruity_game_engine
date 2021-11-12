@@ -1,7 +1,7 @@
 use fruity_core::resource::resource::Resource;
 use fruity_core::signal::Signal;
 
-pub trait WindowsManager: Resource {
+pub trait WindowService: Resource {
     fn close(&self);
     fn set_resizable(&self, resizable: bool);
     fn get_size(&self) -> (usize, usize);

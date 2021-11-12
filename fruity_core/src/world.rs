@@ -2,7 +2,7 @@ use crate::initialize;
 use crate::platform::Initializer;
 use crate::platform::PlatformCallback;
 use crate::settings::Settings;
-use crate::ResourceManager;
+use crate::ResourceContainer;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -10,7 +10,7 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct World {
     /// The resource container
-    pub resource_manager: Arc<ResourceManager>,
+    pub resource_container: Arc<ResourceContainer>,
     platform: Option<PlatformCallback>,
 }
 
@@ -19,18 +19,18 @@ impl Debug for World {
         &self,
         formatter: &mut std::fmt::Formatter<'_>,
     ) -> std::result::Result<(), std::fmt::Error> {
-        self.resource_manager.fmt(formatter)
+        self.resource_container.fmt(formatter)
     }
 }
 
 impl<'s> World {
     /// Returns a World
     pub fn new() -> World {
-        let resource_manager = Arc::new(ResourceManager::new());
-        initialize(resource_manager.clone());
+        let resource_container = Arc::new(ResourceContainer::new());
+        initialize(resource_container.clone());
 
         World {
-            resource_manager,
+            resource_container,
             platform: None,
         }
     }
@@ -38,7 +38,7 @@ impl<'s> World {
     /// Run the world
     pub fn run(&self, initializer: Initializer, settings: &Settings) {
         if let Some(platform) = self.platform {
-            platform(self.resource_manager.clone(), initializer, settings);
+            platform(self.resource_container.clone(), initializer, settings);
         }
     }
 

@@ -1,10 +1,10 @@
 use fruity_core::resource::resource_reference::ResourceReference;
-use fruity_core::resource::resource_manager::ResourceManager;
-use crate::Graphic2dManager;
+use fruity_core::resource::resource_container::ResourceContainer;
+use crate::Graphic2dService;
 use crate::Position;
 use crate::Size;
 use crate::Sprite;
-use fruity_core::entity::entity_manager::EntityManager;
+use fruity_core::entity::entity_service::EntityService;
 use fruity_core::entity_type;
 use std::sync::Arc;
 use rayon::iter::ParallelBridge;
@@ -14,23 +14,23 @@ pub fn draw_sprite(
     position: &Position,
     size: &Size,
     sprite: &Sprite,
-    graphic_2d_manager: ResourceReference<dyn Graphic2dManager>,
+    graphic_2d_service: ResourceReference<dyn Graphic2dService>,
 ) {
     if let Some(material) = &sprite.material.0 {
-        let graphic_2d_manager = graphic_2d_manager.read();
-        graphic_2d_manager.draw_square(position.pos, size.size, sprite.z_index, material.clone());
+        let graphic_2d_service = graphic_2d_service.read();
+        graphic_2d_service.draw_square(position.pos, size.size, sprite.z_index, material.clone());
     }
 }
 
-pub fn draw_sprite_untyped(resource_manager: Arc<ResourceManager>) {
-    let resource1 = resource_manager
-        .require::<dyn Graphic2dManager>("graphic_2d_manager");
+pub fn draw_sprite_untyped(resource_container: Arc<ResourceContainer>) {
+    let resource1 = resource_container
+        .require::<dyn Graphic2dService>("graphic_2d_service");
 
-    let entity_manager = resource_manager
-        .require::<EntityManager>("entity_manager");
+    let entity_service = resource_container
+        .require::<EntityService>("entity_service");
 
-    let entity_manager = entity_manager.read();
-    entity_manager.iter_components(
+    let entity_service = entity_service.read();
+    entity_service.iter_components(
         entity_type!["Position", "Size", "Sprite"],
     )
     .par_bridge()

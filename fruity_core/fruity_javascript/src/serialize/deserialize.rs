@@ -1,10 +1,10 @@
 use crate::js_value::object::introspect_object::deserialize_v8_introspect_object;
-use crate::js_value::utils::get_resource_manager;
+use crate::js_value::utils::get_resource_container;
 use crate::js_value::utils::get_stored_callback;
 use crate::js_value::utils::store_callback;
 use crate::serialize::serialize::serialize_v8;
 use crate::thread_scope_stack::top_thread_scope_stack;
-use crate::JavascriptEngine;
+use crate::JavascriptService;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::IntrospectError;
 use rusty_v8 as v8;
@@ -57,7 +57,7 @@ pub fn deserialize_v8<'a>(
         // Store the function into a global object
         let v8_function = v8::Local::<v8::Function>::try_from(v8_value).unwrap();
         let callback_identifier = store_callback(scope, v8_function);
-        let resource_manager = get_resource_manager(scope).unwrap();
+        let resource_container = get_resource_container(scope).unwrap();
 
         // Push the scope in the stack
         let callback = move |args: Vec<Serialized>| -> Result<Option<Serialized>, IntrospectError> {
@@ -85,10 +85,10 @@ pub fn deserialize_v8<'a>(
                 }
             } else {
                 // Otherwise, we fallback by running it from the javascript manager
-                let javascript_engine =
-                    resource_manager.require::<JavascriptEngine>("javascript_engine");
-                let javascript_engine = javascript_engine.read();
-                javascript_engine.run_callback(callback_identifier, args);
+                let javascript_service =
+                    resource_container.require::<JavascriptService>("javascript_service");
+                let javascript_service = javascript_service.read();
+                javascript_service.run_callback(callback_identifier, args);
             }
 
             Ok(None)

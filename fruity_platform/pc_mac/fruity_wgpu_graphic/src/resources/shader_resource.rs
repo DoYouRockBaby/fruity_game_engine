@@ -1,8 +1,8 @@
-use crate::GraphicManager;
-use crate::WgpuGraphicsManager;
+use crate::GraphicService;
+use crate::WgpuGraphicManager;
 use fruity_any::*;
 use fruity_core::resource::resource::Resource;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use fruity_graphic::resources::shader_resource::load_shader_settings;
 use fruity_graphic::resources::shader_resource::ShaderBindingType;
@@ -82,14 +82,14 @@ pub fn load_shader(
     identifier: &str,
     reader: &mut dyn Read,
     settings: Settings,
-    resource_manager: Arc<ResourceManager>,
+    resource_container: Arc<ResourceContainer>,
 ) {
     // Get the graphic manager state
-    let graphic_manager = resource_manager.require::<dyn GraphicManager>("graphic_manager");
-    let graphic_manager = graphic_manager.read();
-    let graphic_manager = graphic_manager.downcast_ref::<WgpuGraphicsManager>();
+    let graphic_service = resource_container.require::<dyn GraphicService>("graphic_service");
+    let graphic_service = graphic_service.read();
+    let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
 
-    let device = graphic_manager.get_device();
+    let device = graphic_service.get_device();
 
     // read the whole file
     let mut buffer = String::new();
@@ -99,13 +99,13 @@ pub fn load_shader(
     }
 
     // Parse settings
-    let shader_params = load_shader_settings(&settings, resource_manager.clone());
+    let shader_params = load_shader_settings(&settings, resource_container.clone());
 
     // Build the resource
     let resource = WgpuShaderResource::new(device, &buffer, identifier, shader_params);
 
     // Store the resource
-    if let Err(_) = resource_manager.add::<dyn ShaderResource>(identifier, Box::new(resource)) {
+    if let Err(_) = resource_container.add::<dyn ShaderResource>(identifier, Box::new(resource)) {
         log::error!(
             "Couldn't add a resource cause the identifier \"{}\" already exists",
             identifier

@@ -1,9 +1,9 @@
 use crate::gizmos_service::GizmosService;
 use fruity_core::component::component_rwlock::ComponentRwLock;
 use fruity_core::entity::entity::EntityId;
-use fruity_core::entity::entity_manager::EntityManager;
+use fruity_core::entity::entity_service::EntityService;
 use fruity_core::entity_type;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_editor::hooks::use_global;
 use fruity_editor::state::entity::EntityState;
@@ -137,13 +137,13 @@ pub fn draw_gizmos_2d(
     }
 }
 
-pub fn draw_gizmos_2d_untyped(resource_manager: Arc<ResourceManager>) {
-    let resource1 = resource_manager.require::<GizmosService>("gizmos_service");
+pub fn draw_gizmos_2d_untyped(resource_container: Arc<ResourceContainer>) {
+    let resource1 = resource_container.require::<GizmosService>("gizmos_service");
 
-    let entity_manager = resource_manager.require::<EntityManager>("entity_manager");
-    let entity_manager = entity_manager.read();
+    let entity_service = resource_container.require::<EntityService>("entity_service");
+    let entity_service = entity_service.read();
 
-    entity_manager
+    entity_service
         .iter_components(entity_type!["Position", "Size"])
         .par_bridge()
         .for_each(|components| {

@@ -5,7 +5,7 @@ use crate::entity::archetype::encode_entity::encode_entity;
 use crate::entity::archetype::rwlock::EntitySharedRwLock;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
-use crate::entity::entity_manager::RemoveEntityError;
+use crate::entity::entity_service::RemoveEntityError;
 use crate::signal::Signal;
 use std::collections::HashMap;
 use std::sync::Arc;

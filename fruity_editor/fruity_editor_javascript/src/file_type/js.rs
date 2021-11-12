@@ -7,7 +7,7 @@ pub fn get_thumbnail_js(_file_path: &str) -> Option<ResourceReference<dyn Textur
     let world_state = use_global::<WorldState>();
 
     world_state
-        .resource_manager
+        .resource_container
         .get::<dyn TextureResource>("Editor/Icons/js")
 }
 

@@ -39,33 +39,33 @@ fn main() {
 
     // Run the engine
     world.run(
-        |resource_manager, settings| {
-            initialize_winit_window(resource_manager.clone(), settings);
-            initialize_window(resource_manager.clone(), settings);
-            initialize_input(resource_manager.clone(), settings);
-            initialize_winit_input(resource_manager.clone(), settings);
-            initialize_wgpu_graphic(resource_manager.clone(), settings);
-            initialize_graphic(resource_manager.clone(), settings);
-            initialize_wgpu_graphic_2d(resource_manager.clone(), settings);
-            initialize_graphic_2d(resource_manager.clone(), settings);
-            initialize_editor(resource_manager.clone(), settings);
-            initialize_javascript(resource_manager.clone(), settings);
-            initialize_egui_editor(resource_manager.clone(), settings);
-            initialize_editor_graphic_2d(resource_manager.clone(), settings);
-            initialize_editor_javascript(resource_manager.clone(), settings);
+        |resource_container, settings| {
+            initialize_winit_window(resource_container.clone(), settings);
+            initialize_window(resource_container.clone(), settings);
+            initialize_input(resource_container.clone(), settings);
+            initialize_winit_input(resource_container.clone(), settings);
+            initialize_wgpu_graphic(resource_container.clone(), settings);
+            initialize_graphic(resource_container.clone(), settings);
+            initialize_wgpu_graphic_2d(resource_container.clone(), settings);
+            initialize_graphic_2d(resource_container.clone(), settings);
+            initialize_editor(resource_container.clone(), settings);
+            initialize_javascript(resource_container.clone(), settings);
+            initialize_egui_editor(resource_container.clone(), settings);
+            initialize_editor_graphic_2d(resource_container.clone(), settings);
+            initialize_editor_javascript(resource_container.clone(), settings);
 
             // Load resources
             let resource_settings = settings.get::<Vec<Settings>>("resources", Vec::new());
-            resource_manager
+            resource_container
                 .clone()
                 .load_resources_settings(resource_settings);
 
             // Load js script
-            resource_manager
+            resource_container
                 .load_resource_file("assets/index.js", "js")
                 .unwrap();
 
-            /*let mut module_manager = ModuleManager::new(resource_manager.clone());
+            /*let mut module_manager = ModuleManager::new(resource_container.clone());
             module_manager.load_module("./target/debug", "fruity_graphic");
             module_manager.load_module("./target/debug", "fruity_graphic_2d");
             module_manager.load_module("./target/debug", "fruity_editor");

@@ -2,7 +2,7 @@
 pub mod entity;
 
 /// Provides a collections to store archetypes
-pub mod entity_manager;
+pub mod entity_service;
 
 /// Provides a collections to store entities
 pub mod archetype;

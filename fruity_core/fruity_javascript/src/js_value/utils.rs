@@ -1,9 +1,9 @@
-use crate::bridge::resource_manager::RESOURCE_MANAGER_GLOBAL_VAR_NAME;
-use crate::javascript_engine::CallbackIdentifier;
+use crate::bridge::resource_container::RESOURCE_MANAGER_GLOBAL_VAR_NAME;
+use crate::javascript_service::CallbackIdentifier;
 use crate::serialize::serialize::serialize_v8;
 use convert_case::Case;
 use convert_case::Casing;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_introspect::serializable_object::SerializableObject;
 use fruity_introspect::serialized::Serialized;
 use rusty_v8 as v8;
@@ -82,20 +82,21 @@ pub fn check_object_intern_identifier<'a>(
     }
 }
 
-pub fn get_resource_manager(scope: &mut v8::HandleScope) -> Option<Arc<ResourceManager>> {
+pub fn get_resource_container(scope: &mut v8::HandleScope) -> Option<Arc<ResourceContainer>> {
     let context = scope.get_current_context();
     let global_object = context.global(scope);
-    let resource_manager_string = v8::String::new(scope, RESOURCE_MANAGER_GLOBAL_VAR_NAME).unwrap();
-    let resource_manager_v8 = global_object.get(scope, resource_manager_string.into())?;
-    let resource_manager_v8 = v8::Local::<v8::Object>::try_from(resource_manager_v8).ok()?;
-    let resource_manager: &Box<dyn SerializableObject> =
-        get_intern_value_from_v8_object(scope, resource_manager_v8)?;
-    let resource_manager = resource_manager
+    let resource_container_string =
+        v8::String::new(scope, RESOURCE_MANAGER_GLOBAL_VAR_NAME).unwrap();
+    let resource_container_v8 = global_object.get(scope, resource_container_string.into())?;
+    let resource_container_v8 = v8::Local::<v8::Object>::try_from(resource_container_v8).ok()?;
+    let resource_container: &Box<dyn SerializableObject> =
+        get_intern_value_from_v8_object(scope, resource_container_v8)?;
+    let resource_container = resource_container
         .as_any_ref()
-        .downcast_ref::<Arc<ResourceManager>>()
+        .downcast_ref::<Arc<ResourceContainer>>()
         .unwrap();
 
-    Some(resource_manager.clone())
+    Some(resource_container.clone())
 }
 
 pub fn store_callback(

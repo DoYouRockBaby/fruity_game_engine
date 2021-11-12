@@ -1,16 +1,16 @@
-use crate::editor_manager::EditorManager;
-use fruity_core::resource::resource_manager::ResourceManager;
+use crate::editor_service::EditorService;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use std::sync::Arc;
 
-pub mod editor_manager;
+pub mod editor_service;
 pub mod ui_element;
 
 // #[no_mangle]
-pub fn initialize(resource_manager: Arc<ResourceManager>, _settings: &Settings) {
-    let editor_manager = EditorManager::new(resource_manager.clone());
+pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
+    let editor_service = EditorService::new(resource_container.clone());
 
-    resource_manager
-        .add::<EditorManager>("editor_manager", Box::new(editor_manager))
+    resource_container
+        .add::<EditorService>("editor_service", Box::new(editor_service))
         .unwrap();
 }

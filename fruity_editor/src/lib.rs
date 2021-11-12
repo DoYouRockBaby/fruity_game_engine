@@ -1,4 +1,4 @@
-use crate::component_editor_manager::ComponentEditorManager;
+use crate::component_editor_service::ComponentEditorService;
 use crate::components::fields::primitive::draw_editor_bool;
 use crate::components::fields::primitive::draw_editor_f32;
 use crate::components::fields::primitive::draw_editor_f64;
@@ -13,7 +13,7 @@ use crate::components::fields::primitive::draw_editor_u32;
 use crate::components::fields::primitive::draw_editor_u64;
 use crate::components::fields::primitive::draw_editor_u8;
 use crate::components::fields::primitive::draw_editor_usize;
-use crate::file_explorer_manager::FileExplorerManager;
+use crate::file_explorer_service::FileExplorerService;
 use crate::hooks::declare_global;
 use crate::resources::default_resources::load_default_resources;
 use crate::state::entity::EntityState;
@@ -21,17 +21,17 @@ use crate::state::file_explorer::FileExplorerState;
 use crate::state::theme::ThemeState;
 use crate::state::world::WorldState;
 use crate::systems::pause_at_startup::pause_at_startup;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
-use fruity_core::system::system_manager::SystemManager;
+use fruity_core::system::system_service::SystemService;
 use std::sync::Arc;
 
 #[macro_use]
 extern crate lazy_static;
 
-pub mod component_editor_manager;
+pub mod component_editor_service;
 pub mod components;
-pub mod file_explorer_manager;
+pub mod file_explorer_service;
 pub mod hooks;
 pub mod resources;
 pub mod state;
@@ -39,48 +39,48 @@ pub mod systems;
 pub mod ui_element;
 
 // #[no_mangle]
-pub fn initialize(resource_manager: Arc<ResourceManager>, _settings: &Settings) {
-    let component_editor_manager = ComponentEditorManager::new(resource_manager.clone());
-    let file_explorer_manager = FileExplorerManager::new(resource_manager.clone());
+pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
+    let component_editor_service = ComponentEditorService::new(resource_container.clone());
+    let file_explorer_service = FileExplorerService::new(resource_container.clone());
 
-    resource_manager
-        .add::<ComponentEditorManager>(
-            "component_editor_manager",
-            Box::new(component_editor_manager),
+    resource_container
+        .add::<ComponentEditorService>(
+            "component_editor_service",
+            Box::new(component_editor_service),
         )
         .unwrap();
-    resource_manager
-        .add::<FileExplorerManager>("file_explorer_manager", Box::new(file_explorer_manager))
+    resource_container
+        .add::<FileExplorerService>("file_explorer_service", Box::new(file_explorer_service))
         .unwrap();
 
-    declare_global(WorldState::new(resource_manager.clone()));
+    declare_global(WorldState::new(resource_container.clone()));
     declare_global(ThemeState::default());
     declare_global(EntityState::default());
     declare_global(FileExplorerState::default());
 
-    let system_manager = resource_manager.require::<SystemManager>("system_manager");
-    let mut system_manager = system_manager.write();
+    let system_service = resource_container.require::<SystemService>("system_service");
+    let mut system_service = system_service.write();
 
-    system_manager.add_begin_system(pause_at_startup, Some(98));
+    system_service.add_begin_system(pause_at_startup, Some(98));
 
-    let component_editor_manager =
-        resource_manager.require::<ComponentEditorManager>("component_editor_manager");
-    let mut component_editor_manager = component_editor_manager.write();
+    let component_editor_service =
+        resource_container.require::<ComponentEditorService>("component_editor_service");
+    let mut component_editor_service = component_editor_service.write();
 
-    component_editor_manager.register_component_field_editor::<i8, _>(draw_editor_i8);
-    component_editor_manager.register_component_field_editor::<i16, _>(draw_editor_i16);
-    component_editor_manager.register_component_field_editor::<i32, _>(draw_editor_i32);
-    component_editor_manager.register_component_field_editor::<i64, _>(draw_editor_i64);
-    component_editor_manager.register_component_field_editor::<isize, _>(draw_editor_isize);
-    component_editor_manager.register_component_field_editor::<u8, _>(draw_editor_u8);
-    component_editor_manager.register_component_field_editor::<u16, _>(draw_editor_u16);
-    component_editor_manager.register_component_field_editor::<u32, _>(draw_editor_u32);
-    component_editor_manager.register_component_field_editor::<u64, _>(draw_editor_u64);
-    component_editor_manager.register_component_field_editor::<usize, _>(draw_editor_usize);
-    component_editor_manager.register_component_field_editor::<f32, _>(draw_editor_f32);
-    component_editor_manager.register_component_field_editor::<f64, _>(draw_editor_f64);
-    component_editor_manager.register_component_field_editor::<bool, _>(draw_editor_bool);
-    component_editor_manager.register_component_field_editor::<String, _>(draw_editor_string);
+    component_editor_service.register_component_field_editor::<i8, _>(draw_editor_i8);
+    component_editor_service.register_component_field_editor::<i16, _>(draw_editor_i16);
+    component_editor_service.register_component_field_editor::<i32, _>(draw_editor_i32);
+    component_editor_service.register_component_field_editor::<i64, _>(draw_editor_i64);
+    component_editor_service.register_component_field_editor::<isize, _>(draw_editor_isize);
+    component_editor_service.register_component_field_editor::<u8, _>(draw_editor_u8);
+    component_editor_service.register_component_field_editor::<u16, _>(draw_editor_u16);
+    component_editor_service.register_component_field_editor::<u32, _>(draw_editor_u32);
+    component_editor_service.register_component_field_editor::<u64, _>(draw_editor_u64);
+    component_editor_service.register_component_field_editor::<usize, _>(draw_editor_usize);
+    component_editor_service.register_component_field_editor::<f32, _>(draw_editor_f32);
+    component_editor_service.register_component_field_editor::<f64, _>(draw_editor_f64);
+    component_editor_service.register_component_field_editor::<bool, _>(draw_editor_bool);
+    component_editor_service.register_component_field_editor::<String, _>(draw_editor_string);
 
-    load_default_resources(resource_manager);
+    load_default_resources(resource_container);
 }

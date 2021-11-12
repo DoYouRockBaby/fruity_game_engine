@@ -1,5 +1,5 @@
 use crate::resource::resource::Resource;
-use crate::ResourceManager;
+use crate::ResourceContainer;
 use fruity_any::*;
 use fruity_introspect::log_introspect_error;
 use fruity_introspect::serialized::Callback;
@@ -18,7 +18,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-type SystemCallback = dyn Fn(Arc<ResourceManager>) + Sync + Send + 'static;
+type SystemCallback = dyn Fn(Arc<ResourceContainer>) + Sync + Send + 'static;
 
 struct BeginSystem {
     callback: Box<SystemCallback>,
@@ -33,9 +33,9 @@ struct FrameSystem {
     ignore_pause: bool,
 }
 
-/// A system pool, see [‘SystemManager‘] for more informations
+/// A system pool, see [‘SystemService‘] for more informations
 pub struct SystemPool<T> {
-    /// Is the pool ignored, if it's not, it will not be launched when calling [‘SystemManager‘]::run
+    /// Is the pool ignored, if it's not, it will not be launched when calling [‘SystemService‘]::run
     ignore_once: RwLock<bool>,
 
     /// Systems of the pool
@@ -56,29 +56,29 @@ pub struct SystemPool<T> {
 /// Pool 98 is for drawing
 ///
 #[derive(FruityAny)]
-pub struct SystemManager {
+pub struct SystemService {
     pause: AtomicBool,
     system_pools: BTreeMap<usize, SystemPool<FrameSystem>>,
     begin_system_pools: BTreeMap<usize, SystemPool<BeginSystem>>,
     end_system_pools: BTreeMap<usize, SystemPool<EndSystem>>,
-    resource_manager: Arc<ResourceManager>,
+    resource_container: Arc<ResourceContainer>,
 }
 
-impl Debug for SystemManager {
+impl Debug for SystemService {
     fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         Ok(())
     }
 }
 
-impl<'s> SystemManager {
-    /// Returns a SystemManager
-    pub fn new(resource_manager: Arc<ResourceManager>) -> SystemManager {
-        SystemManager {
+impl<'s> SystemService {
+    /// Returns a SystemService
+    pub fn new(resource_container: Arc<ResourceContainer>) -> SystemService {
+        SystemService {
             pause: AtomicBool::new(false),
             system_pools: BTreeMap::new(),
             begin_system_pools: BTreeMap::new(),
             end_system_pools: BTreeMap::new(),
-            resource_manager: resource_manager.clone(),
+            resource_container: resource_container.clone(),
         }
     }
 
@@ -88,7 +88,7 @@ impl<'s> SystemManager {
     /// * `system` - A function that will compute the world
     /// * `pool_index` - A pool identifier, all the systems of the same pool will be processed together in parallel
     ///
-    pub fn add_system<T: Fn(Arc<ResourceManager>) + Sync + Send + 'static>(
+    pub fn add_system<T: Fn(Arc<ResourceContainer>) + Sync + Send + 'static>(
         &mut self,
         callback: T,
         pool_index: Option<usize>,
@@ -121,7 +121,7 @@ impl<'s> SystemManager {
     /// * `system` - A function that will compute the world
     /// * `pool_index` - A pool identifier, all the systems of the same pool will be processed together in parallel
     ///
-    pub fn add_system_that_ignore_pause<T: Fn(Arc<ResourceManager>) + Sync + Send + 'static>(
+    pub fn add_system_that_ignore_pause<T: Fn(Arc<ResourceContainer>) + Sync + Send + 'static>(
         &mut self,
         callback: T,
         pool_index: Option<usize>,
@@ -154,7 +154,7 @@ impl<'s> SystemManager {
     /// * `system` - A function that will compute the world
     /// * `pool_index` - A pool identifier, all the systems of the same pool will be processed together in parallel
     ///
-    pub fn add_begin_system<T: Fn(Arc<ResourceManager>) + Sync + Send + 'static>(
+    pub fn add_begin_system<T: Fn(Arc<ResourceContainer>) + Sync + Send + 'static>(
         &mut self,
         callback: T,
         pool_index: Option<usize>,
@@ -186,7 +186,7 @@ impl<'s> SystemManager {
     /// * `system` - A function that will compute the world
     /// * `pool_index` - A pool identifier, all the systems of the same pool will be processed together in parallel
     ///
-    pub fn add_end_system<T: Fn(Arc<ResourceManager>) + Sync + Send + 'static>(
+    pub fn add_end_system<T: Fn(Arc<ResourceContainer>) + Sync + Send + 'static>(
         &mut self,
         callback: T,
         pool_index: Option<usize>,
@@ -229,7 +229,7 @@ impl<'s> SystemManager {
 
     /// Run all the stored systems
     pub fn run(&self) {
-        let resource_manager = self.resource_manager.clone();
+        let resource_container = self.resource_container.clone();
         let is_paused = self.is_paused();
 
         self.iter_system_pools().for_each(|pool| {
@@ -240,7 +240,7 @@ impl<'s> SystemManager {
             if !pool_ignore {
                 pool.systems.iter().par_bridge().for_each(|system| {
                     if !is_paused || system.ignore_pause {
-                        (system.callback)(resource_manager.clone());
+                        (system.callback)(resource_container.clone());
                     }
                 });
             } else {
@@ -252,7 +252,7 @@ impl<'s> SystemManager {
 
     /// Run all the stored begin systems
     pub fn run_begin(&self) {
-        let resource_manager = self.resource_manager.clone();
+        let resource_container = self.resource_container.clone();
         self.iter_begin_system_pools().for_each(|pool| {
             let pool_ignore_reader = pool.ignore_once.read().unwrap();
             let pool_ignore = pool_ignore_reader.clone();
@@ -262,7 +262,7 @@ impl<'s> SystemManager {
                 pool.systems
                     .iter()
                     .par_bridge()
-                    .for_each(|system| (system.callback)(resource_manager.clone()));
+                    .for_each(|system| (system.callback)(resource_container.clone()));
             } else {
                 let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
                 *pool_ignore_writer = false;
@@ -272,7 +272,7 @@ impl<'s> SystemManager {
 
     /// Run all the stored end systems
     pub fn run_end(&self) {
-        let resource_manager = self.resource_manager.clone();
+        let resource_container = self.resource_container.clone();
         self.iter_end_system_pools().for_each(|pool| {
             let pool_ignore_reader = pool.ignore_once.read().unwrap();
             let pool_ignore = pool_ignore_reader.clone();
@@ -282,7 +282,7 @@ impl<'s> SystemManager {
                 pool.systems
                     .iter()
                     .par_bridge()
-                    .for_each(|system| (system.callback)(resource_manager.clone()));
+                    .for_each(|system| (system.callback)(resource_container.clone()));
             } else {
                 let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
                 *pool_ignore_writer = false;
@@ -296,7 +296,7 @@ impl<'s> SystemManager {
             pool.systems
                 .iter()
                 .par_bridge()
-                .for_each(|system| (system.callback)(self.resource_manager.clone()));
+                .for_each(|system| (system.callback)(self.resource_container.clone()));
         }
     }
 
@@ -306,7 +306,7 @@ impl<'s> SystemManager {
             pool.systems
                 .iter()
                 .par_bridge()
-                .for_each(|system| (system.callback)(self.resource_manager.clone()));
+                .for_each(|system| (system.callback)(self.resource_container.clone()));
         }
     }
 
@@ -316,7 +316,7 @@ impl<'s> SystemManager {
             pool.systems
                 .iter()
                 .par_bridge()
-                .for_each(|system| (system.callback)(self.resource_manager.clone()));
+                .for_each(|system| (system.callback)(self.resource_container.clone()));
         }
     }
 
@@ -371,13 +371,13 @@ impl<'s> SystemManager {
     }
 }
 
-impl IntrospectObject for SystemManager {
+impl IntrospectObject for SystemService {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![
             MethodInfo {
                 name: "add_system".to_string(),
                 call: MethodCaller::Mut(Arc::new(|this, args| {
-                    let this = cast_introspect_mut::<SystemManager>(this);
+                    let this = cast_introspect_mut::<SystemService>(this);
 
                     let mut caster = ArgumentCaster::new("add_system", args);
                     let arg1 = caster.cast_next::<Callback>()?;
@@ -399,7 +399,7 @@ impl IntrospectObject for SystemManager {
             MethodInfo {
                 name: "add_begin_system".to_string(),
                 call: MethodCaller::Mut(Arc::new(|this, args| {
-                    let this = cast_introspect_mut::<SystemManager>(this);
+                    let this = cast_introspect_mut::<SystemService>(this);
 
                     let mut caster = ArgumentCaster::new("add_begin_system", args);
                     let arg1 = caster.cast_next::<Callback>()?;
@@ -421,7 +421,7 @@ impl IntrospectObject for SystemManager {
             MethodInfo {
                 name: "add_end_system".to_string(),
                 call: MethodCaller::Mut(Arc::new(|this, args| {
-                    let this = cast_introspect_mut::<SystemManager>(this);
+                    let this = cast_introspect_mut::<SystemService>(this);
 
                     let mut caster = ArgumentCaster::new("add_end_system", args);
                     let arg1 = caster.cast_next::<Callback>()?;
@@ -443,7 +443,7 @@ impl IntrospectObject for SystemManager {
             MethodInfo {
                 name: "add_end_system".to_string(),
                 call: MethodCaller::Mut(Arc::new(|this, args| {
-                    let this = cast_introspect_mut::<SystemManager>(this);
+                    let this = cast_introspect_mut::<SystemService>(this);
 
                     let mut caster = ArgumentCaster::new("add_end_system", args);
                     let arg1 = caster.cast_next::<Callback>()?;
@@ -465,7 +465,7 @@ impl IntrospectObject for SystemManager {
             MethodInfo {
                 name: "is_paused".to_string(),
                 call: MethodCaller::Const(Arc::new(|this, _args| {
-                    let this = cast_introspect_ref::<SystemManager>(this);
+                    let this = cast_introspect_ref::<SystemService>(this);
 
                     let result = this.is_paused();
 
@@ -475,7 +475,7 @@ impl IntrospectObject for SystemManager {
             MethodInfo {
                 name: "set_paused".to_string(),
                 call: MethodCaller::Const(Arc::new(|this, args| {
-                    let this = cast_introspect_ref::<SystemManager>(this);
+                    let this = cast_introspect_ref::<SystemService>(this);
 
                     let mut caster = ArgumentCaster::new("set_paused", args);
                     let arg1 = caster.cast_next::<bool>()?;
@@ -493,4 +493,4 @@ impl IntrospectObject for SystemManager {
     }
 }
 
-impl Resource for SystemManager {}
+impl Resource for SystemService {}

@@ -1,5 +1,5 @@
 use fruity_core::resource::resource::Resource;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use std::sync::Arc;
 
@@ -28,7 +28,7 @@ pub struct ShaderBinding {
 
 pub fn load_shader_settings(
     settings: &Settings,
-    _resource_manager: Arc<ResourceManager>,
+    _resource_container: Arc<ResourceContainer>,
 ) -> ShaderParams {
     let bindings = settings.get::<Vec<Settings>>("bindings", Vec::new());
     let bindings = bindings

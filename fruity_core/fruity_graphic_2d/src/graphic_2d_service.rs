@@ -5,7 +5,7 @@ use fruity_graphic::math::Color;
 use fruity_graphic::math::Matrix4;
 use fruity_graphic::resources::material_resource::MaterialResource;
 
-pub trait Graphic2dManager: Resource {
+pub trait Graphic2dService: Resource {
     fn start_pass(&self, view_proj: Matrix4);
     fn end_pass(&self);
     fn draw_square(

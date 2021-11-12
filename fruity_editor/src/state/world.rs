@@ -1,13 +1,13 @@
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct WorldState {
-    pub resource_manager: Arc<ResourceManager>,
+    pub resource_container: Arc<ResourceContainer>,
 }
 
 impl WorldState {
-    pub fn new(resource_manager: Arc<ResourceManager>) -> Self {
-        WorldState { resource_manager }
+    pub fn new(resource_container: Arc<ResourceContainer>) -> Self {
+        WorldState { resource_container }
     }
 }

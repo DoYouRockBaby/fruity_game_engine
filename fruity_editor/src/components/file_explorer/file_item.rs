@@ -8,27 +8,27 @@ use crate::ui_element::layout::Column;
 use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
 use crate::Arc;
-use crate::FileExplorerManager;
+use crate::FileExplorerService;
 use std::path::PathBuf;
 
 pub fn file_item_component(path: PathBuf) -> UIElement {
     let world_state = use_global::<WorldState>();
 
-    let resource_manager = world_state.resource_manager.clone();
-    let file_explorer_manager =
-        resource_manager.require::<FileExplorerManager>("file_explorer_manager");
-    let file_explorer_manager_reader = file_explorer_manager.read();
+    let resource_container = world_state.resource_container.clone();
+    let file_explorer_service =
+        resource_container.require::<FileExplorerService>("file_explorer_service");
+    let file_explorer_service_reader = file_explorer_service.read();
 
-    let file_explorer_manager_2 = file_explorer_manager.clone();
+    let file_explorer_service_2 = file_explorer_service.clone();
     let path_string = path.to_str().unwrap().to_string();
     if !path.is_dir() {
         Column {
             children: vec![
                 ImageButton {
-                    image: file_explorer_manager_reader.get_thumbnail(&path_string),
+                    image: file_explorer_service_reader.get_thumbnail(&path_string),
                     on_click: Arc::new(move || {
-                        let file_explorer_manager = file_explorer_manager_2.read();
-                        file_explorer_manager.notify_selected(&path_string);
+                        let file_explorer_service = file_explorer_service_2.read();
+                        file_explorer_service.notify_selected(&path_string);
                     }),
                     width: 64.0,
                     height: 64.0,
@@ -48,7 +48,7 @@ pub fn file_item_component(path: PathBuf) -> UIElement {
         Column {
             children: vec![
                 ImageButton {
-                    image: resource_manager.require::<dyn TextureResource>("Editor/Icons/folder"),
+                    image: resource_container.require::<dyn TextureResource>("Editor/Icons/folder"),
                     on_click: Arc::new(move || {
                         let file_explorer_state = use_global::<FileExplorerState>();
 

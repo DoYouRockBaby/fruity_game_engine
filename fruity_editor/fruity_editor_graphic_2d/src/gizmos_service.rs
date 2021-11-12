@@ -1,12 +1,12 @@
 use fruity_any::*;
 use fruity_core::resource::resource::Resource;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
-use fruity_graphic::graphic_manager::GraphicManager;
+use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::Color;
-use fruity_graphic_2d::graphic_2d_manager::Graphic2dManager;
+use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
 use fruity_graphic_2d::math::vector2d::Vector2d;
-use fruity_input::input_manager::InputManager;
+use fruity_input::input_service::InputService;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
@@ -18,22 +18,22 @@ use std::time::Duration;
 
 #[derive(Debug, FruityAny)]
 pub struct GizmosService {
-    input_manager: ResourceReference<InputManager>,
-    graphic_manager: ResourceReference<dyn GraphicManager>,
-    graphic_2d_manager: ResourceReference<dyn Graphic2dManager>,
+    input_service: ResourceReference<InputService>,
+    graphic_service: ResourceReference<dyn GraphicService>,
+    graphic_2d_service: ResourceReference<dyn Graphic2dService>,
 }
 
 impl GizmosService {
-    pub fn new(resource_manager: Arc<ResourceManager>) -> GizmosService {
-        let input_manager = resource_manager.require::<InputManager>("input_manager");
-        let graphic_manager = resource_manager.require::<dyn GraphicManager>("graphic_manager");
-        let graphic_2d_manager =
-            resource_manager.require::<dyn Graphic2dManager>("graphic_2d_manager");
+    pub fn new(resource_container: Arc<ResourceContainer>) -> GizmosService {
+        let input_service = resource_container.require::<InputService>("input_service");
+        let graphic_service = resource_container.require::<dyn GraphicService>("graphic_service");
+        let graphic_2d_service =
+            resource_container.require::<dyn Graphic2dService>("graphic_2d_service");
 
         GizmosService {
-            input_manager,
-            graphic_manager,
-            graphic_2d_manager,
+            input_service,
+            graphic_service,
+            graphic_2d_service,
         }
     }
 
@@ -59,11 +59,11 @@ impl GizmosService {
         let is_hover = self.is_cursor_hover(&bottom_left, &top_right);
         let color = if is_hover { hover_color } else { color };
 
-        let graphic_2d_manager = self.graphic_2d_manager.read();
-        graphic_2d_manager.draw_line(bottom_left, bottom_right, 3, color, 100);
-        graphic_2d_manager.draw_line(bottom_right, top_right, 3, color, 100);
-        graphic_2d_manager.draw_line(top_right, top_left, 3, color, 100);
-        graphic_2d_manager.draw_line(top_left, bottom_left, 3, color, 100);
+        let graphic_2d_service = self.graphic_2d_service.read();
+        graphic_2d_service.draw_line(bottom_left, bottom_right, 3, color, 100);
+        graphic_2d_service.draw_line(bottom_right, top_right, 3, color, 100);
+        graphic_2d_service.draw_line(top_right, top_left, 3, color, 100);
+        graphic_2d_service.draw_line(top_left, bottom_left, 3, color, 100);
 
         is_hover
     }
@@ -76,15 +76,15 @@ impl GizmosService {
         color: Color,
         hover_color: Color,
     ) -> bool {
-        let graphic_2d_manager = self.graphic_2d_manager.read();
-        let cursor_pos = graphic_2d_manager.get_cursor_position();
+        let graphic_2d_service = self.graphic_2d_service.read();
+        let cursor_pos = graphic_2d_service.get_cursor_position();
 
         let is_hover = cursor_pos.in_triangle(&p1, &p2, &p3);
         let color = if is_hover { hover_color } else { color };
 
-        graphic_2d_manager.draw_line(p1, p2, 3, color, 100);
-        graphic_2d_manager.draw_line(p2, p3, 3, color, 100);
-        graphic_2d_manager.draw_line(p3, p1, 3, color, 100);
+        graphic_2d_service.draw_line(p1, p2, 3, color, 100);
+        graphic_2d_service.draw_line(p2, p3, 3, color, 100);
+        graphic_2d_service.draw_line(p3, p1, 3, color, 100);
 
         is_hover
     }
@@ -96,7 +96,7 @@ impl GizmosService {
         color: Color,
         hover_color: Color,
     ) -> bool {
-        let graphic_2d_manager = self.graphic_2d_manager.read();
+        let graphic_2d_service = self.graphic_2d_service.read();
         let normalise = (to - from).normalise();
         let normal = normalise.normal();
 
@@ -109,7 +109,7 @@ impl GizmosService {
         );
 
         let color = if is_hover { hover_color } else { color };
-        graphic_2d_manager.draw_line(from, to - normalise * 0.05, 3, color, 100);
+        graphic_2d_service.draw_line(from, to - normalise * 0.05, 3, color, 100);
 
         is_hover
     }
@@ -186,9 +186,9 @@ impl GizmosService {
         let is_hover_y_arrow = self.draw_arrow_helper(from, to, color, hover_color);
 
         // Implement the logic
-        let input_manager = self.input_manager.read();
-        let graphic_2d_manager = self.graphic_2d_manager.read();
-        let cursor_pos = graphic_2d_manager.get_cursor_position();
+        let input_service = self.input_service.read();
+        let graphic_2d_service = self.graphic_2d_service.read();
+        let cursor_pos = graphic_2d_service.get_cursor_position();
 
         // Handle moving
         let on_move = Arc::new(on_move);
@@ -197,86 +197,86 @@ impl GizmosService {
             && !is_hover_resize_bottom_right
             && !is_hover_resize_top_left
             && !is_hover_resize_bottom_left
-            && input_manager.is_source_pressed_this_frame("Mouse/Left")
+            && input_service.is_source_pressed_this_frame("Mouse/Left")
         {
             let on_move = on_move.clone();
             DragAction::start(
                 move |action| on_move(true, true, action),
                 cursor_pos,
-                self.input_manager.clone(),
-                self.graphic_2d_manager.clone(),
+                self.input_service.clone(),
+                self.graphic_2d_service.clone(),
             );
         }
 
-        if is_hover_x_arrow && input_manager.is_source_pressed_this_frame("Mouse/Left") {
+        if is_hover_x_arrow && input_service.is_source_pressed_this_frame("Mouse/Left") {
             let on_move = on_move.clone();
             DragAction::start(
                 move |action| on_move(true, false, action),
                 cursor_pos,
-                self.input_manager.clone(),
-                self.graphic_2d_manager.clone(),
+                self.input_service.clone(),
+                self.graphic_2d_service.clone(),
             );
         }
 
-        if is_hover_y_arrow && input_manager.is_source_pressed_this_frame("Mouse/Left") {
+        if is_hover_y_arrow && input_service.is_source_pressed_this_frame("Mouse/Left") {
             let on_move = on_move.clone();
             DragAction::start(
                 move |action| on_move(false, true, action),
                 cursor_pos,
-                self.input_manager.clone(),
-                self.graphic_2d_manager.clone(),
+                self.input_service.clone(),
+                self.graphic_2d_service.clone(),
             );
         }
 
         // Handle resize
         let on_resize = Arc::new(on_resize);
-        if is_hover_resize_top_right && input_manager.is_source_pressed_this_frame("Mouse/Left") {
+        if is_hover_resize_top_right && input_service.is_source_pressed_this_frame("Mouse/Left") {
             let on_resize = on_resize.clone();
             DragAction::start(
                 move |action| on_resize(true, true, action),
                 cursor_pos,
-                self.input_manager.clone(),
-                self.graphic_2d_manager.clone(),
+                self.input_service.clone(),
+                self.graphic_2d_service.clone(),
             );
         }
 
         let on_resize = Arc::new(on_resize);
-        if is_hover_resize_top_left && input_manager.is_source_pressed_this_frame("Mouse/Left") {
+        if is_hover_resize_top_left && input_service.is_source_pressed_this_frame("Mouse/Left") {
             let on_resize = on_resize.clone();
             DragAction::start(
                 move |action| on_resize(false, true, action),
                 cursor_pos,
-                self.input_manager.clone(),
-                self.graphic_2d_manager.clone(),
+                self.input_service.clone(),
+                self.graphic_2d_service.clone(),
             );
         }
 
         let on_resize = Arc::new(on_resize);
-        if is_hover_resize_bottom_right && input_manager.is_source_pressed_this_frame("Mouse/Left")
+        if is_hover_resize_bottom_right && input_service.is_source_pressed_this_frame("Mouse/Left")
         {
             let on_resize = on_resize.clone();
             DragAction::start(
                 move |action| on_resize(true, false, action),
                 cursor_pos,
-                self.input_manager.clone(),
-                self.graphic_2d_manager.clone(),
+                self.input_service.clone(),
+                self.graphic_2d_service.clone(),
             );
         }
 
-        if is_hover_resize_bottom_left && input_manager.is_source_pressed_this_frame("Mouse/Left") {
+        if is_hover_resize_bottom_left && input_service.is_source_pressed_this_frame("Mouse/Left") {
             let on_resize = on_resize.clone();
             DragAction::start(
                 move |action| on_resize(false, false, action),
                 cursor_pos,
-                self.input_manager.clone(),
-                self.graphic_2d_manager.clone(),
+                self.input_service.clone(),
+                self.graphic_2d_service.clone(),
             );
         }
     }
 
     fn is_cursor_hover(&self, bottom_left: &Vector2d, top_right: &Vector2d) -> bool {
-        let graphic_2d_manager = self.graphic_2d_manager.read();
-        let cursor_pos = graphic_2d_manager.get_cursor_position();
+        let graphic_2d_service = self.graphic_2d_service.read();
+        let cursor_pos = graphic_2d_service.get_cursor_position();
 
         // Check if the cursor is in the rect
         bottom_left.x <= cursor_pos.x
@@ -288,24 +288,24 @@ impl GizmosService {
 
 pub struct DragAction {
     start_pos: Vector2d,
-    input_manager: ResourceReference<InputManager>,
-    graphic_2d_manager: ResourceReference<dyn Graphic2dManager>,
+    input_service: ResourceReference<InputService>,
+    graphic_2d_service: ResourceReference<dyn Graphic2dService>,
 }
 
 impl DragAction {
     fn start<F>(
         callback: F,
         start_pos: Vector2d,
-        input_manager: ResourceReference<InputManager>,
-        graphic_2d_manager: ResourceReference<dyn Graphic2dManager>,
+        input_service: ResourceReference<InputService>,
+        graphic_2d_service: ResourceReference<dyn Graphic2dService>,
     ) where
         F: Fn(DragAction) + Send + Sync + 'static,
     {
         // Create the darg action structure
         let drag_action = DragAction {
             start_pos,
-            input_manager,
-            graphic_2d_manager,
+            input_service,
+            graphic_2d_service,
         };
 
         // Start the action in a specific thread
@@ -326,13 +326,13 @@ impl DragAction {
     }
 
     fn is_dragging_button_pressed(&self) -> bool {
-        let input_manager = self.input_manager.read();
-        input_manager.is_source_pressed("Mouse/Left")
+        let input_service = self.input_service.read();
+        input_service.is_source_pressed("Mouse/Left")
     }
 
     pub fn get_cursor_position(&self) -> Vector2d {
-        let graphic_2d_manager = self.graphic_2d_manager.read();
-        graphic_2d_manager.get_cursor_position()
+        let graphic_2d_service = self.graphic_2d_service.read();
+        graphic_2d_service.get_cursor_position()
     }
 }
 

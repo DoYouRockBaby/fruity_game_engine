@@ -8,7 +8,7 @@ use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
-use fruity_windows::windows_manager::WindowsManager;
+use fruity_windows::window_service::WindowService;
 use std::fmt::Debug;
 use std::sync::Arc;
 use winit::dpi::LogicalSize;
@@ -16,7 +16,7 @@ use winit::event::Event;
 use winit::window::Window;
 
 #[derive(FruityAny)]
-pub struct WinitWindowsManager {
+pub struct WinitWindowService {
     window: Window,
     pub(crate) cursor_position: (usize, usize),
     pub on_enter_loop: Signal<()>,
@@ -28,15 +28,15 @@ pub struct WinitWindowsManager {
     pub on_events_cleared: Signal<()>,
 }
 
-impl Debug for WinitWindowsManager {
+impl Debug for WinitWindowService {
     fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         Ok(())
     }
 }
 
-impl WinitWindowsManager {
-    pub fn new(window: Window) -> WinitWindowsManager {
-        WinitWindowsManager {
+impl WinitWindowService {
+    pub fn new(window: Window) -> WinitWindowService {
+        WinitWindowService {
             window,
             cursor_position: Default::default(),
             on_enter_loop: Signal::new(),
@@ -54,7 +54,7 @@ impl WinitWindowsManager {
     }
 }
 
-impl WindowsManager for WinitWindowsManager {
+impl WindowService for WinitWindowService {
     fn close(&self) {
         // TODO: Repair that
         //window.se.push(WindowEvent::CloseRequested);
@@ -110,13 +110,13 @@ impl WindowsManager for WinitWindowsManager {
     }
 }
 
-impl IntrospectObject for WinitWindowsManager {
+impl IntrospectObject for WinitWindowService {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![
             MethodInfo {
                 name: "close".to_string(),
                 call: MethodCaller::Const(Arc::new(|this, _args| {
-                    let this = cast_introspect_ref::<WinitWindowsManager>(this);
+                    let this = cast_introspect_ref::<WinitWindowService>(this);
                     this.close();
                     Ok(None)
                 })),
@@ -124,7 +124,7 @@ impl IntrospectObject for WinitWindowsManager {
             MethodInfo {
                 name: "set_resizable".to_string(),
                 call: MethodCaller::Const(Arc::new(|this, args| {
-                    let this = cast_introspect_ref::<WinitWindowsManager>(this);
+                    let this = cast_introspect_ref::<WinitWindowService>(this);
 
                     let mut caster = ArgumentCaster::new("set_resizable", args);
                     let arg1 = caster.cast_next::<bool>()?;
@@ -136,7 +136,7 @@ impl IntrospectObject for WinitWindowsManager {
             MethodInfo {
                 name: "get_size".to_string(),
                 call: MethodCaller::Const(Arc::new(|this, _args| {
-                    let this = cast_introspect_ref::<WinitWindowsManager>(this);
+                    let this = cast_introspect_ref::<WinitWindowService>(this);
                     let result = this.get_size();
 
                     Ok(Some(Serialized::Array(vec![
@@ -148,7 +148,7 @@ impl IntrospectObject for WinitWindowsManager {
             MethodInfo {
                 name: "get_cursor_position".to_string(),
                 call: MethodCaller::Const(Arc::new(|this, _args| {
-                    let this = cast_introspect_ref::<WinitWindowsManager>(this);
+                    let this = cast_introspect_ref::<WinitWindowService>(this);
                     let result = this.get_cursor_position();
 
                     Ok(Some(Serialized::Array(vec![
@@ -160,7 +160,7 @@ impl IntrospectObject for WinitWindowsManager {
             MethodInfo {
                 name: "set_size".to_string(),
                 call: MethodCaller::Const(Arc::new(|this, args| {
-                    let this = cast_introspect_ref::<WinitWindowsManager>(this);
+                    let this = cast_introspect_ref::<WinitWindowService>(this);
 
                     let mut caster = ArgumentCaster::new("set_size", args);
                     let arg1 = caster.cast_next::<usize>()?;
@@ -173,7 +173,7 @@ impl IntrospectObject for WinitWindowsManager {
             MethodInfo {
                 name: "set_title".to_string(),
                 call: MethodCaller::Const(Arc::new(|this, args| {
-                    let this = cast_introspect_ref::<WinitWindowsManager>(this);
+                    let this = cast_introspect_ref::<WinitWindowService>(this);
 
                     let mut caster = ArgumentCaster::new("set_title", args);
                     let arg1 = caster.cast_next::<String>()?;
@@ -192,4 +192,4 @@ impl IntrospectObject for WinitWindowsManager {
     }
 }
 
-impl Resource for WinitWindowsManager {}
+impl Resource for WinitWindowService {}

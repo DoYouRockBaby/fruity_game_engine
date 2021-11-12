@@ -1,16 +1,16 @@
-use crate::input_manager::InputManager;
-use fruity_core::resource::resource_manager::ResourceManager;
+use crate::input_service::InputService;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use std::sync::Arc;
 
-pub mod input_manager;
+pub mod input_service;
 
 // #[no_mangle]
-pub fn initialize(resource_manager: Arc<ResourceManager>, settings: &Settings) {
-    let mut input_manager = InputManager::new(resource_manager.clone());
-    input_manager.read_input_settings(settings);
+pub fn initialize(resource_container: Arc<ResourceContainer>, settings: &Settings) {
+    let mut input_service = InputService::new(resource_container.clone());
+    input_service.read_input_settings(settings);
 
-    resource_manager
-        .add::<InputManager>("input_manager", Box::new(input_manager))
+    resource_container
+        .add::<InputService>("input_service", Box::new(input_service))
         .unwrap();
 }

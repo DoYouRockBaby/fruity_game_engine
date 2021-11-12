@@ -1,4 +1,4 @@
-class Service2 {
+class CustomService {
     constructor() {
         this.hello = this.hello.bind(this);
     }
@@ -26,26 +26,25 @@ class TestVec {
     }
 }
 
-resourceManager.add("service2", new Service2());
-const systemManager = resourceManager.get("system_manager");
-const entityManager = resourceManager.get("entity_manager");
-const componentFactory = resourceManager.get("components_factory");
-const windowsManager = resourceManager.get("windows_manager");
-const service2 = resourceManager.get("service2");
-const inputManager = resourceManager.get("input_manager");
-const frameManager = resourceManager.get("frame_manager");
+resourceContainer.add("custom_service", new CustomService());
+const systemService = resourceContainer.get("system_service");
+const entityService = resourceContainer.get("entity_service");
+const windowsService = resourceContainer.get("windows_service");
+const customService = resourceContainer.get("custom_service");
+const inputService = resourceContainer.get("input_service");
+const frameService = resourceContainer.get("frame_service");
 
-service2.hello("World");
+customService.hello("World");
 
-inputManager.onPressed.addObserver((key) => {
+inputService.onPressed.addObserver((key) => {
     console.log("Pressed", key);
 });
 
-inputManager.onReleased.addObserver((key) => {
+inputService.onReleased.addObserver((key) => {
     console.log("Released", key);
 });
 
-entityManager.onEntityCreated.addObserver((entity) => {
+entityService.onEntityCreated.addObserver((entity) => {
     if (entity.contains(["Position", "Camera"])) {
         let position = entity.getComponent("Position");
         let camera = entity.getComponent("Camera");
@@ -62,28 +61,28 @@ entityManager.onEntityCreated.addObserver((entity) => {
 });
 
 let player_entity_id = 0;
-systemManager.addBeginSystem(() => {
-    entityManager.create("Image 1", [
+systemService.addBeginSystem(() => {
+    entityService.create("Image 1", [
         new Position({ pos: new Vector2d({ x: 0.25, y: 0.25 }) }),
         new Size({ size: new Vector2d({ x: 0.5, y: 0.5 }) }),
         new Sprite({
-            material: resourceManager.get("assets/material.material"),
+            material: resourceContainer.get("assets/material.material"),
             z_index: 0,
         }),
         new TestVec({ size: new Vector2d({ x: 0.5, y: 0.5 }) }),
     ]);
 
-    player_entity_id = entityManager.create("Player", [
+    player_entity_id = entityService.create("Player", [
         new Position({ pos: new Vector2d({ x: -0.25, y: 0.25 }) }),
         new Size({ size: new Vector2d({ x: 0.3, y: 0.3 }) }),
         new Sprite({
-            material: resourceManager.get("assets/material.material"),
+            material: resourceContainer.get("assets/material.material"),
             z_index: 1,
         }),
         new Move({ velocity: 0.2 }),
     ]);
 
-    entityManager.create("Camera", [
+    entityService.create("Camera", [
         new Position({ pos: new Vector2d({ x: -1.5, y: -1.3 }) }),
         new Size({ size: new Vector2d({ x: 3, y: 2 }) }),
         new Camera({}),
@@ -93,36 +92,36 @@ systemManager.addBeginSystem(() => {
     console.log("ENTITIES CREATED");
 });
 
-systemManager.addSystem(() => {
-    entityManager
+systemService.addSystem(() => {
+    entityService
         .iterComponents(["Position", "Velocity"])
         .forEach(components => {
-            components.get(0).pos = components.get(0).pos.add(components.get(1).vel.mul(frameManager.delta));
+            components.get(0).pos = components.get(0).pos.add(components.get(1).vel.mul(frameService.delta));
         });
 });
 
-systemManager.addSystem(() => {
-    entityManager
+systemService.addSystem(() => {
+    entityService
         .iterComponents(["Position", "Move"])
         .forEach(components => {
             let vel = new Vector2d({ x: 0, y: 0 });
 
-            if (inputManager.isPressed("Run Left")) {
+            if (inputService.isPressed("Run Left")) {
                 vel.x -= components.get(1).velocity;
             }
 
-            if (inputManager.isPressed("Run Right")) {
+            if (inputService.isPressed("Run Right")) {
                 vel.x += components.get(1).velocity;
             }
 
-            if (inputManager.isPressed("Jump")) {
+            if (inputService.isPressed("Jump")) {
                 vel.y += components.get(1).velocity;
             }
 
-            if (inputManager.isPressed("Down")) {
+            if (inputService.isPressed("Down")) {
                 vel.y -= components.get(1).velocity;
             }
 
-            components.get(0).pos = components.get(0).pos.add(vel.mul(frameManager.delta));
+            components.get(0).pos = components.get(0).pos.add(vel.mul(frameService.delta));
         });
 });

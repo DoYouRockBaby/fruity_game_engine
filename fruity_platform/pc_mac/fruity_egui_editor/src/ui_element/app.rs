@@ -1,14 +1,14 @@
 use crate::ui_element::draw_element;
 use egui_wgpu_backend::RenderPass;
 use egui_winit_platform::Platform;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_editor::components::root::root_component;
 use std::sync::Arc;
 
 pub struct Application {}
 
 impl Application {
-    pub fn new(_resource_manager: Arc<ResourceManager>) -> Self {
+    pub fn new(_resource_container: Arc<ResourceContainer>) -> Self {
         Application {}
     }
 }

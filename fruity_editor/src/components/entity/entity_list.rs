@@ -6,18 +6,18 @@ use crate::ui_element::list::ListView;
 use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
 use fruity_core::entity::archetype::rwlock::EntitySharedRwLock;
-use fruity_core::entity::entity_manager::EntityManager;
+use fruity_core::entity::entity_service::EntityService;
 use std::any::Any;
 use std::sync::Arc;
 
 pub fn entity_list_component() -> UIElement {
     let world_state = use_global::<WorldState>();
 
-    let resource_manager = world_state.resource_manager.clone();
-    let entity_manager = resource_manager.require::<EntityManager>("entity_manager");
-    let entity_manager = entity_manager.read();
+    let resource_container = world_state.resource_container.clone();
+    let entity_service = resource_container.require::<EntityService>("entity_service");
+    let entity_service = entity_service.read();
 
-    let items: Vec<Arc<dyn Any + Send + Sync>> = entity_manager
+    let items: Vec<Arc<dyn Any + Send + Sync>> = entity_service
         .iter_all_entities()
         .map(|entity| Arc::new(entity) as Arc<EntitySharedRwLock>)
         .map(|entity| entity as Arc<dyn Any + Send + Sync>)

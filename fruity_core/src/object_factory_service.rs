@@ -1,5 +1,5 @@
 use crate::resource::resource::Resource;
-use crate::ResourceManager;
+use crate::ResourceContainer;
 use fruity_any::*;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::utils::cast_introspect_ref;
@@ -17,20 +17,20 @@ use std::sync::Arc;
 /// Provides a factory for the introspect types
 /// This will be used by the scripting language to expose object creation
 #[derive(FruityAny)]
-pub struct ObjectFactory {
+pub struct ObjectFactoryService {
     factories: HashMap<String, Constructor>,
 }
 
-impl Debug for ObjectFactory {
+impl Debug for ObjectFactoryService {
     fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         Ok(())
     }
 }
 
-impl ObjectFactory {
-    /// Returns an ObjectFactory
-    pub fn new(_resource_manager: Arc<ResourceManager>) -> ObjectFactory {
-        ObjectFactory {
+impl ObjectFactoryService {
+    /// Returns an ObjectFactoryService
+    pub fn new(_resource_container: Arc<ResourceContainer>) -> ObjectFactoryService {
+        ObjectFactoryService {
             factories: HashMap::new(),
         }
     }
@@ -69,12 +69,12 @@ impl ObjectFactory {
     }
 }
 
-impl IntrospectObject for ObjectFactory {
+impl IntrospectObject for ObjectFactoryService {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![MethodInfo {
             name: "instantiate".to_string(),
             call: MethodCaller::Const(Arc::new(move |this, args| {
-                let this = cast_introspect_ref::<ObjectFactory>(this);
+                let this = cast_introspect_ref::<ObjectFactoryService>(this);
 
                 let mut caster = ArgumentCaster::new("instantiate", args);
                 let arg1 = caster.cast_next::<String>()?;
@@ -91,4 +91,4 @@ impl IntrospectObject for ObjectFactory {
     }
 }
 
-impl Resource for ObjectFactory {}
+impl Resource for ObjectFactoryService {}

@@ -3,26 +3,26 @@ use crate::state::world::WorldState;
 use crate::ui_element::input::Button;
 use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
-use fruity_core::system::system_manager::SystemManager;
+use fruity_core::system::system_service::SystemService;
 use std::sync::Arc;
 
 pub fn run_controls_component() -> Vec<UIElement> {
     let world_state = use_global::<WorldState>();
 
-    let resource_manager = world_state.resource_manager.clone();
-    let system_manager = resource_manager.require::<SystemManager>("system_manager");
-    let system_manager_reader = system_manager.read();
+    let resource_container = world_state.resource_container.clone();
+    let system_service = resource_container.require::<SystemService>("system_service");
+    let system_service_reader = system_service.read();
 
-    let system_manager_2 = system_manager.clone();
-    let system_manager_3 = system_manager.clone();
+    let system_service_2 = system_service.clone();
+    let system_service_3 = system_service.clone();
     vec![
-        if system_manager_reader.is_paused() {
+        if system_service_reader.is_paused() {
             Button {
                 label: "▶".to_string(),
                 on_click: Arc::new(move || {
-                    let system_manager = system_manager_2.read();
+                    let system_service = system_service_2.read();
 
-                    system_manager.set_paused(false);
+                    system_service.set_paused(false);
                 }),
                 ..Default::default()
             }
@@ -31,9 +31,9 @@ pub fn run_controls_component() -> Vec<UIElement> {
             Button {
                 label: "⏸".to_string(),
                 on_click: Arc::new(move || {
-                    let system_manager = system_manager_3.read();
+                    let system_service = system_service_3.read();
 
-                    system_manager.set_paused(true);
+                    system_service.set_paused(true);
                 }),
                 ..Default::default()
             }
@@ -42,7 +42,7 @@ pub fn run_controls_component() -> Vec<UIElement> {
         Button {
             label: "◼".to_string(),
             on_click: Arc::new(move || {}),
-            enabled: !system_manager_reader.is_paused(),
+            enabled: !system_service_reader.is_paused(),
             ..Default::default()
         }
         .elem(),

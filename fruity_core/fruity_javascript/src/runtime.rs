@@ -1,7 +1,7 @@
 use crate::bridge::console::configure_console;
 use crate::error::JsError;
 use crate::exception::exception_to_err_result;
-use crate::javascript_engine::CallbackIdentifier;
+use crate::javascript_service::CallbackIdentifier;
 use crate::js_value::object::JsObject;
 use crate::js_value::utils::get_stored_callback;
 use crate::module_map::ModuleInfos;

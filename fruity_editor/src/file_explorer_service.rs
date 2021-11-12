@@ -1,6 +1,6 @@
 use fruity_any::*;
 use fruity_core::resource::resource::Resource;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_graphic::resources::texture_resource::TextureResource;
 use fruity_introspect::FieldInfo;
@@ -18,15 +18,15 @@ struct FileTypeEntry {
 }
 
 #[derive(FruityAny)]
-pub struct FileExplorerManager {
-    resource_manager: Arc<ResourceManager>,
+pub struct FileExplorerService {
+    resource_container: Arc<ResourceContainer>,
     file_types: HashMap<String, FileTypeEntry>,
 }
 
-impl FileExplorerManager {
-    pub fn new(resource_manager: Arc<ResourceManager>) -> Self {
-        FileExplorerManager {
-            resource_manager,
+impl FileExplorerService {
+    pub fn new(resource_container: Arc<ResourceContainer>) -> Self {
+        FileExplorerService {
+            resource_container,
             file_types: HashMap::new(),
         }
     }
@@ -53,7 +53,7 @@ impl FileExplorerManager {
         match self.inner_get_thumbnail(file_path) {
             Some(thumbnail) => thumbnail,
             None => self
-                .resource_manager
+                .resource_container
                 .require::<dyn TextureResource>("Editor/Icons/unknown"),
         }
     }
@@ -86,7 +86,7 @@ impl FileExplorerManager {
     }
 }
 
-impl Debug for FileExplorerManager {
+impl Debug for FileExplorerService {
     fn fmt(
         &self,
         _formatter: &mut std::fmt::Formatter<'_>,
@@ -95,7 +95,7 @@ impl Debug for FileExplorerManager {
     }
 }
 
-impl IntrospectObject for FileExplorerManager {
+impl IntrospectObject for FileExplorerService {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }
@@ -105,4 +105,4 @@ impl IntrospectObject for FileExplorerManager {
     }
 }
 
-impl Resource for FileExplorerManager {}
+impl Resource for FileExplorerService {}

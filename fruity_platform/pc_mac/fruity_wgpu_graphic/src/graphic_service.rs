@@ -1,14 +1,14 @@
 use fruity_any::*;
 use fruity_core::resource::resource::Resource;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::signal::Signal;
-use fruity_graphic::graphic_manager::GraphicManager;
+use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::Matrix4;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
-use fruity_windows::windows_manager::WindowsManager;
-use fruity_winit_windows::windows_manager::WinitWindowsManager;
+use fruity_windows::window_service::WindowService;
+use fruity_winit_windows::window_service::WinitWindowService;
 use std::fmt::Debug;
 use std::iter;
 use std::ops::Deref;
@@ -43,7 +43,7 @@ struct RenderBundleEntry {
 }
 
 #[derive(Debug, FruityAny)]
-pub struct WgpuGraphicsManager {
+pub struct WgpuGraphicManager {
     state: State,
     current_output: Option<wgpu::SurfaceTexture>,
     render_bundle_queue: Mutex<Vec<RenderBundleEntry>>,
@@ -52,66 +52,65 @@ pub struct WgpuGraphicsManager {
     pub on_after_draw_end: Signal<()>,
 }
 
-impl WgpuGraphicsManager {
-    pub fn new(resource_manager: Arc<ResourceManager>) -> WgpuGraphicsManager {
-        let windows_manager =
-            resource_manager.require::<dyn WindowsManager>("windows_manager");
-        let windows_manager = windows_manager.read();
-        let windows_manager = windows_manager.downcast_ref::<WinitWindowsManager>();
+impl WgpuGraphicManager {
+    pub fn new(resource_container: Arc<ResourceContainer>) -> WgpuGraphicManager {
+        let window_service = resource_container.require::<dyn WindowService>("window_service");
+        let window_service = window_service.read();
+        let window_service = window_service.downcast_ref::<WinitWindowService>();
 
         // Subscribe to windows observer to proceed the graphics when it's neededs
-        let resource_manager_2 = resource_manager.clone();
-        windows_manager.on_start_update().add_observer(move |_| {
-            let graphic_manager =
-                resource_manager_2.require::<dyn GraphicManager>("graphic_manager");
-            let mut graphic_manager = graphic_manager.write();
-            let graphic_manager = graphic_manager.downcast_mut::<WgpuGraphicsManager>();
+        let resource_container_2 = resource_container.clone();
+        window_service.on_start_update().add_observer(move |_| {
+            let graphic_service =
+                resource_container_2.require::<dyn GraphicService>("graphic_service");
+            let mut graphic_service = graphic_service.write();
+            let graphic_service = graphic_service.downcast_mut::<WgpuGraphicManager>();
 
-            graphic_manager.start_draw();
+            graphic_service.start_draw();
         });
 
-        let resource_manager_2 = resource_manager.clone();
-        windows_manager.on_end_update().add_observer(move |_| {
-            let graphic_manager =
-                resource_manager_2.require::<dyn GraphicManager>("graphic_manager");
+        let resource_container_2 = resource_container.clone();
+        window_service.on_end_update().add_observer(move |_| {
+            let graphic_service =
+                resource_container_2.require::<dyn GraphicService>("graphic_service");
 
             // Send the event that we will end to draw
             {
-                let graphics_manager_reader = graphic_manager.read();
-                graphics_manager_reader.on_before_draw_end().notify(());
+                let graphic_service = graphic_service.read();
+                graphic_service.on_before_draw_end().notify(());
             }
 
             // End the drawing
             {
-                let mut graphics_manager_writer = graphic_manager.write();
-                graphics_manager_writer.end_draw();
+                let mut graphic_service = graphic_service.write();
+                graphic_service.end_draw();
             }
 
             // Send the event that we finish to draw
             {
-                let graphics_manager_reader = graphic_manager.read();
-                graphics_manager_reader.on_after_draw_end().notify(());
+                let graphic_service = graphic_service.read();
+                graphic_service.on_after_draw_end().notify(());
             }
         });
 
-        let resource_manager_2 = resource_manager.clone();
-        windows_manager
+        let resource_container_2 = resource_container.clone();
+        window_service
             .on_resize()
             .add_observer(move |(width, height)| {
-                let graphic_manager =
-                    resource_manager_2.require::<dyn GraphicManager>("graphic_manager");
-                let mut graphic_manager = graphic_manager.write();
-                graphic_manager.resize(*width, *height);
+                let graphic_service =
+                    resource_container_2.require::<dyn GraphicService>("graphic_service");
+                let mut graphic_service = graphic_service.write();
+                graphic_service.resize(*width, *height);
             });
 
         // Initialize the graphics
-        let state = WgpuGraphicsManager::initialize(windows_manager.get_window());
+        let state = WgpuGraphicManager::initialize(window_service.get_window());
 
         // Dispatch initialized event
         let on_initialized = Signal::new();
         on_initialized.notify(());
 
-        WgpuGraphicsManager {
+        WgpuGraphicManager {
             state,
             current_output: None,
             render_bundle_queue: Mutex::new(Vec::new()),
@@ -255,7 +254,7 @@ impl WgpuGraphicsManager {
     }
 }
 
-impl GraphicManager for WgpuGraphicsManager {
+impl GraphicService for WgpuGraphicManager {
     fn start_draw(&mut self) {
         // Get the texture view where the scene will be rendered
         let output = self.state.surface.get_current_texture().unwrap();
@@ -373,7 +372,7 @@ impl GraphicManager for WgpuGraphicsManager {
     }
 }
 
-impl IntrospectObject for WgpuGraphicsManager {
+impl IntrospectObject for WgpuGraphicManager {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }
@@ -383,4 +382,4 @@ impl IntrospectObject for WgpuGraphicsManager {
     }
 }
 
-impl Resource for WgpuGraphicsManager {}
+impl Resource for WgpuGraphicManager {}

@@ -1,6 +1,6 @@
 use fruity_any::*;
 use fruity_core::resource::resource::Resource;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::utils::cast_introspect_ref;
 use fruity_introspect::FieldInfo;
@@ -14,20 +14,20 @@ use std::sync::Arc;
 use std::time::Instant;
 
 #[derive(FruityAny)]
-pub struct FrameManager {
+pub struct FrameService {
     last_frame_instant: Instant,
     delta: f32,
 }
 
-impl Debug for FrameManager {
+impl Debug for FrameService {
     fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         Ok(())
     }
 }
 
-impl FrameManager {
-    pub fn new(_resource_manager: Arc<ResourceManager>) -> FrameManager {
-        FrameManager {
+impl FrameService {
+    pub fn new(_resource_container: Arc<ResourceContainer>) -> FrameService {
+        FrameService {
             delta: 0.0,
             last_frame_instant: Instant::now(),
         }
@@ -46,12 +46,12 @@ impl FrameManager {
     }
 }
 
-impl IntrospectObject for FrameManager {
+impl IntrospectObject for FrameService {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![MethodInfo {
             name: "get_delta".to_string(),
             call: MethodCaller::Const(Arc::new(|this, _args| {
-                let this = cast_introspect_ref::<FrameManager>(this);
+                let this = cast_introspect_ref::<FrameService>(this);
                 let result = this.get_delta();
                 Ok(Some(Serialized::F32(result)))
             })),
@@ -62,10 +62,10 @@ impl IntrospectObject for FrameManager {
         vec![FieldInfo {
             name: "delta".to_string(),
             ty: TypeId::of::<f32>(),
-            getter: Arc::new(|this| this.downcast_ref::<FrameManager>().unwrap().delta.into()),
+            getter: Arc::new(|this| this.downcast_ref::<FrameService>().unwrap().delta.into()),
             setter: SetterCaller::None,
         }]
     }
 }
 
-impl Resource for FrameManager {}
+impl Resource for FrameService {}

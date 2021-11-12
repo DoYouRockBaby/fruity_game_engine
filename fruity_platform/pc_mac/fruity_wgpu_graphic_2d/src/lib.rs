@@ -1,16 +1,16 @@
-use crate::graphic_2d_manager::WgpuGraphics2dManager;
-use fruity_core::resource::resource_manager::ResourceManager;
+use crate::graphic_2d_service::WgpuGraphic2dManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
-use fruity_graphic_2d::graphic_2d_manager::Graphic2dManager;
+use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
 use std::sync::Arc;
 
-pub mod graphic_2d_manager;
+pub mod graphic_2d_service;
 
 // #[no_mangle]
-pub fn initialize(resource_manager: Arc<ResourceManager>, _settings: &Settings) {
-    let graphic_2d_manager = WgpuGraphics2dManager::new(resource_manager.clone());
+pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
+    let graphic_2d_service = WgpuGraphic2dManager::new(resource_container.clone());
 
-    resource_manager
-        .add::<dyn Graphic2dManager>("graphic_2d_manager", Box::new(graphic_2d_manager))
+    resource_container
+        .add::<dyn Graphic2dService>("graphic_2d_service", Box::new(graphic_2d_service))
         .unwrap();
 }

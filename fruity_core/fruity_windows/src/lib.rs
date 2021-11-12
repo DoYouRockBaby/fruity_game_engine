@@ -1,15 +1,15 @@
-use crate::frame_manager::FrameManager;
-use fruity_core::resource::resource_manager::ResourceManager;
+use crate::frame_service::FrameService;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use std::sync::Arc;
 
-pub mod frame_manager;
-pub mod windows_manager;
+pub mod frame_service;
+pub mod window_service;
 
-pub fn initialize(resource_manager: Arc<ResourceManager>, _settings: &Settings) {
-    let frame_manager = FrameManager::new(resource_manager.clone());
+pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
+    let frame_service = FrameService::new(resource_container.clone());
 
-    resource_manager
-        .add::<FrameManager>("frame_manager", Box::new(frame_manager))
+    resource_container
+        .add::<FrameService>("frame_service", Box::new(frame_service))
         .unwrap();
 }

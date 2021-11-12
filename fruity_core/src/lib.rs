@@ -10,10 +10,10 @@
 //! - Entities represent any object stored in the ecs, entities are composed of components, in a game engine, a game object for example
 //! - Components are structure where the datas are stored
 
-use crate::entity::entity_manager::EntityManager;
-use crate::object_factory::ObjectFactory;
-use crate::resource::resource_manager::ResourceManager;
-use crate::system::system_manager::SystemManager;
+use crate::entity::entity_service::EntityService;
+use crate::object_factory_service::ObjectFactoryService;
+use crate::resource::resource_container::ResourceContainer;
+use crate::system::system_service::SystemService;
 use std::sync::Arc;
 
 pub use fruity_core_derive::Component;
@@ -54,7 +54,7 @@ pub mod world;
 
 /// Provides a factory for the introspect object
 /// This will be used by the scripting language to expose object creation, especialy components
-pub mod object_factory;
+pub mod object_factory_service;
 
 /// Create an entity, use it like entity![Box::new(component1), Box::new(component2)])
 #[macro_export]
@@ -73,19 +73,19 @@ macro_rules! entity_type {
 }
 
 /// Initialize this extension
-pub fn initialize(resource_manager: Arc<ResourceManager>) {
-    //let module_manager = ModuleManager::new(resource_manager.clone());
-    let entity_manager = EntityManager::new(resource_manager.clone());
-    let system_manager = SystemManager::new(resource_manager.clone());
-    let object_factory = ObjectFactory::new(resource_manager.clone());
+pub fn initialize(resource_container: Arc<ResourceContainer>) {
+    //let module_manager = ModuleManager::new(resource_container.clone());
+    let entity_service = EntityService::new(resource_container.clone());
+    let system_service = SystemService::new(resource_container.clone());
+    let object_factory_service = ObjectFactoryService::new(resource_container.clone());
 
-    resource_manager
-        .add::<EntityManager>("entity_manager", Box::new(entity_manager))
+    resource_container
+        .add::<EntityService>("entity_service", Box::new(entity_service))
         .unwrap();
-    resource_manager
-        .add::<SystemManager>("system_manager", Box::new(system_manager))
+    resource_container
+        .add::<SystemService>("system_service", Box::new(system_service))
         .unwrap();
-    resource_manager
-        .add::<ObjectFactory>("object_factory", Box::new(object_factory))
+    resource_container
+        .add::<ObjectFactoryService>("object_factory_service", Box::new(object_factory_service))
         .unwrap();
 }

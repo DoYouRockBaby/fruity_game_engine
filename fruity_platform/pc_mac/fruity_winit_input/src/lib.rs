@@ -1,8 +1,8 @@
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
-use fruity_input::input_manager::InputManager;
-use fruity_windows::windows_manager::WindowsManager;
-use fruity_winit_windows::windows_manager::WinitWindowsManager;
+use fruity_input::input_service::InputService;
+use fruity_windows::window_service::WindowService;
+use fruity_winit_windows::window_service::WinitWindowService;
 use std::sync::Arc;
 use winit::event::ElementState;
 use winit::event::Event;
@@ -11,27 +11,27 @@ use winit::event::VirtualKeyCode;
 use winit::event::WindowEvent;
 
 // #[no_mangle]
-pub fn initialize(resource_manager: Arc<ResourceManager>, _settings: &Settings) {
-    let windows_manager = resource_manager.require::<dyn WindowsManager>("windows_manager");
-    let windows_manager = windows_manager.read();
-    let windows_manager = windows_manager.downcast_ref::<WinitWindowsManager>();
+pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
+    let window_service = resource_container.require::<dyn WindowService>("window_service");
+    let window_service = window_service.read();
+    let window_service = window_service.downcast_ref::<WinitWindowService>();
 
-    let input_manager = resource_manager.require::<InputManager>("input_manager");
+    let input_service = resource_container.require::<InputService>("input_service");
 
-    let input_manager_2 = input_manager.clone();
-    windows_manager.on_event.add_observer(move |event| {
-        let mut input_manager = input_manager_2.write();
-        handle_keyboard_input(&mut input_manager, event);
+    let input_service_2 = input_service.clone();
+    window_service.on_event.add_observer(move |event| {
+        let mut input_service = input_service_2.write();
+        handle_keyboard_input(&mut input_service, event);
     });
 
-    let input_manager_2 = input_manager.clone();
-    windows_manager.on_end_update.add_observer(move |_| {
-        let mut input_manager = input_manager_2.write();
-        input_manager.handle_frame_end();
+    let input_service_2 = input_service.clone();
+    window_service.on_end_update.add_observer(move |_| {
+        let mut input_service = input_service_2.write();
+        input_service.handle_frame_end();
     });
 }
 
-fn handle_keyboard_input(input_manager: &mut InputManager, event: &Event<()>) {
+fn handle_keyboard_input(input_service: &mut InputService, event: &Event<()>) {
     if let Event::WindowEvent { event, .. } = event {
         if let WindowEvent::MouseInput { state, button, .. } = event {
             let source = match button {
@@ -43,9 +43,9 @@ fn handle_keyboard_input(input_manager: &mut InputManager, event: &Event<()>) {
 
             // Detect if pressed or released
             if ElementState::Pressed == *state {
-                input_manager.notify_pressed(source);
+                input_service.notify_pressed(source);
             } else {
-                input_manager.notify_released(source);
+                input_service.notify_released(source);
             }
         } else if let WindowEvent::KeyboardInput { input, .. } = event {
             if let Some(key) = input.virtual_keycode {
@@ -218,9 +218,9 @@ fn handle_keyboard_input(input_manager: &mut InputManager, event: &Event<()>) {
 
                 // Detect if pressed or released
                 if ElementState::Pressed == input.state {
-                    input_manager.notify_pressed(source);
+                    input_service.notify_pressed(source);
                 } else {
-                    input_manager.notify_released(source);
+                    input_service.notify_released(source);
                 }
             }
         }

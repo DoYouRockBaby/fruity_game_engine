@@ -1,9 +1,9 @@
 use crate::resources::texture_resource::WgpuTextureResource;
-use crate::GraphicManager;
-use crate::WgpuGraphicsManager;
+use crate::GraphicService;
+use crate::WgpuGraphicManager;
 use fruity_any::*;
 use fruity_core::resource::resource::Resource;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use fruity_graphic::resources::image_resource::ImageResource;
 use fruity_graphic::resources::texture_resource::TextureResource;
@@ -35,7 +35,7 @@ pub fn load_image(
     identifier: &str,
     reader: &mut dyn Read,
     settings: Settings,
-    resource_manager: Arc<ResourceManager>,
+    resource_container: Arc<ResourceContainer>,
 ) {
     let load_type = settings.get::<String>("type", "image".to_string());
 
@@ -50,7 +50,7 @@ pub fn load_image(
         // Store the resource if it's a simple image
         let resource = WgpuImageResource::from_buffer(&buffer);
         if let Err(_) =
-            resource_manager.add::<dyn ImageResource>(identifier.clone(), Box::new(resource))
+            resource_container.add::<dyn ImageResource>(identifier.clone(), Box::new(resource))
         {
             log::error!(
                 "Couldn't add a resource cause the identifier \"{}\" already exists",
@@ -62,12 +62,12 @@ pub fn load_image(
         let image = load_from_memory(&buffer).unwrap();
 
         // Get the graphic manager state
-        let graphic_manager = resource_manager.require::<dyn GraphicManager>("graphic_manager");
-        let graphic_manager = graphic_manager.read();
-        let graphic_manager = graphic_manager.downcast_ref::<WgpuGraphicsManager>();
+        let graphic_service = resource_container.require::<dyn GraphicService>("graphic_service");
+        let graphic_service = graphic_service.read();
+        let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
 
-        let device = graphic_manager.get_device();
-        let queue = graphic_manager.get_queue();
+        let device = graphic_service.get_device();
+        let queue = graphic_service.get_queue();
 
         // Create the texture
         let resource = if let Ok(value) =
@@ -81,7 +81,7 @@ pub fn load_image(
 
         // Store the texture
         if let Err(_) =
-            resource_manager.add::<dyn TextureResource>(identifier.clone(), Box::new(resource))
+            resource_container.add::<dyn TextureResource>(identifier.clone(), Box::new(resource))
         {
             log::error!(
                 "Couldn't add a resource cause the identifier \"{}\" already exists",

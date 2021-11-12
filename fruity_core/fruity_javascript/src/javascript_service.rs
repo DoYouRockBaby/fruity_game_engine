@@ -1,10 +1,10 @@
 use crate::bridge::constructors::configure_constructors;
-use crate::bridge::resource_manager::configure_resource_manager;
+use crate::bridge::resource_container::configure_resource_container;
 use crate::error::log_js_error;
 use crate::JsRuntime;
 use fruity_any::*;
 use fruity_core::resource::resource::Resource;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::utils::single_thread_wrapper::SingleThreadWrapper;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
@@ -16,21 +16,21 @@ use std::sync::Arc;
 pub struct CallbackIdentifier(pub i32);
 
 #[derive(Debug, FruityAny)]
-pub struct JavascriptEngine {
+pub struct JavascriptService {
     single_thread_wrapper: SingleThreadWrapper<JsRuntime>,
 }
 
-impl JavascriptEngine {
-    pub fn new(resource_manager: Arc<ResourceManager>) -> JavascriptEngine {
+impl JavascriptService {
+    pub fn new(resource_container: Arc<ResourceContainer>) -> JavascriptService {
         let single_thread_wrapper = SingleThreadWrapper::<JsRuntime>::start(move || {
             let mut runtime = JsRuntime::new();
-            configure_constructors(&mut runtime, resource_manager.clone());
-            configure_resource_manager(&mut runtime, resource_manager.clone());
+            configure_constructors(&mut runtime, resource_container.clone());
+            configure_resource_container(&mut runtime, resource_container.clone());
 
             runtime
         });
 
-        JavascriptEngine {
+        JavascriptService {
             single_thread_wrapper,
         }
     }
@@ -62,7 +62,7 @@ impl JavascriptEngine {
     }
 }
 
-impl IntrospectObject for JavascriptEngine {
+impl IntrospectObject for JavascriptService {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }
@@ -72,4 +72,4 @@ impl IntrospectObject for JavascriptEngine {
     }
 }
 
-impl Resource for JavascriptEngine {}
+impl Resource for JavascriptService {}

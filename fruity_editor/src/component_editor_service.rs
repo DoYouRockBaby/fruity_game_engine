@@ -2,7 +2,7 @@ use crate::ui_element::UIElement;
 use fruity_any::*;
 use fruity_core::component::component_rwlock::ComponentRwLock;
 use fruity_core::resource::resource::Resource;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
@@ -15,13 +15,13 @@ pub type ComponentFieldEditor =
     Arc<dyn Fn(ComponentRwLock, &FieldInfo) -> UIElement + Send + Sync + 'static>;
 
 #[derive(FruityAny)]
-pub struct ComponentEditorManager {
+pub struct ComponentEditorService {
     component_field_editors: HashMap<TypeId, ComponentFieldEditor>,
 }
 
-impl ComponentEditorManager {
-    pub fn new(_resource_manager: Arc<ResourceManager>) -> Self {
-        ComponentEditorManager {
+impl ComponentEditorService {
+    pub fn new(_resource_container: Arc<ResourceContainer>) -> Self {
+        ComponentEditorService {
             component_field_editors: HashMap::new(),
         }
     }
@@ -43,7 +43,7 @@ impl ComponentEditorManager {
     }
 }
 
-impl Debug for ComponentEditorManager {
+impl Debug for ComponentEditorService {
     fn fmt(
         &self,
         _formatter: &mut std::fmt::Formatter<'_>,
@@ -52,7 +52,7 @@ impl Debug for ComponentEditorManager {
     }
 }
 
-impl IntrospectObject for ComponentEditorManager {
+impl IntrospectObject for ComponentEditorService {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }
@@ -62,4 +62,4 @@ impl IntrospectObject for ComponentEditorManager {
     }
 }
 
-impl Resource for ComponentEditorManager {}
+impl Resource for ComponentEditorService {}

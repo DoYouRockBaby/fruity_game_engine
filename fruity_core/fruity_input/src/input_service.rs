@@ -1,6 +1,6 @@
 use fruity_any::*;
 use fruity_core::resource::resource::Resource;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use fruity_core::signal::Signal;
 use fruity_introspect::serialized::Serialized;
@@ -19,7 +19,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 #[derive(FruityAny)]
-pub struct InputManager {
+pub struct InputService {
     pub input_map: HashMap<String, String>,
     pub pressed_inputs: HashSet<String>,
     pub pressed_sources: HashSet<String>,
@@ -31,15 +31,15 @@ pub struct InputManager {
     pub on_released: Signal<String>,
 }
 
-impl Debug for InputManager {
+impl Debug for InputService {
     fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         Ok(())
     }
 }
 
-impl InputManager {
-    pub fn new(_resource_manager: Arc<ResourceManager>) -> InputManager {
-        InputManager {
+impl InputService {
+    pub fn new(_resource_container: Arc<ResourceContainer>) -> InputService {
+        InputService {
             input_map: HashMap::new(),
             pressed_inputs: HashSet::new(),
             pressed_sources: HashSet::new(),
@@ -129,12 +129,12 @@ impl InputManager {
     }
 }
 
-impl IntrospectObject for InputManager {
+impl IntrospectObject for InputService {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![MethodInfo {
             name: "is_pressed".to_string(),
             call: MethodCaller::Const(Arc::new(|this, args| {
-                let this = cast_introspect_ref::<InputManager>(this);
+                let this = cast_introspect_ref::<InputService>(this);
 
                 let mut caster = ArgumentCaster::new("is_pressed", args);
                 let arg1 = caster.cast_next::<String>()?;
@@ -151,7 +151,7 @@ impl IntrospectObject for InputManager {
                 name: "on_pressed".to_string(),
                 ty: TypeId::of::<Signal<String>>(),
                 getter: Arc::new(|this| {
-                    this.downcast_ref::<InputManager>()
+                    this.downcast_ref::<InputService>()
                         .unwrap()
                         .on_pressed
                         .clone()
@@ -163,7 +163,7 @@ impl IntrospectObject for InputManager {
                 name: "on_released".to_string(),
                 ty: TypeId::of::<Signal<String>>(),
                 getter: Arc::new(|this| {
-                    this.downcast_ref::<InputManager>()
+                    this.downcast_ref::<InputService>()
                         .unwrap()
                         .on_released
                         .clone()
@@ -175,4 +175,4 @@ impl IntrospectObject for InputManager {
     }
 }
 
-impl Resource for InputManager {}
+impl Resource for InputService {}

@@ -1,11 +1,11 @@
-use crate::windows_manager::WinitWindowsManager;
+use crate::window_service::WinitWindowService;
 use core::ffi::c_void;
 use fruity_core::platform::Initializer;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
-use fruity_core::system::system_manager::SystemManager;
-use fruity_windows::frame_manager::FrameManager;
-use fruity_windows::windows_manager::WindowsManager;
+use fruity_core::system::system_service::SystemService;
+use fruity_windows::frame_service::FrameService;
+use fruity_windows::window_service::WindowService;
 use std::sync::Arc;
 use winit::dpi::LogicalSize;
 use winit::event::Event;
@@ -14,7 +14,7 @@ use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
 use winit::window::WindowBuilder;
 
-pub mod windows_manager;
+pub mod window_service;
 
 struct WindowSettings {
     title: String,
@@ -23,38 +23,38 @@ struct WindowSettings {
     resizable: bool,
 }
 
-pub fn initialize(resource_manager: Arc<ResourceManager>, _settings: &Settings) {
-    let windows_manager = resource_manager.require::<dyn WindowsManager>("windows_manager");
-    let windows_manager = windows_manager.read();
-    let windows_manager = windows_manager
+pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
+    let window_service = resource_container.require::<dyn WindowService>("window_service");
+    let window_service = window_service.read();
+    let window_service = window_service
         .as_any_ref()
-        .downcast_ref::<WinitWindowsManager>()
+        .downcast_ref::<WinitWindowService>()
         .unwrap();
 
-    let resource_manager_2 = resource_manager.clone();
-    windows_manager.on_enter_loop.add_observer(move |_| {
-        let frame_manager = resource_manager_2.require::<FrameManager>("frame_manager");
-        let mut frame_manager = frame_manager.write();
+    let resource_container_2 = resource_container.clone();
+    window_service.on_enter_loop.add_observer(move |_| {
+        let frame_service = resource_container_2.require::<FrameService>("frame_service");
+        let mut frame_service = frame_service.write();
 
-        frame_manager.begin_frame();
+        frame_service.begin_frame();
     });
 
-    let resource_manager_2 = resource_manager.clone();
-    windows_manager.on_start_update.add_observer(move |_| {
-        let frame_manager = resource_manager_2.require::<FrameManager>("frame_manager");
-        let mut frame_manager = frame_manager.write();
+    let resource_container_2 = resource_container.clone();
+    window_service.on_start_update.add_observer(move |_| {
+        let frame_service = resource_container_2.require::<FrameService>("frame_service");
+        let mut frame_service = frame_service.write();
 
-        frame_manager.begin_frame();
+        frame_service.begin_frame();
     });
 }
 
 pub fn platform(
-    resource_manager: Arc<ResourceManager>,
+    resource_container: Arc<ResourceContainer>,
     initializer: Initializer,
     settings: &Settings,
 ) {
     // Get dependencies
-    let system_manager = resource_manager.require::<SystemManager>("system_manager");
+    let system_service = resource_container.require::<SystemService>("system_service");
 
     // Read settings
     let window_settings = read_window_settings(settings);
@@ -74,33 +74,33 @@ pub fn platform(
     let window_id = window.id();
 
     // Build and inject the windows service
-    let windows_manager = WinitWindowsManager::new(window);
+    let window_service = WinitWindowService::new(window);
 
-    let on_start_update = windows_manager.on_start_update.clone();
-    let on_end_update = windows_manager.on_end_update.clone();
-    let on_resize = windows_manager.on_resize.clone();
-    let on_cursor_moved = windows_manager.on_cursor_moved.clone();
-    let on_event = windows_manager.on_event.clone();
-    let on_events_cleared = windows_manager.on_events_cleared.clone();
+    let on_start_update = window_service.on_start_update.clone();
+    let on_end_update = window_service.on_end_update.clone();
+    let on_resize = window_service.on_resize.clone();
+    let on_cursor_moved = window_service.on_cursor_moved.clone();
+    let on_event = window_service.on_event.clone();
+    let on_events_cleared = window_service.on_events_cleared.clone();
 
-    resource_manager
-        .add::<dyn WindowsManager>("windows_manager", Box::new(windows_manager))
+    resource_container
+        .add::<dyn WindowService>("window_service", Box::new(window_service))
         .unwrap();
 
     // Initialize the engine
-    initializer(resource_manager.clone(), settings);
+    initializer(resource_container.clone(), settings);
 
     // Run the begin systems before everything
-    let system_manager = system_manager.clone();
-    let system_manager_reader = system_manager.read();
-    system_manager_reader.run_begin();
-    std::mem::drop(system_manager_reader);
+    let system_service = system_service.clone();
+    let system_service_reader = system_service.read();
+    system_service_reader.run_begin();
+    std::mem::drop(system_service_reader);
 
     // Run the render loop
-    let windows_manager = resource_manager.require::<dyn WindowsManager>("windows_manager");
-    let windows_manager_reader = windows_manager.read();
-    windows_manager_reader.on_enter_loop().notify(());
-    std::mem::drop(windows_manager_reader);
+    let window_service = resource_container.require::<dyn WindowService>("window_service");
+    let window_service_reader = window_service.read();
+    window_service_reader.on_enter_loop().notify(());
+    std::mem::drop(window_service_reader);
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
@@ -139,14 +139,14 @@ pub fn platform(
                 event: WindowEvent::CursorMoved { position, .. },
                 ..
             } => {
-                let mut windows_manager = windows_manager.write();
-                let mut windows_manager = windows_manager
+                let mut window_service = window_service.write();
+                let mut window_service = window_service
                     .as_any_mut()
-                    .downcast_mut::<WinitWindowsManager>()
+                    .downcast_mut::<WinitWindowService>()
                     .unwrap();
 
-                windows_manager.cursor_position = (position.x as usize, position.y as usize);
-                std::mem::drop(windows_manager);
+                window_service.cursor_position = (position.x as usize, position.y as usize);
+                std::mem::drop(window_service);
 
                 on_cursor_moved.notify((position.x as usize, position.y as usize));
             }
@@ -169,8 +169,8 @@ pub fn platform(
         on_start_update.notify(());
 
         // Run the systems
-        let system_manager_reader = system_manager.read();
-        system_manager_reader.run();
+        let system_service_reader = system_service.read();
+        system_service_reader.run();
 
         // End the update
         on_end_update.notify(());

@@ -1,6 +1,6 @@
 use crate::platform::Initializer;
 use crate::settings::Settings;
-use crate::ResourceManager;
+use crate::ResourceContainer;
 use hot_reload_lib::load_symbol;
 use hot_reload_lib::HotReloadLib;
 use std::collections::HashMap;
@@ -19,15 +19,15 @@ pub enum LoadModuleError {
 /// A structure to manage module loading, supports hot reload
 pub struct ModuleManager {
     libs: HashMap<String, HotReloadLib>,
-    resource_manager: Arc<ResourceManager>,
+    resource_container: Arc<ResourceContainer>,
 }
 
 impl ModuleManager {
     /// Returns a ModuleManager
-    pub fn new(resource_manager: Arc<ResourceManager>) -> ModuleManager {
+    pub fn new(resource_container: Arc<ResourceContainer>) -> ModuleManager {
         ModuleManager {
             libs: HashMap::new(),
-            resource_manager: resource_manager.clone(),
+            resource_container: resource_container.clone(),
         }
     }
 
@@ -39,16 +39,16 @@ impl ModuleManager {
     /// * `lib` - The lib name
     ///
     pub fn load_module(&mut self, folder: &str, lib_name: &str, settings: &Settings) {
-        let resource_manager = self.resource_manager.clone();
+        let resource_container = self.resource_container.clone();
 
         let moved_settings = settings.clone();
         let lib = HotReloadLib::new(&folder, &lib_name, move |lib| {
-            let resource_manager = resource_manager.clone();
-            load_symbol::<Initializer>(&lib, "initialize")(resource_manager, &moved_settings);
+            let resource_container = resource_container.clone();
+            load_symbol::<Initializer>(&lib, "initialize")(resource_container, &moved_settings);
         });
         log::debug!("Loaded {}", lib_name);
 
-        lib.load_symbol::<Initializer>("initialize")(self.resource_manager.clone(), settings);
+        lib.load_symbol::<Initializer>("initialize")(self.resource_container.clone(), settings);
 
         self.libs.insert(lib_name.to_string(), lib);
     }

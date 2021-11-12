@@ -1,2 +1,2 @@
 /// Provides container for systems
-pub mod system_manager;
+pub mod system_service;

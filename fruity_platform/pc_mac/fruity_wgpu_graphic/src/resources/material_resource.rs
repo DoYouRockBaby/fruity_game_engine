@@ -1,10 +1,10 @@
 use crate::resources::shader_resource::WgpuShaderResource;
 use crate::resources::texture_resource::WgpuTextureResource;
-use crate::GraphicManager;
-use crate::WgpuGraphicsManager;
+use crate::GraphicService;
+use crate::WgpuGraphicManager;
 use fruity_any::*;
 use fruity_core::resource::resource::Resource;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::settings::build_settings_from_yaml;
 use fruity_core::settings::Settings;
@@ -68,10 +68,10 @@ impl WgpuMaterialResource {
     fn new(
         label: &str,
         material_params: MaterialParams,
-        graphic_manager: &WgpuGraphicsManager,
+        graphic_service: &WgpuGraphicManager,
     ) -> WgpuMaterialResource {
-        let surface_config = graphic_manager.get_config();
-        let device = graphic_manager.get_device();
+        let surface_config = graphic_service.get_config();
+        let device = graphic_service.get_device();
         let mut uniform_buffers: HashMap<BufferIdentifier, wgpu::Buffer> = HashMap::new();
         let shader = material_params.shader.clone();
 
@@ -87,12 +87,12 @@ impl WgpuMaterialResource {
                     let bind_group_index = binding_group.index;
                     match binding_group.ty {
                         MaterialParamsBindingGroupType::Camera => {
-                            let bind_group_layout = graphic_manager.get_camera_bind_group_layout();
+                            let bind_group_layout = graphic_service.get_camera_bind_group_layout();
                             let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                                layout: &graphic_manager.get_camera_bind_group_layout(),
+                                layout: &graphic_service.get_camera_bind_group_layout(),
                                 entries: &[wgpu::BindGroupEntry {
                                     binding: 0,
-                                    resource: graphic_manager
+                                    resource: graphic_service
                                         .get_camera_buffer()
                                         .as_entire_binding(),
                                 }],
@@ -280,12 +280,12 @@ pub fn load_material(
     identifier: &str,
     reader: &mut dyn Read,
     _settings: Settings,
-    resource_manager: Arc<ResourceManager>,
+    resource_container: Arc<ResourceContainer>,
 ) {
     // Get the dependencies
-    let graphic_manager = resource_manager.require::<dyn GraphicManager>("graphic_manager");
-    let graphic_manager = graphic_manager.read();
-    let graphic_manager = graphic_manager.downcast_ref::<WgpuGraphicsManager>();
+    let graphic_service = resource_container.require::<dyn GraphicService>("graphic_service");
+    let graphic_service = graphic_service.read();
+    let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
 
     // read the whole file
     let mut buffer = String::new();
@@ -303,7 +303,7 @@ pub fn load_material(
 
     // Parse settings
     let material_settings = if let Some(material_settings) =
-        build_material_params(&settings, resource_manager.clone())
+        build_material_params(&settings, resource_container.clone())
     {
         material_settings
     } else {
@@ -311,11 +311,11 @@ pub fn load_material(
     };
 
     // Build the resource
-    let resource = WgpuMaterialResource::new(identifier, material_settings, graphic_manager);
+    let resource = WgpuMaterialResource::new(identifier, material_settings, graphic_service);
 
     // Store the resource
     if let Err(_) =
-        resource_manager.add::<dyn MaterialResource>(identifier.clone(), Box::new(resource))
+        resource_container.add::<dyn MaterialResource>(identifier.clone(), Box::new(resource))
     {
         log::error!(
             "Couldn't add a resource cause the identifier \"{}\" already exists",

@@ -1,7 +1,7 @@
 use crate::resource::error::AddResourceError;
 use crate::resource::error::LoadResourceError;
 use crate::resource::error::RemoveResourceError;
-use crate::resource::inner_resource_manager::InnerResourceManager;
+use crate::resource::inner_resource_container::InnerResourceContainer;
 use crate::resource::resource::Resource;
 use crate::resource::resource_reference::ResourceReference;
 use crate::resource::serialized_resource::SerializedResource;
@@ -20,15 +20,15 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 /// A a function that is used to load a resource
-pub type ResourceLoader = fn(&str, &mut dyn Read, Settings, Arc<ResourceManager>);
+pub type ResourceLoader = fn(&str, &mut dyn Read, Settings, Arc<ResourceContainer>);
 
 /// The resource manager
 #[derive(FruityAny)]
-pub struct ResourceManager {
-    pub(crate) inner: RwLock<InnerResourceManager>,
+pub struct ResourceContainer {
+    pub(crate) inner: RwLock<InnerResourceContainer>,
 }
 
-impl Debug for ResourceManager {
+impl Debug for ResourceContainer {
     fn fmt(
         &self,
         _formatter: &mut std::fmt::Formatter<'_>,
@@ -37,11 +37,11 @@ impl Debug for ResourceManager {
     }
 }
 
-impl ResourceManager {
-    /// Returns a ResourceManager
-    pub fn new() -> ResourceManager {
-        ResourceManager {
-            inner: RwLock::new(InnerResourceManager::new()),
+impl ResourceContainer {
+    /// Returns a ResourceContainer
+    pub fn new() -> ResourceContainer {
+        ResourceContainer {
+            inner: RwLock::new(InnerResourceContainer::new()),
         }
     }
 
@@ -139,7 +139,7 @@ impl ResourceManager {
         path: &str,
         resource_type: &str,
     ) -> Result<(), LoadResourceError> {
-        InnerResourceManager::load_resource_file(self, path, resource_type)
+        InnerResourceContainer::load_resource_file(self, path, resource_type)
     }
 
     /// Load and add a resource into the collection
@@ -156,7 +156,7 @@ impl ResourceManager {
         reader: &mut dyn Read,
         settings: Settings,
     ) -> Result<(), LoadResourceError> {
-        InnerResourceManager::load_resource(self, identifier, resource_type, reader, settings)
+        InnerResourceContainer::load_resource(self, identifier, resource_type, reader, settings)
     }
 
     /// Load many resources for settings
@@ -165,7 +165,7 @@ impl ResourceManager {
     /// * `settings` - The settings of resources
     ///
     pub fn load_resources_settings(self: Arc<Self>, settings: Vec<Settings>) {
-        InnerResourceManager::load_resources_settings(self, settings)
+        InnerResourceContainer::load_resources_settings(self, settings)
     }
 
     /// Load resources for settings
@@ -174,17 +174,17 @@ impl ResourceManager {
     /// * `settings` - The settings of resources
     ///
     pub fn load_resource_settings(self: Arc<Self>, settings: Settings) -> Option<()> {
-        InnerResourceManager::load_resource_settings(self, settings)
+        InnerResourceContainer::load_resource_settings(self, settings)
     }
 }
 
-impl IntrospectObject for ResourceManager {
+impl IntrospectObject for ResourceContainer {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![
             MethodInfo {
                 name: "get".to_string(),
                 call: MethodCaller::Const(Arc::new(|this, args| {
-                    let this = cast_introspect_ref::<ResourceManager>(this);
+                    let this = cast_introspect_ref::<ResourceContainer>(this);
 
                     let mut caster = ArgumentCaster::new("get", args);
                     let arg1 = caster.cast_next::<String>()?;
@@ -197,7 +197,7 @@ impl IntrospectObject for ResourceManager {
             MethodInfo {
                 name: "add".to_string(),
                 call: MethodCaller::Const(Arc::new(|this, args| {
-                    let this = cast_introspect_ref::<ResourceManager>(this);
+                    let this = cast_introspect_ref::<ResourceContainer>(this);
 
                     let mut caster = ArgumentCaster::new("add", args);
                     let arg1 = caster.cast_next::<String>()?;
@@ -216,7 +216,7 @@ impl IntrospectObject for ResourceManager {
             MethodInfo {
                 name: "remove".to_string(),
                 call: MethodCaller::Const(Arc::new(|this, args| {
-                    let this = cast_introspect_ref::<ResourceManager>(this);
+                    let this = cast_introspect_ref::<ResourceContainer>(this);
 
                     let mut caster = ArgumentCaster::new("remove", args);
                     let arg1 = caster.cast_next::<String>()?;

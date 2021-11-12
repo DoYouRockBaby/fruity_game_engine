@@ -1,16 +1,16 @@
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use maplit::hashmap;
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::sync::Arc;
 
-pub fn load_default_resources(resource_manager: Arc<ResourceManager>) {
-    load_draw_line_shader(resource_manager.clone());
-    load_draw_line_material(resource_manager.clone());
+pub fn load_default_resources(resource_container: Arc<ResourceContainer>) {
+    load_draw_line_shader(resource_container.clone());
+    load_draw_line_material(resource_container.clone());
 }
 
-pub fn load_draw_line_shader(resource_manager: Arc<ResourceManager>) {
+pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
     let settings = Settings::Object(hashmap! {
         "bindings".to_string() => Settings::Array(vec![
             Settings::Object(hashmap!{
@@ -55,12 +55,12 @@ pub fn load_draw_line_shader(resource_manager: Arc<ResourceManager>) {
     .to_string();
 
     let mut shader_src = Cursor::new(shader_src);
-    resource_manager
+    resource_container
         .load_resource("Shaders/Draw Line", "wgsl", &mut shader_src, settings)
         .unwrap();
 }
 
-pub fn load_draw_line_material(resource_manager: Arc<ResourceManager>) {
+pub fn load_draw_line_material(resource_container: Arc<ResourceContainer>) {
     let settings = Settings::Object(HashMap::default());
 
     let material_src = "
@@ -74,7 +74,7 @@ binding_groups:
         .to_string();
 
     let mut material_src = Cursor::new(material_src);
-    resource_manager
+    resource_container
         .load_resource(
             "Materials/Draw Line",
             "material",

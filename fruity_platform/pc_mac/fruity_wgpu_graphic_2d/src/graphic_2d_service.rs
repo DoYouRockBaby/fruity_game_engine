@@ -1,56 +1,56 @@
 use fruity_any::*;
 use fruity_core::resource::resource::Resource;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
-use fruity_graphic::graphic_manager::GraphicManager;
+use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::Color;
 use fruity_graphic::math::Matrix4;
 use fruity_graphic::resources::material_resource::MaterialResource;
 use fruity_graphic::resources::shader_resource::ShaderResource;
-use fruity_graphic_2d::graphic_2d_manager::Graphic2dManager;
+use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
 use fruity_graphic_2d::math::vector2d::Vector2d;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
-use fruity_wgpu_graphic::graphic_manager::WgpuGraphicsManager;
+use fruity_wgpu_graphic::graphic_service::WgpuGraphicManager;
 use fruity_wgpu_graphic::resources::material_resource::BufferIdentifier;
 use fruity_wgpu_graphic::resources::material_resource::Vertex;
 use fruity_wgpu_graphic::resources::material_resource::WgpuMaterialResource;
 use fruity_wgpu_graphic::resources::shader_resource::WgpuShaderResource;
-use fruity_windows::windows_manager::WindowsManager;
+use fruity_windows::window_service::WindowService;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
 #[derive(Debug, FruityAny)]
-pub struct WgpuGraphics2dManager {
-    windows_manager: ResourceReference<dyn WindowsManager>,
-    graphic_manager: ResourceReference<dyn GraphicManager>,
-    resource_manager: Arc<ResourceManager>,
+pub struct WgpuGraphic2dManager {
+    window_service: ResourceReference<dyn WindowService>,
+    graphic_service: ResourceReference<dyn GraphicService>,
+    resource_container: Arc<ResourceContainer>,
 }
 
-impl WgpuGraphics2dManager {
-    pub fn new(resource_manager: Arc<ResourceManager>) -> WgpuGraphics2dManager {
-        let windows_manager = resource_manager.require::<dyn WindowsManager>("windows_manager");
-        let graphic_manager = resource_manager.require::<dyn GraphicManager>("graphic_manager");
+impl WgpuGraphic2dManager {
+    pub fn new(resource_container: Arc<ResourceContainer>) -> WgpuGraphic2dManager {
+        let window_service = resource_container.require::<dyn WindowService>("window_service");
+        let graphic_service = resource_container.require::<dyn GraphicService>("graphic_service");
 
-        WgpuGraphics2dManager {
-            windows_manager,
-            graphic_manager,
-            resource_manager,
+        WgpuGraphic2dManager {
+            window_service,
+            graphic_service,
+            resource_container,
         }
     }
 }
 
-impl Graphic2dManager for WgpuGraphics2dManager {
+impl Graphic2dService for WgpuGraphic2dManager {
     fn start_pass(&self, view_proj: Matrix4) {
-        let mut graphic_manager = self.graphic_manager.write();
-        graphic_manager.update_camera(view_proj);
-        graphic_manager.start_pass();
+        let mut graphic_service = self.graphic_service.write();
+        graphic_service.update_camera(view_proj);
+        graphic_service.start_pass();
     }
 
     fn end_pass(&self) {
-        let graphic_manager = self.graphic_manager.read();
-        graphic_manager.end_pass();
+        let graphic_service = self.graphic_service.read();
+        graphic_service.end_pass();
     }
 
     fn draw_square(
@@ -60,14 +60,14 @@ impl Graphic2dManager for WgpuGraphics2dManager {
         z_index: usize,
         material: ResourceReference<dyn MaterialResource>,
     ) {
-        let graphic_manager = self.graphic_manager.read();
-        let graphic_manager = graphic_manager.downcast_ref::<WgpuGraphicsManager>();
+        let graphic_service = self.graphic_service.read();
+        let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
 
         let material = material.read();
         let material = material.downcast_ref::<WgpuMaterialResource>();
 
-        let device = graphic_manager.get_device();
-        let config = graphic_manager.get_config();
+        let device = graphic_service.get_device();
+        let config = graphic_service.get_config();
 
         // Create the main render pipeline
         let vertices: &[Vertex] = &[
@@ -123,29 +123,29 @@ impl Graphic2dManager for WgpuGraphics2dManager {
             label: Some("main"),
         });
 
-        graphic_manager.push_render_bundle(bundle, z_index);
+        graphic_service.push_render_bundle(bundle, z_index);
     }
 
     fn draw_line(&self, pos1: Vector2d, pos2: Vector2d, width: u32, color: Color, z_index: usize) {
-        let windows_manager = self.windows_manager.read();
-        let graphic_manager = self.graphic_manager.read();
-        let graphic_manager = graphic_manager.downcast_ref::<WgpuGraphicsManager>();
+        let window_service = self.window_service.read();
+        let graphic_service = self.graphic_service.read();
+        let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
 
-        let queue = graphic_manager.get_queue();
-        let device = graphic_manager.get_device();
-        let config = graphic_manager.get_config();
-        let camera_transform = graphic_manager.get_camera_transform().clone();
-        let viewport_size = windows_manager.get_size().clone();
+        let queue = graphic_service.get_queue();
+        let device = graphic_service.get_device();
+        let config = graphic_service.get_config();
+        let camera_transform = graphic_service.get_camera_transform().clone();
+        let viewport_size = window_service.get_size().clone();
 
         // Get resources
         let material = self
-            .resource_manager
+            .resource_container
             .require::<dyn MaterialResource>("Materials/Draw Line");
         let material = material.read();
         let material = material.downcast_ref::<WgpuMaterialResource>();
 
         let shader = self
-            .resource_manager
+            .resource_container
             .require::<dyn ShaderResource>("Shaders/Draw Line");
         let shader = shader.read();
         let shader = shader.downcast_ref::<WgpuShaderResource>();
@@ -233,19 +233,19 @@ impl Graphic2dManager for WgpuGraphics2dManager {
             label: Some("main"),
         });
 
-        graphic_manager.push_render_bundle(bundle, z_index);
+        graphic_service.push_render_bundle(bundle, z_index);
     }
 
     fn get_cursor_position(&self) -> Vector2d {
-        let windows_manager = self.windows_manager.read();
-        let graphic_manager = self.graphic_manager.read();
+        let window_service = self.window_service.read();
+        let graphic_service = self.graphic_service.read();
 
         // Get informations from the resource dependencies
-        let cursor_position = windows_manager.get_cursor_position();
-        let viewport_size = windows_manager.get_size();
-        let camera_transform = graphic_manager.get_camera_transform().clone();
-        std::mem::drop(graphic_manager);
-        std::mem::drop(windows_manager);
+        let cursor_position = window_service.get_cursor_position();
+        let viewport_size = window_service.get_size();
+        let camera_transform = graphic_service.get_camera_transform().clone();
+        std::mem::drop(graphic_service);
+        std::mem::drop(window_service);
 
         // Transform the cursor in the engine world (especialy taking care of camera)
         let cursor_pos = Vector2d::new(
@@ -257,7 +257,7 @@ impl Graphic2dManager for WgpuGraphics2dManager {
     }
 }
 
-impl IntrospectObject for WgpuGraphics2dManager {
+impl IntrospectObject for WgpuGraphic2dManager {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }
@@ -267,4 +267,4 @@ impl IntrospectObject for WgpuGraphics2dManager {
     }
 }
 
-impl Resource for WgpuGraphics2dManager {}
+impl Resource for WgpuGraphic2dManager {}

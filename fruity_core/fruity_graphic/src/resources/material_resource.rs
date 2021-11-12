@@ -1,7 +1,7 @@
 use crate::resources::shader_resource::ShaderResource;
 use crate::resources::texture_resource::TextureResource;
 use fruity_core::resource::resource::Resource;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::settings::build_settings_from_yaml;
 use fruity_core::settings::Settings;
@@ -43,7 +43,7 @@ pub enum MaterialParamsBindingGroupType {
 
 pub fn load_material_settings(
     reader: &mut dyn Read,
-    resource_manager: Arc<ResourceManager>,
+    resource_container: Arc<ResourceContainer>,
 ) -> Option<MaterialParams> {
     // read the whole file
     let mut buffer = String::new();
@@ -60,15 +60,15 @@ pub fn load_material_settings(
     };
 
     // Parse settings
-    build_material_params(&settings, resource_manager)
+    build_material_params(&settings, resource_container)
 }
 
 pub fn build_material_params(
     settings: &Settings,
-    resource_manager: Arc<ResourceManager>,
+    resource_container: Arc<ResourceContainer>,
 ) -> Option<MaterialParams> {
     let shader_identifier = settings.get::<String>("shader", String::default());
-    let shader = resource_manager.get::<dyn ShaderResource>(&shader_identifier);
+    let shader = resource_container.get::<dyn ShaderResource>(&shader_identifier);
     let shader = if let Some(shader) = shader {
         shader
     } else {
@@ -78,7 +78,7 @@ pub fn build_material_params(
     let binding_groups = settings.get::<Vec<Settings>>("binding_groups", Vec::new());
     let binding_groups = binding_groups
         .iter()
-        .filter_map(|params| build_material_bind_group_params(params, resource_manager.clone()))
+        .filter_map(|params| build_material_bind_group_params(params, resource_container.clone()))
         .collect::<Vec<_>>();
 
     Some(MaterialParams {
@@ -89,7 +89,7 @@ pub fn build_material_params(
 
 fn build_material_bind_group_params(
     settings: &Settings,
-    resource_manager: Arc<ResourceManager>,
+    resource_container: Arc<ResourceContainer>,
 ) -> Option<MaterialParamsBindingGroup> {
     match &settings.get::<String>("type", String::default()) as &str {
         "camera" => {
@@ -105,7 +105,7 @@ fn build_material_bind_group_params(
             let bindings = settings.get::<Vec<Settings>>("bindings", Vec::new());
             let bindings = bindings
                 .iter()
-                .filter_map(|params| build_material_bind_params(params, resource_manager.clone()))
+                .filter_map(|params| build_material_bind_params(params, resource_container.clone()))
                 .collect::<Vec<_>>();
 
             Some(MaterialParamsBindingGroup {
@@ -119,12 +119,12 @@ fn build_material_bind_group_params(
 
 fn build_material_bind_params(
     params: &Settings,
-    resource_manager: Arc<ResourceManager>,
+    resource_container: Arc<ResourceContainer>,
 ) -> Option<MaterialParamsBinding> {
     match &params.get::<String>("type", String::default()) as &str {
         "texture" => {
             let texture_identifier = params.get::<String>("texture", String::default());
-            let texture = resource_manager.get::<dyn TextureResource>(&texture_identifier);
+            let texture = resource_container.get::<dyn TextureResource>(&texture_identifier);
 
             if let Some(texture) = texture {
                 Some(MaterialParamsBindingType::Texture { texture })
@@ -134,7 +134,7 @@ fn build_material_bind_params(
         }
         "sampler" => {
             let texture_identifier = params.get::<String>("texture", String::default());
-            let texture = resource_manager.get::<dyn TextureResource>(&texture_identifier);
+            let texture = resource_container.get::<dyn TextureResource>(&texture_identifier);
 
             if let Some(texture) = texture {
                 Some(MaterialParamsBindingType::Sampler { texture })

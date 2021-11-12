@@ -1,8 +1,8 @@
 use crate::js_value::utils::inject_serialized_into_v8_return_value;
 use crate::serialize::deserialize::deserialize_v8;
 use crate::JsRuntime;
-use fruity_core::object_factory::ObjectFactory;
-use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::object_factory_service::ObjectFactoryService;
+use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_introspect::serialized::ObjectFields;
 use fruity_introspect::serialized::Serialized;
@@ -11,19 +11,20 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::Arc;
 
-pub fn configure_constructors(runtime: &mut JsRuntime, resource_manager: Arc<ResourceManager>) {
+pub fn configure_constructors(runtime: &mut JsRuntime, resource_container: Arc<ResourceContainer>) {
     let mut global_object = runtime.global_object();
     let scope = &mut runtime.handle_scope();
 
-    let object_factory = resource_manager.require::<ObjectFactory>("object_factory");
-    let object_factory_reader = object_factory.read();
+    let object_factory_service =
+        resource_container.require::<ObjectFactoryService>("object_factory_service");
+    let object_factory_service_reader = object_factory_service.read();
 
-    object_factory_reader.iter().for_each(|(key, ..)| {
+    object_factory_service_reader.iter().for_each(|(key, ..)| {
         let mut data_fields = HashMap::new();
 
         data_fields.insert(
-            "object_factory".to_string(),
-            Serialized::NativeObject(Box::new(object_factory.clone())),
+            "object_factory_service".to_string(),
+            Serialized::NativeObject(Box::new(object_factory_service.clone())),
         );
 
         data_fields.insert(
@@ -47,9 +48,10 @@ pub fn configure_constructors(runtime: &mut JsRuntime, resource_manager: Arc<Res
                 let data_fields = ObjectFields::try_from(data).unwrap();
 
                 // Get the object factory
-                let test = data_fields.get("object_factory").unwrap().clone();
-                let object_factory = ResourceReference::<ObjectFactory>::try_from(test).unwrap();
-                let object_factory = object_factory.read();
+                let test = data_fields.get("object_factory_service").unwrap().clone();
+                let object_factory_service =
+                    ResourceReference::<ObjectFactoryService>::try_from(test).unwrap();
+                let object_factory_service = object_factory_service.read();
 
                 // Get the object identifier
                 let object_identifier =
@@ -70,7 +72,8 @@ pub fn configure_constructors(runtime: &mut JsRuntime, resource_manager: Arc<Res
                 }
 
                 // Call the function
-                let result = object_factory.instantiate(&object_identifier, deserialized_args);
+                let result =
+                    object_factory_service.instantiate(&object_identifier, deserialized_args);
 
                 // Return the result
                 if let Some(result) = result {

@@ -5,7 +5,7 @@ use crate::ui_element::layout::Empty;
 use crate::ui_element::UIAlign;
 use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
-use crate::ComponentEditorManager;
+use crate::ComponentEditorService;
 use fruity_core::component::component_rwlock::ComponentRwLock;
 
 pub mod primitive;
@@ -13,10 +13,10 @@ pub mod primitive;
 pub fn edit_component_fields(component: ComponentRwLock) -> UIElement {
     let world_state = use_global::<WorldState>();
 
-    let resource_manager = world_state.resource_manager.clone();
-    let component_editor_manager =
-        resource_manager.require::<ComponentEditorManager>("component_editor_manager");
-    let component_editor_manager = component_editor_manager.read();
+    let resource_container = world_state.resource_container.clone();
+    let component_editor_service =
+        resource_container.require::<ComponentEditorService>("component_editor_service");
+    let component_editor_service = component_editor_service.read();
 
     let reader = component.read();
     let fields_edit = reader
@@ -24,7 +24,7 @@ pub fn edit_component_fields(component: ComponentRwLock) -> UIElement {
         .iter()
         .map(|field_info| {
             if let Some(field_editor) =
-                component_editor_manager.get_component_field_editor(field_info.ty)
+                component_editor_service.get_component_field_editor(field_info.ty)
             {
                 field_editor(component.clone(), field_info)
             } else {

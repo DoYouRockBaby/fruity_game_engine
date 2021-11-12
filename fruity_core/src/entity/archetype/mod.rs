@@ -8,7 +8,7 @@ use crate::entity::entity::get_type_identifier;
 use crate::entity::entity::get_type_identifier_by_any;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
-use crate::entity::entity_manager::RemoveEntityError;
+use crate::entity::entity_service::RemoveEntityError;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::sync::RwLock;

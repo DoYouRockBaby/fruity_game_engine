@@ -2,10 +2,10 @@ use crate::resource::error::AddResourceError;
 use crate::resource::error::LoadResourceError;
 use crate::resource::error::RemoveResourceError;
 use crate::resource::resource::Resource;
-use crate::resource::resource_manager::ResourceLoader;
+use crate::resource::resource_container::ResourceLoader;
 use crate::resource::resource_reference::ResourceReference;
 use crate::settings::Settings;
-use crate::ResourceManager;
+use crate::ResourceContainer;
 use fruity_any::*;
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -16,12 +16,12 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 #[derive(FruityAny)]
-pub struct InnerResourceManager {
+pub struct InnerResourceContainer {
     resources: HashMap<String, Arc<dyn Resource>>,
     resource_loaders: HashMap<String, ResourceLoader>,
 }
 
-impl Debug for InnerResourceManager {
+impl Debug for InnerResourceContainer {
     fn fmt(
         &self,
         _formatter: &mut std::fmt::Formatter<'_>,
@@ -30,9 +30,9 @@ impl Debug for InnerResourceManager {
     }
 }
 
-impl InnerResourceManager {
-    pub fn new() -> InnerResourceManager {
-        InnerResourceManager {
+impl InnerResourceContainer {
+    pub fn new() -> InnerResourceContainer {
+        InnerResourceContainer {
             resources: HashMap::new(),
             resource_loaders: HashMap::new(),
         }
@@ -95,7 +95,7 @@ impl InnerResourceManager {
     }
 
     pub fn load_resource_file(
-        this: Arc<ResourceManager>,
+        this: Arc<ResourceContainer>,
         path: &str,
         resource_type: &str,
     ) -> Result<(), LoadResourceError> {
@@ -106,7 +106,7 @@ impl InnerResourceManager {
     }
 
     pub fn load_resource(
-        this: Arc<ResourceManager>,
+        this: Arc<ResourceContainer>,
         identifier: &str,
         resource_type: &str,
         reader: &mut dyn Read,
@@ -128,13 +128,13 @@ impl InnerResourceManager {
         Ok(())
     }
 
-    pub fn load_resources_settings(this: Arc<ResourceManager>, settings: Vec<Settings>) {
+    pub fn load_resources_settings(this: Arc<ResourceContainer>, settings: Vec<Settings>) {
         settings.into_iter().for_each(|settings| {
             Self::load_resource_settings(this.clone(), settings);
         })
     }
 
-    pub fn load_resource_settings(this: Arc<ResourceManager>, settings: Settings) -> Option<()> {
+    pub fn load_resource_settings(this: Arc<ResourceContainer>, settings: Settings) -> Option<()> {
         // Parse settings
         let fields = if let Settings::Object(fields) = settings {
             fields

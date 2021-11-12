@@ -7,7 +7,7 @@ use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
 use crate::resource::resource::Resource;
 use crate::signal::Signal;
-use crate::ResourceManager;
+use crate::ResourceContainer;
 use fruity_any::*;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::utils::cast_introspect_mut;
@@ -30,7 +30,7 @@ pub enum RemoveEntityError {
 
 /// A storage for every entities, use [’Archetypes’] to store entities of different types
 #[derive(Debug, FruityAny)]
-pub struct EntityManager {
+pub struct EntityService {
     id_incrementer: u64,
     archetypes: Vec<Archetype>,
 
@@ -41,10 +41,10 @@ pub struct EntityManager {
     pub on_entity_removed: Signal<EntityId>,
 }
 
-impl EntityManager {
-    /// Returns an EntityManager
-    pub fn new(_resource_manager: Arc<ResourceManager>) -> EntityManager {
-        EntityManager {
+impl EntityService {
+    /// Returns an EntityService
+    pub fn new(_resource_container: Arc<ResourceContainer>) -> EntityService {
+        EntityService {
             id_incrementer: 0,
             archetypes: Vec::new(),
             on_entity_created: Signal::new(),
@@ -102,7 +102,7 @@ impl EntityManager {
         &self,
         entity_identifier: EntityTypeIdentifier,
     ) -> impl Iterator<Item = ComponentListRwLock> {
-        let this = unsafe { &*(self as *const _) } as &EntityManager;
+        let this = unsafe { &*(self as *const _) } as &EntityService;
         this.iter_entities(entity_identifier.clone())
             .map(move |entity| {
                 entity
@@ -173,13 +173,13 @@ impl EntityManager {
     }
 }
 
-impl IntrospectObject for EntityManager {
+impl IntrospectObject for EntityService {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![
             MethodInfo {
                 name: "iter_entities".to_string(),
                 call: MethodCaller::Const(Arc::new(move |this, args| {
-                    let this = cast_introspect_ref::<EntityManager>(this);
+                    let this = cast_introspect_ref::<EntityService>(this);
 
                     let mut caster = ArgumentCaster::new("iter_entities", args);
                     let arg1 = caster.cast_next::<Vec<String>>()?;
@@ -194,7 +194,7 @@ impl IntrospectObject for EntityManager {
             MethodInfo {
                 name: "iter_components".to_string(),
                 call: MethodCaller::Const(Arc::new(move |this, args| {
-                    let this = cast_introspect_ref::<EntityManager>(this);
+                    let this = cast_introspect_ref::<EntityService>(this);
 
                     let mut caster = ArgumentCaster::new("iter_components", args);
                     let arg1 = caster.cast_next::<Vec<String>>()?;
@@ -209,7 +209,7 @@ impl IntrospectObject for EntityManager {
             MethodInfo {
                 name: "create".to_string(),
                 call: MethodCaller::Mut(Arc::new(move |this, args| {
-                    let this = cast_introspect_mut::<EntityManager>(this);
+                    let this = cast_introspect_mut::<EntityService>(this);
 
                     let mut caster = ArgumentCaster::new("create", args);
                     let arg1 = caster.cast_next::<String>()?;
@@ -222,7 +222,7 @@ impl IntrospectObject for EntityManager {
             MethodInfo {
                 name: "remove".to_string(),
                 call: MethodCaller::Mut(Arc::new(move |this, args| {
-                    let this = cast_introspect_mut::<EntityManager>(this);
+                    let this = cast_introspect_mut::<EntityService>(this);
 
                     let mut caster = ArgumentCaster::new("remove", args);
                     let arg1 = caster.cast_next::<EntityId>()?;
@@ -239,7 +239,7 @@ impl IntrospectObject for EntityManager {
             name: "on_entity_created".to_string(),
             ty: TypeId::of::<Signal<EntitySharedRwLock>>(),
             getter: Arc::new(|this| {
-                this.downcast_ref::<EntityManager>()
+                this.downcast_ref::<EntityService>()
                     .unwrap()
                     .on_entity_created
                     .clone()
@@ -250,4 +250,4 @@ impl IntrospectObject for EntityManager {
     }
 }
 
-impl Resource for EntityManager {}
+impl Resource for EntityService {}
