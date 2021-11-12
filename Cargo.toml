@@ -13,9 +13,9 @@ pretty_env_logger = "0.4.0"
 log = "0.4.14"
 rayon = "1.5"
 mini-redis = "0.4"
-# fruity_editor = { path = "fruity_editor" }
-# fruity_editor_graphic_2d = { path = "fruity_editor/fruity_editor_graphic_2d" }
-# fruity_editor_javascript = { path = "fruity_editor/fruity_editor_javascript" }
+fruity_editor = { path = "fruity_editor" }
+fruity_editor_graphic_2d = { path = "fruity_editor/fruity_editor_graphic_2d" }
+fruity_editor_javascript = { path = "fruity_editor/fruity_editor_javascript" }
 fruity_graphic = { path = "fruity_core/fruity_graphic" }
 fruity_graphic_2d = { path = "fruity_core/fruity_graphic_2d" }
 fruity_input = { path = "fruity_core/fruity_input" }
@@ -26,3 +26,4 @@ fruity_wgpu_graphic = { path = "fruity_platform/pc_mac/fruity_wgpu_graphic" }
 fruity_wgpu_graphic_2d = { path = "fruity_platform/pc_mac/fruity_wgpu_graphic_2d" }
 fruity_winit_input = { path = "fruity_platform/pc_mac/fruity_winit_input" }
 fruity_winit_windows = { path = "fruity_platform/pc_mac/fruity_winit_windows" }
+fruity_egui_editor = { path = "fruity_platform/pc_mac/fruity_egui_editor" }

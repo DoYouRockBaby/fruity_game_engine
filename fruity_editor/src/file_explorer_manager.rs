@@ -1,9 +1,7 @@
 use fruity_any::*;
-use fruity_core::resource::resource_manager::ResourceIdentifier;
+use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_manager::ResourceManager;
-use fruity_core::service::service::Service;
-use fruity_core::service::service_manager::ServiceManager;
-use fruity_core::service::service_rwlock::ServiceRwLock;
+use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_graphic::resources::texture_resource::TextureResource;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
@@ -12,25 +10,23 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 struct FileTypeEntry {
-    get_thumbnail: Arc<dyn Fn(&str) -> Option<Arc<TextureResource>> + Send + Sync>,
+    get_thumbnail:
+        Arc<dyn Fn(&str) -> Option<ResourceReference<dyn TextureResource>> + Send + Sync>,
     on_selected: Arc<dyn Fn(&str) + Send + Sync>,
 }
 
 #[derive(FruityAny)]
 pub struct FileExplorerManager {
-    resource_manager: ServiceRwLock<ResourceManager>,
+    resource_manager: Arc<ResourceManager>,
     file_types: HashMap<String, FileTypeEntry>,
 }
 
 impl FileExplorerManager {
-    pub fn new(service_manager: &Arc<RwLock<ServiceManager>>) -> Self {
-        let service_manager = service_manager.read().unwrap();
-
+    pub fn new(resource_manager: Arc<ResourceManager>) -> Self {
         FileExplorerManager {
-            resource_manager: service_manager.get::<ResourceManager>().unwrap(),
+            resource_manager,
             file_types: HashMap::new(),
         }
     }
@@ -38,7 +34,10 @@ impl FileExplorerManager {
     pub fn register_file_type(
         &mut self,
         file_type: &str,
-        get_thumbnail: impl Fn(&str) -> Option<Arc<TextureResource>> + Send + Sync + 'static,
+        get_thumbnail: impl Fn(&str) -> Option<ResourceReference<dyn TextureResource>>
+            + Send
+            + Sync
+            + 'static,
         on_selected: impl Fn(&str) + Send + Sync + 'static,
     ) {
         self.file_types.insert(
@@ -50,15 +49,12 @@ impl FileExplorerManager {
         );
     }
 
-    pub fn get_thumbnail(&self, file_path: &str) -> Arc<TextureResource> {
+    pub fn get_thumbnail(&self, file_path: &str) -> ResourceReference<dyn TextureResource> {
         match self.inner_get_thumbnail(file_path) {
             Some(thumbnail) => thumbnail,
-            None => {
-                let resource_manager = self.resource_manager.read().unwrap();
-                resource_manager
-                    .get::<TextureResource>(ResourceIdentifier("Editor/Icons/unknown".to_string()))
-                    .unwrap()
-            }
+            None => self
+                .resource_manager
+                .require::<dyn TextureResource>("Editor/Icons/unknown"),
         }
     }
 
@@ -75,7 +71,10 @@ impl FileExplorerManager {
         Some(())
     }
 
-    fn inner_get_thumbnail(&self, file_path: &str) -> Option<Arc<TextureResource>> {
+    fn inner_get_thumbnail(
+        &self,
+        file_path: &str,
+    ) -> Option<ResourceReference<dyn TextureResource>> {
         let file_type = Self::get_file_type_from_path(file_path)?;
         let file_type = self.file_types.get(&file_type)?;
         (file_type.get_thumbnail)(file_path)
@@ -106,4 +105,4 @@ impl IntrospectObject for FileExplorerManager {
     }
 }
 
-impl Service for FileExplorerManager {}
+impl Resource for FileExplorerManager {}

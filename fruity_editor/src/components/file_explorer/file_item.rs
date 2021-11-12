@@ -1,4 +1,3 @@
-use crate::components::file_explorer::ResourceIdentifier;
 use crate::components::file_explorer::TextureResource;
 use crate::hooks::use_global;
 use crate::state::file_explorer::FileExplorerState;
@@ -10,17 +9,17 @@ use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
 use crate::Arc;
 use crate::FileExplorerManager;
-use fruity_core::resource::resource_manager::ResourceManager;
 use std::path::PathBuf;
 
 pub fn file_item_component(path: PathBuf) -> UIElement {
     let world_state = use_global::<WorldState>();
-    let service_manager = world_state.service_manager.read().unwrap();
-    let file_explorer_manager = service_manager.get::<FileExplorerManager>().unwrap();
-    let file_explorer_manager_reader = file_explorer_manager.read().unwrap();
-    let resource_manager = service_manager.read::<ResourceManager>();
-    let file_explorer_manager_2 = file_explorer_manager.clone();
 
+    let resource_manager = world_state.resource_manager.clone();
+    let file_explorer_manager =
+        resource_manager.require::<FileExplorerManager>("file_explorer_manager");
+    let file_explorer_manager_reader = file_explorer_manager.read();
+
+    let file_explorer_manager_2 = file_explorer_manager.clone();
     let path_string = path.to_str().unwrap().to_string();
     if !path.is_dir() {
         Column {
@@ -28,7 +27,7 @@ pub fn file_item_component(path: PathBuf) -> UIElement {
                 ImageButton {
                     image: file_explorer_manager_reader.get_thumbnail(&path_string),
                     on_click: Arc::new(move || {
-                        let file_explorer_manager = file_explorer_manager_2.read().unwrap();
+                        let file_explorer_manager = file_explorer_manager_2.read();
                         file_explorer_manager.notify_selected(&path_string);
                     }),
                     width: 64.0,
@@ -49,11 +48,7 @@ pub fn file_item_component(path: PathBuf) -> UIElement {
         Column {
             children: vec![
                 ImageButton {
-                    image: resource_manager
-                        .get::<TextureResource>(ResourceIdentifier(
-                            "Editor/Icons/folder".to_string(),
-                        ))
-                        .unwrap(),
+                    image: resource_manager.require::<dyn TextureResource>("Editor/Icons/folder"),
                     on_click: Arc::new(move || {
                         let file_explorer_state = use_global::<FileExplorerState>();
 

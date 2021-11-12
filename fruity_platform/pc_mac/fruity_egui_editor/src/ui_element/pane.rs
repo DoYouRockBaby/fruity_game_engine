@@ -1,10 +1,10 @@
-use crate::hooks::use_state;
-use crate::ui_element::egui::app::DrawContext;
-use crate::ui_element::egui::draw_element;
-use crate::ui_element::pane::Pane;
-use crate::ui_element::pane::PaneGrid;
-use crate::ui_element::pane::UIPaneSide;
+use crate::ui_element::app::DrawContext;
+use crate::ui_element::draw_element;
 use comp_state::CloneState;
+use fruity_editor::hooks::use_state;
+use fruity_editor::ui_element::pane::Pane;
+use fruity_editor::ui_element::pane::PaneGrid;
+use fruity_editor::ui_element::pane::UIPaneSide;
 
 pub fn draw_pane_grid<'a>(elem: PaneGrid, _ui: &mut egui::Ui, ctx: &mut DrawContext) {
     // Initialize the pane grid state

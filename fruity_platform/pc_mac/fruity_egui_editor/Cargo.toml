@@ -1,0 +1,29 @@
+[package]
+name = "fruity_egui_editor"
+version = "0.1.0"
+edition = "2018"
+resolver = "2"
+
+# [lib]
+# crate-type = ["dylib"]
+
+[dependencies]
+winit = "0.25.0"
+lazy_static = "1.4"
+egui_wgpu_backend = "0.14"
+wgpu = "0.11.0"
+egui = "0.15"
+epi = "0.15"
+image = { version = "0.23", default-features = false, features = ["png", "jpeg", "gif", "bmp", "ico", "tiff"] }
+egui_winit_platform = "0.11"
+maplit = "1.0.2"
+comp_state = { path = "../../../deps/comp_state" }
+fruity_any = { path = "../../../fruity_core/fruity_any" }
+fruity_core = { path = "../../../fruity_core" }
+fruity_introspect = { path = "../../../fruity_core/fruity_introspect" }
+fruity_graphic = { path = "../../../fruity_core/fruity_graphic" }
+fruity_windows = { path = "../../../fruity_core/fruity_windows" }
+fruity_editor = { path = "../../../fruity_editor" }
+fruity_wgpu_graphic = { path = "../fruity_wgpu_graphic" }
+fruity_winit_windows = { path = "../fruity_winit_windows" }
+log = "0.4.14"

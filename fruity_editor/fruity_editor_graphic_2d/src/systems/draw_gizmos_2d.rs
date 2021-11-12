@@ -3,8 +3,8 @@ use fruity_core::component::component_rwlock::ComponentRwLock;
 use fruity_core::entity::entity::EntityId;
 use fruity_core::entity::entity_manager::EntityManager;
 use fruity_core::entity_type;
-use fruity_core::service::service_guard::ServiceReadGuard;
-use fruity_core::service::service_manager::ServiceManager;
+use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_editor::hooks::use_global;
 use fruity_editor::state::entity::EntityState;
 use fruity_graphic::math::GREEN;
@@ -13,15 +13,15 @@ use fruity_graphic_2d::components::position::Position;
 use fruity_graphic_2d::components::size::Size;
 use rayon::prelude::*;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 pub fn draw_gizmos_2d(
     entity_id: &EntityId,
     position: ComponentRwLock,
     size: ComponentRwLock,
-    gizmos_service: ServiceReadGuard<GizmosService>,
+    gizmos_service: ResourceReference<GizmosService>,
 ) {
     let entity = use_global::<EntityState>();
+    let gizmos_service = gizmos_service.read();
 
     if let Some(selected_entity) = &entity.selected_entity {
         let selected_entity_id = {
@@ -137,9 +137,11 @@ pub fn draw_gizmos_2d(
     }
 }
 
-pub fn draw_gizmos_2d_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
-    let service_manager = service_manager.read().unwrap();
-    let entity_manager = service_manager.read::<EntityManager>();
+pub fn draw_gizmos_2d_untyped(resource_manager: Arc<ResourceManager>) {
+    let service1 = resource_manager.require::<GizmosService>("gizmos_service");
+
+    let entity_manager = resource_manager.require::<EntityManager>("entity_manager");
+    let entity_manager = entity_manager.read();
 
     entity_manager
         .iter_components(entity_type!["Position", "Size"])
@@ -161,7 +163,6 @@ pub fn draw_gizmos_2d_untyped(service_manager: Arc<RwLock<ServiceManager>>) {
                 }
             };
 
-            let service1 = service_manager.read::<GizmosService>();
-            draw_gizmos_2d(&components.entity_id(), position, size, service1);
+            draw_gizmos_2d(&components.entity_id(), position, size, service1.clone());
         });
 }

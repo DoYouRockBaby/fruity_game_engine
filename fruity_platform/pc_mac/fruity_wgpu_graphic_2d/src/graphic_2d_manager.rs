@@ -30,37 +30,14 @@ pub struct WgpuGraphics2dManager {
 
 impl WgpuGraphics2dManager {
     pub fn new(resource_manager: Arc<ResourceManager>) -> WgpuGraphics2dManager {
-        let windows_manager =
-            resource_manager.require::<dyn WindowsManager>("windows_manager");
-        let graphic_manager =
-            resource_manager.require::<dyn GraphicManager>("graphic_manager");
+        let windows_manager = resource_manager.require::<dyn WindowsManager>("windows_manager");
+        let graphic_manager = resource_manager.require::<dyn GraphicManager>("graphic_manager");
 
         WgpuGraphics2dManager {
             windows_manager,
             graphic_manager,
             resource_manager,
         }
-    }
-
-    /// Get the cursor position in the 2D world, take in care the camera transform
-    pub fn get_cursor_position(&self) -> Vector2d {
-        let windows_manager = self.windows_manager.read();
-        let graphic_manager = self.graphic_manager.read();
-
-        // Get informations from the services
-        let cursor_position = windows_manager.get_cursor_position();
-        let viewport_size = windows_manager.get_size();
-        let camera_transform = graphic_manager.get_camera_transform().clone();
-        std::mem::drop(graphic_manager);
-        std::mem::drop(windows_manager);
-
-        // Transform the cursor in the engine world (especialy taking care of camera)
-        let cursor_pos = Vector2d::new(
-            (cursor_position.0 as f32 / viewport_size.0 as f32) * 2.0 - 1.0,
-            (cursor_position.1 as f32 / viewport_size.1 as f32) * -2.0 + 1.0,
-        );
-
-        camera_transform.invert() * cursor_pos
     }
 }
 
@@ -257,6 +234,26 @@ impl Graphic2dManager for WgpuGraphics2dManager {
         });
 
         graphic_manager.push_render_bundle(bundle, z_index);
+    }
+
+    fn get_cursor_position(&self) -> Vector2d {
+        let windows_manager = self.windows_manager.read();
+        let graphic_manager = self.graphic_manager.read();
+
+        // Get informations from the services
+        let cursor_position = windows_manager.get_cursor_position();
+        let viewport_size = windows_manager.get_size();
+        let camera_transform = graphic_manager.get_camera_transform().clone();
+        std::mem::drop(graphic_manager);
+        std::mem::drop(windows_manager);
+
+        // Transform the cursor in the engine world (especialy taking care of camera)
+        let cursor_pos = Vector2d::new(
+            (cursor_position.0 as f32 / viewport_size.0 as f32) * 2.0 - 1.0,
+            (cursor_position.1 as f32 / viewport_size.1 as f32) * -2.0 + 1.0,
+        );
+
+        camera_transform.invert() * cursor_pos
     }
 }
 

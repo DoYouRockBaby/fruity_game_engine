@@ -1,9 +1,9 @@
-use crate::hooks::topo;
-use crate::ui_element::egui::app::DrawContext;
-use crate::ui_element::egui::draw_element;
-use crate::ui_element::menu::MenuBar;
-use crate::ui_element::menu::MenuSection;
+use crate::ui_element::app::DrawContext;
+use crate::ui_element::draw_element;
 use egui::menu;
+use fruity_editor::hooks::topo;
+use fruity_editor::ui_element::menu::MenuBar;
+use fruity_editor::ui_element::menu::MenuSection;
 
 #[topo::nested]
 pub fn draw_menu_bar<'a>(elem: MenuBar, _ui: &mut egui::Ui, ctx: &mut DrawContext) {

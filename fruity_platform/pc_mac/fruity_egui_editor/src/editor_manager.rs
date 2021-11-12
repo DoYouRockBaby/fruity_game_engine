@@ -1,7 +1,5 @@
-use crate::hooks::use_global;
-use crate::state::entity::EntityState;
-use crate::ui_element::egui::app::Application;
-use crate::ui_element::egui::app::DrawContext;
+use crate::ui_element::app::Application;
+use crate::ui_element::app::DrawContext;
 use egui::FontDefinitions;
 use egui_wgpu_backend::RenderPass;
 use egui_wgpu_backend::ScreenDescriptor;
@@ -10,21 +8,24 @@ use egui_winit_platform::PlatformDescriptor;
 use epi::*;
 use fruity_any::*;
 use fruity_core::entity::entity::EntityId;
-use fruity_core::service::service::Service;
-use fruity_core::service::service_manager::ServiceManager;
-use fruity_core::service::service_rwlock::ServiceRwLock;
-use fruity_core::service::utils::cast_service;
-use fruity_core::service::utils::ArgumentCaster;
+use fruity_core::resource::resource::Resource;
+use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_reference::ResourceReference;
+use fruity_editor::hooks::use_global;
+use fruity_editor::state::entity::EntityState;
 use fruity_graphic::graphic_manager::GraphicManager;
 use fruity_introspect::serialized::Serialized;
+use fruity_introspect::utils::cast_introspect_ref;
+use fruity_introspect::utils::ArgumentCaster;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
+use fruity_wgpu_graphic::graphic_manager::WgpuGraphicsManager;
 use fruity_windows::windows_manager::WindowsManager;
+use fruity_winit_windows::windows_manager::WinitWindowsManager;
 use std::fmt::Debug;
 use std::sync::Arc;
-use std::sync::RwLock;
 use std::time::Instant;
 use winit::event::Event;
 
@@ -38,8 +39,8 @@ pub struct EditorManagerState {
 
 #[derive(FruityAny)]
 pub struct EditorManager {
-    windows_manager: ServiceRwLock<WindowsManager>,
-    graphic_manager: ServiceRwLock<GraphicManager>,
+    windows_manager: ResourceReference<dyn WindowsManager>,
+    graphic_manager: ResourceReference<dyn GraphicManager>,
     state: EditorManagerState,
 }
 
@@ -56,40 +57,41 @@ impl Debug for EditorManager {
 }
 
 impl EditorManager {
-    pub fn new(service_manager: &Arc<RwLock<ServiceManager>>) -> EditorManager {
-        let service_manager_reader = service_manager.read().unwrap();
-        let windows_manager = service_manager_reader.get::<WindowsManager>().unwrap();
-        let graphic_manager = service_manager_reader.get::<GraphicManager>().unwrap();
-        let windows_manager_reader = windows_manager.read().unwrap();
-        let graphic_manager_reader = graphic_manager.read().unwrap();
+    pub fn new(resource_manager: Arc<ResourceManager>) -> EditorManager {
+        let windows_manager = resource_manager.require::<dyn WindowsManager>("windows_manager");
+        let graphic_manager = resource_manager.require::<dyn GraphicManager>("graphic_manager");
+
+        let windows_manager_reader = windows_manager.read();
+        let windows_manager_reader = windows_manager_reader.downcast_ref::<WinitWindowsManager>();
+        let graphic_manager_reader = graphic_manager.read();
 
         // Register to events of graphic_manager to update the UI when needed
-        let service_manager_2 = service_manager.clone();
+        let resource_manager_2 = resource_manager.clone();
         graphic_manager_reader
-            .on_before_draw_end
+            .on_before_draw_end()
             .add_observer(move |_| {
-                let service_manager = service_manager_2.read().unwrap();
-                let mut editor_manager = service_manager.write::<EditorManager>();
+                let editor_manager = resource_manager_2.require::<EditorManager>("editor_manager");
+                let mut editor_manager = editor_manager.write();
 
                 editor_manager.draw();
             });
 
-        let service_manager_2 = service_manager.clone();
+        let resource_manager_2 = resource_manager.clone();
         windows_manager_reader.on_event.add_observer(move |event| {
-            let service_manager = service_manager_2.read().unwrap();
-            let mut editor_manager = service_manager.write::<EditorManager>();
+            let editor_manager = resource_manager_2.require::<EditorManager>("editor_manager");
+            let mut editor_manager = editor_manager.write();
 
             editor_manager.handle_event(&event);
         });
 
         // Create the base UI
-        let application = Application::new(service_manager);
+        let application = Application::new(resource_manager.clone());
 
         // Connect to the window
         let state = EditorManager::initialize(
             application,
             windows_manager.clone(),
-            &graphic_manager_reader,
+            graphic_manager.clone(),
         );
 
         EditorManager {
@@ -101,21 +103,23 @@ impl EditorManager {
 
     pub fn initialize(
         application: Application,
-        windows_manager: ServiceRwLock<WindowsManager>,
-        graphic_manager: &GraphicManager,
+        windows_manager: ResourceReference<dyn WindowsManager>,
+        graphic_manager: ResourceReference<dyn GraphicManager>,
     ) -> EditorManagerState {
-        let windows_manager_reader = windows_manager.read().unwrap();
+        let windows_manager = windows_manager.read();
+        let graphic_manager = graphic_manager.read();
+        let graphic_manager = graphic_manager.downcast_ref::<WgpuGraphicsManager>();
 
         // Get all what we need to initialize
         let device = graphic_manager.get_device();
         let config = graphic_manager.get_config();
 
         // We use the egui_winit_platform crate as the platform.
-        let size = windows_manager_reader.get_size();
+        let size = windows_manager.get_size();
         let platform = Platform::new(PlatformDescriptor {
             physical_width: size.0 as u32,
             physical_height: size.1 as u32,
-            scale_factor: windows_manager_reader.get_scale_factor(),
+            scale_factor: windows_manager.get_scale_factor(),
             font_definitions: FontDefinitions::default(),
             style: Default::default(),
         });
@@ -133,8 +137,11 @@ impl EditorManager {
     }
 
     fn draw(&mut self) {
-        let graphic_manager = self.graphic_manager.read().unwrap();
-        let windows_manager = self.windows_manager.read().unwrap();
+        let windows_manager = self.windows_manager.read();
+        let windows_manager = windows_manager.downcast_ref::<WinitWindowsManager>();
+        let graphic_manager = self.graphic_manager.read();
+        let graphic_manager = graphic_manager.downcast_ref::<WgpuGraphicsManager>();
+
         let device = graphic_manager.get_device();
         let config = graphic_manager.get_config();
         let queue = graphic_manager.get_queue();
@@ -221,7 +228,7 @@ impl IntrospectObject for EditorManager {
         vec![MethodInfo {
             name: "is_entity_selected".to_string(),
             call: MethodCaller::Const(Arc::new(|this, args| {
-                let this = cast_service::<EditorManager>(this);
+                let this = cast_introspect_ref::<EditorManager>(this);
 
                 let mut caster = ArgumentCaster::new("is_entity_selected", args);
                 let arg1 = caster.cast_next::<EntityId>()?;
@@ -237,4 +244,4 @@ impl IntrospectObject for EditorManager {
     }
 }
 
-impl Service for EditorManager {}
+impl Resource for EditorManager {}

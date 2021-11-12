@@ -16,4 +16,6 @@ pub trait Graphic2dManager: Resource {
         material: ResourceReference<dyn MaterialResource>,
     );
     fn draw_line(&self, pos1: Vector2d, pos2: Vector2d, width: u32, color: Color, z_index: usize);
+    /// Get the cursor position in the 2D world, take in care the camera transform
+    fn get_cursor_position(&self) -> Vector2d;
 }

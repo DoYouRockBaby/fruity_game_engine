@@ -1,10 +1,10 @@
-use fruity_core::service::service_manager::ServiceManager;
+use fruity_core::resource::resource_manager::ResourceManager;
 use fruity_core::system::system_manager::SystemManager;
 use std::sync::Arc;
-use std::sync::RwLock;
 
-pub fn pause_at_startup(service_manager: Arc<RwLock<ServiceManager>>) {
-    let service_manager = service_manager.read().unwrap();
-    let system_manager = service_manager.read::<SystemManager>();
+pub fn pause_at_startup(resource_manager: Arc<ResourceManager>) {
+    let system_manager = resource_manager.require::<SystemManager>("system_manager");
+    let system_manager = system_manager.read();
+
     system_manager.set_paused(true);
 }

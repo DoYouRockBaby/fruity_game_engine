@@ -1,7 +1,7 @@
 use fruity_any::*;
-use fruity_core::service::service::Service;
-use fruity_core::service::service_manager::ServiceManager;
-use fruity_core::service::service_rwlock::ServiceRwLock;
+use fruity_core::resource::resource::Resource;
+use fruity_core::resource::resource_manager::ResourceManager;
+use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_graphic::graphic_manager::GraphicManager;
 use fruity_graphic::math::Color;
 use fruity_graphic_2d::graphic_2d_manager::Graphic2dManager;
@@ -12,24 +12,23 @@ use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
 use std::fmt::Debug;
 use std::sync::Arc;
-use std::sync::RwLock;
 use std::thread::sleep;
 use std::thread::spawn;
 use std::time::Duration;
 
 #[derive(Debug, FruityAny)]
 pub struct GizmosService {
-    input_manager: ServiceRwLock<InputManager>,
-    graphic_manager: ServiceRwLock<GraphicManager>,
-    graphic_2d_manager: ServiceRwLock<Graphic2dManager>,
+    input_manager: ResourceReference<InputManager>,
+    graphic_manager: ResourceReference<dyn GraphicManager>,
+    graphic_2d_manager: ResourceReference<dyn Graphic2dManager>,
 }
 
 impl GizmosService {
-    pub fn new(service_manager: &Arc<RwLock<ServiceManager>>) -> GizmosService {
-        let service_manager = service_manager.read().unwrap();
-        let input_manager = service_manager.get::<InputManager>().unwrap();
-        let graphic_manager = service_manager.get::<GraphicManager>().unwrap();
-        let graphic_2d_manager = service_manager.get::<Graphic2dManager>().unwrap();
+    pub fn new(resource_manager: Arc<ResourceManager>) -> GizmosService {
+        let input_manager = resource_manager.require::<InputManager>("input_manager");
+        let graphic_manager = resource_manager.require::<dyn GraphicManager>("graphic_manager");
+        let graphic_2d_manager =
+            resource_manager.require::<dyn Graphic2dManager>("graphic_2d_manager");
 
         GizmosService {
             input_manager,
@@ -60,7 +59,7 @@ impl GizmosService {
         let is_hover = self.is_cursor_hover(&bottom_left, &top_right);
         let color = if is_hover { hover_color } else { color };
 
-        let graphic_2d_manager = self.graphic_2d_manager.read().unwrap();
+        let graphic_2d_manager = self.graphic_2d_manager.read();
         graphic_2d_manager.draw_line(bottom_left, bottom_right, 3, color, 100);
         graphic_2d_manager.draw_line(bottom_right, top_right, 3, color, 100);
         graphic_2d_manager.draw_line(top_right, top_left, 3, color, 100);
@@ -77,7 +76,7 @@ impl GizmosService {
         color: Color,
         hover_color: Color,
     ) -> bool {
-        let graphic_2d_manager = self.graphic_2d_manager.read().unwrap();
+        let graphic_2d_manager = self.graphic_2d_manager.read();
         let cursor_pos = graphic_2d_manager.get_cursor_position();
 
         let is_hover = cursor_pos.in_triangle(&p1, &p2, &p3);
@@ -97,7 +96,7 @@ impl GizmosService {
         color: Color,
         hover_color: Color,
     ) -> bool {
-        let graphic_2d_manager = self.graphic_2d_manager.read().unwrap();
+        let graphic_2d_manager = self.graphic_2d_manager.read();
         let normalise = (to - from).normalise();
         let normal = normalise.normal();
 
@@ -187,8 +186,8 @@ impl GizmosService {
         let is_hover_y_arrow = self.draw_arrow_helper(from, to, color, hover_color);
 
         // Implement the logic
-        let input_manager = self.input_manager.read().unwrap();
-        let graphic_2d_manager = self.graphic_2d_manager.read().unwrap();
+        let input_manager = self.input_manager.read();
+        let graphic_2d_manager = self.graphic_2d_manager.read();
         let cursor_pos = graphic_2d_manager.get_cursor_position();
 
         // Handle moving
@@ -276,7 +275,7 @@ impl GizmosService {
     }
 
     fn is_cursor_hover(&self, bottom_left: &Vector2d, top_right: &Vector2d) -> bool {
-        let graphic_2d_manager = self.graphic_2d_manager.read().unwrap();
+        let graphic_2d_manager = self.graphic_2d_manager.read();
         let cursor_pos = graphic_2d_manager.get_cursor_position();
 
         // Check if the cursor is in the rect
@@ -289,16 +288,16 @@ impl GizmosService {
 
 pub struct DragAction {
     start_pos: Vector2d,
-    input_manager: ServiceRwLock<InputManager>,
-    graphic_2d_manager: ServiceRwLock<Graphic2dManager>,
+    input_manager: ResourceReference<InputManager>,
+    graphic_2d_manager: ResourceReference<dyn Graphic2dManager>,
 }
 
 impl DragAction {
     fn start<F>(
         callback: F,
         start_pos: Vector2d,
-        input_manager: ServiceRwLock<InputManager>,
-        graphic_2d_manager: ServiceRwLock<Graphic2dManager>,
+        input_manager: ResourceReference<InputManager>,
+        graphic_2d_manager: ResourceReference<dyn Graphic2dManager>,
     ) where
         F: Fn(DragAction) + Send + Sync + 'static,
     {
@@ -327,12 +326,12 @@ impl DragAction {
     }
 
     fn is_dragging_button_pressed(&self) -> bool {
-        let input_manager = self.input_manager.read().unwrap();
+        let input_manager = self.input_manager.read();
         input_manager.is_source_pressed("Mouse/Left")
     }
 
     pub fn get_cursor_position(&self) -> Vector2d {
-        let graphic_2d_manager = self.graphic_2d_manager.read().unwrap();
+        let graphic_2d_manager = self.graphic_2d_manager.read();
         graphic_2d_manager.get_cursor_position()
     }
 }
@@ -347,4 +346,4 @@ impl IntrospectObject for GizmosService {
     }
 }
 
-impl Service for GizmosService {}
+impl Resource for GizmosService {}

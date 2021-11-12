@@ -2,7 +2,6 @@ use crate::ui_element::layout::Empty;
 use std::any::Any;
 
 pub mod display;
-pub mod egui;
 pub mod input;
 pub mod layout;
 pub mod list;
@@ -40,7 +39,7 @@ pub trait UIWidget: Any {
 }
 
 pub struct UIElement {
-    root: Box<dyn Any>,
+    pub root: Box<dyn Any>,
 }
 
 impl Default for UIElement {

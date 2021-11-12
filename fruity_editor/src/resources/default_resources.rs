@@ -1,15 +1,14 @@
-use fruity_core::resource::resource_manager::ResourceIdentifier;
 use fruity_core::resource::resource_manager::ResourceManager;
-use fruity_core::service::service_rwlock::ServiceRwLock;
 use fruity_core::settings::Settings;
 use maplit::hashmap;
 use std::io::Cursor;
+use std::sync::Arc;
 
-pub fn load_default_resources(resource_manager: ServiceRwLock<ResourceManager>) {
+pub fn load_default_resources(resource_manager: Arc<ResourceManager>) {
     load_default_icons(resource_manager.clone());
 }
 
-pub fn load_default_icons(resource_manager: ServiceRwLock<ResourceManager>) {
+pub fn load_default_icons(resource_manager: Arc<ResourceManager>) {
     load_icon(
         "Editor/Icons/unknown",
         include_bytes!("unknown_thumbnail.png"),
@@ -50,7 +49,7 @@ pub fn load_icon(
     name: &str,
     bytes: &[u8],
     image_type: &str,
-    mut resource_manager: ServiceRwLock<ResourceManager>,
+    resource_manager: Arc<ResourceManager>,
 ) {
     let settings = Settings::Object(hashmap! {
         "type".to_string() => Settings::String("texture".to_string()),
@@ -59,11 +58,6 @@ pub fn load_icon(
     let mut image_reader = Cursor::new(bytes);
 
     resource_manager
-        .load_resource(
-            ResourceIdentifier(name.to_string()),
-            image_type,
-            &mut image_reader,
-            settings,
-        )
+        .load_resource(name, image_type, &mut image_reader, settings)
         .unwrap();
 }

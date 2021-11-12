@@ -1,8 +1,8 @@
 use crate::ui_element::UIElement;
 use fruity_any::*;
 use fruity_core::component::component_rwlock::ComponentRwLock;
-use fruity_core::service::service::Service;
-use fruity_core::service::service_manager::ServiceManager;
+use fruity_core::resource::resource::Resource;
+use fruity_core::resource::resource_manager::ResourceManager;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
@@ -10,7 +10,6 @@ use std::any::TypeId;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 pub type ComponentFieldEditor =
     Arc<dyn Fn(ComponentRwLock, &FieldInfo) -> UIElement + Send + Sync + 'static>;
@@ -21,7 +20,7 @@ pub struct ComponentEditorManager {
 }
 
 impl ComponentEditorManager {
-    pub fn new(_service_manager: &Arc<RwLock<ServiceManager>>) -> Self {
+    pub fn new(_service_manager: Arc<ResourceManager>) -> Self {
         ComponentEditorManager {
             component_field_editors: HashMap::new(),
         }
@@ -63,4 +62,4 @@ impl IntrospectObject for ComponentEditorManager {
     }
 }
 
-impl Service for ComponentEditorManager {}
+impl Resource for ComponentEditorManager {}

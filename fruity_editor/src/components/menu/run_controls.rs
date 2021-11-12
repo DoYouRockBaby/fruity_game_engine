@@ -9,18 +9,20 @@ use std::sync::Arc;
 pub fn run_controls_component() -> Vec<UIElement> {
     let world_state = use_global::<WorldState>();
 
-    let service_manager = world_state.service_manager.clone();
-    let service_manager_reader = world_state.service_manager.read().unwrap();
-    let system_manager = service_manager_reader.read::<SystemManager>();
+    let resource_manager = world_state.resource_manager.clone();
+    let system_manager = resource_manager.require::<SystemManager>("system_manager");
+    let system_manager_reader = system_manager.read();
 
+    let system_manager_2 = system_manager.clone();
+    let system_manager_3 = system_manager.clone();
     vec![
-        if system_manager.is_paused() {
+        if system_manager_reader.is_paused() {
             Button {
                 label: "▶".to_string(),
                 on_click: Arc::new(move || {
-                    let service_manager = service_manager.read().unwrap();
-                    let system_manager_reader = service_manager.read::<SystemManager>();
-                    system_manager_reader.set_paused(false);
+                    let system_manager = system_manager_2.read();
+
+                    system_manager.set_paused(false);
                 }),
                 ..Default::default()
             }
@@ -29,9 +31,9 @@ pub fn run_controls_component() -> Vec<UIElement> {
             Button {
                 label: "⏸".to_string(),
                 on_click: Arc::new(move || {
-                    let service_manager = service_manager.read().unwrap();
-                    let system_manager_reader = service_manager.read::<SystemManager>();
-                    system_manager_reader.set_paused(true);
+                    let system_manager = system_manager_3.read();
+
+                    system_manager.set_paused(true);
                 }),
                 ..Default::default()
             }
@@ -40,7 +42,7 @@ pub fn run_controls_component() -> Vec<UIElement> {
         Button {
             label: "◼".to_string(),
             on_click: Arc::new(move || {}),
-            enabled: !system_manager.is_paused(),
+            enabled: !system_manager_reader.is_paused(),
             ..Default::default()
         }
         .elem(),

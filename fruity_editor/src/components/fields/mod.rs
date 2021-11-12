@@ -11,9 +11,12 @@ use fruity_core::component::component_rwlock::ComponentRwLock;
 pub mod primitive;
 
 pub fn edit_component_fields(component: ComponentRwLock) -> UIElement {
-    let service_manager = use_global::<WorldState>().service_manager.clone();
-    let service_manager = service_manager.read().unwrap();
-    let component_editor_manager = service_manager.read::<ComponentEditorManager>();
+    let world_state = use_global::<WorldState>();
+
+    let resource_manager = world_state.resource_manager.clone();
+    let component_editor_manager =
+        resource_manager.require::<ComponentEditorManager>("component_editor_manager");
+    let component_editor_manager = component_editor_manager.read();
 
     let reader = component.read();
     let fields_edit = reader

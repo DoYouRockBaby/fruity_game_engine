@@ -1,5 +1,6 @@
 use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
+use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_graphic::resources::texture_resource::TextureResource;
 use std::sync::Arc;
 
@@ -28,7 +29,7 @@ impl UIWidget for Button {
 }
 
 pub struct ImageButton {
-    pub image: Arc<TextureResource>,
+    pub image: ResourceReference<dyn TextureResource>,
     pub on_click: Arc<dyn Fn() + Send + Sync>,
     pub width: f32,
     pub height: f32,

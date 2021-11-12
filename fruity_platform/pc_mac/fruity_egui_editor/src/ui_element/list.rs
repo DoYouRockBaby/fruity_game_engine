@@ -1,8 +1,8 @@
-use crate::hooks::topo;
-use crate::ui_element::egui::app::DrawContext;
-use crate::ui_element::egui::draw_element;
-use crate::ui_element::list::ListView;
+use crate::ui_element::app::DrawContext;
+use crate::ui_element::draw_element;
 use egui::ScrollArea;
+use fruity_editor::hooks::topo;
+use fruity_editor::ui_element::list::ListView;
 use std::ops::Deref;
 
 #[topo::nested]

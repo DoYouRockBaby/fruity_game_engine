@@ -1,13 +1,14 @@
-use crate::hooks::topo;
-use crate::hooks::use_state;
-use crate::ui_element::egui::app::DrawContext;
-use crate::ui_element::input::Button;
-use crate::ui_element::input::Checkbox;
-use crate::ui_element::input::FloatInput;
-use crate::ui_element::input::ImageButton;
-use crate::ui_element::input::Input;
-use crate::ui_element::input::IntegerInput;
+use crate::ui_element::app::DrawContext;
 use comp_state::CloneState;
+use fruity_editor::hooks::topo;
+use fruity_editor::hooks::use_state;
+use fruity_editor::ui_element::input::Button;
+use fruity_editor::ui_element::input::Checkbox;
+use fruity_editor::ui_element::input::FloatInput;
+use fruity_editor::ui_element::input::ImageButton;
+use fruity_editor::ui_element::input::Input;
+use fruity_editor::ui_element::input::IntegerInput;
+use fruity_wgpu_graphic::resources::texture_resource::WgpuTextureResource;
 use std::sync::Arc;
 
 #[topo::nested]
@@ -22,11 +23,16 @@ pub fn draw_button<'a>(elem: Button, ui: &mut egui::Ui, _ctx: &mut DrawContext) 
 
 #[topo::nested]
 pub fn draw_image_button<'a>(elem: ImageButton, ui: &mut egui::Ui, ctx: &mut DrawContext) {
-    let egui_texture_id = ctx.egui_rpass.egui_texture_from_wgpu_texture(
-        ctx.device,
-        &elem.image.texture,
-        wgpu::FilterMode::Linear,
-    );
+    let egui_texture_id = {
+        let image = elem.image.read();
+        let image = image.downcast_ref::<WgpuTextureResource>();
+
+        ctx.egui_rpass.egui_texture_from_wgpu_texture(
+            ctx.device,
+            &image.texture,
+            wgpu::FilterMode::Linear,
+        )
+    };
 
     if ui
         .add(egui::ImageButton::new(

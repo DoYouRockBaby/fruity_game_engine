@@ -13,9 +13,9 @@ use std::sync::Arc;
 pub fn entity_list_component() -> UIElement {
     let world_state = use_global::<WorldState>();
 
-    let service_manager = world_state.service_manager.clone();
-    let service_manager = service_manager.read().unwrap();
-    let entity_manager = service_manager.read::<EntityManager>();
+    let resource_manager = world_state.resource_manager.clone();
+    let entity_manager = resource_manager.require::<EntityManager>("entity_manager");
+    let entity_manager = entity_manager.read();
 
     let items: Vec<Arc<dyn Any + Send + Sync>> = entity_manager
         .iter_all_entities()

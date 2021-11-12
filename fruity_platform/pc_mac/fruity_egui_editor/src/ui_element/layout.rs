@@ -1,11 +1,11 @@
-use crate::ui_element::egui::app::DrawContext;
-use crate::ui_element::egui::draw_element;
-use crate::ui_element::layout::Collapsible;
-use crate::ui_element::layout::Column;
-use crate::ui_element::layout::Row;
-use crate::ui_element::layout::Scroll;
-use crate::ui_element::UISize;
+use crate::ui_element::app::DrawContext;
+use crate::ui_element::draw_element;
 use egui::ScrollArea;
+use fruity_editor::ui_element::layout::Collapsible;
+use fruity_editor::ui_element::layout::Column;
+use fruity_editor::ui_element::layout::Row;
+use fruity_editor::ui_element::layout::Scroll;
+use fruity_editor::ui_element::UISize;
 
 pub fn draw_empty<'a>(_ui: &mut egui::Ui) {}
 

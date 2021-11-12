@@ -7,7 +7,6 @@ use crate::ui_element::layout::Scroll;
 use crate::ui_element::UIElement;
 use crate::ui_element::UISize;
 use crate::ui_element::UIWidget;
-use fruity_core::resource::resource_manager::ResourceIdentifier;
 use fruity_graphic::resources::texture_resource::TextureResource;
 
 pub mod file_item;

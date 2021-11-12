@@ -1,16 +1,13 @@
-use fruity_core::service::service_manager::ServiceManager;
+use fruity_core::resource::resource_manager::ResourceManager;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 #[derive(Debug)]
 pub struct WorldState {
-    pub service_manager: Arc<RwLock<ServiceManager>>,
+    pub resource_manager: Arc<ResourceManager>,
 }
 
 impl WorldState {
-    pub fn new(service_manager: &Arc<RwLock<ServiceManager>>) -> Self {
-        WorldState {
-            service_manager: service_manager.clone(),
-        }
+    pub fn new(resource_manager: Arc<ResourceManager>) -> Self {
+        WorldState { resource_manager }
     }
 }
