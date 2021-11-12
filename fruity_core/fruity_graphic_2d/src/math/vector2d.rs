@@ -191,9 +191,13 @@ impl Mul<Vector2d> for Matrix4 {
     type Output = Vector2d;
 
     fn mul(self, rhs: Vector2d) -> Self::Output {
+        let cgmath_vec = cgmath::Vector4::new(rhs.x, rhs.y, 0.0, 1.0);
+        let cgmath_matrix4 = cgmath::Matrix4::from(self.0);
+        let cgmath_result = cgmath_matrix4 * cgmath_vec;
+
         Vector2d {
-            x: self.0[0][0] * rhs.x + self.0[0][1] * rhs.y,
-            y: self.0[1][0] * rhs.x + self.0[1][1] * rhs.y,
+            x: cgmath_result.x,
+            y: cgmath_result.y,
         }
     }
 }
