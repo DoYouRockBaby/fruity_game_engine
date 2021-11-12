@@ -1,0 +1,12 @@
+[package]
+name = "fruity_winit_windows"
+version = "0.1.0"
+edition = "2018"
+resolver = "2"
+
+[dependencies]
+winit = "0.25.0"
+fruity_any = { path = "../../../fruity_core/fruity_any" }
+fruity_core = { path = "../../../fruity_core" }
+fruity_introspect = { path = "../../../fruity_core/fruity_introspect" }
+fruity_windows = { path = "../../../fruity_core/fruity_windows" }

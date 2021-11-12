@@ -1,10 +1,8 @@
 use crate::components::component::math::draw_editor_vector_2d;
 use crate::gizmos_service::GizmosService;
 use crate::systems::draw_gizmos_2d::draw_gizmos_2d_untyped;
-use fruity_core::service::service_manager::ServiceManager;
 use fruity_core::settings::Settings;
 use fruity_core::system::system_manager::SystemManager;
-use fruity_editor::component_editor_manager::ComponentEditorManager;
 use fruity_graphic_2d::math::vector2d::Vector2d;
 use std::sync::Arc;
 use std::sync::RwLock;

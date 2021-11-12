@@ -5,19 +5,24 @@ edition = "2018"
 resolver = "2"
 
 [dependencies]
-fruity_any = { path = "fruity_engine/fruity_any" }
-fruity_core = { path = "fruity_engine/fruity_core" }
-fruity_introspect = { path = "fruity_engine/fruity_introspect" }
+fruity_any = { path = "fruity_core/fruity_any" }
+fruity_core = { path = "fruity_core" }
+fruity_introspect = { path = "fruity_core/fruity_introspect" }
 hot_reload_lib = { path = "deps/hot_reload_lib" }
 pretty_env_logger = "0.4.0"
 log = "0.4.14"
 rayon = "1.5"
 mini-redis = "0.4"
-fruity_editor = { path = "fruity_editor" }
-fruity_editor_graphic_2d = { path = "fruity_editor/fruity_editor_graphic_2d" }
-fruity_editor_javascript = { path = "fruity_editor/fruity_editor_javascript" }
-fruity_graphic = { path = "fruity_engine/fruity_graphic" }
-fruity_graphic_2d = { path = "fruity_engine/fruity_graphic_2d" }
-fruity_input = { path = "fruity_engine/fruity_input" }
-fruity_javascript = { path = "fruity_engine/fruity_javascript" }
-fruity_windows = { path = "fruity_engine/fruity_windows" }
+# fruity_editor = { path = "fruity_editor" }
+# fruity_editor_graphic_2d = { path = "fruity_editor/fruity_editor_graphic_2d" }
+# fruity_editor_javascript = { path = "fruity_editor/fruity_editor_javascript" }
+fruity_graphic = { path = "fruity_core/fruity_graphic" }
+fruity_graphic_2d = { path = "fruity_core/fruity_graphic_2d" }
+fruity_input = { path = "fruity_core/fruity_input" }
+fruity_javascript = { path = "fruity_core/fruity_javascript" }
+fruity_windows = { path = "fruity_core/fruity_windows" }
+
+fruity_wgpu_graphic = { path = "fruity_platform/pc_mac/fruity_wgpu_graphic" }
+fruity_wgpu_graphic_2d = { path = "fruity_platform/pc_mac/fruity_wgpu_graphic_2d" }
+fruity_winit_input = { path = "fruity_platform/pc_mac/fruity_winit_input" }
+fruity_winit_windows = { path = "fruity_platform/pc_mac/fruity_winit_windows" }

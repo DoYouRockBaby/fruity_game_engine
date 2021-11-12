@@ -15,7 +15,7 @@ use fruity_core::service::service_manager::ServiceManager;
 use fruity_core::service::service_rwlock::ServiceRwLock;
 use fruity_core::service::utils::cast_service;
 use fruity_core::service::utils::ArgumentCaster;
-use fruity_graphic::graphics_manager::GraphicsManager;
+use fruity_graphic::graphic_manager::GraphicManager;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
@@ -39,7 +39,7 @@ pub struct EditorManagerState {
 #[derive(FruityAny)]
 pub struct EditorManager {
     windows_manager: ServiceRwLock<WindowsManager>,
-    graphic_manager: ServiceRwLock<GraphicsManager>,
+    graphic_manager: ServiceRwLock<GraphicManager>,
     state: EditorManagerState,
 }
 
@@ -59,7 +59,7 @@ impl EditorManager {
     pub fn new(service_manager: &Arc<RwLock<ServiceManager>>) -> EditorManager {
         let service_manager_reader = service_manager.read().unwrap();
         let windows_manager = service_manager_reader.get::<WindowsManager>().unwrap();
-        let graphic_manager = service_manager_reader.get::<GraphicsManager>().unwrap();
+        let graphic_manager = service_manager_reader.get::<GraphicManager>().unwrap();
         let windows_manager_reader = windows_manager.read().unwrap();
         let graphic_manager_reader = graphic_manager.read().unwrap();
 
@@ -102,7 +102,7 @@ impl EditorManager {
     pub fn initialize(
         application: Application,
         windows_manager: ServiceRwLock<WindowsManager>,
-        graphic_manager: &GraphicsManager,
+        graphic_manager: &GraphicManager,
     ) -> EditorManagerState {
         let windows_manager_reader = windows_manager.read().unwrap();
 

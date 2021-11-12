@@ -8,10 +8,14 @@
 [P] Implement entity hierarchy
 [X] Put a get_constructor function into introspect
 [X] Implements entity deletion
+[ ] Resources and services containers should be merged
+[ ] Abstract resources
+[ ] Split abstractions and implementations for all crates
 [ ] Add an exception when you try to access a deleted entity, propagate it into js
 [ ] There should be some memory leak in archetype
 [ ] Make macros for native systems
 [ ] Test and stabilize ECS
+[ ] Find a way to move the introspect declaration into the associated traits
 
 ## Editor
 

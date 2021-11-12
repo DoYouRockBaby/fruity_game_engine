@@ -1,0 +1,11 @@
+[package]
+name = "fruity_input"
+version = "0.1.0"
+edition = "2018"
+resolver = "2"
+
+[dependencies]
+fruity_any = { path = "../fruity_any" }
+fruity_core = { path = ".." }
+fruity_introspect = { path = "../fruity_introspect" }
+fruity_windows = { path = "../fruity_windows" }

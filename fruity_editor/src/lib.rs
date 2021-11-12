@@ -17,7 +17,7 @@ use crate::editor_manager::EditorManager;
 use crate::file_explorer_manager::FileExplorerManager;
 use crate::resources::default_resources::load_default_resources;
 use crate::systems::pause_at_startup::pause_at_startup;
-use fruity_core::resource::resources_manager::ResourcesManager;
+use fruity_core::resource::resource_manager::ResourceManager;
 use fruity_core::service::service_manager::ServiceManager;
 use fruity_core::settings::Settings;
 use fruity_core::system::system_manager::SystemManager;
@@ -67,10 +67,10 @@ pub fn initialize(service_manager: &Arc<RwLock<ServiceManager>>, _settings: &Set
     component_editor_manager.register_component_field_editor::<bool, _>(draw_editor_bool);
     component_editor_manager.register_component_field_editor::<String, _>(draw_editor_string);
 
-    let resources_manager = service_manager_writer.get::<ResourcesManager>().unwrap();
+    let resource_manager = service_manager_writer.get::<ResourceManager>().unwrap();
     std::mem::drop(system_manager);
     std::mem::drop(component_editor_manager);
     std::mem::drop(service_manager_writer);
 
-    load_default_resources(resources_manager);
+    load_default_resources(resource_manager);
 }

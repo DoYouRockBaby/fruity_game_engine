@@ -9,11 +9,11 @@ resolver = "2"
 
 [dependencies]
 rayon = "1.5"
-fruity_any = { path = "../../fruity_engine/fruity_any" }
-fruity_core = { path = "../../fruity_engine/fruity_core" }
+fruity_any = { path = "../../fruity_core/fruity_any" }
+fruity_core = { path = "../../fruity_core" }
 fruity_editor = { path = "../" }
-fruity_input = { path = "../../fruity_engine/fruity_input" }
-fruity_introspect = { path = "../../fruity_engine/fruity_introspect" }
-fruity_graphic = { path = "../../fruity_engine/fruity_graphic" }
-fruity_graphic_2d = { path = "../../fruity_engine/fruity_graphic_2d" }
+fruity_input = { path = "../../fruity_core/fruity_input" }
+fruity_introspect = { path = "../../fruity_core/fruity_introspect" }
+fruity_graphic = { path = "../../fruity_core/fruity_graphic" }
+fruity_graphic_2d = { path = "../../fruity_core/fruity_graphic_2d" }
 log = "0.4.14"

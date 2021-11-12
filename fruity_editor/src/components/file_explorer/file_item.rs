@@ -10,7 +10,7 @@ use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
 use crate::Arc;
 use crate::FileExplorerManager;
-use fruity_core::resource::resources_manager::ResourcesManager;
+use fruity_core::resource::resource_manager::ResourceManager;
 use std::path::PathBuf;
 
 pub fn file_item_component(path: PathBuf) -> UIElement {
@@ -18,7 +18,7 @@ pub fn file_item_component(path: PathBuf) -> UIElement {
     let service_manager = world_state.service_manager.read().unwrap();
     let file_explorer_manager = service_manager.get::<FileExplorerManager>().unwrap();
     let file_explorer_manager_reader = file_explorer_manager.read().unwrap();
-    let resource_manager = service_manager.read::<ResourcesManager>();
+    let resource_manager = service_manager.read::<ResourceManager>();
     let file_explorer_manager_2 = file_explorer_manager.clone();
 
     let path_string = path.to_str().unwrap().to_string();
@@ -50,7 +50,7 @@ pub fn file_item_component(path: PathBuf) -> UIElement {
             children: vec![
                 ImageButton {
                     image: resource_manager
-                        .get_resource::<TextureResource>(ResourceIdentifier(
+                        .get::<TextureResource>(ResourceIdentifier(
                             "Editor/Icons/folder".to_string(),
                         ))
                         .unwrap(),

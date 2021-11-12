@@ -1,6 +1,6 @@
 use fruity_any::*;
-use fruity_core::resource::resources_manager::ResourceIdentifier;
-use fruity_core::resource::resources_manager::ResourcesManager;
+use fruity_core::resource::resource_manager::ResourceIdentifier;
+use fruity_core::resource::resource_manager::ResourceManager;
 use fruity_core::service::service::Service;
 use fruity_core::service::service_manager::ServiceManager;
 use fruity_core::service::service_rwlock::ServiceRwLock;
@@ -21,7 +21,7 @@ struct FileTypeEntry {
 
 #[derive(FruityAny)]
 pub struct FileExplorerManager {
-    resource_manager: ServiceRwLock<ResourcesManager>,
+    resource_manager: ServiceRwLock<ResourceManager>,
     file_types: HashMap<String, FileTypeEntry>,
 }
 
@@ -30,7 +30,7 @@ impl FileExplorerManager {
         let service_manager = service_manager.read().unwrap();
 
         FileExplorerManager {
-            resource_manager: service_manager.get::<ResourcesManager>().unwrap(),
+            resource_manager: service_manager.get::<ResourceManager>().unwrap(),
             file_types: HashMap::new(),
         }
     }
@@ -56,9 +56,7 @@ impl FileExplorerManager {
             None => {
                 let resource_manager = self.resource_manager.read().unwrap();
                 resource_manager
-                    .get_resource::<TextureResource>(ResourceIdentifier(
-                        "Editor/Icons/unknown".to_string(),
-                    ))
+                    .get::<TextureResource>(ResourceIdentifier("Editor/Icons/unknown".to_string()))
                     .unwrap()
             }
         }

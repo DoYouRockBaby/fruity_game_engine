@@ -26,15 +26,14 @@ class TestVec {
     }
 }
 
-services.register("service2", new Service2());
-const systemManager = services.get("system_manager");
-const entityManager = services.get("entity_manager");
-const componentFactory = services.get("components_factory");
-const windowsManager = services.get("windows_manager");
-const resourcesManager = services.get("resources_manager");
-const service2 = services.get("service2");
-const inputManager = services.get("input_manager");
-const frameManager = services.get("frame_manager");
+resourceManager.add("service2", new Service2());
+const systemManager = resourceManager.get("system_manager");
+const entityManager = resourceManager.get("entity_manager");
+const componentFactory = resourceManager.get("components_factory");
+const windowsManager = resourceManager.get("windows_manager");
+const service2 = resourceManager.get("service2");
+const inputManager = resourceManager.get("input_manager");
+const frameManager = resourceManager.get("frame_manager");
 
 service2.hello("World");
 
@@ -68,8 +67,7 @@ systemManager.addBeginSystem(() => {
         new Position({ pos: new Vector2d({ x: 0.25, y: 0.25 }) }),
         new Size({ size: new Vector2d({ x: 0.5, y: 0.5 }) }),
         new Sprite({
-            texture: resourcesManager.getResource("assets/logo.png"),
-            material: resourcesManager.getResource("assets/material.material"),
+            material: resourceManager.get("assets/material.material"),
             z_index: 0,
         }),
         new TestVec({ size: new Vector2d({ x: 0.5, y: 0.5 }) }),
@@ -79,8 +77,7 @@ systemManager.addBeginSystem(() => {
         new Position({ pos: new Vector2d({ x: -0.25, y: 0.25 }) }),
         new Size({ size: new Vector2d({ x: 0.3, y: 0.3 }) }),
         new Sprite({
-            texture: resourcesManager.getResource("assets/logo.png"),
-            material: resourcesManager.getResource("assets/material.material"),
+            material: resourceManager.get("assets/material.material"),
             z_index: 1,
         }),
         new Move({ velocity: 0.2 }),

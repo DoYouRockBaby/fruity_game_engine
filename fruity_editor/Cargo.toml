@@ -18,9 +18,9 @@ image = { version = "0.23", default-features = false, features = ["png", "jpeg",
 egui_winit_platform = "0.11"
 maplit = "1.0.2"
 comp_state = { path = "../deps/comp_state" }
-fruity_any = { path = "../fruity_engine/fruity_any" }
-fruity_core = { path = "../fruity_engine/fruity_core" }
-fruity_introspect = { path = "../fruity_engine/fruity_introspect" }
-fruity_graphic = { path = "../fruity_engine/fruity_graphic" }
-fruity_windows = { path = "../fruity_engine/fruity_windows" }
+fruity_any = { path = "../fruity_core/fruity_any" }
+fruity_core = { path = ".." }
+fruity_introspect = { path = "../fruity_core/fruity_introspect" }
+fruity_graphic = { path = "../fruity_core/fruity_graphic" }
+fruity_windows = { path = "../fruity_core/fruity_windows" }
 log = "0.4.14"

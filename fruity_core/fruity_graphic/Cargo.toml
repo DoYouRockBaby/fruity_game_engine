@@ -1,0 +1,19 @@
+[package]
+name = "fruity_graphic"
+version = "0.1.0"
+edition = "2018"
+resolver = "2"
+
+# [lib]
+# crate-type = ["dylib"]
+
+[dependencies]
+bytemuck = { version = "1.4", features = [ "derive" ] }
+log = "0.4.14"
+yaml-rust = "0.4"
+css-color-parser = "0.1.2"
+cgmath = "0.18"
+fruity_any = { path = "../fruity_any" }
+fruity_core = { path = ".." }
+fruity_introspect = { path = "../fruity_introspect" }
+fruity_windows = { path = "../fruity_windows" }

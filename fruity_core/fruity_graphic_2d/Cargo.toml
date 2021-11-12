@@ -1,0 +1,20 @@
+[package]
+name = "fruity_graphic_2d"
+version = "0.1.0"
+edition = "2018"
+resolver = "2"
+
+# [lib]
+# crate-type = ["dylib"]
+
+[dependencies]
+bytemuck = { version = "1.4", features = [ "derive" ] }
+log = "0.4.14"
+rayon = "1.5"
+cgmath = "0.18"
+maplit = "1.0.2"
+fruity_any = { path = "../fruity_any" }
+fruity_core = { path = ".." }
+fruity_introspect = { path = "../fruity_introspect" }
+fruity_graphic = { path = "../fruity_graphic" }
+fruity_windows = { path = "../fruity_windows" }
