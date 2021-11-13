@@ -1,5 +1,7 @@
 use crate::ResourceContainer;
 use fruity_any::*;
+use fruity_core::inject::Inject;
+use fruity_core::inject::Inject0;
 use fruity_core::resource::resource::Resource;
 use fruity_introspect::log_introspect_error;
 use fruity_introspect::serialized::Callback;
@@ -88,15 +90,11 @@ impl<'s> SystemService {
     /// * `system` - A function that will compute the world
     /// * `pool_index` - A pool identifier, all the systems of the same pool will be processed together in parallel
     ///
-    pub fn add_system<T: Fn(Arc<ResourceContainer>) + Sync + Send + 'static>(
-        &mut self,
-        callback: T,
-        pool_index: Option<usize>,
-    ) {
+    pub fn add_system<T: Inject>(&mut self, callback: T, pool_index: Option<usize>) {
         let pool_index = pool_index.unwrap_or(50);
 
         let system = FrameSystem {
-            callback: Box::new(callback),
+            callback: callback.inject(),
             ignore_pause: false,
         };
 
@@ -121,7 +119,7 @@ impl<'s> SystemService {
     /// * `system` - A function that will compute the world
     /// * `pool_index` - A pool identifier, all the systems of the same pool will be processed together in parallel
     ///
-    pub fn add_system_that_ignore_pause<T: Fn(Arc<ResourceContainer>) + Sync + Send + 'static>(
+    pub fn add_system_that_ignore_pause<T: Inject>(
         &mut self,
         callback: T,
         pool_index: Option<usize>,
@@ -129,7 +127,7 @@ impl<'s> SystemService {
         let pool_index = pool_index.unwrap_or(50);
 
         let system = FrameSystem {
-            callback: Box::new(callback),
+            callback: callback.inject(),
             ignore_pause: true,
         };
 
@@ -154,15 +152,11 @@ impl<'s> SystemService {
     /// * `system` - A function that will compute the world
     /// * `pool_index` - A pool identifier, all the systems of the same pool will be processed together in parallel
     ///
-    pub fn add_begin_system<T: Fn(Arc<ResourceContainer>) + Sync + Send + 'static>(
-        &mut self,
-        callback: T,
-        pool_index: Option<usize>,
-    ) {
+    pub fn add_begin_system<T: Inject>(&mut self, callback: T, pool_index: Option<usize>) {
         let pool_index = pool_index.unwrap_or(50);
 
         let system = BeginSystem {
-            callback: Box::new(callback),
+            callback: callback.inject(),
         };
 
         if let Some(pool) = self.begin_system_pools.get_mut(&pool_index) {
@@ -186,15 +180,11 @@ impl<'s> SystemService {
     /// * `system` - A function that will compute the world
     /// * `pool_index` - A pool identifier, all the systems of the same pool will be processed together in parallel
     ///
-    pub fn add_end_system<T: Fn(Arc<ResourceContainer>) + Sync + Send + 'static>(
-        &mut self,
-        callback: T,
-        pool_index: Option<usize>,
-    ) {
+    pub fn add_end_system<T: Inject>(&mut self, callback: T, pool_index: Option<usize>) {
         let pool_index = pool_index.unwrap_or(50);
 
         let system = EndSystem {
-            callback: Box::new(callback),
+            callback: callback.inject(),
         };
 
         if let Some(pool) = self.end_system_pools.get_mut(&pool_index) {
@@ -384,12 +374,12 @@ impl IntrospectObject for SystemService {
                     let arg2 = caster.cast_next_optional::<usize>();
 
                     this.add_system(
-                        move |_| {
+                        Inject0::new(move || {
                             match arg1(vec![]) {
                                 Ok(_) => (),
                                 Err(err) => log_introspect_error(&err),
                             };
-                        },
+                        }),
                         arg2,
                     );
 
@@ -406,12 +396,12 @@ impl IntrospectObject for SystemService {
                     let arg2 = caster.cast_next_optional::<usize>();
 
                     this.add_begin_system(
-                        move |_| {
+                        Inject0::new(move || {
                             match arg1(vec![]) {
                                 Ok(_) => (),
                                 Err(err) => log_introspect_error(&err),
                             };
-                        },
+                        }),
                         arg2,
                     );
 
@@ -428,12 +418,12 @@ impl IntrospectObject for SystemService {
                     let arg2 = caster.cast_next_optional::<usize>();
 
                     this.add_end_system(
-                        move |_| {
+                        Inject0::new(move || {
                             match arg1(vec![]) {
                                 Ok(_) => (),
                                 Err(err) => log_introspect_error(&err),
                             };
-                        },
+                        }),
                         arg2,
                     );
 
@@ -450,12 +440,12 @@ impl IntrospectObject for SystemService {
                     let arg2 = caster.cast_next_optional::<usize>();
 
                     this.add_end_system(
-                        move |_| {
+                        Inject0::new(move || {
                             match arg1(vec![]) {
                                 Ok(_) => (),
                                 Err(err) => log_introspect_error(&err),
                             };
-                        },
+                        }),
                         arg2,
                     );
 

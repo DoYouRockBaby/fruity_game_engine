@@ -14,8 +14,7 @@ pub fn edit_component_fields(component: ComponentRwLock) -> UIElement {
     let world_state = use_global::<WorldState>();
 
     let resource_container = world_state.resource_container.clone();
-    let component_editor_service =
-        resource_container.require::<ComponentEditorService>("component_editor_service");
+    let component_editor_service = resource_container.require::<ComponentEditorService>();
     let component_editor_service = component_editor_service.read();
 
     let reader = component.read();

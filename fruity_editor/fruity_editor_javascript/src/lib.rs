@@ -11,8 +11,7 @@ pub mod resources;
 
 // #[no_mangle]
 pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
-    let file_explorer_service =
-        resource_container.require::<FileExplorerService>("file_explorer_service");
+    let file_explorer_service = resource_container.require::<FileExplorerService>();
     let mut file_explorer_service = file_explorer_service.write();
 
     file_explorer_service.register_file_type("js", get_thumbnail_js, on_selected_js);

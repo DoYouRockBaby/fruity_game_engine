@@ -21,6 +21,7 @@ use crate::state::file_explorer::FileExplorerState;
 use crate::state::theme::ThemeState;
 use crate::state::world::WorldState;
 use crate::systems::pause_at_startup::pause_at_startup;
+use fruity_core::inject::Inject1;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use fruity_ecs::system::system_service::SystemService;
@@ -44,13 +45,16 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let file_explorer_service = FileExplorerService::new(resource_container.clone());
 
     resource_container
-        .add::<ComponentEditorService>(
+        .add_require::<ComponentEditorService>(
             "component_editor_service",
             Box::new(component_editor_service),
         )
         .unwrap();
     resource_container
-        .add::<FileExplorerService>("file_explorer_service", Box::new(file_explorer_service))
+        .add_require::<FileExplorerService>(
+            "file_explorer_service",
+            Box::new(file_explorer_service),
+        )
         .unwrap();
 
     declare_global(WorldState::new(resource_container.clone()));
@@ -58,13 +62,12 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     declare_global(EntityState::default());
     declare_global(FileExplorerState::default());
 
-    let system_service = resource_container.require::<SystemService>("system_service");
+    let system_service = resource_container.require::<SystemService>();
     let mut system_service = system_service.write();
 
-    system_service.add_begin_system(pause_at_startup, Some(98));
+    system_service.add_begin_system(Inject1::new(pause_at_startup), None);
 
-    let component_editor_service =
-        resource_container.require::<ComponentEditorService>("component_editor_service");
+    let component_editor_service = resource_container.require::<ComponentEditorService>();
     let mut component_editor_service = component_editor_service.write();
 
     component_editor_service.register_component_field_editor::<i8, _>(draw_editor_i8);

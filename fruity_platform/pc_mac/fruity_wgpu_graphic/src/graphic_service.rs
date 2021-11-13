@@ -54,15 +54,14 @@ pub struct WgpuGraphicManager {
 
 impl WgpuGraphicManager {
     pub fn new(resource_container: Arc<ResourceContainer>) -> WgpuGraphicManager {
-        let window_service = resource_container.require::<dyn WindowService>("window_service");
+        let window_service = resource_container.require::<dyn WindowService>();
         let window_service = window_service.read();
         let window_service = window_service.downcast_ref::<WinitWindowService>();
 
         // Subscribe to windows observer to proceed the graphics when it's neededs
         let resource_container_2 = resource_container.clone();
         window_service.on_start_update().add_observer(move |_| {
-            let graphic_service =
-                resource_container_2.require::<dyn GraphicService>("graphic_service");
+            let graphic_service = resource_container_2.require::<dyn GraphicService>();
             let mut graphic_service = graphic_service.write();
             let graphic_service = graphic_service.downcast_mut::<WgpuGraphicManager>();
 
@@ -71,8 +70,7 @@ impl WgpuGraphicManager {
 
         let resource_container_2 = resource_container.clone();
         window_service.on_end_update().add_observer(move |_| {
-            let graphic_service =
-                resource_container_2.require::<dyn GraphicService>("graphic_service");
+            let graphic_service = resource_container_2.require::<dyn GraphicService>();
 
             // Send the event that we will end to draw
             {
@@ -97,8 +95,7 @@ impl WgpuGraphicManager {
         window_service
             .on_resize()
             .add_observer(move |(width, height)| {
-                let graphic_service =
-                    resource_container_2.require::<dyn GraphicService>("graphic_service");
+                let graphic_service = resource_container_2.require::<dyn GraphicService>();
                 let mut graphic_service = graphic_service.write();
                 graphic_service.resize(*width, *height);
             });

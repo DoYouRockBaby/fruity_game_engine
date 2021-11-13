@@ -12,11 +12,11 @@ use winit::event::WindowEvent;
 
 // #[no_mangle]
 pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
-    let window_service = resource_container.require::<dyn WindowService>("window_service");
+    let window_service = resource_container.require::<dyn WindowService>();
     let window_service = window_service.read();
     let window_service = window_service.downcast_ref::<WinitWindowService>();
 
-    let input_service = resource_container.require::<InputService>("input_service");
+    let input_service = resource_container.require::<InputService>();
 
     let input_service_2 = input_service.clone();
     window_service.on_event.add_observer(move |event| {

@@ -1,3 +1,4 @@
+use crate::component::component::Component;
 use crate::entity::archetype::rwlock::EntityReadGuard;
 use crate::entity::archetype::rwlock::EntityWriteGuard;
 use std::fmt::Debug;
@@ -27,6 +28,19 @@ impl<'s> ComponentListReadGuard<'s> {
             guard,
             component_indexes,
         }
+    }
+
+    /// Returns a reference array over the components
+    pub fn get_components(&self) -> Vec<&dyn Component> {
+        let components = self.guard.get_components();
+
+        self.component_indexes
+            .iter()
+            .map(move |index| {
+                let result = components.get(*index).unwrap();
+                *result
+            })
+            .collect::<Vec<_>>()
     }
 }
 
@@ -64,6 +78,21 @@ impl<'s> ComponentListWriteGuard<'s> {
             guard,
             component_indexes,
         }
+    }
+
+    /// Returns a mutable reference array over the components
+    pub fn get_components_mut(&mut self) -> Vec<&mut dyn Component> {
+        let components = self.guard.get_components_mut();
+
+        self.component_indexes
+            .iter()
+            .map(move |index| {
+                let result = components.get_mut(*index).unwrap();
+                let result = unsafe { &mut *(*result as *mut _) } as &mut dyn Component;
+
+                result
+            })
+            .collect::<Vec<_>>()
     }
 }
 

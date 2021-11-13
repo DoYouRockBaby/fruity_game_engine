@@ -50,9 +50,9 @@ pub fn initialize(resource_container: Arc<ResourceContainer>) {
     let system_service = SystemService::new(resource_container.clone());
 
     resource_container
-        .add::<EntityService>("entity_service", Box::new(entity_service))
+        .add_require::<EntityService>("entity_service", Box::new(entity_service))
         .unwrap();
     resource_container
-        .add::<SystemService>("system_service", Box::new(system_service))
+        .add_require::<SystemService>("system_service", Box::new(system_service))
         .unwrap();
 }

@@ -11,6 +11,6 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let graphic_2d_service = WgpuGraphic2dManager::new(resource_container.clone());
 
     resource_container
-        .add::<dyn Graphic2dService>("graphic_2d_service", Box::new(graphic_2d_service))
+        .add_require::<dyn Graphic2dService>("graphic_2d_service", Box::new(graphic_2d_service))
         .unwrap();
 }

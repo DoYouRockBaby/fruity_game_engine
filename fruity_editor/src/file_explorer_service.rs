@@ -54,7 +54,8 @@ impl FileExplorerService {
             Some(thumbnail) => thumbnail,
             None => self
                 .resource_container
-                .require::<dyn TextureResource>("Editor/Icons/unknown"),
+                .get::<dyn TextureResource>("Editor/Icons/unknown")
+                .unwrap(),
         }
     }
 

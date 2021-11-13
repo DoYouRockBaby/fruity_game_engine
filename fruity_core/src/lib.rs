@@ -23,6 +23,9 @@ pub mod module;
 /// All related with resources
 pub mod resource;
 
+/// Provides a tool to inject resources into functions
+pub mod inject;
+
 /// An observer pattern
 pub mod signal;
 
@@ -48,6 +51,9 @@ pub fn initialize(resource_container: Arc<ResourceContainer>) {
     let object_factory_service = ObjectFactoryService::new(resource_container.clone());
 
     resource_container
-        .add::<ObjectFactoryService>("object_factory_service", Box::new(object_factory_service))
+        .add_require::<ObjectFactoryService>(
+            "object_factory_service",
+            Box::new(object_factory_service),
+        )
         .unwrap();
 }

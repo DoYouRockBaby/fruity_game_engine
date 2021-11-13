@@ -14,7 +14,7 @@ pub fn entity_list_component() -> UIElement {
     let world_state = use_global::<WorldState>();
 
     let resource_container = world_state.resource_container.clone();
-    let entity_service = resource_container.require::<EntityService>("entity_service");
+    let entity_service = resource_container.require::<EntityService>();
     let entity_service = entity_service.read();
 
     let items: Vec<Arc<dyn Any + Send + Sync>> = entity_service

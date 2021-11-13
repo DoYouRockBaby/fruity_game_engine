@@ -7,6 +7,7 @@ use crate::resource::resource_reference::ResourceReference;
 use crate::settings::Settings;
 use crate::ResourceContainer;
 use fruity_any::*;
+use std::any::TypeId;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fs::File;
@@ -18,6 +19,7 @@ use std::sync::RwLock;
 #[derive(FruityAny)]
 pub struct InnerResourceContainer {
     resources: HashMap<String, Arc<dyn Resource>>,
+    resources_by_type: HashMap<TypeId, Arc<dyn Resource>>,
     resource_loaders: HashMap<String, ResourceLoader>,
 }
 
@@ -34,7 +36,26 @@ impl InnerResourceContainer {
     pub fn new() -> InnerResourceContainer {
         InnerResourceContainer {
             resources: HashMap::new(),
+            resources_by_type: HashMap::new(),
             resource_loaders: HashMap::new(),
+        }
+    }
+
+    pub fn require<T: Resource + ?Sized>(&self) -> ResourceReference<T> {
+        match self
+            .resources_by_type
+            .get(&TypeId::of::<T>())
+            .map(|resource| resource.clone())
+        {
+            Some(resource) => match resource.as_any_arc().downcast::<RwLock<Box<T>>>() {
+                Ok(resource) => ResourceReference::new(resource),
+                Err(_) => {
+                    panic!("Failed to get a required resource")
+                }
+            },
+            None => {
+                panic!("Failed to get a required resource")
+            }
         }
     }
 
@@ -72,8 +93,11 @@ impl InnerResourceContainer {
                 identifier.to_string(),
             ))
         } else {
+            let shared = Arc::new(RwLock::new(resource));
             self.resources
-                .insert(identifier.to_string(), Arc::new(RwLock::new(resource)));
+                .insert(identifier.to_string(), shared.clone());
+            self.resources_by_type
+                .insert(TypeId::of::<T>(), shared.clone());
             Ok(())
         }
     }

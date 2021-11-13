@@ -10,7 +10,7 @@ pub fn run_controls_component() -> Vec<UIElement> {
     let world_state = use_global::<WorldState>();
 
     let resource_container = world_state.resource_container.clone();
-    let system_service = resource_container.require::<SystemService>("system_service");
+    let system_service = resource_container.require::<SystemService>();
     let system_service_reader = system_service.read();
 
     let system_service_2 = system_service.clone();

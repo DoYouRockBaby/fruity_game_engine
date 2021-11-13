@@ -15,7 +15,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let graphic_service = WgpuGraphicManager::new(resource_container.clone());
 
     resource_container
-        .add::<dyn GraphicService>("graphic_service", Box::new(graphic_service))
+        .add_require::<dyn GraphicService>("graphic_service", Box::new(graphic_service))
         .unwrap();
 
     resource_container.add_resource_loader("png", load_image);

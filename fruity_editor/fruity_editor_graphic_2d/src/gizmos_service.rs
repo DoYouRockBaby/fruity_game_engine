@@ -25,10 +25,9 @@ pub struct GizmosService {
 
 impl GizmosService {
     pub fn new(resource_container: Arc<ResourceContainer>) -> GizmosService {
-        let input_service = resource_container.require::<InputService>("input_service");
-        let graphic_service = resource_container.require::<dyn GraphicService>("graphic_service");
-        let graphic_2d_service =
-            resource_container.require::<dyn Graphic2dService>("graphic_2d_service");
+        let input_service = resource_container.require::<InputService>();
+        let graphic_service = resource_container.require::<dyn GraphicService>();
+        let graphic_2d_service = resource_container.require::<dyn Graphic2dService>();
 
         GizmosService {
             input_service,

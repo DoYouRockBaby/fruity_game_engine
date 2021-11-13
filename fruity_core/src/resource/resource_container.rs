@@ -54,9 +54,9 @@ impl ResourceContainer {
     /// # Generic Arguments
     /// * `T` - The resource type
     ///
-    pub fn require<T: Resource + ?Sized>(&self, identifier: &str) -> ResourceReference<T> {
-        // TODO: Add a beautifull error message
-        self.get(identifier).unwrap()
+    pub fn require<T: Resource + ?Sized>(&self) -> ResourceReference<T> {
+        let inner = self.inner.read().unwrap();
+        inner.require()
     }
 
     /// Get a resource by it's identifier
@@ -99,6 +99,20 @@ impl ResourceContainer {
     /// * `resource` - The resource object
     ///
     pub fn add<T: Resource + ?Sized>(
+        &self,
+        identifier: &str,
+        resource: Box<T>,
+    ) -> Result<(), AddResourceError> {
+        let mut inner = self.inner.write().unwrap();
+        inner.add(identifier, resource)
+    }
+
+    /// Add a resource into the collection that can be required by type
+    ///
+    /// # Arguments
+    /// * `resource` - The resource object
+    ///
+    pub fn add_require<T: Resource + ?Sized>(
         &self,
         identifier: &str,
         resource: Box<T>,

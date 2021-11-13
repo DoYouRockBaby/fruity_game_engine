@@ -58,8 +58,8 @@ impl Debug for EditorService {
 
 impl EditorService {
     pub fn new(resource_container: Arc<ResourceContainer>) -> EditorService {
-        let window_service = resource_container.require::<dyn WindowService>("window_service");
-        let graphic_service = resource_container.require::<dyn GraphicService>("graphic_service");
+        let window_service = resource_container.require::<dyn WindowService>();
+        let graphic_service = resource_container.require::<dyn GraphicService>();
 
         let window_service_reader = window_service.read();
         let window_service_reader = window_service_reader.downcast_ref::<WinitWindowService>();
@@ -70,8 +70,7 @@ impl EditorService {
         graphic_service_reader
             .on_before_draw_end()
             .add_observer(move |_| {
-                let editor_service =
-                    resource_container_2.require::<EditorService>("editor_service");
+                let editor_service = resource_container_2.require::<EditorService>();
                 let mut editor_service = editor_service.write();
 
                 editor_service.draw();
@@ -79,7 +78,7 @@ impl EditorService {
 
         let resource_container_2 = resource_container.clone();
         window_service_reader.on_event.add_observer(move |event| {
-            let editor_service = resource_container_2.require::<EditorService>("editor_service");
+            let editor_service = resource_container_2.require::<EditorService>();
             let mut editor_service = editor_service.write();
 
             editor_service.handle_event(&event);

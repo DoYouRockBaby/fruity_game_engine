@@ -10,6 +10,6 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let frame_service = FrameService::new(resource_container.clone());
 
     resource_container
-        .add::<FrameService>("frame_service", Box::new(frame_service))
+        .add_require::<FrameService>("frame_service", Box::new(frame_service))
         .unwrap();
 }

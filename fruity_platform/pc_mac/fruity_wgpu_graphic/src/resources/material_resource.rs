@@ -283,7 +283,7 @@ pub fn load_material(
     resource_container: Arc<ResourceContainer>,
 ) {
     // Get the dependencies
-    let graphic_service = resource_container.require::<dyn GraphicService>("graphic_service");
+    let graphic_service = resource_container.require::<dyn GraphicService>();
     let graphic_service = graphic_service.read();
     let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
 

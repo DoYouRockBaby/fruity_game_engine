@@ -15,8 +15,7 @@ pub fn configure_constructors(runtime: &mut JsRuntime, resource_container: Arc<R
     let mut global_object = runtime.global_object();
     let scope = &mut runtime.handle_scope();
 
-    let object_factory_service =
-        resource_container.require::<ObjectFactoryService>("object_factory_service");
+    let object_factory_service = resource_container.require::<ObjectFactoryService>();
     let object_factory_service_reader = object_factory_service.read();
 
     object_factory_service_reader.iter().for_each(|(key, ..)| {

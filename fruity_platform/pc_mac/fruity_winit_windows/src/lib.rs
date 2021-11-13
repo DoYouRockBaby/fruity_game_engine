@@ -24,7 +24,7 @@ struct WindowSettings {
 }
 
 pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
-    let window_service = resource_container.require::<dyn WindowService>("window_service");
+    let window_service = resource_container.require::<dyn WindowService>();
     let window_service = window_service.read();
     let window_service = window_service
         .as_any_ref()
@@ -33,7 +33,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
 
     let resource_container_2 = resource_container.clone();
     window_service.on_enter_loop.add_observer(move |_| {
-        let frame_service = resource_container_2.require::<FrameService>("frame_service");
+        let frame_service = resource_container_2.require::<FrameService>();
         let mut frame_service = frame_service.write();
 
         frame_service.begin_frame();
@@ -41,7 +41,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
 
     let resource_container_2 = resource_container.clone();
     window_service.on_start_update.add_observer(move |_| {
-        let frame_service = resource_container_2.require::<FrameService>("frame_service");
+        let frame_service = resource_container_2.require::<FrameService>();
         let mut frame_service = frame_service.write();
 
         frame_service.begin_frame();
@@ -54,7 +54,7 @@ pub fn platform(
     settings: &Settings,
 ) {
     // Get dependencies
-    let system_service = resource_container.require::<SystemService>("system_service");
+    let system_service = resource_container.require::<SystemService>();
 
     // Read settings
     let window_settings = read_window_settings(settings);
@@ -84,7 +84,7 @@ pub fn platform(
     let on_events_cleared = window_service.on_events_cleared.clone();
 
     resource_container
-        .add::<dyn WindowService>("window_service", Box::new(window_service))
+        .add_require::<dyn WindowService>("window_service", Box::new(window_service))
         .unwrap();
 
     // Initialize the engine
@@ -97,7 +97,7 @@ pub fn platform(
     std::mem::drop(system_service_reader);
 
     // Run the render loop
-    let window_service = resource_container.require::<dyn WindowService>("window_service");
+    let window_service = resource_container.require::<dyn WindowService>();
     let window_service_reader = window_service.read();
     window_service_reader.on_enter_loop().notify(());
     std::mem::drop(window_service_reader);

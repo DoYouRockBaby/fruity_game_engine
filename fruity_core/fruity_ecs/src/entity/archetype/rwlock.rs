@@ -67,7 +67,7 @@ impl EntitySharedRwLock {
     /// # Arguments
     /// * `component_type` - The component type
     ///
-    pub fn get_component(&self, component_type: String) -> Option<ComponentRwLock> {
+    pub fn get_component(&self, component_type: &str) -> Option<ComponentRwLock> {
         let reader = self.read();
         reader
             .get_components()
@@ -185,6 +185,25 @@ impl<'a> EntityReadGuard<'a> {
     pub fn get_components(&self) -> &[&'a dyn Component] {
         &self.components
     }
+
+    /// Get a component rwlock
+    ///
+    /// # Arguments
+    /// * `component_type` - The component type
+    ///
+    pub fn get_component<T: Component>(&self, component_type: &str) -> Option<&T> {
+        match self
+            .get_components()
+            .iter()
+            .find(|component| component.get_component_type() == component_type)
+        {
+            Some(component) => match component.as_any_ref().downcast_ref::<T>() {
+                Some(component) => Some(component),
+                None => None,
+            },
+            None => None,
+        }
+    }
 }
 
 impl<'a> Deref for EntityReadGuard<'a> {
@@ -244,6 +263,25 @@ impl<'a> EntityWriteGuard<'a> {
     pub fn get_components_mut(&mut self) -> &mut [&'a mut dyn Component] {
         &mut self.components
     }
+
+    /// Get a component rwlock
+    ///
+    /// # Arguments
+    /// * `component_type` - The component type
+    ///
+    pub fn get_component_mut<T: Component>(&mut self, component_type: &str) -> Option<&mut T> {
+        match self
+            .get_components_mut()
+            .iter_mut()
+            .find(|component| component.get_component_type() == component_type)
+        {
+            Some(component) => match component.as_any_mut().downcast_mut::<T>() {
+                Some(component) => Some(component),
+                None => None,
+            },
+            None => None,
+        }
+    }
 }
 
 impl<'a> Drop for EntityWriteGuard<'a> {
@@ -284,7 +322,7 @@ impl IntrospectObject for EntitySharedRwLock {
                     let mut caster = ArgumentCaster::new("get_component", args);
                     let arg1 = caster.cast_next::<String>()?;
 
-                    let result = this.get_component(arg1);
+                    let result = this.get_component(&arg1);
 
                     Ok(result.map(|result| Serialized::NativeObject(Box::new(result))))
                 })),

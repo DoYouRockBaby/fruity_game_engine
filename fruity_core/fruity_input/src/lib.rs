@@ -11,6 +11,6 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, settings: &Setting
     input_service.read_input_settings(settings);
 
     resource_container
-        .add::<InputService>("input_service", Box::new(input_service))
+        .add_require::<InputService>("input_service", Box::new(input_service))
         .unwrap();
 }

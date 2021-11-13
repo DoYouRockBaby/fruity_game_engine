@@ -11,6 +11,6 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let editor_service = EditorService::new(resource_container.clone());
 
     resource_container
-        .add::<EditorService>("editor_service", Box::new(editor_service))
+        .add_require::<EditorService>("editor_service", Box::new(editor_service))
         .unwrap();
 }

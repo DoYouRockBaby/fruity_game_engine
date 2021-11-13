@@ -5,6 +5,8 @@ use crate::entity::archetype::Archetype;
 use crate::entity::entity::get_type_identifier_by_any;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
+use crate::entity::entity_query::EntityQueryReadCallback;
+use crate::entity::entity_query::EntityQueryWriteCallback;
 use crate::ResourceContainer;
 use fruity_any::*;
 use fruity_core::resource::resource::Resource;
@@ -18,6 +20,8 @@ use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use fruity_introspect::SetterCaller;
+use rayon::iter::ParallelBridge;
+use rayon::iter::ParallelIterator;
 use std::any::TypeId;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -88,6 +92,44 @@ impl EntityService {
             .filter(move |archetype| archetype.get_type_identifier().contains(&entity_identifier))
             .map(|archetype| archetype.iter())
             .flatten()
+    }
+
+    /// Execute a closure over all entities with a specific archetype type
+    /// Use every entity that contains the provided entity type
+    /// Also map components to the order of provided entity type
+    /// identifier
+    ///
+    /// # Arguments
+    /// * `entity_identifier` - The entity type identifier
+    /// * `callback` - The closure to execute
+    ///
+    pub fn for_each(
+        &self,
+        entity_identifier: EntityTypeIdentifier,
+        callback: impl EntityQueryReadCallback,
+    ) {
+        self.iter_components(entity_identifier)
+            .par_bridge()
+            .for_each(move |components| (callback.inject_components())(components));
+    }
+
+    /// Execute a closure over all entities with a specific archetype type
+    /// Use every entity that contains the provided entity type
+    /// Also map components to the order of provided entity type
+    /// identifier
+    ///
+    /// # Arguments
+    /// * `entity_identifier` - The entity type identifier
+    /// * `callback` - The closure to execute
+    ///
+    pub fn for_each_mut(
+        &self,
+        entity_identifier: EntityTypeIdentifier,
+        callback: impl EntityQueryWriteCallback,
+    ) {
+        self.iter_components(entity_identifier)
+            .par_bridge()
+            .for_each(move |components| (callback.inject_components())(components));
     }
 
     /// Iterate over all entities with a specific archetype type

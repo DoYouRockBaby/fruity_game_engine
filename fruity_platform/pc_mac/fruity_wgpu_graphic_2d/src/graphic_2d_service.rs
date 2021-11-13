@@ -30,8 +30,8 @@ pub struct WgpuGraphic2dManager {
 
 impl WgpuGraphic2dManager {
     pub fn new(resource_container: Arc<ResourceContainer>) -> WgpuGraphic2dManager {
-        let window_service = resource_container.require::<dyn WindowService>("window_service");
-        let graphic_service = resource_container.require::<dyn GraphicService>("graphic_service");
+        let window_service = resource_container.require::<dyn WindowService>();
+        let graphic_service = resource_container.require::<dyn GraphicService>();
 
         WgpuGraphic2dManager {
             window_service,
@@ -140,13 +140,15 @@ impl Graphic2dService for WgpuGraphic2dManager {
         // Get resources
         let material = self
             .resource_container
-            .require::<dyn MaterialResource>("Materials/Draw Line");
+            .get::<dyn MaterialResource>("Materials/Draw Line")
+            .unwrap();
         let material = material.read();
         let material = material.downcast_ref::<WgpuMaterialResource>();
 
         let shader = self
             .resource_container
-            .require::<dyn ShaderResource>("Shaders/Draw Line");
+            .get::<dyn ShaderResource>("Shaders/Draw Line")
+            .unwrap();
         let shader = shader.read();
         let shader = shader.downcast_ref::<WgpuShaderResource>();
 

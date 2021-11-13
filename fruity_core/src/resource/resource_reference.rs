@@ -31,15 +31,37 @@ impl<T: Resource + ?Sized> ResourceReference<T> {
 
     /// Create a read guard over the resource
     pub fn read(&self) -> ResourceReadGuard<T> {
+        let inner_guard = self.0.read().unwrap();
+
+        // Safe cause the write guard contains an arc to the referenced resource so it will
+        // not be released until the guard is released
+        let inner_guard = unsafe {
+            std::mem::transmute::<RwLockReadGuard<Box<T>>, RwLockReadGuard<'static, Box<T>>>(
+                inner_guard,
+            )
+        };
+
         ResourceReadGuard::<T> {
-            inner_guard: self.0.read().unwrap(),
+            _referenced: self.0.clone(),
+            inner_guard,
         }
     }
 
     /// Create a write guard over the resource
     pub fn write(&self) -> ResourceWriteGuard<T> {
+        let inner_guard = self.0.write().unwrap();
+
+        // Safe cause the write guard contains an arc to the referenced resource so it will
+        // not be released until the guard is released
+        let inner_guard = unsafe {
+            std::mem::transmute::<RwLockWriteGuard<Box<T>>, RwLockWriteGuard<'static, Box<T>>>(
+                inner_guard,
+            )
+        };
+
         ResourceWriteGuard::<T> {
-            inner_guard: self.0.write().unwrap(),
+            _referenced: self.0.clone(),
+            inner_guard,
         }
     }
 }
@@ -115,18 +137,19 @@ impl<T: Resource + ?Sized> Into<Serialized> for ResourceReference<T> {
 }
 
 /// A read guard for a resource reference
-pub struct ResourceReadGuard<'a, T: Resource + ?Sized> {
-    inner_guard: RwLockReadGuard<'a, Box<T>>,
+pub struct ResourceReadGuard<T: Resource + ?Sized> {
+    _referenced: Arc<RwLock<Box<T>>>,
+    inner_guard: RwLockReadGuard<'static, Box<T>>,
 }
 
-impl<'a, T: Resource + ?Sized> ResourceReadGuard<'a, T> {
+impl<'a, T: Resource + ?Sized> ResourceReadGuard<T> {
     /// Downcast to the original sized type that implement the resource trait
     pub fn downcast_ref<U: Resource>(&self) -> &U {
         self.deref().as_any_ref().downcast_ref::<U>().unwrap()
     }
 }
 
-impl<'a, T: Resource + ?Sized> Deref for ResourceReadGuard<'a, T> {
+impl<'a, T: Resource + ?Sized> Deref for ResourceReadGuard<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -135,25 +158,26 @@ impl<'a, T: Resource + ?Sized> Deref for ResourceReadGuard<'a, T> {
 }
 
 /// A write guard for a resource reference
-pub struct ResourceWriteGuard<'a, T: Resource + ?Sized> {
-    inner_guard: RwLockWriteGuard<'a, Box<T>>,
+pub struct ResourceWriteGuard<T: Resource + ?Sized> {
+    _referenced: Arc<RwLock<Box<T>>>,
+    inner_guard: RwLockWriteGuard<'static, Box<T>>,
 }
 
-impl<'a, T: Resource + ?Sized> ResourceWriteGuard<'a, T> {
+impl<T: Resource + ?Sized> ResourceWriteGuard<T> {
     /// Downcast to the original sized type that implement the resource trait
     pub fn downcast_ref<U: Resource>(&self) -> &U {
         self.deref().as_any_ref().downcast_ref::<U>().unwrap()
     }
 }
 
-impl<'a, T: Resource + ?Sized> ResourceWriteGuard<'a, T> {
+impl<T: Resource + ?Sized> ResourceWriteGuard<T> {
     /// Downcast to the original sized type that implement the resource trait
     pub fn downcast_mut<U: Resource>(&mut self) -> &mut U {
         self.deref_mut().as_any_mut().downcast_mut::<U>().unwrap()
     }
 }
 
-impl<'a, T: Resource + ?Sized> Deref for ResourceWriteGuard<'a, T> {
+impl<T: Resource + ?Sized> Deref for ResourceWriteGuard<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -161,7 +185,7 @@ impl<'a, T: Resource + ?Sized> Deref for ResourceWriteGuard<'a, T> {
     }
 }
 
-impl<'a, T: Resource + ?Sized> DerefMut for ResourceWriteGuard<'a, T> {
+impl<T: Resource + ?Sized> DerefMut for ResourceWriteGuard<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.inner_guard.deref_mut()
     }
