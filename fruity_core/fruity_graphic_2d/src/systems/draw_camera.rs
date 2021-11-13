@@ -3,7 +3,7 @@ use crate::Graphic2dService;
 use crate::Position;
 use crate::Size;
 use fruity_core::inject::Const;
-use fruity_core::resource::resource_reference::ResourceReference;
+use fruity_core::inject::Ref;
 use fruity_ecs::entity::entity_query::EntityQueryReadCallback3;
 use fruity_ecs::entity::entity_service::EntityService;
 use fruity_ecs::entity_type;
@@ -12,8 +12,8 @@ use fruity_graphic::math::Matrix4;
 
 pub fn draw_camera(
     entity_service: Const<EntityService>,
-    graphic_2d_service: ResourceReference<dyn Graphic2dService>,
-    system_service: ResourceReference<SystemService>,
+    graphic_2d_service: Ref<dyn Graphic2dService>,
+    system_service: Ref<SystemService>,
 ) {
     entity_service.for_each(
         entity_type!["Position", "Size", "Camera"],
