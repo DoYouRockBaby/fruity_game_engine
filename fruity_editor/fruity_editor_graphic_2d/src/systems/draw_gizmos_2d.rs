@@ -11,6 +11,7 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
     let entity = use_global::<EntityState>();
 
     if let Some(selected_entity) = &entity.selected_entity {
+        // Get the selected entity bounds
         let (bottom_left, top_right) = {
             let entity_reader = selected_entity.read();
             let position = entity_reader.get_component::<Position>("Position").unwrap();
@@ -22,12 +23,14 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
             (bottom_left, top_right)
         };
 
+        // Draw the resize helper
         gizmos_service.draw_resize_helper(
             bottom_left,
             top_right,
             GREEN,
             RED,
             move |move_x, move_y, drag_action| {
+                // Get the position origin
                 let position_origin = {
                     let entity_reader = selected_entity.read();
                     let position = entity_reader.get_component::<Position>("Position").unwrap();
@@ -40,8 +43,8 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
                         .get_component_mut::<Position>("Position")
                         .unwrap();
 
+                    // Move the entity with the cursor
                     let cursor_movement = cursor_position - start_pos;
-
                     if move_x {
                         position.pos.x = position_origin.x + cursor_movement.x;
                     }
@@ -52,6 +55,7 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
                 });
             },
             move |fixed_x, fixed_y, drag_action| {
+                // Get the position and the size origin
                 let (position_origin, size_origin) = {
                     let entity_reader = selected_entity.read();
                     let position = entity_reader.get_component::<Position>("Position").unwrap();
@@ -65,6 +69,7 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
 
                     let cursor_movement = cursor_position - start_pos;
 
+                    // Move the entity with the cursor
                     let position = entity_writer
                         .get_component_mut::<Position>("Position")
                         .unwrap();
@@ -80,6 +85,7 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
                         position_origin.y + cursor_movement.y
                     };
 
+                    // Resize the entity with the cursor
                     let size = entity_writer.get_component_mut::<Size>("Size").unwrap();
                     size.size.x = if fixed_x {
                         size_origin.x + cursor_movement.x
