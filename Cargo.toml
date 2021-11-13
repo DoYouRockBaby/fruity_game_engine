@@ -7,6 +7,7 @@ resolver = "2"
 [dependencies]
 fruity_any = { path = "fruity_core/fruity_any" }
 fruity_core = { path = "fruity_core" }
+fruity_ecs = { path = "fruity_core/fruity_ecs" }
 fruity_introspect = { path = "fruity_core/fruity_introspect" }
 hot_reload_lib = { path = "deps/hot_reload_lib" }
 pretty_env_logger = "0.4.0"

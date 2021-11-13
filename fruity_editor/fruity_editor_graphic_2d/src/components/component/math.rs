@@ -1,4 +1,4 @@
-use fruity_core::component::component_rwlock::ComponentRwLock;
+use fruity_ecs::component::component_rwlock::ComponentRwLock;
 use fruity_editor::ui_element::display::Text;
 use fruity_editor::ui_element::input::FloatInput;
 use fruity_editor::ui_element::layout::Row;

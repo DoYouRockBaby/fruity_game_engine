@@ -1,5 +1,5 @@
 use fruity_any::*;
-use fruity_core::*;
+use fruity_ecs::*;
 use fruity_graphic::math::Matrix4;
 use fruity_introspect::serializable_object::SerializableObject;
 use fruity_introspect::serialized::Serialized;

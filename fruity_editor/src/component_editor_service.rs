@@ -1,8 +1,8 @@
 use crate::ui_element::UIElement;
 use fruity_any::*;
-use fruity_core::component::component_rwlock::ComponentRwLock;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
+use fruity_ecs::component::component_rwlock::ComponentRwLock;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;

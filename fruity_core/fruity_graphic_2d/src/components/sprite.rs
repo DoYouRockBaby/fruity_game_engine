@@ -1,6 +1,6 @@
 use fruity_any::*;
 use fruity_core::resource::resource_reference::OptionResourceReference;
-use fruity_core::*;
+use fruity_ecs::*;
 use fruity_graphic::resources::material_resource::MaterialResource;
 
 #[derive(Debug, Clone, Component, FruityAny)]

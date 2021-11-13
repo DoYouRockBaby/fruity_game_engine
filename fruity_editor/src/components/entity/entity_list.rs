@@ -5,8 +5,8 @@ use crate::ui_element::input::Button;
 use crate::ui_element::list::ListView;
 use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
-use fruity_core::entity::archetype::rwlock::EntitySharedRwLock;
-use fruity_core::entity::entity_service::EntityService;
+use fruity_ecs::entity::archetype::rwlock::EntitySharedRwLock;
+use fruity_ecs::entity::entity_service::EntityService;
 use std::any::Any;
 use std::sync::Arc;
 

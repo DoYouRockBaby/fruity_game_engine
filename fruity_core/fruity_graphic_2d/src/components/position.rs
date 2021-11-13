@@ -1,6 +1,6 @@
 use crate::Vector2d;
 use fruity_any::*;
-use fruity_core::*;
+use fruity_ecs::*;
 
 #[derive(Debug, Clone, Component, Default, FruityAny)]
 pub struct Position {

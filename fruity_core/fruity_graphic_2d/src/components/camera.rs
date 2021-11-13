@@ -1,5 +1,5 @@
 use fruity_any::*;
-use fruity_core::*;
+use fruity_ecs::*;
 
 #[derive(Debug, Clone, Component, FruityAny)]
 pub struct Camera {

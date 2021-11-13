@@ -3,7 +3,7 @@ use crate::state::world::WorldState;
 use crate::ui_element::input::Button;
 use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
-use fruity_core::system::system_service::SystemService;
+use fruity_ecs::system::system_service::SystemService;
 use std::sync::Arc;
 
 pub fn run_controls_component() -> Vec<UIElement> {

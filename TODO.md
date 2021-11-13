@@ -8,9 +8,9 @@
 [P] Implement entity hierarchy
 [X] Put a get_constructor function into introspect
 [X] Implements entity deletion
-[ ] Resources and services containers should be merged
-[ ] Abstract resources
-[ ] Split abstractions and implementations for all crates
+[X] Resources and services containers should be merged
+[X] Abstract resources
+[X] Split abstractions and implementations for all crates
 [ ] Add an exception when you try to access a deleted entity, propagate it into js
 [ ] There should be some memory leak in archetype
 [ ] Make macros for native systems
@@ -77,3 +77,4 @@
 [ ] Rust doc everywhere
 [ ] Remove as many unwrap as possible (ecs and javascript)
 [ ] A lot of unsafe code were created to avoid lifetime issue in ecs, remove as many as possible
+[ ] Use a tool that detect unused dependencies

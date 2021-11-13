@@ -6,7 +6,7 @@ use crate::ui_element::UIAlign;
 use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
 use crate::ComponentEditorService;
-use fruity_core::component::component_rwlock::ComponentRwLock;
+use fruity_ecs::component::component_rwlock::ComponentRwLock;
 
 pub mod primitive;
 

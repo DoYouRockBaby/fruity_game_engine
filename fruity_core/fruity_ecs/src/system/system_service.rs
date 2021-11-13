@@ -1,6 +1,6 @@
-use crate::resource::resource::Resource;
 use crate::ResourceContainer;
 use fruity_any::*;
+use fruity_core::resource::resource::Resource;
 use fruity_introspect::log_introspect_error;
 use fruity_introspect::serialized::Callback;
 use fruity_introspect::utils::cast_introspect_mut;

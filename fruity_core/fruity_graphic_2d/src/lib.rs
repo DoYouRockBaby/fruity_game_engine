@@ -10,7 +10,7 @@ use crate::systems::draw_sprite::draw_sprite_untyped;
 use fruity_core::object_factory_service::ObjectFactoryService;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
-use fruity_core::system::system_service::SystemService;
+use fruity_ecs::system::system_service::SystemService;
 use std::sync::Arc;
 
 pub mod components;

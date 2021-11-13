@@ -6,7 +6,7 @@ use crate::entity::archetype::rwlock::EntitySharedRwLock;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
 use crate::entity::entity_service::RemoveEntityError;
-use crate::signal::Signal;
+use fruity_core::signal::Signal;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;

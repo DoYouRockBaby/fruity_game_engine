@@ -1,5 +1,5 @@
 use fruity_core::resource::resource_container::ResourceContainer;
-use fruity_core::system::system_service::SystemService;
+use fruity_ecs::system::system_service::SystemService;
 use std::sync::Arc;
 
 pub fn pause_at_startup(resource_container: Arc<ResourceContainer>) {

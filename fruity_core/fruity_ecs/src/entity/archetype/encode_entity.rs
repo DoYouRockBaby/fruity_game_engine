@@ -4,7 +4,7 @@ use crate::entity::archetype::Component;
 use crate::entity::archetype::EntityCellHead;
 use crate::entity::archetype::EntityId;
 use crate::entity::archetype::InnerArchetype;
-use crate::utils::slice::copy;
+use fruity_core::utils::slice::copy;
 use std::mem::size_of;
 
 // TODO: There is a lot of optimizations to do inside this

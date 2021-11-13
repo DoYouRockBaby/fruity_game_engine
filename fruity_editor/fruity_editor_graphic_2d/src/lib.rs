@@ -3,7 +3,7 @@ use crate::gizmos_service::GizmosService;
 use crate::systems::draw_gizmos_2d::draw_gizmos_2d_untyped;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
-use fruity_core::system::system_service::SystemService;
+use fruity_ecs::system::system_service::SystemService;
 use fruity_editor::component_editor_service::ComponentEditorService;
 use fruity_graphic_2d::math::vector2d::Vector2d;
 use std::sync::Arc;

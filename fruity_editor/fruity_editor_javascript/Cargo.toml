@@ -13,6 +13,7 @@ maplit = "1.0.2"
 edit = "0.1.3"
 fruity_any = { path = "../../fruity_core/fruity_any" }
 fruity_core = { path = "../../fruity_core" }
+fruity_ecs = { path = "../../fruity_core/fruity_ecs" }
 fruity_editor = { path = "../" }
 fruity_introspect = { path = "../../fruity_core/fruity_introspect" }
 fruity_graphic = { path = "../../fruity_core/fruity_graphic" }

@@ -7,5 +7,6 @@ resolver = "2"
 [dependencies]
 fruity_any = { path = "../fruity_any" }
 fruity_core = { path = ".." }
+fruity_ecs = { path = "../fruity_ecs" }
 fruity_introspect = { path = "../fruity_introspect" }
 fruity_windows = { path = "../fruity_windows" }

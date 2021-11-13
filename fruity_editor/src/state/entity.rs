@@ -1,4 +1,4 @@
-use fruity_core::entity::archetype::rwlock::EntitySharedRwLock;
+use fruity_ecs::entity::archetype::rwlock::EntitySharedRwLock;
 
 #[derive(Debug, Default)]
 pub struct EntityState {

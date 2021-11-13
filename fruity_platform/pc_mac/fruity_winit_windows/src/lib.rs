@@ -3,7 +3,7 @@ use core::ffi::c_void;
 use fruity_core::platform::Initializer;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
-use fruity_core::system::system_service::SystemService;
+use fruity_ecs::system::system_service::SystemService;
 use fruity_windows::frame_service::FrameService;
 use fruity_windows::window_service::WindowService;
 use std::sync::Arc;

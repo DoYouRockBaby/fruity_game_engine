@@ -1,8 +1,8 @@
 use crate::component::component::Component;
 use crate::component::component::ComponentDecoder;
 use crate::component::component::ComponentDecoderMut;
-use crate::utils::slice::copy;
 use fruity_any::FruityAny;
+use fruity_core::utils::slice::copy;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;

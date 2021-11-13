@@ -31,7 +31,7 @@ fn derive_component_trait(input: TokenStream) -> TokenStream {
     let struct_name = ident.to_string();
 
     let output = quote! {
-        impl fruity_core::component::component::Component for #ident {
+        impl fruity_ecs::component::component::Component for #ident {
             fn get_component_type(&self) -> String {
                 #struct_name.to_string()
             }
@@ -51,21 +51,21 @@ fn derive_component_trait(input: TokenStream) -> TokenStream {
                 fruity_core::utils::slice::copy(buffer, encoded);
             }
 
-            fn get_decoder(&self) -> fruity_core::component::component::ComponentDecoder {
+            fn get_decoder(&self) -> fruity_ecs::component::component::ComponentDecoder {
                 |data| {
                     let (_head, body, _tail) = unsafe { data.align_to::<Self>() };
                     &body[0]
                 }
             }
 
-            fn get_decoder_mut(&self) -> fruity_core::component::component::ComponentDecoderMut {
+            fn get_decoder_mut(&self) -> fruity_ecs::component::component::ComponentDecoderMut {
                 |data| {
                     let (_head, body, _tail) = unsafe { data.align_to_mut::<Self>() };
                     &mut body[0]
                 }
             }
 
-            fn duplicate(&self) -> Box<dyn fruity_core::component::component::Component> {
+            fn duplicate(&self) -> Box<dyn fruity_ecs::component::component::Component> {
                 Box::new(self.clone())
             }
         }
@@ -212,7 +212,7 @@ fn derive_component_instantiable_object_trait(input: TokenStream)  -> TokenStrea
                         })
                     };
         
-                    Ok(fruity_introspect::serialized::Serialized::NativeObject(Box::new(fruity_core::component::component::AnyComponent::new(new_object))))
+                    Ok(fruity_introspect::serialized::Serialized::NativeObject(Box::new(fruity_ecs::component::component::AnyComponent::new(new_object))))
                 })
             }
         }

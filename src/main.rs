@@ -3,6 +3,7 @@ extern crate pretty_env_logger;
 use fruity_core::settings::read_settings;
 use fruity_core::settings::Settings;
 use fruity_core::world::World;
+use fruity_ecs::initialize as initialize_ecs;
 use fruity_editor::initialize as initialize_editor;
 use fruity_editor_graphic_2d::initialize as initialize_editor_graphic_2d;
 use fruity_editor_javascript::initialize as initialize_editor_javascript;
@@ -38,6 +39,7 @@ fn main() {
     world.set_platform(platform);
 
     // Run the engine
+    initialize_ecs(world.resource_container.clone());
     world.run(
         |resource_container, settings| {
             initialize_winit_window(resource_container.clone(), settings);
