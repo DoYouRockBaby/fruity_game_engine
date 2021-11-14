@@ -1,21 +1,31 @@
 use crate::gizmos_service::GizmosService;
 use fruity_core::inject::Const;
 use fruity_editor::hooks::use_global;
-use fruity_editor::state::entity::EntityState;
+use fruity_editor::state::world::WorldState;
 use fruity_graphic::math::GREEN;
 use fruity_graphic::math::RED;
 use fruity_graphic_2d::components::position::Position;
 use fruity_graphic_2d::components::size::Size;
 
 pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
-    let entity = use_global::<EntityState>();
+    let world_state = use_global::<WorldState>();
 
-    if let Some(selected_entity) = &entity.selected_entity {
+    if let Some(selected_entity) = &world_state.selected_entity {
         // Get the selected entity bounds
         let (bottom_left, top_right) = {
             let entity_reader = selected_entity.read();
-            let position = entity_reader.get_component::<Position>("Position").unwrap();
-            let size = entity_reader.get_component::<Size>("Size").unwrap();
+            let position =
+                if let Some(position) = entity_reader.get_component::<Position>("Position") {
+                    position
+                } else {
+                    return;
+                };
+
+            let size = if let Some(size) = entity_reader.get_component::<Size>("Size") {
+                size
+            } else {
+                return;
+            };
 
             let bottom_left = position.pos;
             let top_right = position.pos + size.size;

@@ -1,5 +1,4 @@
 use crate::hooks::use_global;
-use crate::state::entity::EntityState;
 use crate::state::world::WorldState;
 use crate::ui_element::input::Button;
 use crate::ui_element::list::ListView;
@@ -33,10 +32,10 @@ pub fn entity_list_component() -> UIElement {
             Button {
                 label: item_reader.name.clone(),
                 on_click: Arc::new(move || {
-                    let entity_state = use_global::<EntityState>();
+                    let world_state = use_global::<WorldState>();
                     let item = item.clone();
 
-                    entity_state.selected_entity = Some(item.clone());
+                    world_state.selected_entity = Some(item.clone());
                 }),
                 ..Default::default()
             }

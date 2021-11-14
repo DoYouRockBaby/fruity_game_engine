@@ -16,7 +16,6 @@ use crate::components::fields::primitive::draw_editor_usize;
 use crate::file_explorer_service::FileExplorerService;
 use crate::hooks::declare_global;
 use crate::resources::default_resources::load_default_resources;
-use crate::state::entity::EntityState;
 use crate::state::file_explorer::FileExplorerState;
 use crate::state::theme::ThemeState;
 use crate::state::world::WorldState;
@@ -59,7 +58,6 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
 
     declare_global(WorldState::new(resource_container.clone()));
     declare_global(ThemeState::default());
-    declare_global(EntityState::default());
     declare_global(FileExplorerState::default());
 
     let system_service = resource_container.require::<SystemService>();

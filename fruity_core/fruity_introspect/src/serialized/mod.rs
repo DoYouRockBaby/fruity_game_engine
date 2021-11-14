@@ -15,7 +15,14 @@ pub mod impl_containers;
 /// Implementation of serialized conversions for tuples
 pub mod impl_tuples;
 
+/// Provides a factory for the introspect types
+pub mod object_factory;
+
+/// Provides a function to deserialize
+pub mod deserialize;
+
 use crate::serializable_object::SerializableObject;
+use crate::serialized::object_factory::ObjectFactory;
 use crate::IntrospectError;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -162,4 +169,16 @@ impl Debug for Serialized {
     ) -> std::result::Result<(), std::fmt::Error> {
         Ok(())
     }
+}
+
+/// Trait for serializable objects
+pub trait Serialize {
+    /// Serialize the object
+    fn serialize(&self) -> Serialized;
+}
+
+/// Trait for deserializable object
+pub trait Deserialize {
+    /// Deserialize an instancied object
+    fn deserialize(&mut self, serialized: &Serialized, object_factory: &ObjectFactory);
 }

@@ -1,12 +1,14 @@
 use crate::component::serialized_component::SerializedComponent;
 use fruity_any::*;
 use fruity_introspect::serializable_object::SerializableObject;
+use fruity_introspect::serialized::Serialize;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use fruity_introspect::SetterCaller;
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::ops::Deref;
@@ -42,6 +44,28 @@ pub trait Component: IntrospectObject + Debug {
     /// Create a new component that is a clone of self
     fn duplicate(&self) -> Box<dyn Component>;
 }
+
+impl Serialize for dyn Component {
+    fn serialize(&self) -> Serialized {
+        let mut fields = HashMap::new();
+
+        self.get_field_infos().into_iter().for_each(|field_info| {
+            let getter = field_info.getter;
+            fields.insert(field_info.name, getter(self.as_any_ref()));
+        });
+
+        Serialized::SerializedObject {
+            class_name: self.get_component_type(),
+            fields,
+        }
+    }
+}
+
+/*impl Deserialize for dyn Component {
+    fn deserialize(&mut self, serialized: &Serialized, object_factory: &ObjectFactory) {
+        self.component.deserialize(serialized, object_factory);
+    }
+}*/
 
 /// An container for a component without knowing the instancied type
 #[derive(FruityAny, Debug)]
@@ -85,6 +109,12 @@ impl TryFrom<Serialized> for AnyComponent {
         }
     }
 }
+
+/*impl Deserialize for AnyComponent {
+    fn deserialize(&mut self, serialized: &Serialized, object_factory: &ObjectFactory) {
+        self.component.deserialize(serialized, object_factory);
+    }
+}*/
 
 impl IntrospectObject for AnyComponent {
     fn get_field_infos(&self) -> Vec<FieldInfo> {

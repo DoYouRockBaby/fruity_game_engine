@@ -12,7 +12,7 @@ use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_ecs::entity::entity::EntityId;
 use fruity_editor::hooks::use_global;
-use fruity_editor::state::entity::EntityState;
+use fruity_editor::state::world::WorldState;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::utils::cast_introspect_ref;
@@ -201,9 +201,9 @@ impl EditorService {
     }
 
     fn is_entity_selected(&self, entity_id: &EntityId) -> bool {
-        let entity_state = use_global::<EntityState>();
+        let world_state = use_global::<WorldState>();
 
-        if let Some(selected_entity) = &entity_state.selected_entity {
+        if let Some(selected_entity) = &world_state.selected_entity {
             let entity = selected_entity.read();
             entity.entity_id == *entity_id
         } else {

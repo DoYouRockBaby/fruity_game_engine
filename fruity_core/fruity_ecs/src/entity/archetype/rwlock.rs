@@ -12,6 +12,7 @@ use crate::entity::archetype::EntityTypeIdentifier;
 use fruity_any::*;
 use fruity_core::signal::Signal;
 use fruity_introspect::serializable_object::SerializableObject;
+use fruity_introspect::serialized::Serialize;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::utils::cast_introspect_ref;
 use fruity_introspect::utils::ArgumentCaster;
@@ -21,6 +22,7 @@ use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use fruity_introspect::SetterCaller;
 use itertools::Itertools;
+use maplit::hashmap;
 use std::any::TypeId;
 use std::fmt::Debug;
 use std::fmt::Formatter;
@@ -142,6 +144,27 @@ impl EntitySharedRwLock {
         component_indexes.map(move |component_indexes| {
             ComponentListRwLock::new(weak.clone(), component_indexes.clone())
         })
+    }
+}
+
+impl Serialize for EntitySharedRwLock {
+    fn serialize(&self) -> Serialized {
+        let entity = self.read();
+        Serialized::SerializedObject {
+            class_name: "EntitySharedRwLock".to_string(),
+            fields: hashmap! {
+                "name".to_string() => Serialized::String(entity.name.to_string()),
+                "enabled".to_string() => Serialized::Bool(entity.enabled),
+                "components".to_string() => Serialized::Array(
+                    self.iter_all_components()
+                        .map(|component| {
+                            let component = component.read();
+                            component.serialize()
+                        })
+                        .collect(),
+                )
+            },
+        }
     }
 }
 

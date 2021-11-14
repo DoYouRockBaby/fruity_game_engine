@@ -1,6 +1,5 @@
 use crate::components::fields::edit_component_fields;
 use crate::hooks::use_global;
-use crate::state::entity::EntityState;
 use crate::ui_element::input::Checkbox;
 use crate::ui_element::input::Input;
 use crate::ui_element::layout::Collapsible;
@@ -13,12 +12,13 @@ use crate::ui_element::UIAlign;
 use crate::ui_element::UIElement;
 use crate::ui_element::UISize;
 use crate::ui_element::UIWidget;
+use crate::WorldState;
 use std::sync::Arc;
 
 pub fn entity_edit_component() -> UIElement {
-    let entity_state = use_global::<EntityState>();
+    let world_state = use_global::<WorldState>();
 
-    if let Some(entity) = &entity_state.selected_entity {
+    if let Some(entity) = &world_state.selected_entity {
         let entity_reader = entity.read();
 
         let head = Column {

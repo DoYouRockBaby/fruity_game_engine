@@ -187,29 +187,33 @@ fn derive_component_instantiable_object_trait(input: TokenStream)  -> TokenStrea
                 use fruity_introspect::IntrospectObject;
 
                 std::sync::Arc::new(|mut args: Vec<fruity_introspect::serialized::Serialized>| {
-                    let serialized = args.remove(0);
                     let mut new_object = #ident::default();
-                    let new_object_fields = new_object.get_field_infos();
-                    if let fruity_introspect::serialized::Serialized::SerializedObject { fields, .. } =
-                        serialized
-                    {
-                        fields.into_iter().for_each(|(key, value)| {
-                            let field_info = new_object_fields
-                                .iter()
-                                .find(|field_info| field_info.name == *key);
 
-                            if let Some(field_info) = field_info {
-                                match &field_info.setter {
-                                    fruity_introspect::SetterCaller::Const(call) => {
-                                        call(new_object.as_any_ref(), value);
+                    if args.len() > 0 {
+                        let serialized = args.remove(0);
+                        let new_object_fields = new_object.get_field_infos();
+
+                        if let fruity_introspect::serialized::Serialized::SerializedObject { fields, .. } =
+                            serialized
+                        {
+                            fields.into_iter().for_each(|(key, value)| {
+                                let field_info = new_object_fields
+                                    .iter()
+                                    .find(|field_info| field_info.name == *key);
+
+                                if let Some(field_info) = field_info {
+                                    match &field_info.setter {
+                                        fruity_introspect::SetterCaller::Const(call) => {
+                                            call(new_object.as_any_ref(), value);
+                                        }
+                                        fruity_introspect::SetterCaller::Mut(call) => {
+                                            call(new_object.as_any_mut(), value);
+                                        }
+                                        fruity_introspect::SetterCaller::None => (),
                                     }
-                                    fruity_introspect::SetterCaller::Mut(call) => {
-                                        call(new_object.as_any_mut(), value);
-                                    }
-                                    fruity_introspect::SetterCaller::None => (),
                                 }
-                            }
-                        })
+                            })
+                        };
                     };
         
                     Ok(fruity_introspect::serialized::Serialized::NativeObject(Box::new(fruity_ecs::component::component::AnyComponent::new(new_object))))
@@ -231,30 +235,33 @@ pub fn derive_instantiable_object_trait(input: TokenStream)  -> TokenStream {
                 use fruity_introspect::IntrospectObject;
 
                 std::sync::Arc::new(|mut args: Vec<fruity_introspect::serialized::Serialized>| {
-                    let serialized = args.remove(0);
                     let mut new_object = #ident::default();
-                    let new_object_fields = new_object.get_field_infos();
 
-                    if let fruity_introspect::serialized::Serialized::SerializedObject { fields, .. } =
-                        serialized
-                    {
-                        fields.into_iter().for_each(|(key, value)| {
-                            let field_info = new_object_fields
-                                .iter()
-                                .find(|field_info| field_info.name == *key);
+                    if args.len() > 0 {
+                        let serialized = args.remove(0);
+                        let new_object_fields = new_object.get_field_infos();
 
-                            if let Some(field_info) = field_info {
-                                match &field_info.setter {
-                                    fruity_introspect::SetterCaller::Const(call) => {
-                                        call(new_object.as_any_ref(), value);
+                        if let fruity_introspect::serialized::Serialized::SerializedObject { fields, .. } =
+                            serialized
+                        {
+                            fields.into_iter().for_each(|(key, value)| {
+                                let field_info = new_object_fields
+                                    .iter()
+                                    .find(|field_info| field_info.name == *key);
+
+                                if let Some(field_info) = field_info {
+                                    match &field_info.setter {
+                                        fruity_introspect::SetterCaller::Const(call) => {
+                                            call(new_object.as_any_ref(), value);
+                                        }
+                                        fruity_introspect::SetterCaller::Mut(call) => {
+                                            call(new_object.as_any_mut(), value);
+                                        }
+                                        fruity_introspect::SetterCaller::None => (),
                                     }
-                                    fruity_introspect::SetterCaller::Mut(call) => {
-                                        call(new_object.as_any_mut(), value);
-                                    }
-                                    fruity_introspect::SetterCaller::None => (),
                                 }
-                            }
-                        })
+                            })
+                        };
                     };
         
                     Ok(new_object.into())

@@ -851,6 +851,7 @@ dependencies = [
  "fruity_introspect",
  "itertools",
  "log",
+ "maplit",
  "rayon",
 ]
 

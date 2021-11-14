@@ -11,6 +11,7 @@ resolver = "2"
 log = "0.4.14"
 rayon = "1.5"
 itertools = "0.10.1"
+maplit = "1.0.2"
 fruity_ecs_derive = { path = "fruity_ecs_derive" }
 fruity_any = { path = "../fruity_any" }
 fruity_core = { path = ".." }

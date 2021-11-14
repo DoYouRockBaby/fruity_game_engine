@@ -9,8 +9,11 @@ use crate::entity::entity_query::EntityQueryReadCallback;
 use crate::entity::entity_query::EntityQueryWriteCallback;
 use crate::ResourceContainer;
 use fruity_any::*;
+use fruity_core::object_factory_service::ObjectFactoryService;
 use fruity_core::resource::resource::Resource;
+use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::signal::Signal;
+use fruity_introspect::serialized::Serialize;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::utils::cast_introspect_mut;
 use fruity_introspect::utils::cast_introspect_ref;
@@ -37,6 +40,7 @@ pub enum RemoveEntityError {
 pub struct EntityService {
     id_incrementer: u64,
     archetypes: Vec<Archetype>,
+    object_factory_service: ResourceReference<ObjectFactoryService>,
 
     /// Signal propagated when a new entity is inserted into the collection
     pub on_entity_created: Signal<EntitySharedRwLock>,
@@ -45,15 +49,34 @@ pub struct EntityService {
     pub on_entity_removed: Signal<EntityId>,
 }
 
+/// A save for the entities stored in an [’EntityService’]
+#[derive(Clone, Debug)]
+pub struct EntityServiceSnapshot {
+    entities: Vec<Serialized>,
+}
+
 impl EntityService {
     /// Returns an EntityService
-    pub fn new(_resource_container: Arc<ResourceContainer>) -> EntityService {
+    pub fn new(resource_container: Arc<ResourceContainer>) -> EntityService {
         EntityService {
             id_incrementer: 0,
             archetypes: Vec::new(),
+            object_factory_service: resource_container.require::<ObjectFactoryService>(),
             on_entity_created: Signal::new(),
             on_entity_removed: Signal::new(),
         }
+    }
+
+    /// Get a specific entity by it's id
+    ///
+    /// # Arguments
+    /// * `entity_id` - The entity id
+    ///
+    pub fn get_entity(&self, entity_id: EntityId) -> Option<EntitySharedRwLock> {
+        self.iter_all_entities().find(|entity| {
+            let entity = entity.read();
+            entity.entity_id == entity_id
+        })
     }
 
     /// Get a locked entity
@@ -213,11 +236,112 @@ impl EntityService {
             .iter()
             .find(|archetype| *archetype.get_type_identifier() == entity_identifier)
     }
+
+    /// Clear all the entities
+    pub fn clear(&mut self) {
+        // Propagate all entity removed events
+        self.archetypes.iter().for_each(|archetype| {
+            archetype.iter().for_each(|entity| {
+                let entity = entity.read();
+                self.on_entity_removed.notify(entity.entity_id);
+            })
+        });
+
+        // Clear all entities
+        self.id_incrementer = 0;
+        self.archetypes.clear();
+    }
+
+    /// Create a snapshot over all the entities
+    pub fn snapshot(&self) -> EntityServiceSnapshot {
+        let mut result = Vec::<Serialized>::new();
+
+        // Propagate all entity removed events
+        self.archetypes.iter().for_each(|archetype| {
+            archetype.iter().for_each(|entity| {
+                result.push(entity.serialize());
+            })
+        });
+
+        EntityServiceSnapshot { entities: result }
+    }
+
+    /// Restore an entity snapshot
+    ///
+    /// # Arguments
+    /// * `snapshot` - The snapshot
+    ///
+    pub fn restore(&mut self, snapshot: &EntityServiceSnapshot) {
+        self.clear();
+        snapshot
+            .entities
+            .iter()
+            .for_each(|entity| self.restore_entity(entity));
+    }
+
+    fn restore_entity(&mut self, entity: &Serialized) {
+        let object_factory_service = self.object_factory_service.read();
+        let deserialized_entity = entity.deserialize(object_factory_service.get_object_factory());
+
+        if let Serialized::SerializedObject { mut fields, .. } = deserialized_entity {
+            let name = if let Some(Serialized::String(name)) = fields.remove("name") {
+                name
+            } else {
+                return;
+            };
+
+            let enabled = if let Some(Serialized::Bool(enabled)) = fields.remove("enabled") {
+                enabled
+            } else {
+                return;
+            };
+
+            let components =
+                if let Some(Serialized::Array(components)) = fields.remove("components") {
+                    components
+                        .into_iter()
+                        .filter_map(|component| {
+                            if let Serialized::NativeObject(component) = component {
+                                component
+                                    .as_any_box()
+                                    .downcast::<AnyComponent>()
+                                    .ok()
+                                    .map(|component| *component)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                } else {
+                    return;
+                };
+
+            let entity_id = self.create(name, components);
+            let entity = self.get_entity(entity_id).unwrap();
+            let mut entity = entity.write();
+            entity.enabled = enabled;
+        }
+    }
 }
 
 impl IntrospectObject for EntityService {
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![
+            MethodInfo {
+                name: "get_entity".to_string(),
+                call: MethodCaller::Const(Arc::new(move |this, args| {
+                    let this = cast_introspect_ref::<EntityService>(this);
+
+                    let mut caster = ArgumentCaster::new("get_entity", args);
+                    let arg1 = caster.cast_next::<EntityId>()?;
+
+                    let result = this
+                        .get_entity(arg1)
+                        .map(|entity| Serialized::NativeObject(Box::new(entity)));
+
+                    Ok(result)
+                })),
+            },
             MethodInfo {
                 name: "iter_entities".to_string(),
                 call: MethodCaller::Const(Arc::new(move |this, args| {
