@@ -11,9 +11,9 @@
 [X] Resources and services containers should be merged
 [X] Abstract resources
 [X] Split abstractions and implementations for all crates
+[X] Make native systems easy to use
 [ ] Add an exception when you try to access a deleted entity, propagate it into js
 [ ] There should be some memory leak in archetype
-[ ] Make macros for native systems
 [ ] Test and stabilize ECS
 [ ] Find a way to move the introspect declaration into the associated traits
 
@@ -24,7 +24,7 @@
 [X] Create a pseudo DOM to abstract the interface creation
 [X] Wrap the DOM system with iced
 [ ] Expose the GUI API to javascript to create custom component editor
-[P] Components visualization
+[X] Components visualization
 [P] Entity hierarchy visualisation
 [ ] Resources browser
 [ ] Resources visualisation, take the material as an example and try to make it easy to edit in sprite component
