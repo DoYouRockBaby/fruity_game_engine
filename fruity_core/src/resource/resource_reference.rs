@@ -14,24 +14,24 @@ use std::sync::RwLockReadGuard;
 use std::sync::RwLockWriteGuard;
 
 /// A reference over a resource that is supposed to be used by components
-#[derive(Debug)]
-pub struct ResourceReference<T: Resource + ?Sized>(pub Arc<RwLock<Box<T>>>);
-
-impl<T: Resource + ?Sized> Clone for ResourceReference<T> {
-    fn clone(&self) -> Self {
-        ResourceReference(self.0.clone())
-    }
+#[derive(Debug, Clone)]
+pub struct ResourceReference<T: Resource + ?Sized> {
+    path: String,
+    resource: Arc<RwLock<Box<T>>>,
 }
 
 impl<T: Resource + ?Sized> ResourceReference<T> {
     /// Create a resource reference from a resource
-    pub fn new(resource: Arc<RwLock<Box<T>>>) -> Self {
-        ResourceReference(resource)
+    pub fn new(path: &str, resource: Arc<RwLock<Box<T>>>) -> Self {
+        ResourceReference {
+            path: path.to_string(),
+            resource,
+        }
     }
 
     /// Create a read guard over the resource
     pub fn read(&self) -> ResourceReadGuard<T> {
-        let inner_guard = self.0.read().unwrap();
+        let inner_guard = self.resource.read().unwrap();
 
         // Safe cause the write guard contains an arc to the referenced resource so it will
         // not be released until the guard is released
@@ -42,14 +42,14 @@ impl<T: Resource + ?Sized> ResourceReference<T> {
         };
 
         ResourceReadGuard::<T> {
-            _referenced: self.0.clone(),
+            _referenced: self.resource.clone(),
             inner_guard,
         }
     }
 
     /// Create a write guard over the resource
     pub fn write(&self) -> ResourceWriteGuard<T> {
-        let inner_guard = self.0.write().unwrap();
+        let inner_guard = self.resource.write().unwrap();
 
         // Safe cause the write guard contains an arc to the referenced resource so it will
         // not be released until the guard is released
@@ -60,7 +60,7 @@ impl<T: Resource + ?Sized> ResourceReference<T> {
         };
 
         ResourceWriteGuard::<T> {
-            _referenced: self.0.clone(),
+            _referenced: self.resource.clone(),
             inner_guard,
         }
     }
@@ -68,6 +68,10 @@ impl<T: Resource + ?Sized> ResourceReference<T> {
 
 // TODO: Complete that
 impl<T: Resource + ?Sized> IntrospectObject for ResourceReference<T> {
+    fn get_class_name(&self) -> String {
+        "ResourceReference".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }
@@ -79,7 +83,7 @@ impl<T: Resource + ?Sized> IntrospectObject for ResourceReference<T> {
 
 impl<T: Resource + ?Sized> SerializableObject for ResourceReference<T> {
     fn duplicate(&self) -> Box<dyn SerializableObject> {
-        Box::new(self.clone())
+        Box::new(*self.clone())
     }
 }
 
@@ -117,7 +121,7 @@ impl<T: Resource + ?Sized> TryFrom<Serialized> for ResourceReference<T> {
                 } else if let Ok(value) = value.clone().as_any_box().downcast::<Arc<dyn Resource>>()
                 {
                     if let Ok(value) = value.as_any_arc().downcast::<RwLock<Box<T>>>() {
-                        Ok(ResourceReference::new(value))
+                        Ok(ResourceReference::new{(value)})
                     } else {
                         Err(format!("Couldn't convert a Serialized to native object"))
                     }
@@ -192,14 +196,8 @@ impl<T: Resource + ?Sized> DerefMut for ResourceWriteGuard<T> {
 }
 
 /// An optionnal reference over a resource that is supposed to be used by components
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OptionResourceReference<T: Resource + ?Sized>(pub Option<ResourceReference<T>>);
-
-impl<T: Resource + ?Sized> Clone for OptionResourceReference<T> {
-    fn clone(&self) -> Self {
-        OptionResourceReference(self.0.clone())
-    }
-}
 
 impl<T: Resource + ?Sized> OptionResourceReference<T> {
     /// Create an empty resource reference
@@ -223,6 +221,10 @@ impl<T: Resource + ?Sized> Deref for OptionResourceReference<T> {
 
 // TODO: Complete that
 impl<T: Resource + ?Sized> IntrospectObject for OptionResourceReference<T> {
+    fn get_class_name(&self) -> String {
+        "OptionResourceReference".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }

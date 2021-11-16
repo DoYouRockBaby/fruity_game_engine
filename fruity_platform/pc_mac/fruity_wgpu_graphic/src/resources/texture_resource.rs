@@ -126,6 +126,10 @@ impl WgpuTextureResource {
 impl Resource for WgpuTextureResource {}
 
 impl IntrospectObject for WgpuTextureResource {
+    fn get_class_name(&self) -> String {
+        "TextureResource".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }

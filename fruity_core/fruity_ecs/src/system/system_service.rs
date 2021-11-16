@@ -362,6 +362,10 @@ impl<'s> SystemService {
 }
 
 impl IntrospectObject for SystemService {
+    fn get_class_name(&self) -> String {
+        "SystemService".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![
             MethodInfo {

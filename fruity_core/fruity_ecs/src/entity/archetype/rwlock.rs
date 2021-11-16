@@ -12,7 +12,6 @@ use crate::entity::archetype::EntityTypeIdentifier;
 use fruity_any::*;
 use fruity_core::signal::Signal;
 use fruity_introspect::serializable_object::SerializableObject;
-use fruity_introspect::serialized::Serialize;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::utils::cast_introspect_ref;
 use fruity_introspect::utils::ArgumentCaster;
@@ -22,7 +21,6 @@ use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use fruity_introspect::SetterCaller;
 use itertools::Itertools;
-use maplit::hashmap;
 use std::any::TypeId;
 use std::fmt::Debug;
 use std::fmt::Formatter;
@@ -75,7 +73,7 @@ impl EntitySharedRwLock {
             .get_components()
             .iter()
             .enumerate()
-            .find(|(_index, component)| component.get_component_type() == component_type)
+            .find(|(_index, component)| component.get_class_name() == component_type)
             .map(|(index, _component)| ComponentRwLock::new(self.clone(), index))
     }
 
@@ -147,27 +145,6 @@ impl EntitySharedRwLock {
     }
 }
 
-impl Serialize for EntitySharedRwLock {
-    fn serialize(&self) -> Serialized {
-        let entity = self.read();
-        Serialized::SerializedObject {
-            class_name: "EntitySharedRwLock".to_string(),
-            fields: hashmap! {
-                "name".to_string() => Serialized::String(entity.name.to_string()),
-                "enabled".to_string() => Serialized::Bool(entity.enabled),
-                "components".to_string() => Serialized::Array(
-                    self.iter_all_components()
-                        .map(|component| {
-                            let component = component.read();
-                            component.serialize()
-                        })
-                        .collect(),
-                )
-            },
-        }
-    }
-}
-
 impl Debug for EntitySharedRwLock {
     fn fmt(&self, formater: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         let reader = self.read();
@@ -218,7 +195,7 @@ impl<'a> EntityReadGuard<'a> {
         match self
             .get_components()
             .iter()
-            .find(|component| component.get_component_type() == component_type)
+            .find(|component| component.get_class_name() == component_type)
         {
             Some(component) => match component.as_any_ref().downcast_ref::<T>() {
                 Some(component) => Some(component),
@@ -296,7 +273,7 @@ impl<'a> EntityWriteGuard<'a> {
         match self
             .get_components_mut()
             .iter_mut()
-            .find(|component| component.get_component_type() == component_type)
+            .find(|component| component.get_class_name() == component_type)
         {
             Some(component) => match component.as_any_mut().downcast_mut::<T>() {
                 Some(component) => Some(component),
@@ -335,6 +312,10 @@ impl<'a> Debug for EntityWriteGuard<'a> {
 }
 
 impl IntrospectObject for EntitySharedRwLock {
+    fn get_class_name(&self) -> String {
+        "EntitySharedRwLock".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![
             MethodInfo {
@@ -380,6 +361,7 @@ impl IntrospectObject for EntitySharedRwLock {
             FieldInfo {
                 name: "id".to_string(),
                 ty: TypeId::of::<u64>(),
+                serializable: false,
                 getter: Arc::new(|this| {
                     let this = cast_introspect_ref::<EntitySharedRwLock>(this);
                     let reader = this.read();
@@ -391,11 +373,27 @@ impl IntrospectObject for EntitySharedRwLock {
             FieldInfo {
                 name: "on_updated".to_string(),
                 ty: TypeId::of::<Signal<()>>(),
+                serializable: false,
                 getter: Arc::new(|this| {
                     let this = cast_introspect_ref::<EntitySharedRwLock>(this);
                     let reader = this.read();
 
                     reader.on_updated.clone().into()
+                }),
+                setter: SetterCaller::None,
+            },
+            FieldInfo {
+                name: "components".to_string(),
+                ty: TypeId::of::<ComponentRwLock>(),
+                serializable: true,
+                getter: Arc::new(|this| {
+                    let this = cast_introspect_ref::<EntitySharedRwLock>(this);
+
+                    Serialized::Array(
+                        this.iter_all_components()
+                            .map(|component| Serialized::NativeObject(Box::new(component)))
+                            .collect::<Vec<_>>(),
+                    )
                 }),
                 setter: SetterCaller::None,
             },

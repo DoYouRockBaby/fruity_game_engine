@@ -370,6 +370,10 @@ impl GraphicService for WgpuGraphicManager {
 }
 
 impl IntrospectObject for WgpuGraphicManager {
+    fn get_class_name(&self) -> String {
+        "GraphicManager".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }

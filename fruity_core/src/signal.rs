@@ -83,6 +83,10 @@ impl<T> Signal<T> {
 }
 
 impl<T: Into<Serialized> + Debug + Clone + 'static> IntrospectObject for Signal<T> {
+    fn get_class_name(&self) -> String {
+        "Signal".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![MethodInfo {
             name: "add_observer".to_string(),

@@ -248,6 +248,10 @@ impl Into<Serialized> for Vector2d {
 }
 
 impl IntrospectObject for Vector2d {
+    fn get_class_name(&self) -> String {
+        "Vector2d".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![
             MethodInfo {
@@ -400,6 +404,7 @@ impl IntrospectObject for Vector2d {
             FieldInfo {
                 name: "x".to_string(),
                 ty: TypeId::of::<f32>(),
+                serializable: true,
                 getter: Arc::new(|this| this.downcast_ref::<Vector2d>().unwrap().x.into()),
                 setter: SetterCaller::Mut(std::sync::Arc::new(|this, value| {
                     let this = this.downcast_mut::<Vector2d>().unwrap();
@@ -415,6 +420,7 @@ impl IntrospectObject for Vector2d {
             FieldInfo {
                 name: "y".to_string(),
                 ty: TypeId::of::<f32>(),
+                serializable: true,
                 getter: Arc::new(|this| this.downcast_ref::<Vector2d>().unwrap().y.into()),
                 setter: SetterCaller::Mut(std::sync::Arc::new(|this, value| {
                     let this = this.downcast_mut::<Vector2d>().unwrap();

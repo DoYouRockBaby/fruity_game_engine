@@ -115,6 +115,10 @@ pub fn load_shader(
 }
 
 impl IntrospectObject for WgpuShaderResource {
+    fn get_class_name(&self) -> String {
+        "ShaderResource".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }

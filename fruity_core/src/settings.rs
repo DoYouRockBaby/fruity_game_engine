@@ -75,6 +75,10 @@ impl Settings {
 impl Resource for Settings {}
 
 impl IntrospectObject for Settings {
+    fn get_class_name(&self) -> String {
+        "Settings".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }
@@ -91,6 +95,7 @@ pub fn read_settings(reader: &mut dyn Read) -> Settings {
         log::error!("{}", err.to_string());
         return Settings::Object(HashMap::new());
     }
+
     let docs = YamlLoader::load_from_str(&buffer).unwrap();
     let root = &docs[0];
 

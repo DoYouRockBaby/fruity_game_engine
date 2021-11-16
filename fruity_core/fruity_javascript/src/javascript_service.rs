@@ -63,6 +63,10 @@ impl JavascriptService {
 }
 
 impl IntrospectObject for JavascriptService {
+    fn get_class_name(&self) -> String {
+        "JavascriptService".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }

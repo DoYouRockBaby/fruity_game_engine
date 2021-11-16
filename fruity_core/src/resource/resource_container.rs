@@ -193,6 +193,10 @@ impl ResourceContainer {
 }
 
 impl IntrospectObject for ResourceContainer {
+    fn get_class_name(&self) -> String {
+        "ResourceContainer".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![
             MethodInfo {

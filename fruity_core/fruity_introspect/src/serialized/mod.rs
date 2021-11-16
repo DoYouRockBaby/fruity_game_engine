@@ -18,8 +18,11 @@ pub mod impl_tuples;
 /// Provides a factory for the introspect types
 pub mod object_factory;
 
-/// Provides a function to deserialize
-pub mod deserialize;
+/// Provides a function to serialize and deserialize
+pub mod serialize;
+
+/// Provides functions to serialize and deserialize a serialized value to yaml
+pub mod yaml;
 
 use crate::serializable_object::SerializableObject;
 use crate::serialized::object_factory::ObjectFactory;
@@ -169,16 +172,4 @@ impl Debug for Serialized {
     ) -> std::result::Result<(), std::fmt::Error> {
         Ok(())
     }
-}
-
-/// Trait for serializable objects
-pub trait Serialize {
-    /// Serialize the object
-    fn serialize(&self) -> Serialized;
-}
-
-/// Trait for deserializable object
-pub trait Deserialize {
-    /// Deserialize an instancied object
-    fn deserialize(&mut self, serialized: &Serialized, object_factory: &ObjectFactory);
 }

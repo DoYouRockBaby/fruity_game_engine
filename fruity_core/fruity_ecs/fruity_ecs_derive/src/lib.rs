@@ -28,14 +28,9 @@ pub fn derive_component(input: TokenStream) -> TokenStream {
 
 fn derive_component_trait(input: TokenStream) -> TokenStream {
     let DeriveInput { ident, .. } = parse_macro_input!(input);
-    let struct_name = ident.to_string();
 
     let output = quote! {
         impl fruity_ecs::component::component::Component for #ident {
-            fn get_component_type(&self) -> String {
-                #struct_name.to_string()
-            }
-
             fn encode_size(&self) -> usize {
                 std::mem::size_of::<Self>()
             }
@@ -77,6 +72,7 @@ fn derive_component_trait(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(IntrospectObject)]
 pub fn derive_introspect_object_trait(input: TokenStream)  -> TokenStream {
     let DeriveInput { ident, data, .. } = parse_macro_input!(input);
+    let struct_name = ident.to_string();
 
     let body = match data {
         Data::Struct(ref data) => {
@@ -119,6 +115,7 @@ pub fn derive_introspect_object_trait(input: TokenStream)  -> TokenStream {
                     fruity_introspect::FieldInfo {
                         name: #name_as_string.to_string(),
                         ty: std::any::TypeId::of::<#ty>(),
+                        serializable: true,
                         getter: std::sync::Arc::new(|this| this.downcast_ref::<#ident>().unwrap().#name.clone().into()),
                         setter: fruity_introspect::SetterCaller::Mut(std::sync::Arc::new(|this, value| {
                             fn convert<
@@ -167,6 +164,10 @@ pub fn derive_introspect_object_trait(input: TokenStream)  -> TokenStream {
 
     let output = quote! {
         impl fruity_introspect::IntrospectObject for #ident {
+            fn get_class_name(&self) -> String {
+                #struct_name.to_string()
+            }
+
             #body
 
             fn get_method_infos(&self) -> Vec<fruity_introspect::MethodInfo> {

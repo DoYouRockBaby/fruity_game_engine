@@ -72,6 +72,10 @@ impl ObjectFactoryService {
 }
 
 impl IntrospectObject for ObjectFactoryService {
+    fn get_class_name(&self) -> String {
+        "ObjectFactoryService".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![MethodInfo {
             name: "instantiate".to_string(),

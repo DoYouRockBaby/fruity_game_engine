@@ -111,6 +111,10 @@ impl WindowService for WinitWindowService {
 }
 
 impl IntrospectObject for WinitWindowService {
+    fn get_class_name(&self) -> String {
+        "WindowService".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![
             MethodInfo {

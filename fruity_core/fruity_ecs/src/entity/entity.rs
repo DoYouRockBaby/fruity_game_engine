@@ -51,7 +51,7 @@ pub type EntityId = u64;
 pub fn get_type_identifier_by_any(components: &[AnyComponent]) -> EntityTypeIdentifier {
     let identifier = components
         .iter()
-        .map(|component| component.get_component_type())
+        .map(|component| component.get_class_name())
         .collect::<Vec<_>>();
 
     EntityTypeIdentifier(identifier)
@@ -61,7 +61,7 @@ pub fn get_type_identifier_by_any(components: &[AnyComponent]) -> EntityTypeIden
 pub fn get_type_identifier(components: &[&dyn Component]) -> EntityTypeIdentifier {
     let identifier = components
         .iter()
-        .map(|component| component.get_component_type())
+        .map(|component| component.get_class_name())
         .collect::<Vec<_>>();
 
     EntityTypeIdentifier(identifier)

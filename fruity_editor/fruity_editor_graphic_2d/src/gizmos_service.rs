@@ -336,6 +336,10 @@ impl DragAction {
 }
 
 impl IntrospectObject for GizmosService {
+    fn get_class_name(&self) -> String {
+        "GizmosService".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }

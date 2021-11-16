@@ -97,6 +97,10 @@ impl Debug for FileExplorerService {
 }
 
 impl IntrospectObject for FileExplorerService {
+    fn get_class_name(&self) -> String {
+        "FileExplorerService".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }

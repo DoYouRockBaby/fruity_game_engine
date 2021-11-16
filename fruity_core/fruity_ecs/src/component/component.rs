@@ -1,14 +1,14 @@
 use crate::component::serialized_component::SerializedComponent;
 use fruity_any::*;
 use fruity_introspect::serializable_object::SerializableObject;
-use fruity_introspect::serialized::Serialize;
+use fruity_introspect::serialized::object_factory::ObjectFactory;
+use fruity_introspect::serialized::serialize::Deserialize;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use fruity_introspect::SetterCaller;
-use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::ops::Deref;
@@ -22,9 +22,6 @@ pub type ComponentDecoderMut = fn(buffer: &mut [u8]) -> &mut dyn Component;
 
 /// An abstraction over a component, should be implemented for every component
 pub trait Component: IntrospectObject + Debug {
-    /// Return the component type identifier
-    fn get_component_type(&self) -> String;
-
     /// Return the size that is required to encode the object
     fn encode_size(&self) -> usize;
 
@@ -44,28 +41,6 @@ pub trait Component: IntrospectObject + Debug {
     /// Create a new component that is a clone of self
     fn duplicate(&self) -> Box<dyn Component>;
 }
-
-impl Serialize for dyn Component {
-    fn serialize(&self) -> Serialized {
-        let mut fields = HashMap::new();
-
-        self.get_field_infos().into_iter().for_each(|field_info| {
-            let getter = field_info.getter;
-            fields.insert(field_info.name, getter(self.as_any_ref()));
-        });
-
-        Serialized::SerializedObject {
-            class_name: self.get_component_type(),
-            fields,
-        }
-    }
-}
-
-/*impl Deserialize for dyn Component {
-    fn deserialize(&mut self, serialized: &Serialized, object_factory: &ObjectFactory) {
-        self.component.deserialize(serialized, object_factory);
-    }
-}*/
 
 /// An container for a component without knowing the instancied type
 #[derive(FruityAny, Debug)]
@@ -110,13 +85,11 @@ impl TryFrom<Serialized> for AnyComponent {
     }
 }
 
-/*impl Deserialize for AnyComponent {
-    fn deserialize(&mut self, serialized: &Serialized, object_factory: &ObjectFactory) {
-        self.component.deserialize(serialized, object_factory);
-    }
-}*/
-
 impl IntrospectObject for AnyComponent {
+    fn get_class_name(&self) -> String {
+        "AnyComponent".to_string()
+    }
+
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         self.component
             .as_ref()
@@ -129,6 +102,7 @@ impl IntrospectObject for AnyComponent {
                 FieldInfo {
                     name: field_info.name,
                     ty: field_info.ty,
+                    serializable: field_info.serializable,
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<AnyComponent>().unwrap();
                         getter(this.component.as_ref().as_any_ref())
@@ -174,6 +148,23 @@ impl IntrospectObject for AnyComponent {
                 },
             })
             .collect::<Vec<_>>()
+    }
+}
+
+impl Deserialize for AnyComponent {
+    type Output = Self;
+
+    fn deserialize(serialized: &Serialized, object_factory: &ObjectFactory) -> Option<Self> {
+        let native_serialized = serialized.deserialize_native_objects(object_factory);
+        if let Serialized::NativeObject(native_object) = native_serialized {
+            native_object
+                .as_any_box()
+                .downcast::<AnyComponent>()
+                .ok()
+                .map(|component| *component)
+        } else {
+            None
+        }
     }
 }
 

@@ -3,6 +3,8 @@ use crate::component::component_guard::ComponentWriteGuard;
 use crate::entity::archetype::rwlock::EntitySharedRwLock;
 use fruity_any::*;
 use fruity_introspect::serializable_object::SerializableObject;
+use fruity_introspect::serialized::serialize::Serialize;
+use fruity_introspect::serialized::Serialized;
 use fruity_introspect::FieldInfo;
 use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodInfo;
@@ -64,7 +66,20 @@ impl ComponentRwLock {
     }
 }
 
+impl Serialize for ComponentRwLock {
+    fn serialize(&self) -> Option<Serialized> {
+        let native_serialized = Serialized::NativeObject(Box::new(self.clone()));
+        let serialized = native_serialized.serialize_native_objects();
+        Some(serialized)
+    }
+}
+
 impl IntrospectObject for ComponentRwLock {
+    fn get_class_name(&self) -> String {
+        let component = self.read();
+        component.get_class_name()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }
@@ -81,6 +96,7 @@ impl IntrospectObject for ComponentRwLock {
                 FieldInfo {
                     name: field_info.name,
                     ty: field_info.ty,
+                    serializable: field_info.serializable,
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<ComponentRwLock>().unwrap();
                         let reader = this.read();

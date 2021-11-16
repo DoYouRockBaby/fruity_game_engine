@@ -64,7 +64,7 @@ pub fn entity_edit_component() -> UIElement {
                 .map(|component| {
                     let component_reader = component.read();
                     Collapsible {
-                        title: component_reader.get_component_type(),
+                        title: component_reader.get_class_name(),
                         child: edit_component_fields(component.clone()),
                     }
                     .elem()

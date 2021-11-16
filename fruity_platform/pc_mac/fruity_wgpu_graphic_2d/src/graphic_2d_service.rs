@@ -260,6 +260,10 @@ impl Graphic2dService for WgpuGraphic2dManager {
 }
 
 impl IntrospectObject for WgpuGraphic2dManager {
+    fn get_class_name(&self) -> String {
+        "Graphic2dManager".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }

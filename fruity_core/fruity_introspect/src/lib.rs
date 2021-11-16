@@ -106,6 +106,9 @@ pub struct FieldInfo {
     /// The type of the field
     pub ty: TypeId,
 
+    /// If true, this fields will be ignored by serialize
+    pub serializable: bool,
+
     /// Function to get one of the entry field value as Any
     ///
     /// # Arguments
@@ -150,6 +153,9 @@ pub trait InstantiableObject {
 
 /// Trait to implement static introspection to an object
 pub trait IntrospectObject: Debug + FruityAny {
+    /// Return the class type name
+    fn get_class_name(&self) -> String;
+
     /// Get a list of fields with many informations
     fn get_field_infos(&self) -> Vec<FieldInfo>;
 
@@ -158,6 +164,10 @@ pub trait IntrospectObject: Debug + FruityAny {
 }
 
 impl<T: IntrospectObject + ?Sized> IntrospectObject for Box<T> {
+    fn get_class_name(&self) -> String {
+        format!("Box<{}>", self.as_ref().get_class_name())
+    }
+
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         self.as_ref()
             .get_field_infos()
@@ -169,6 +179,7 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Box<T> {
                 FieldInfo {
                     name: field_info.name,
                     ty: field_info.ty,
+                    serializable: field_info.serializable,
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<Box<T>>().unwrap();
 
@@ -222,6 +233,10 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Box<T> {
 }
 
 impl<T: IntrospectObject + ?Sized> IntrospectObject for Arc<T> {
+    fn get_class_name(&self) -> String {
+        format!("Arc<{}>", self.as_ref().get_class_name())
+    }
+
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         self.as_ref()
             .get_field_infos()
@@ -233,6 +248,7 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Arc<T> {
                 FieldInfo {
                     name: field_info.name,
                     ty: field_info.ty,
+                    serializable: field_info.serializable,
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<Arc<T>>().unwrap();
 
@@ -280,6 +296,11 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Arc<T> {
 }
 
 impl<T: IntrospectObject> IntrospectObject for RwLock<T> {
+    fn get_class_name(&self) -> String {
+        let reader = self.read().unwrap();
+        format!("RwLock<{}>", reader.get_class_name())
+    }
+
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         let reader = self.read().unwrap();
         reader
@@ -292,6 +313,7 @@ impl<T: IntrospectObject> IntrospectObject for RwLock<T> {
                 FieldInfo {
                     name: field_info.name,
                     ty: field_info.ty,
+                    serializable: field_info.serializable,
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<RwLock<T>>().unwrap();
                         let reader = this.read().unwrap();

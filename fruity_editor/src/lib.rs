@@ -31,6 +31,7 @@ extern crate lazy_static;
 
 pub mod component_editor_service;
 pub mod components;
+pub mod dialog_service;
 pub mod file_explorer_service;
 pub mod hooks;
 pub mod resources;

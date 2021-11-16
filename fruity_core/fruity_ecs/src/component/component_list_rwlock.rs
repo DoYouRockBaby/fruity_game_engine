@@ -92,6 +92,10 @@ impl ComponentListRwLock {
 }
 
 impl IntrospectObject for ComponentListRwLock {
+    fn get_class_name(&self) -> String {
+        "ComponentListRwLock".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![
             MethodInfo {

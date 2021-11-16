@@ -28,10 +28,6 @@ impl SerializedComponent {
 }
 
 impl Component for SerializedComponent {
-    fn get_component_type(&self) -> String {
-        self.class_name.clone()
-    }
-
     fn encode_size(&self) -> usize {
         std::mem::size_of::<Self>()
     }
@@ -67,6 +63,10 @@ impl Component for SerializedComponent {
 }
 
 impl IntrospectObject for SerializedComponent {
+    fn get_class_name(&self) -> String {
+        self.class_name.clone()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }
@@ -80,6 +80,7 @@ impl IntrospectObject for SerializedComponent {
 
                 FieldInfo {
                     name: key.clone(),
+                    serializable: true,
                     // TODO: Complete that
                     ty: match field {
                         Serialized::U8(_) => TypeId::of::<u8>(),

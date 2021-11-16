@@ -21,6 +21,14 @@ impl SerializedResource {
 }
 
 impl IntrospectObject for SerializedResource {
+    fn get_class_name(&self) -> String {
+        if let Serialized::SerializedObject { class_name, .. } = &self.serialized {
+            class_name.clone()
+        } else {
+            "SerializedResource".to_string()
+        }
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         let this = self.clone();
 

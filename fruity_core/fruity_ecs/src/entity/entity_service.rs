@@ -13,7 +13,8 @@ use fruity_core::object_factory_service::ObjectFactoryService;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::signal::Signal;
-use fruity_introspect::serialized::Serialize;
+use fruity_introspect::serialized::serialize::Deserialize;
+use fruity_introspect::serialized::serialize::Serialize;
 use fruity_introspect::serialized::Serialized;
 use fruity_introspect::utils::cast_introspect_mut;
 use fruity_introspect::utils::cast_introspect_ref;
@@ -23,6 +24,7 @@ use fruity_introspect::IntrospectObject;
 use fruity_introspect::MethodCaller;
 use fruity_introspect::MethodInfo;
 use fruity_introspect::SetterCaller;
+use maplit::hashmap;
 use rayon::iter::ParallelBridge;
 use rayon::iter::ParallelIterator;
 use std::any::TypeId;
@@ -51,9 +53,7 @@ pub struct EntityService {
 
 /// A save for the entities stored in an [’EntityService’]
 #[derive(Clone, Debug)]
-pub struct EntityServiceSnapshot {
-    entities: Vec<Serialized>,
-}
+pub struct EntityServiceSnapshot(pub Serialized);
 
 impl EntityService {
     /// Returns an EntityService
@@ -254,16 +254,31 @@ impl EntityService {
 
     /// Create a snapshot over all the entities
     pub fn snapshot(&self) -> EntityServiceSnapshot {
-        let mut result = Vec::<Serialized>::new();
+        let serialized_entities = self
+            .iter_all_entities()
+            .filter_map(|entity| {
+                let reader = entity.read();
+                let serialized_components = Serialized::Array(
+                    entity
+                        .iter_all_components()
+                        .filter_map(|component| component.serialize())
+                        .collect::<Vec<_>>(),
+                );
 
-        // Propagate all entity removed events
-        self.archetypes.iter().for_each(|archetype| {
-            archetype.iter().for_each(|entity| {
-                result.push(entity.serialize());
+                let serialized_entity = Serialized::SerializedObject {
+                    class_name: "Entity".to_string(),
+                    fields: hashmap! {
+                        "name".to_string() => Serialized::String(reader.name.clone()),
+                        "enabled".to_string() => Serialized::Bool(reader.enabled),
+                        "components".to_string() => serialized_components,
+                    },
+                };
+
+                Some(serialized_entity)
             })
-        });
+            .collect::<Vec<_>>();
 
-        EntityServiceSnapshot { entities: result }
+        EntityServiceSnapshot(Serialized::Array(serialized_entities))
     }
 
     /// Restore an entity snapshot
@@ -273,58 +288,55 @@ impl EntityService {
     ///
     pub fn restore(&mut self, snapshot: &EntityServiceSnapshot) {
         self.clear();
-        snapshot
-            .entities
-            .iter()
-            .for_each(|entity| self.restore_entity(entity));
+
+        if let Serialized::Array(entities) = &snapshot.0 {
+            entities
+                .iter()
+                .for_each(|serialized_entity| self.restore_entity(serialized_entity));
+        }
     }
 
-    fn restore_entity(&mut self, entity: &Serialized) {
+    fn restore_entity(&mut self, serialized_entity: &Serialized) {
         let object_factory_service = self.object_factory_service.read();
-        let deserialized_entity = entity.deserialize(object_factory_service.get_object_factory());
+        let object_factory = object_factory_service.get_object_factory();
 
-        if let Serialized::SerializedObject { mut fields, .. } = deserialized_entity {
-            let name = if let Some(Serialized::String(name)) = fields.remove("name") {
+        if let Serialized::SerializedObject { fields, .. } = serialized_entity {
+            let name = if let Some(Serialized::String(name)) = fields.get("name") {
                 name
             } else {
                 return;
             };
 
-            let enabled = if let Some(Serialized::Bool(enabled)) = fields.remove("enabled") {
+            let enabled = if let Some(Serialized::Bool(enabled)) = fields.get("enabled") {
                 enabled
             } else {
                 return;
             };
 
-            let components =
-                if let Some(Serialized::Array(components)) = fields.remove("components") {
-                    components
-                        .into_iter()
-                        .filter_map(|component| {
-                            if let Serialized::NativeObject(component) = component {
-                                component
-                                    .as_any_box()
-                                    .downcast::<AnyComponent>()
-                                    .ok()
-                                    .map(|component| *component)
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<Vec<_>>()
-                } else {
-                    return;
-                };
+            let components = if let Some(Serialized::Array(components)) = fields.get("components") {
+                components
+                    .iter()
+                    .filter_map(|serialized_component| {
+                        AnyComponent::deserialize(serialized_component, object_factory)
+                    })
+                    .collect::<Vec<_>>()
+            } else {
+                return;
+            };
 
-            let entity_id = self.create(name, components);
+            let entity_id = self.create(name.clone(), components);
             let entity = self.get_entity(entity_id).unwrap();
             let mut entity = entity.write();
-            entity.enabled = enabled;
+            entity.enabled = *enabled;
         }
     }
 }
 
 impl IntrospectObject for EntityService {
+    fn get_class_name(&self) -> String {
+        "EntityService".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![
             MethodInfo {
@@ -404,6 +416,7 @@ impl IntrospectObject for EntityService {
         vec![FieldInfo {
             name: "on_entity_created".to_string(),
             ty: TypeId::of::<Signal<EntitySharedRwLock>>(),
+            serializable: false,
             getter: Arc::new(|this| {
                 this.downcast_ref::<EntityService>()
                     .unwrap()

@@ -47,6 +47,10 @@ impl FrameService {
 }
 
 impl IntrospectObject for FrameService {
+    fn get_class_name(&self) -> String {
+        "FrameService".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![MethodInfo {
             name: "get_delta".to_string(),
@@ -62,6 +66,7 @@ impl IntrospectObject for FrameService {
         vec![FieldInfo {
             name: "delta".to_string(),
             ty: TypeId::of::<f32>(),
+            serializable: false,
             getter: Arc::new(|this| this.downcast_ref::<FrameService>().unwrap().delta.into()),
             setter: SetterCaller::None,
         }]

@@ -221,6 +221,10 @@ impl EditorService {
 }
 
 impl IntrospectObject for EditorService {
+    fn get_class_name(&self) -> String {
+        "EditorService".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![MethodInfo {
             name: "is_entity_selected".to_string(),

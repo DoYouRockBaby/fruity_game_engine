@@ -39,3 +39,9 @@ impl<T: IntrospectObject + ?Sized> TryFrom<Serialized> for Option<Arc<T>> {
         }
     }
 }
+
+impl<T: Into<Serialized>> Into<Serialized> for Vec<T> {
+    fn into(self) -> Serialized {
+        Serialized::Array(self.into_iter().map(|elem| elem.into()).collect::<Vec<_>>())
+    }
+}

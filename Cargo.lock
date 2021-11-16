@@ -941,6 +941,7 @@ dependencies = [
  "lazy_static 1.4.0",
  "log",
  "maplit",
+ "tinyfiledialogs",
  "wgpu",
  "winit",
 ]
@@ -1022,7 +1023,9 @@ name = "fruity_introspect"
 version = "0.1.0"
 dependencies = [
  "fruity_any",
+ "linked-hash-map",
  "log",
+ "yaml-rust",
 ]
 
 [[package]]
@@ -2622,6 +2625,16 @@ dependencies = [
  "jpeg-decoder",
  "miniz_oxide 0.4.4",
  "weezl",
+]
+
+[[package]]
+name = "tinyfiledialogs"
+version = "3.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9545b2375cbcb7a7d70cca5e92fbaa096fd89bebd2fbc54a3da7f37d15a54e6b"
+dependencies = [
+ "cc",
+ "libc",
 ]
 
 [[package]]

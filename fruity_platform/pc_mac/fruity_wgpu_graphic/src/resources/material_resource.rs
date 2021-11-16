@@ -326,6 +326,10 @@ pub fn load_material(
 }
 
 impl IntrospectObject for WgpuMaterialResource {
+    fn get_class_name(&self) -> String {
+        "MaterialResource".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![]
     }

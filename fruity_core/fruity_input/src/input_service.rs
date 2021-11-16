@@ -130,6 +130,10 @@ impl InputService {
 }
 
 impl IntrospectObject for InputService {
+    fn get_class_name(&self) -> String {
+        "InputService".to_string()
+    }
+
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![MethodInfo {
             name: "is_pressed".to_string(),
@@ -150,6 +154,7 @@ impl IntrospectObject for InputService {
             FieldInfo {
                 name: "on_pressed".to_string(),
                 ty: TypeId::of::<Signal<String>>(),
+                serializable: false,
                 getter: Arc::new(|this| {
                     this.downcast_ref::<InputService>()
                         .unwrap()
@@ -162,6 +167,7 @@ impl IntrospectObject for InputService {
             FieldInfo {
                 name: "on_released".to_string(),
                 ty: TypeId::of::<Signal<String>>(),
+                serializable: false,
                 getter: Arc::new(|this| {
                     this.downcast_ref::<InputService>()
                         .unwrap()
