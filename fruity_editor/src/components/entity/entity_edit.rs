@@ -1,5 +1,6 @@
 use crate::components::fields::edit_component_fields;
 use crate::hooks::use_global;
+use crate::state::select_entity::SelectEntityState;
 use crate::ui_element::input::Checkbox;
 use crate::ui_element::input::Input;
 use crate::ui_element::layout::Collapsible;
@@ -12,15 +13,16 @@ use crate::ui_element::UIAlign;
 use crate::ui_element::UIElement;
 use crate::ui_element::UISize;
 use crate::ui_element::UIWidget;
-use crate::WorldState;
 use std::sync::Arc;
 
 pub fn entity_edit_component() -> UIElement {
-    let world_state = use_global::<WorldState>();
+    let select_entity_state = use_global::<SelectEntityState>();
 
-    if let Some(entity) = &world_state.selected_entity {
+    if let Some(entity) = select_entity_state.get_selected_entity() {
         let entity_reader = entity.read();
 
+        let entity_2 = entity.clone();
+        let entity_3 = entity.clone();
         let head = Column {
             children: vec![Row {
                 children: vec![
@@ -30,8 +32,7 @@ pub fn entity_edit_component() -> UIElement {
                             label: "".to_string(),
                             value: entity_reader.enabled,
                             on_change: Arc::new(move |value| {
-                                let entity = entity.clone();
-                                let mut entity = entity.write();
+                                let mut entity = entity_2.write();
                                 entity.enabled = value;
                             }),
                         }
@@ -43,8 +44,7 @@ pub fn entity_edit_component() -> UIElement {
                             value: entity_reader.name.to_string(),
                             placeholder: "Name ...".to_string(),
                             on_change: Arc::new(move |value: &str| {
-                                let entity = entity.clone();
-                                let mut entity = entity.write();
+                                let mut entity = entity_3.write();
                                 entity.name = value.to_string();
                             }),
                         }

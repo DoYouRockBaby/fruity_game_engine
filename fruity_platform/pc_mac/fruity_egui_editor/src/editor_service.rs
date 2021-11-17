@@ -9,17 +9,10 @@ use epi::*;
 use fruity_any::*;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
-use fruity_core::introspect::MethodCaller;
 use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
-use fruity_core::serialize::serialized::Serialized;
-use fruity_core::utils::introspect::cast_introspect_ref;
-use fruity_core::utils::introspect::ArgumentCaster;
-use fruity_ecs::entity::entity::EntityId;
-use fruity_editor::hooks::use_global;
-use fruity_editor::state::world::WorldState;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_wgpu_graphic::graphic_service::WgpuGraphicManager;
 use fruity_windows::window_service::WindowService;
@@ -197,17 +190,6 @@ impl EditorService {
             .unwrap();
     }
 
-    fn is_entity_selected(&self, entity_id: &EntityId) -> bool {
-        let world_state = use_global::<WorldState>();
-
-        if let Some(selected_entity) = &world_state.selected_entity {
-            let entity = selected_entity.read();
-            entity.entity_id == *entity_id
-        } else {
-            false
-        }
-    }
-
     fn handle_event(&mut self, event: &Event<'static, ()>) {
         self.state.platform.handle_event(&event);
     }
@@ -223,18 +205,7 @@ impl IntrospectObject for EditorService {
     }
 
     fn get_method_infos(&self) -> Vec<MethodInfo> {
-        vec![MethodInfo {
-            name: "is_entity_selected".to_string(),
-            call: MethodCaller::Const(Arc::new(|this, args| {
-                let this = cast_introspect_ref::<EditorService>(this);
-
-                let mut caster = ArgumentCaster::new("is_entity_selected", args);
-                let arg1 = caster.cast_next::<EntityId>()?;
-
-                let result = this.is_entity_selected(&arg1);
-                Ok(Some(Serialized::Bool(result)))
-            })),
-        }]
+        vec![]
     }
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {

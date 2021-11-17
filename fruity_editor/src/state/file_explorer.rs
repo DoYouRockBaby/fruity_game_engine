@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct FileExplorerState {
-    pub current_dir: String,
+    current_dir: String,
 }
 
 impl Default for FileExplorerState {
@@ -15,6 +15,14 @@ impl Default for FileExplorerState {
 }
 
 impl FileExplorerState {
+    pub fn get_current_dir(&self) -> String {
+        self.current_dir.clone()
+    }
+
+    pub fn open_dir(&mut self, path: &str) {
+        self.current_dir = path.to_string();
+    }
+
     pub fn get_files(&self) -> Vec<PathBuf> {
         match fs::read_dir(&self.current_dir) {
             Ok(dir) => dir

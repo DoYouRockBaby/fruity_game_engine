@@ -67,6 +67,8 @@ fn main() {
                 .load_resource_file("assets/index.js", "js")
                 .unwrap();
 
+            // Load entry scene
+
             /*let mut module_manager = ModuleManager::new(resource_container.clone());
             module_manager.load_module("./target/debug", "fruity_graphic");
             module_manager.load_module("./target/debug", "fruity_graphic_2d");

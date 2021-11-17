@@ -17,6 +17,8 @@ use crate::file_explorer_service::FileExplorerService;
 use crate::hooks::declare_global;
 use crate::resources::default_resources::load_default_resources;
 use crate::state::file_explorer::FileExplorerState;
+use crate::state::scene::SceneState;
+use crate::state::select_entity::SelectEntityState;
 use crate::state::theme::ThemeState;
 use crate::state::world::WorldState;
 use crate::systems::pause_at_startup::pause_at_startup;
@@ -56,6 +58,8 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
 
     declare_global(WorldState::new(resource_container.clone()));
     declare_global(ThemeState::default());
+    declare_global(SceneState::new(resource_container.clone()));
+    declare_global(SelectEntityState::default());
     declare_global(FileExplorerState::default());
 
     let system_service = resource_container.require::<SystemService>();

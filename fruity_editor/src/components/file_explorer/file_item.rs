@@ -52,9 +52,7 @@ pub fn file_item_component(path: PathBuf) -> UIElement {
                         .unwrap(),
                     on_click: Arc::new(move || {
                         let file_explorer_state = use_global::<FileExplorerState>();
-
-                        file_explorer_state.current_dir =
-                            path_2.to_path_buf().to_string_lossy().to_string();
+                        file_explorer_state.open_dir(&path_2.to_path_buf().to_string_lossy());
                     }),
                     width: 64.0,
                     height: 64.0,
