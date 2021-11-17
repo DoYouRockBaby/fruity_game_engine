@@ -1,19 +1,27 @@
 use crate::gizmos_service::GizmosService;
 use fruity_core::inject::Const;
+use fruity_ecs::entity::archetype::rwlock::EntitySharedRwLock;
 use fruity_editor::hooks::use_global;
-use fruity_editor::state::select_entity::SelectEntityState;
+use fruity_editor::state::inspector::InspectorState;
 use fruity_graphic::math::GREEN;
 use fruity_graphic::math::RED;
 use fruity_graphic_2d::components::position::Position;
 use fruity_graphic_2d::components::size::Size;
 
 pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
-    let select_entity_state = use_global::<SelectEntityState>();
+    let inspector_state = use_global::<InspectorState>();
 
-    if let Some(selected_entity) = select_entity_state.get_selected_entity() {
+    if let Some(selected) = inspector_state.get_selected() {
+        let entity =
+            if let Some(entity) = selected.as_any_ref().downcast_ref::<EntitySharedRwLock>() {
+                entity
+            } else {
+                return;
+            };
+
         // Get the selected entity bounds
         let (bottom_left, top_right) = {
-            let entity_reader = selected_entity.read();
+            let entity_reader = entity.read();
             let position =
                 if let Some(position) = entity_reader.get_component::<Position>("Position") {
                     position
@@ -34,14 +42,14 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
         };
 
         // Draw the resize helper
-        let selected_entity_2 = selected_entity.clone();
+        let selected_entity_2 = entity.clone();
         gizmos_service.draw_resize_helper(
             bottom_left,
             top_right,
             GREEN,
             RED,
             move |move_x, move_y, drag_action| {
-                let selected_entity = selected_entity.clone();
+                let selected_entity = entity.clone();
 
                 // Get the position origin
                 let position_origin = {

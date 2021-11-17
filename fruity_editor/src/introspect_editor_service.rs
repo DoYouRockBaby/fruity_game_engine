@@ -5,45 +5,45 @@ use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
-use fruity_ecs::component::component_rwlock::ComponentRwLock;
+use fruity_core::serialize::serialized::SerializableObject;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-pub type ComponentFieldEditor =
-    Arc<dyn Fn(ComponentRwLock, &FieldInfo) -> UIElement + Send + Sync + 'static>;
+pub type IntrospectFieldEditor =
+    Arc<dyn Fn(Box<dyn SerializableObject>, &FieldInfo) -> UIElement + Send + Sync + 'static>;
 
 #[derive(FruityAny)]
-pub struct ComponentEditorService {
-    component_field_editors: HashMap<TypeId, ComponentFieldEditor>,
+pub struct IntrospectEditorService {
+    component_field_editors: HashMap<TypeId, IntrospectFieldEditor>,
 }
 
-impl ComponentEditorService {
+impl IntrospectEditorService {
     pub fn new(_resource_container: Arc<ResourceContainer>) -> Self {
-        ComponentEditorService {
+        IntrospectEditorService {
             component_field_editors: HashMap::new(),
         }
     }
 
-    pub fn register_component_field_editor<T, F>(&mut self, editor: F)
+    pub fn register_field_editor<T, F>(&mut self, editor: F)
     where
         T: 'static,
-        F: Fn(ComponentRwLock, &FieldInfo) -> UIElement + Send + Sync + 'static,
+        F: Fn(Box<dyn SerializableObject>, &FieldInfo) -> UIElement + Send + Sync + 'static,
     {
         let editor = Arc::new(editor);
         self.component_field_editors
             .insert(TypeId::of::<T>(), editor.clone());
     }
 
-    pub fn get_component_field_editor(&self, type_id: TypeId) -> Option<ComponentFieldEditor> {
+    pub fn get_field_editor(&self, type_id: TypeId) -> Option<IntrospectFieldEditor> {
         self.component_field_editors
             .get(&type_id)
             .map(|draw| draw.clone())
     }
 }
 
-impl Debug for ComponentEditorService {
+impl Debug for IntrospectEditorService {
     fn fmt(
         &self,
         _formatter: &mut std::fmt::Formatter<'_>,
@@ -52,9 +52,9 @@ impl Debug for ComponentEditorService {
     }
 }
 
-impl IntrospectObject for ComponentEditorService {
+impl IntrospectObject for IntrospectEditorService {
     fn get_class_name(&self) -> String {
-        "ComponentEditorService".to_string()
+        "IntrospectEditorService".to_string()
     }
 
     fn get_method_infos(&self) -> Vec<MethodInfo> {
@@ -66,4 +66,4 @@ impl IntrospectObject for ComponentEditorService {
     }
 }
 
-impl Resource for ComponentEditorService {}
+impl Resource for IntrospectEditorService {}

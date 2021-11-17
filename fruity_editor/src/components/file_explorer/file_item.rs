@@ -25,6 +25,7 @@ pub fn file_item_component(path: PathBuf) -> UIElement {
             children: vec![
                 ImageButton {
                     image: file_explorer_service_reader.get_thumbnail(&path_string),
+                    enabled: true,
                     on_click: Arc::new(move || {
                         let file_explorer_service = file_explorer_service_2.read();
                         file_explorer_service.notify_selected(&path_string);
@@ -50,6 +51,7 @@ pub fn file_item_component(path: PathBuf) -> UIElement {
                     image: resource_container
                         .get::<dyn TextureResource>("Editor/Icons/folder")
                         .unwrap(),
+                    enabled: true,
                     on_click: Arc::new(move || {
                         let file_explorer_state = use_global::<FileExplorerState>();
                         file_explorer_state.open_dir(&path_2.to_path_buf().to_string_lossy());

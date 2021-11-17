@@ -13,10 +13,9 @@ use std::sync::Arc;
 
 #[topo::nested]
 pub fn draw_button<'a>(elem: Button, ui: &mut egui::Ui, _ctx: &mut DrawContext) {
-    if ui
-        .add_enabled(elem.enabled, egui::Button::new(elem.label))
-        .clicked()
-    {
+    let response = ui.add_enabled(elem.enabled, egui::Button::new(elem.label));
+
+    if response.clicked() {
         (elem.on_click)()
     }
 }

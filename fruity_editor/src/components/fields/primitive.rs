@@ -10,16 +10,18 @@ use crate::ui_element::UISize;
 use crate::ui_element::UIWidget;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::SetterCaller;
+use fruity_core::serialize::serialized::SerializableObject;
 use fruity_core::serialize::serialized::Serialized;
-use fruity_ecs::component::component_rwlock::ComponentRwLock;
 use std::convert::TryFrom;
 use std::sync::Arc;
 
 macro_rules! impl_int_for_editable_component {
     ( $fn_name:ident, $type:ident ) => {
-        pub fn $fn_name(component: ComponentRwLock, field_info: &FieldInfo) -> UIElement {
-            let reader = component.read();
-            let value = (field_info.getter)(reader.as_any_ref());
+        pub fn $fn_name(
+            introspect: Box<dyn SerializableObject>,
+            field_info: &FieldInfo,
+        ) -> UIElement {
+            let value = (field_info.getter)(introspect.as_any_ref());
             let value = if let Ok(value) = $type::try_from(value) {
                 value
             } else {
@@ -27,7 +29,6 @@ macro_rules! impl_int_for_editable_component {
             };
 
             let field_info = field_info.clone();
-            let component = component.clone();
             Row {
                 children: vec![
                     RowItem {
@@ -43,16 +44,12 @@ macro_rules! impl_int_for_editable_component {
                         child: IntegerInput {
                             value: value as i64,
                             on_change: Arc::new(move |value| {
-                                let mut writer = component.write();
                                 match &field_info.setter {
                                     SetterCaller::Const(setter) => setter(
-                                        writer.as_any_ref(),
+                                        introspect.as_any_ref(),
                                         Serialized::try_from(value as $type).unwrap(),
                                     ),
-                                    SetterCaller::Mut(setter) => setter(
-                                        writer.as_any_mut(),
-                                        Serialized::try_from(value as $type).unwrap(),
-                                    ),
+                                    SetterCaller::Mut(_) => (),
                                     SetterCaller::None => (),
                                 };
                             }),
@@ -80,9 +77,11 @@ impl_int_for_editable_component!(draw_editor_isize, isize);
 
 macro_rules! impl_float_for_editable_component {
     ( $fn_name:ident, $type:ident ) => {
-        pub fn $fn_name(component: ComponentRwLock, field_info: &FieldInfo) -> UIElement {
-            let reader = component.read();
-            let value = (field_info.getter)(reader.as_any_ref());
+        pub fn $fn_name(
+            introspect: Box<dyn SerializableObject>,
+            field_info: &FieldInfo,
+        ) -> UIElement {
+            let value = (field_info.getter)(introspect.as_any_ref());
             let value = if let Ok(value) = $type::try_from(value) {
                 value
             } else {
@@ -90,7 +89,6 @@ macro_rules! impl_float_for_editable_component {
             };
 
             let field_info = field_info.clone();
-            let component = component.clone();
             Row {
                 children: vec![
                     RowItem {
@@ -106,17 +104,12 @@ macro_rules! impl_float_for_editable_component {
                         child: FloatInput {
                             value: value as f64,
                             on_change: Arc::new(move |value| {
-                                let component = component.clone();
-                                let mut writer = component.write();
                                 match &field_info.setter {
                                     SetterCaller::Const(setter) => setter(
-                                        writer.as_any_ref(),
+                                        introspect.as_any_ref(),
                                         Serialized::try_from(value as $type).unwrap(),
                                     ),
-                                    SetterCaller::Mut(setter) => setter(
-                                        writer.as_any_mut(),
-                                        Serialized::try_from(value as $type).unwrap(),
-                                    ),
+                                    SetterCaller::Mut(_) => (),
                                     SetterCaller::None => (),
                                 };
                             }),
@@ -134,9 +127,11 @@ macro_rules! impl_float_for_editable_component {
 impl_float_for_editable_component!(draw_editor_f32, f32);
 impl_float_for_editable_component!(draw_editor_f64, f64);
 
-pub fn draw_editor_bool(component: ComponentRwLock, field_info: &FieldInfo) -> UIElement {
-    let reader = component.read();
-    let value = (field_info.getter)(reader.as_any_ref());
+pub fn draw_editor_bool(
+    introspect: Box<dyn SerializableObject>,
+    field_info: &FieldInfo,
+) -> UIElement {
+    let value = (field_info.getter)(introspect.as_any_ref());
     let value = if let Ok(value) = bool::try_from(value) {
         value
     } else {
@@ -144,20 +139,16 @@ pub fn draw_editor_bool(component: ComponentRwLock, field_info: &FieldInfo) -> U
     };
 
     let field_info = field_info.clone();
-    let component = component.clone();
     Checkbox {
         label: field_info.name.to_string(),
         value: value,
         on_change: Arc::new(move |value| {
-            let mut writer = component.write();
-
             match &field_info.setter {
-                SetterCaller::Const(setter) => {
-                    setter(writer.as_any_ref(), Serialized::try_from(value).unwrap())
-                }
-                SetterCaller::Mut(setter) => {
-                    setter(writer.as_any_mut(), Serialized::try_from(value).unwrap())
-                }
+                SetterCaller::Const(setter) => setter(
+                    introspect.as_any_ref(),
+                    Serialized::try_from(value).unwrap(),
+                ),
+                SetterCaller::Mut(_) => (),
                 SetterCaller::None => (),
             };
         }),
@@ -165,9 +156,11 @@ pub fn draw_editor_bool(component: ComponentRwLock, field_info: &FieldInfo) -> U
     .elem()
 }
 
-pub fn draw_editor_string(component: ComponentRwLock, field_info: &FieldInfo) -> UIElement {
-    let reader = component.read();
-    let value = (field_info.getter)(reader.as_any_ref());
+pub fn draw_editor_string(
+    introspect: Box<dyn SerializableObject>,
+    field_info: &FieldInfo,
+) -> UIElement {
+    let value = (field_info.getter)(introspect.as_any_ref());
     let value = if let Ok(value) = String::try_from(value) {
         value
     } else {
@@ -175,7 +168,6 @@ pub fn draw_editor_string(component: ComponentRwLock, field_info: &FieldInfo) ->
     };
 
     let field_info = field_info.clone();
-    let component = component.clone();
     Row {
         children: vec![
             RowItem {
@@ -192,17 +184,12 @@ pub fn draw_editor_string(component: ComponentRwLock, field_info: &FieldInfo) ->
                     placeholder: "".to_string(),
                     value: value,
                     on_change: Arc::new(move |value: &str| {
-                        let mut writer = component.write();
-
                         match &field_info.setter {
                             SetterCaller::Const(setter) => setter(
-                                writer.as_any_ref(),
+                                introspect.as_any_ref(),
                                 Serialized::try_from(value.to_string()).unwrap(),
                             ),
-                            SetterCaller::Mut(setter) => setter(
-                                writer.as_any_mut(),
-                                Serialized::try_from(value.to_string()).unwrap(),
-                            ),
+                            SetterCaller::Mut(_) => (),
                             SetterCaller::None => (),
                         };
                     }),

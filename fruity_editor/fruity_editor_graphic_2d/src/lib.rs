@@ -5,7 +5,7 @@ use fruity_core::inject::Inject1;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use fruity_ecs::system::system_service::SystemService;
-use fruity_editor::component_editor_service::ComponentEditorService;
+use fruity_editor::introspect_editor_service::IntrospectEditorService;
 use fruity_graphic_2d::math::vector2d::Vector2d;
 use std::sync::Arc;
 
@@ -26,7 +26,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
 
     system_service.add_system_that_ignore_pause(Inject1::new(draw_gizmos_2d), Some(98));
 
-    let component_editor_service = resource_container.require::<ComponentEditorService>();
-    let mut component_editor_service = component_editor_service.write();
-    component_editor_service.register_component_field_editor::<Vector2d, _>(draw_editor_vector_2d);
+    let introspect_editor_service = resource_container.require::<IntrospectEditorService>();
+    let mut introspect_editor_service = introspect_editor_service.write();
+    introspect_editor_service.register_field_editor::<Vector2d, _>(draw_editor_vector_2d);
 }

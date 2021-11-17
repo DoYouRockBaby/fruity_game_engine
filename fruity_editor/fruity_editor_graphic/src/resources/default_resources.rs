@@ -10,22 +10,15 @@ pub fn load_default_resources(resource_container: Arc<ResourceContainer>) {
 
 pub fn load_default_icons(resource_container: Arc<ResourceContainer>) {
     load_icon(
-        "Editor/Icons/unknown",
-        include_bytes!("unknown_thumbnail.png"),
+        "Editor/Icons/material",
+        include_bytes!("material_thumbnail.png"),
         "png",
         resource_container.clone(),
     );
 
     load_icon(
-        "Editor/Icons/folder",
-        include_bytes!("folder_thumbnail.png"),
-        "png",
-        resource_container.clone(),
-    );
-
-    load_icon(
-        "Editor/Icons/settings",
-        include_bytes!("settings_thumbnail.png"),
+        "Editor/Icons/shader",
+        include_bytes!("shader_thumbnail.png"),
         "png",
         resource_container.clone(),
     );

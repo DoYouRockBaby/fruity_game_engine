@@ -1,11 +1,18 @@
+use crate::WgpuGraphicManager;
 use fruity_any::*;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
+use fruity_core::resource::resource_container::ResourceContainer;
+use fruity_core::settings::Settings;
+use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::resources::texture_resource::TextureResource;
+use image::load_from_memory;
 use image::GenericImageView;
+use std::io::Read;
 use std::num::NonZeroU32;
+use std::sync::Arc;
 
 #[derive(Debug, FruityAny)]
 pub struct WgpuTextureResource {
@@ -136,5 +143,50 @@ impl IntrospectObject for WgpuTextureResource {
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![]
+    }
+}
+
+pub fn load_texture(
+    identifier: &str,
+    reader: &mut dyn Read,
+    _settings: Settings,
+    resource_container: Arc<ResourceContainer>,
+) {
+    // read the whole file
+    let mut buffer = Vec::new();
+    if let Err(err) = reader.read_to_end(&mut buffer) {
+        log::error!("{}", err.to_string());
+        return;
+    }
+
+    // Load the image
+    let image = load_from_memory(&buffer).unwrap();
+
+    // Get the graphic manager state
+    let graphic_service = resource_container.require::<dyn GraphicService>();
+    let graphic_service = graphic_service.read();
+    let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
+
+    let device = graphic_service.get_device();
+    let queue = graphic_service.get_queue();
+
+    // Create the texture
+    let resource = if let Ok(value) =
+        WgpuTextureResource::from_image(device, queue, &image, Some(&identifier))
+    {
+        value
+    } else {
+        log::error!("Couldn't parse a texture");
+        return;
+    };
+
+    // Store the texture
+    if let Err(_) =
+        resource_container.add::<dyn TextureResource>(identifier.clone(), Box::new(resource))
+    {
+        log::error!(
+            "Couldn't add a resource cause the identifier \"{}\" already exists",
+            identifier
+        );
     }
 }

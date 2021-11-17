@@ -5,6 +5,7 @@ use fruity_core::settings::Settings;
 use fruity_core::world::World;
 use fruity_ecs::initialize as initialize_ecs;
 use fruity_editor::initialize as initialize_editor;
+use fruity_editor_graphic::initialize as initialize_editor_graphic;
 use fruity_editor_graphic_2d::initialize as initialize_editor_graphic_2d;
 use fruity_editor_javascript::initialize as initialize_editor_javascript;
 use fruity_egui_editor::initialize as initialize_egui_editor;
@@ -53,6 +54,7 @@ fn main() {
             initialize_editor(resource_container.clone(), settings);
             initialize_javascript(resource_container.clone(), settings);
             initialize_egui_editor(resource_container.clone(), settings);
+            initialize_editor_graphic(resource_container.clone(), settings);
             initialize_editor_graphic_2d(resource_container.clone(), settings);
             initialize_editor_javascript(resource_container.clone(), settings);
 

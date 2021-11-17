@@ -30,6 +30,7 @@ impl UIWidget for Button {
 
 pub struct ImageButton {
     pub image: ResourceReference<dyn TextureResource>,
+    pub enabled: bool,
     pub on_click: Arc<dyn Fn() + Send + Sync>,
     pub width: f32,
     pub height: f32,

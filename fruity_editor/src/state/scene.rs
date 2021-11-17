@@ -1,6 +1,6 @@
 use crate::dialog_service::DialogService;
 use crate::hooks::use_global;
-use crate::state::select_entity::SelectEntityState;
+use crate::state::inspector::InspectorState;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::serialize::yaml::deserialize_yaml;
@@ -32,12 +32,12 @@ impl SceneState {
     }
 
     pub fn run(&mut self) {
-        let select_entity_state = use_global::<SelectEntityState>();
+        let inspector_state = use_global::<InspectorState>();
         let entity_service = self.entity_service.read();
         let system_service = self.system_service.read();
 
         self.snapshot = Some(entity_service.snapshot());
-        select_entity_state.unselect_entity();
+        inspector_state.unselect();
         system_service.set_paused(false);
     }
 
@@ -47,13 +47,13 @@ impl SceneState {
     }
 
     pub fn stop(&mut self) {
-        let select_entity_state = use_global::<SelectEntityState>();
+        let inspector_state = use_global::<InspectorState>();
         let mut entity_service = self.entity_service.write();
         let system_service = self.system_service.read();
 
         self.snapshot = None;
         entity_service.restore(self.snapshot.as_ref().unwrap());
-        select_entity_state.unselect_entity();
+        inspector_state.unselect();
         system_service.set_paused(true);
     }
 
@@ -73,13 +73,13 @@ impl SceneState {
         if let Some(filepath) = dialog_service.open(&["*.frsc"]) {
             if let Ok(mut reader) = File::open(&filepath) {
                 if let Some(snapshot) = deserialize_yaml(&mut reader) {
-                    let select_entity_state = use_global::<SelectEntityState>();
+                    let inspector_state = use_global::<InspectorState>();
                     let mut entity_service = self.entity_service.write();
                     let system_service = self.system_service.read();
 
                     entity_service.restore(&EntityServiceSnapshot(snapshot));
                     system_service.set_paused(true);
-                    select_entity_state.unselect_entity();
+                    inspector_state.unselect();
                     self.current_filepath = Some(filepath);
                 } else {
                 }
