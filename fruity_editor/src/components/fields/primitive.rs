@@ -8,10 +8,10 @@ use crate::ui_element::layout::RowItem;
 use crate::ui_element::UIElement;
 use crate::ui_element::UISize;
 use crate::ui_element::UIWidget;
+use fruity_core::introspect::FieldInfo;
+use fruity_core::introspect::SetterCaller;
+use fruity_core::serialize::serialized::Serialized;
 use fruity_ecs::component::component_rwlock::ComponentRwLock;
-use fruity_introspect::serialized::Serialized;
-use fruity_introspect::FieldInfo;
-use fruity_introspect::SetterCaller;
 use std::convert::TryFrom;
 use std::sync::Arc;
 

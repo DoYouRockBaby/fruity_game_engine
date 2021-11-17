@@ -1,5 +1,5 @@
-use crate::serialized::Serialized;
-use crate::IntrospectError;
+use crate::introspect::IntrospectError;
+use crate::serialize::serialized::Serialized;
 use std::any::Any;
 use std::convert::TryFrom;
 use std::iter::Enumerate;

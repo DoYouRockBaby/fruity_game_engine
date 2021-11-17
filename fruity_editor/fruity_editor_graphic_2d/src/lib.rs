@@ -18,7 +18,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let gizmos_service = GizmosService::new(resource_container.clone());
 
     resource_container
-        .add_require::<GizmosService>("gizmos_service", Box::new(gizmos_service))
+        .add::<GizmosService>("gizmos_service", Box::new(gizmos_service))
         .unwrap();
 
     let system_service = resource_container.require::<SystemService>();

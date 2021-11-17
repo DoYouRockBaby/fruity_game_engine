@@ -1,7 +1,12 @@
-use crate::serialized::ObjectFactory;
-use crate::Serialized;
-use crate::SetterCaller;
+use crate::serialize::serialized::Serialized;
+use crate::ObjectFactoryService;
 use std::collections::HashMap;
+
+/// A structure used to serialize datas
+pub mod serialized;
+
+/// Provides functions to serialize and deserialize a serialized value to yaml
+pub mod yaml;
 
 /// A trait that implements a function to serialize an object to a [’Serialized’]
 pub trait Serialize {
@@ -15,8 +20,10 @@ pub trait Deserialize {
     type Output;
 
     /// A function to deserialize an object from a [’Serialized’]
-    fn deserialize(serialized: &Serialized, object_factory: &ObjectFactory)
-        -> Option<Self::Output>;
+    fn deserialize(
+        serialized: &Serialized,
+        object_factory_service: &ObjectFactoryService,
+    ) -> Option<Self::Output>;
 }
 
 impl Serialized {
@@ -76,63 +83,31 @@ impl Serialized {
     /// # Arguments
     /// * `object_factory` - The object factory that will instantiate the objects
     ///
-    pub fn deserialize_native_objects(&self, object_factory: &ObjectFactory) -> Serialized {
+    pub fn deserialize_native_objects(
+        &self,
+        object_factory_service: &ObjectFactoryService,
+    ) -> Serialized {
         if let Serialized::SerializedObject { class_name, fields } = self {
-            let new_object = object_factory.instantiate(class_name, Vec::new());
+            let mut deserialized_fields = HashMap::<String, Serialized>::new();
+
+            for (key, value) in fields.iter() {
+                deserialized_fields.insert(
+                    key.clone(),
+                    value.deserialize_native_objects(object_factory_service),
+                );
+            }
+
+            let new_object = object_factory_service.instantiate(
+                class_name,
+                vec![Serialized::SerializedObject {
+                    class_name: "unknown".to_string(),
+                    fields: deserialized_fields.clone(),
+                }],
+            );
 
             if let Some(new_object) = new_object {
-                if let Serialized::NativeObject(mut new_object) = new_object {
-                    fields.into_iter().for_each(|(key, value)| {
-                        let new_object_fields = new_object.get_field_infos();
-                        let field_info = new_object_fields
-                            .iter()
-                            .find(|field_info| field_info.name == *key);
-
-                        if let Some(field_info) = field_info {
-                            match &field_info.setter {
-                                SetterCaller::Const(call) => {
-                                    call(
-                                        new_object.as_any_ref(),
-                                        value.deserialize_native_objects(object_factory),
-                                    );
-                                }
-                                SetterCaller::Mut(call) => {
-                                    call(
-                                        new_object.as_any_mut(),
-                                        value.deserialize_native_objects(object_factory),
-                                    );
-                                }
-                                SetterCaller::None => (),
-                            }
-                        }
-                    });
-
-                    Serialized::NativeObject(new_object)
-                } else {
-                    let mut deserialized_fields = HashMap::<String, Serialized>::new();
-
-                    for (key, value) in fields.iter() {
-                        deserialized_fields.insert(
-                            key.clone(),
-                            value.deserialize_native_objects(object_factory),
-                        );
-                    }
-
-                    Serialized::SerializedObject {
-                        class_name: class_name.clone(),
-                        fields: deserialized_fields,
-                    }
-                }
+                new_object
             } else {
-                let mut deserialized_fields = HashMap::<String, Serialized>::new();
-
-                for (key, value) in fields.iter() {
-                    deserialized_fields.insert(
-                        key.clone(),
-                        value.deserialize_native_objects(object_factory),
-                    );
-                }
-
                 Serialized::SerializedObject {
                     class_name: class_name.clone(),
                     fields: deserialized_fields,
@@ -143,7 +118,7 @@ impl Serialized {
                 serialized_objects
                     .iter()
                     .map(|serializable_object| {
-                        serializable_object.deserialize_native_objects(object_factory)
+                        serializable_object.deserialize_native_objects(object_factory_service)
                     })
                     .collect::<Vec<_>>(),
             )

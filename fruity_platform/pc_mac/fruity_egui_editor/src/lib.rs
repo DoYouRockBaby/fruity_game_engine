@@ -15,9 +15,9 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let dialog_service = WgpuDialogService::new(resource_container.clone());
 
     resource_container
-        .add_require::<EditorService>("editor_service", Box::new(editor_service))
+        .add::<EditorService>("editor_service", Box::new(editor_service))
         .unwrap();
     resource_container
-        .add_require::<dyn DialogService>("dialog_service", Box::new(dialog_service))
+        .add::<dyn DialogService>("dialog_service", Box::new(dialog_service))
         .unwrap();
 }

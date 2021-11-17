@@ -45,16 +45,13 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let file_explorer_service = FileExplorerService::new(resource_container.clone());
 
     resource_container
-        .add_require::<ComponentEditorService>(
+        .add::<ComponentEditorService>(
             "component_editor_service",
             Box::new(component_editor_service),
         )
         .unwrap();
     resource_container
-        .add_require::<FileExplorerService>(
-            "file_explorer_service",
-            Box::new(file_explorer_service),
-        )
+        .add::<FileExplorerService>("file_explorer_service", Box::new(file_explorer_service))
         .unwrap();
 
     declare_global(WorldState::new(resource_container.clone()));

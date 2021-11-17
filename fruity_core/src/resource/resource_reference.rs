@@ -1,10 +1,17 @@
+use crate::introspect::Constructor;
+use crate::introspect::FieldInfo;
+use crate::introspect::InstantiableObject;
+use crate::introspect::IntrospectObject;
+use crate::introspect::MethodCaller;
+use crate::introspect::MethodInfo;
+use crate::introspect::SetterCaller;
 use crate::resource::resource::Resource;
+use crate::serialize::serialized::SerializableObject;
+use crate::serialize::serialized::Serialized;
+use crate::utils::introspect::ArgumentCaster;
+use crate::ResourceContainer;
 use fruity_any::FruityAny;
-use fruity_introspect::serializable_object::SerializableObject;
-use fruity_introspect::serialized::Serialized;
-use fruity_introspect::FieldInfo;
-use fruity_introspect::IntrospectObject;
-use fruity_introspect::MethodInfo;
+use std::any::TypeId;
 use std::convert::TryFrom;
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -13,19 +20,177 @@ use std::sync::RwLock;
 use std::sync::RwLockReadGuard;
 use std::sync::RwLockWriteGuard;
 
+/// A reference over an any resource that is supposed to be used by components
+#[derive(Debug, Clone, FruityAny)]
+pub struct AnyResourceReference {
+    name: String,
+    resource: Arc<dyn Resource>,
+    resource_container: Arc<ResourceContainer>,
+}
+
+impl AnyResourceReference {
+    /// Create a resource reference from a resource
+    pub fn new(
+        name: &str,
+        resource: Arc<dyn Resource>,
+        resource_container: Arc<ResourceContainer>,
+    ) -> Self {
+        AnyResourceReference {
+            name: name.to_string(),
+            resource,
+            resource_container,
+        }
+    }
+}
+
+impl InstantiableObject for AnyResourceReference {
+    fn get_constructor() -> Constructor {
+        Arc::new(
+            |resource_container: Arc<ResourceContainer>, args: Vec<Serialized>| {
+                let mut caster = ArgumentCaster::new("ResourceReference", args);
+                let arg1 = caster.next()?;
+
+                if let Serialized::SerializedObject { fields, .. } = arg1 {
+                    if let Some(Serialized::String(resource_name)) = fields.get("resource_name") {
+                        if let Some(resource) = resource_container.get_untyped(resource_name) {
+                            Ok(Serialized::NativeObject(Box::new(resource)))
+                        } else {
+                            Ok(Serialized::Null)
+                        }
+                    } else {
+                        Ok(Serialized::Null)
+                    }
+                } else {
+                    Ok(Serialized::Null)
+                }
+            },
+        )
+    }
+}
+
+impl IntrospectObject for AnyResourceReference {
+    fn get_class_name(&self) -> String {
+        "ResourceReference".to_string()
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        let mut fields_infos = self
+            .resource
+            .get_field_infos()
+            .into_iter()
+            .map(|field_info| {
+                let getter = field_info.getter.clone();
+                let setter = field_info.setter.clone();
+
+                FieldInfo {
+                    name: field_info.name,
+                    ty: field_info.ty,
+                    serializable: false,
+                    getter: Arc::new(move |this| {
+                        let this = this.downcast_ref::<AnyResourceReference>().unwrap();
+
+                        getter(this.resource.as_any_ref())
+                    }),
+                    setter: match setter {
+                        SetterCaller::Const(call) => {
+                            SetterCaller::Const(Arc::new(move |this, args| {
+                                let this = this.downcast_ref::<AnyResourceReference>().unwrap();
+
+                                call(this.resource.as_any_ref(), args)
+                            }))
+                        }
+                        SetterCaller::Mut(call) => {
+                            SetterCaller::Mut(Arc::new(move |this, args| {
+                                let this = this.downcast_mut::<AnyResourceReference>().unwrap();
+
+                                call(this.resource.as_any_mut(), args)
+                            }))
+                        }
+                        SetterCaller::None => SetterCaller::None,
+                    },
+                }
+            })
+            .collect::<Vec<_>>();
+
+        fields_infos.append(&mut vec![FieldInfo {
+            name: "resource_name".to_string(),
+            ty: TypeId::of::<String>(),
+            serializable: true,
+            getter: Arc::new(move |this| {
+                let this = this.downcast_ref::<AnyResourceReference>().unwrap();
+                Serialized::String(this.name.clone())
+            }),
+            setter: SetterCaller::Mut(Arc::new(move |this, value| {
+                let this = this.downcast_mut::<AnyResourceReference>().unwrap();
+
+                match String::try_from(value) {
+                    Ok(value) => this.name = value,
+                    Err(_) => {
+                        log::error!("Expected a String for property resource_name",);
+                    }
+                }
+            })),
+        }]);
+
+        fields_infos
+    }
+
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        self.resource
+            .get_method_infos()
+            .into_iter()
+            .map(|method_info| MethodInfo {
+                name: method_info.name,
+                call: match method_info.call {
+                    MethodCaller::Const(call) => {
+                        MethodCaller::Const(Arc::new(move |this, args| {
+                            let this = this.downcast_ref::<AnyResourceReference>().unwrap();
+
+                            call(this.resource.as_any_ref(), args)
+                        }))
+                    }
+                    MethodCaller::Mut(call) => MethodCaller::Mut(Arc::new(move |this, args| {
+                        let this = this.downcast_mut::<AnyResourceReference>().unwrap();
+
+                        call(this.resource.as_any_mut(), args)
+                    })),
+                },
+            })
+            .collect::<Vec<_>>()
+    }
+}
+
+impl SerializableObject for AnyResourceReference {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
+    }
+}
+
+impl Into<Serialized> for AnyResourceReference {
+    fn into(self) -> Serialized {
+        Serialized::NativeObject(Box::new(self))
+    }
+}
+
 /// A reference over a resource that is supposed to be used by components
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ResourceReference<T: Resource + ?Sized> {
-    path: String,
+    name: String,
     resource: Arc<RwLock<Box<T>>>,
+    resource_container: Arc<ResourceContainer>,
 }
 
 impl<T: Resource + ?Sized> ResourceReference<T> {
     /// Create a resource reference from a resource
-    pub fn new(path: &str, resource: Arc<RwLock<Box<T>>>) -> Self {
+    pub fn new(
+        name: &str,
+        resource: Arc<RwLock<Box<T>>>,
+        resource_container: Arc<ResourceContainer>,
+    ) -> Self {
         ResourceReference {
-            path: path.to_string(),
+            name: name.to_string(),
             resource,
+            resource_container,
         }
     }
 
@@ -66,24 +231,111 @@ impl<T: Resource + ?Sized> ResourceReference<T> {
     }
 }
 
-// TODO: Complete that
+impl<T: Resource + ?Sized> Clone for ResourceReference<T> {
+    fn clone(&self) -> Self {
+        ResourceReference::<T>::new(
+            &self.name,
+            self.resource.clone(),
+            self.resource_container.clone(),
+        )
+    }
+}
+
 impl<T: Resource + ?Sized> IntrospectObject for ResourceReference<T> {
     fn get_class_name(&self) -> String {
         "ResourceReference".to_string()
     }
 
-    fn get_method_infos(&self) -> Vec<MethodInfo> {
-        vec![]
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        let mut fields_infos = self
+            .resource
+            .get_field_infos()
+            .into_iter()
+            .map(|field_info| {
+                let getter = field_info.getter.clone();
+                let setter = field_info.setter.clone();
+
+                FieldInfo {
+                    name: field_info.name,
+                    ty: field_info.ty,
+                    serializable: false,
+                    getter: Arc::new(move |this| {
+                        let this = this.downcast_ref::<ResourceReference<T>>().unwrap();
+
+                        getter(this.resource.as_any_ref())
+                    }),
+                    setter: match setter {
+                        SetterCaller::Const(call) => {
+                            SetterCaller::Const(Arc::new(move |this, args| {
+                                let this = this.downcast_ref::<ResourceReference<T>>().unwrap();
+
+                                call(this.resource.as_any_ref(), args)
+                            }))
+                        }
+                        SetterCaller::Mut(call) => {
+                            SetterCaller::Mut(Arc::new(move |this, args| {
+                                let this = this.downcast_mut::<ResourceReference<T>>().unwrap();
+
+                                call(this.resource.as_any_mut(), args)
+                            }))
+                        }
+                        SetterCaller::None => SetterCaller::None,
+                    },
+                }
+            })
+            .collect::<Vec<_>>();
+
+        fields_infos.append(&mut vec![FieldInfo {
+            name: "resource_name".to_string(),
+            ty: TypeId::of::<String>(),
+            serializable: true,
+            getter: Arc::new(move |this| {
+                let this = this.downcast_ref::<ResourceReference<T>>().unwrap();
+                Serialized::String(this.name.clone())
+            }),
+            setter: SetterCaller::Mut(Arc::new(move |this, value| {
+                let this = this.downcast_mut::<ResourceReference<T>>().unwrap();
+
+                match String::try_from(value) {
+                    Ok(value) => this.name = value,
+                    Err(_) => {
+                        log::error!("Expected a String for property resource_name",);
+                    }
+                }
+            })),
+        }]);
+
+        fields_infos
     }
 
-    fn get_field_infos(&self) -> Vec<FieldInfo> {
-        vec![]
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        self.resource
+            .get_method_infos()
+            .into_iter()
+            .map(|method_info| MethodInfo {
+                name: method_info.name,
+                call: match method_info.call {
+                    MethodCaller::Const(call) => {
+                        MethodCaller::Const(Arc::new(move |this, args| {
+                            let this = this.downcast_ref::<ResourceReference<T>>().unwrap();
+
+                            call(this.resource.as_any_ref(), args)
+                        }))
+                    }
+                    MethodCaller::Mut(call) => MethodCaller::Mut(Arc::new(move |this, args| {
+                        let this = this.downcast_mut::<ResourceReference<T>>().unwrap();
+
+                        call(this.resource.as_any_mut(), args)
+                    })),
+                },
+            })
+            .collect::<Vec<_>>()
     }
 }
 
 impl<T: Resource + ?Sized> SerializableObject for ResourceReference<T> {
     fn duplicate(&self) -> Box<dyn SerializableObject> {
-        Box::new(*self.clone())
+        Box::new(self.clone())
     }
 }
 
@@ -118,10 +370,21 @@ impl<T: Resource + ?Sized> TryFrom<Serialized> for ResourceReference<T> {
                     .downcast::<ResourceReference<T>>()
                 {
                     Ok(*value)
-                } else if let Ok(value) = value.clone().as_any_box().downcast::<Arc<dyn Resource>>()
+                } else if let Ok(resource_reference) = value
+                    .clone()
+                    .as_any_box()
+                    .downcast::<AnyResourceReference>()
                 {
-                    if let Ok(value) = value.as_any_arc().downcast::<RwLock<Box<T>>>() {
-                        Ok(ResourceReference::new{(value)})
+                    if let Ok(resource) = resource_reference
+                        .resource
+                        .as_any_arc()
+                        .downcast::<RwLock<Box<T>>>()
+                    {
+                        Ok(ResourceReference::new(
+                            &resource_reference.name,
+                            resource,
+                            resource_reference.resource_container.clone(),
+                        ))
                     } else {
                         Err(format!("Couldn't convert a Serialized to native object"))
                     }
@@ -196,8 +459,21 @@ impl<T: Resource + ?Sized> DerefMut for ResourceWriteGuard<T> {
 }
 
 /// An optionnal reference over a resource that is supposed to be used by components
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct OptionResourceReference<T: Resource + ?Sized>(pub Option<ResourceReference<T>>);
+
+impl<T: Resource + ?Sized> Clone for OptionResourceReference<T> {
+    fn clone(&self) -> Self {
+        OptionResourceReference(match &self.0 {
+            Some(value) => Some(ResourceReference::<T>::new(
+                &value.name,
+                value.resource.clone(),
+                value.resource_container.clone(),
+            )),
+            None => None,
+        })
+    }
+}
 
 impl<T: Resource + ?Sized> OptionResourceReference<T> {
     /// Create an empty resource reference
@@ -225,12 +501,101 @@ impl<T: Resource + ?Sized> IntrospectObject for OptionResourceReference<T> {
         "OptionResourceReference".to_string()
     }
 
-    fn get_method_infos(&self) -> Vec<MethodInfo> {
-        vec![]
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        if let Some(resource) = &self.0 {
+            let mut fields_infos = resource
+                .resource
+                .get_field_infos()
+                .into_iter()
+                .map(|field_info| {
+                    let getter = field_info.getter.clone();
+                    let setter = field_info.setter.clone();
+
+                    FieldInfo {
+                        name: field_info.name,
+                        ty: field_info.ty,
+                        serializable: false,
+                        getter: Arc::new(move |this| {
+                            let this = this.downcast_ref::<ResourceReference<T>>().unwrap();
+
+                            getter(this.resource.as_any_ref())
+                        }),
+                        setter: match setter {
+                            SetterCaller::Const(call) => {
+                                SetterCaller::Const(Arc::new(move |this, args| {
+                                    let this = this.downcast_ref::<ResourceReference<T>>().unwrap();
+
+                                    call(this.resource.as_any_ref(), args)
+                                }))
+                            }
+                            SetterCaller::Mut(call) => {
+                                SetterCaller::Mut(Arc::new(move |this, args| {
+                                    let this = this.downcast_mut::<ResourceReference<T>>().unwrap();
+
+                                    call(this.resource.as_any_mut(), args)
+                                }))
+                            }
+                            SetterCaller::None => SetterCaller::None,
+                        },
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            fields_infos.append(&mut vec![FieldInfo {
+                name: "resource_name".to_string(),
+                ty: TypeId::of::<String>(),
+                serializable: true,
+                getter: Arc::new(move |this| {
+                    let this = this.downcast_ref::<ResourceReference<T>>().unwrap();
+                    Serialized::String(this.name.clone())
+                }),
+                setter: SetterCaller::Mut(Arc::new(move |this, value| {
+                    let this = this.downcast_mut::<ResourceReference<T>>().unwrap();
+
+                    match String::try_from(value) {
+                        Ok(value) => this.name = value,
+                        Err(_) => {
+                            log::error!("Expected a String for property resource_name",);
+                        }
+                    }
+                })),
+            }]);
+
+            fields_infos
+        } else {
+            vec![]
+        }
     }
 
-    fn get_field_infos(&self) -> Vec<FieldInfo> {
-        vec![]
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        if let Some(resource) = &self.0 {
+            resource
+                .resource
+                .get_method_infos()
+                .into_iter()
+                .map(|method_info| MethodInfo {
+                    name: method_info.name,
+                    call: match method_info.call {
+                        MethodCaller::Const(call) => {
+                            MethodCaller::Const(Arc::new(move |this, args| {
+                                let this = this.downcast_ref::<ResourceReference<T>>().unwrap();
+
+                                call(this.resource.as_any_ref(), args)
+                            }))
+                        }
+                        MethodCaller::Mut(call) => {
+                            MethodCaller::Mut(Arc::new(move |this, args| {
+                                let this = this.downcast_mut::<ResourceReference<T>>().unwrap();
+
+                                call(this.resource.as_any_mut(), args)
+                            }))
+                        }
+                    },
+                })
+                .collect::<Vec<_>>()
+        } else {
+            vec![]
+        }
     }
 }
 

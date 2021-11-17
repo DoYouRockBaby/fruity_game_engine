@@ -1,6 +1,9 @@
 use crate::GraphicService;
 use crate::WgpuGraphicManager;
 use fruity_any::*;
+use fruity_core::introspect::FieldInfo;
+use fruity_core::introspect::IntrospectObject;
+use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
@@ -9,9 +12,6 @@ use fruity_graphic::resources::shader_resource::ShaderBindingType;
 use fruity_graphic::resources::shader_resource::ShaderBindingVisibility;
 use fruity_graphic::resources::shader_resource::ShaderParams;
 use fruity_graphic::resources::shader_resource::ShaderResource;
-use fruity_introspect::FieldInfo;
-use fruity_introspect::IntrospectObject;
-use fruity_introspect::MethodInfo;
 use std::io::Read;
 use std::sync::Arc;
 

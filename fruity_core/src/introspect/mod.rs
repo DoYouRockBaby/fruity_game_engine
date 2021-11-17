@@ -5,7 +5,8 @@
 //! Implements traits and macros to make a structure abe to list it's field and to get/set it with any
 //!
 
-use crate::serialized::Serialized;
+use crate::serialize::serialized::Serialized;
+use crate::ResourceContainer;
 use fruity_any::FruityAny;
 use std::any::Any;
 use std::any::TypeId;
@@ -14,15 +15,6 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::Arc;
 use std::sync::RwLock;
-
-/// Provides trait to implement a self duplication for an introspect object that can be stored in [’Serialized’]
-pub mod serializable_object;
-
-/// Provides structure to pass object between the rust ecosystem and the scripting system
-pub mod serialized;
-
-/// Provides utility functions to help the implementation of introspection
-pub mod utils;
 
 #[derive(Debug, Clone)]
 /// Informations about a field of an introspect object
@@ -81,8 +73,11 @@ pub fn log_introspect_error(err: &IntrospectError) {
 }
 
 /// A setter caller
-pub type Constructor =
-    Arc<dyn Fn(Vec<Serialized>) -> Result<Serialized, IntrospectError> + Send + Sync>;
+pub type Constructor = Arc<
+    dyn Fn(Arc<ResourceContainer>, Vec<Serialized>) -> Result<Serialized, IntrospectError>
+        + Send
+        + Sync,
+>;
 
 /// A setter caller
 #[derive(Clone)]

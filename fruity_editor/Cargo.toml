@@ -21,7 +21,6 @@ comp_state = { path = "../deps/comp_state" }
 fruity_any = { path = "../fruity_core/fruity_any" }
 fruity_core = { path = "../fruity_core" }
 fruity_ecs = { path = "../fruity_core/fruity_ecs" }
-fruity_introspect = { path = "../fruity_core/fruity_introspect" }
 fruity_graphic = { path = "../fruity_core/fruity_graphic" }
 fruity_windows = { path = "../fruity_core/fruity_windows" }
 log = "0.4.14"

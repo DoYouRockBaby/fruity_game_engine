@@ -1,8 +1,8 @@
+use crate::introspect::FieldInfo;
+use crate::introspect::IntrospectObject;
+use crate::introspect::MethodInfo;
 use crate::resource::resource::Resource;
 use fruity_any::*;
-use fruity_introspect::FieldInfo;
-use fruity_introspect::IntrospectObject;
-use fruity_introspect::MethodInfo;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::io::Read;

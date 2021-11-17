@@ -9,21 +9,21 @@ use crate::entity::entity_query::EntityQueryReadCallback;
 use crate::entity::entity_query::EntityQueryWriteCallback;
 use crate::ResourceContainer;
 use fruity_any::*;
+use fruity_core::introspect::FieldInfo;
+use fruity_core::introspect::IntrospectObject;
+use fruity_core::introspect::MethodCaller;
+use fruity_core::introspect::MethodInfo;
+use fruity_core::introspect::SetterCaller;
 use fruity_core::object_factory_service::ObjectFactoryService;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_reference::ResourceReference;
+use fruity_core::serialize::serialized::Serialized;
+use fruity_core::serialize::Deserialize;
+use fruity_core::serialize::Serialize;
 use fruity_core::signal::Signal;
-use fruity_introspect::serialized::serialize::Deserialize;
-use fruity_introspect::serialized::serialize::Serialize;
-use fruity_introspect::serialized::Serialized;
-use fruity_introspect::utils::cast_introspect_mut;
-use fruity_introspect::utils::cast_introspect_ref;
-use fruity_introspect::utils::ArgumentCaster;
-use fruity_introspect::FieldInfo;
-use fruity_introspect::IntrospectObject;
-use fruity_introspect::MethodCaller;
-use fruity_introspect::MethodInfo;
-use fruity_introspect::SetterCaller;
+use fruity_core::utils::introspect::cast_introspect_mut;
+use fruity_core::utils::introspect::cast_introspect_ref;
+use fruity_core::utils::introspect::ArgumentCaster;
 use maplit::hashmap;
 use rayon::iter::ParallelBridge;
 use rayon::iter::ParallelIterator;
@@ -298,7 +298,6 @@ impl EntityService {
 
     fn restore_entity(&mut self, serialized_entity: &Serialized) {
         let object_factory_service = self.object_factory_service.read();
-        let object_factory = object_factory_service.get_object_factory();
 
         if let Serialized::SerializedObject { fields, .. } = serialized_entity {
             let name = if let Some(Serialized::String(name)) = fields.get("name") {
@@ -317,7 +316,7 @@ impl EntityService {
                 components
                     .iter()
                     .filter_map(|serialized_component| {
-                        AnyComponent::deserialize(serialized_component, object_factory)
+                        AnyComponent::deserialize(serialized_component, &object_factory_service)
                     })
                     .collect::<Vec<_>>()
             } else {

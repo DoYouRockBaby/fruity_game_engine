@@ -1,14 +1,14 @@
 use crate::component::serialized_component::SerializedComponent;
 use fruity_any::*;
-use fruity_introspect::serializable_object::SerializableObject;
-use fruity_introspect::serialized::object_factory::ObjectFactory;
-use fruity_introspect::serialized::serialize::Deserialize;
-use fruity_introspect::serialized::Serialized;
-use fruity_introspect::FieldInfo;
-use fruity_introspect::IntrospectObject;
-use fruity_introspect::MethodCaller;
-use fruity_introspect::MethodInfo;
-use fruity_introspect::SetterCaller;
+use fruity_core::introspect::FieldInfo;
+use fruity_core::introspect::IntrospectObject;
+use fruity_core::introspect::MethodCaller;
+use fruity_core::introspect::MethodInfo;
+use fruity_core::introspect::SetterCaller;
+use fruity_core::object_factory_service::ObjectFactoryService;
+use fruity_core::serialize::serialized::SerializableObject;
+use fruity_core::serialize::serialized::Serialized;
+use fruity_core::serialize::Deserialize;
 use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::ops::Deref;
@@ -154,7 +154,7 @@ impl IntrospectObject for AnyComponent {
 impl Deserialize for AnyComponent {
     type Output = Self;
 
-    fn deserialize(serialized: &Serialized, object_factory: &ObjectFactory) -> Option<Self> {
+    fn deserialize(serialized: &Serialized, object_factory: &ObjectFactoryService) -> Option<Self> {
         let native_serialized = serialized.deserialize_native_objects(object_factory);
         if let Serialized::NativeObject(native_object) = native_serialized {
             native_object
@@ -162,6 +162,10 @@ impl Deserialize for AnyComponent {
                 .downcast::<AnyComponent>()
                 .ok()
                 .map(|component| *component)
+        } else if let Serialized::SerializedObject { class_name, fields } = native_serialized {
+            Some(AnyComponent::new(SerializedComponent::new(
+                class_name, fields,
+            )))
         } else {
             None
         }

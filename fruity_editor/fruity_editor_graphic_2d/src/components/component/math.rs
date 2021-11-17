@@ -1,3 +1,6 @@
+use fruity_core::introspect::FieldInfo;
+use fruity_core::serialize::serialized::Serialized;
+use fruity_core::introspect::SetterCaller;
 use fruity_ecs::component::component_rwlock::ComponentRwLock;
 use fruity_editor::ui_element::display::Text;
 use fruity_editor::ui_element::input::FloatInput;
@@ -7,9 +10,6 @@ use fruity_editor::ui_element::UIElement;
 use fruity_editor::ui_element::UISize;
 use fruity_editor::ui_element::UIWidget;
 use fruity_graphic_2d::math::vector2d::Vector2d;
-use fruity_introspect::serialized::Serialized;
-use fruity_introspect::FieldInfo;
-use fruity_introspect::SetterCaller;
 use std::convert::TryFrom;
 use std::sync::Arc;
 

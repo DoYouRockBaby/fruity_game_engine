@@ -8,11 +8,11 @@ use crate::serialize::deserialize::deserialize_v8;
 use crate::thread_scope_stack::pop_thread_scope_stack;
 use crate::thread_scope_stack::push_thread_scope_stack;
 use crate::JsObject;
-use fruity_introspect::log_introspect_error;
-use fruity_introspect::serializable_object::SerializableObject;
-use fruity_introspect::serialized::Serialized;
-use fruity_introspect::MethodCaller;
-use fruity_introspect::SetterCaller;
+use fruity_core::introspect::log_introspect_error;
+use fruity_core::introspect::MethodCaller;
+use fruity_core::introspect::SetterCaller;
+use fruity_core::serialize::serialized::SerializableObject;
+use fruity_core::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 
 impl JsObject {

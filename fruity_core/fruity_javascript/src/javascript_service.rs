@@ -3,13 +3,13 @@ use crate::bridge::resource_container::configure_resource_container;
 use crate::error::log_js_error;
 use crate::JsRuntime;
 use fruity_any::*;
+use fruity_core::introspect::FieldInfo;
+use fruity_core::introspect::IntrospectObject;
+use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
+use fruity_core::serialize::serialized::Serialized;
 use fruity_core::utils::single_thread_wrapper::SingleThreadWrapper;
-use fruity_introspect::serialized::Serialized;
-use fruity_introspect::FieldInfo;
-use fruity_introspect::IntrospectObject;
-use fruity_introspect::MethodInfo;
 use std::sync::Arc;
 
 #[derive(Clone, Copy)]

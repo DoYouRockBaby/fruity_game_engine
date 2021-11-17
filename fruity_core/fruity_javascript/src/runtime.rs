@@ -10,7 +10,7 @@ use crate::normalize_path::normalize_path;
 use crate::serialize::serialize::serialize_v8;
 use crate::thread_scope_stack::clear_thread_scope_stack;
 use crate::thread_scope_stack::push_thread_scope_stack;
-use fruity_introspect::serialized::Serialized;
+use fruity_core::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 use std::cell::RefCell;
 use std::path::Path;

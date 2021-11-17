@@ -16,6 +16,5 @@ maplit = "1.0.2"
 fruity_any = { path = "../fruity_any" }
 fruity_core = { path = ".." }
 fruity_ecs = { path = "../fruity_ecs" }
-fruity_introspect = { path = "../fruity_introspect" }
 fruity_graphic = { path = "../fruity_graphic" }
 fruity_windows = { path = "../fruity_windows" }

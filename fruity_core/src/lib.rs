@@ -12,6 +12,7 @@
 
 use crate::object_factory_service::ObjectFactoryService;
 use crate::resource::resource_container::ResourceContainer;
+use crate::resource::resource_reference::AnyResourceReference;
 use std::sync::Arc;
 
 #[macro_use]
@@ -19,6 +20,12 @@ extern crate lazy_static;
 
 /// Tools to load dynamicaly modules
 pub mod module;
+
+/// Traits to make types able to introspect themself
+pub mod introspect;
+
+/// Tools to implement data serialization
+pub mod serialize;
 
 /// All related with resources
 pub mod resource;
@@ -51,9 +58,11 @@ pub fn initialize(resource_container: Arc<ResourceContainer>) {
     let object_factory_service = ObjectFactoryService::new(resource_container.clone());
 
     resource_container
-        .add_require::<ObjectFactoryService>(
-            "object_factory_service",
-            Box::new(object_factory_service),
-        )
+        .add::<ObjectFactoryService>("object_factory_service", Box::new(object_factory_service))
         .unwrap();
+
+    let object_factory_service = resource_container.require::<ObjectFactoryService>();
+    let mut object_factory_service = object_factory_service.write();
+
+    object_factory_service.register::<AnyResourceReference>("ResourceReference");
 }

@@ -12,5 +12,3 @@ pub mod resource_container;
 
 /// A wrapper for resource that come from scripting languages as serialized
 pub mod serialized_resource;
-
-mod inner_resource_container;

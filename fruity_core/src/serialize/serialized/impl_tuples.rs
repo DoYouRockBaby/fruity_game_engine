@@ -1,4 +1,4 @@
-use crate::Serialized;
+use crate::serialize::serialized::Serialized;
 
 impl Into<Serialized> for () {
     fn into(self) -> Serialized {

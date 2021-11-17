@@ -16,5 +16,4 @@ cgmath = "0.18"
 fruity_any = { path = "../fruity_any" }
 fruity_core = { path = ".." }
 fruity_ecs = { path = "../fruity_ecs" }
-fruity_introspect = { path = "../fruity_introspect" }
 fruity_windows = { path = "../fruity_windows" }

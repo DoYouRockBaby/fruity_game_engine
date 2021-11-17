@@ -84,7 +84,7 @@ pub fn platform(
     let on_events_cleared = window_service.on_events_cleared.clone();
 
     resource_container
-        .add_require::<dyn WindowService>("window_service", Box::new(window_service))
+        .add::<dyn WindowService>("window_service", Box::new(window_service))
         .unwrap();
 
     // Initialize the engine

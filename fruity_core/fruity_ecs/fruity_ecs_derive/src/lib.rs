@@ -112,20 +112,20 @@ pub fn derive_introspect_object_trait(input: TokenStream)  -> TokenStream {
                 let type_as_string = ty.to_string();
 
                 quote! {
-                    fruity_introspect::FieldInfo {
+                    fruity_core::introspect::FieldInfo {
                         name: #name_as_string.to_string(),
                         ty: std::any::TypeId::of::<#ty>(),
                         serializable: true,
                         getter: std::sync::Arc::new(|this| this.downcast_ref::<#ident>().unwrap().#name.clone().into()),
-                        setter: fruity_introspect::SetterCaller::Mut(std::sync::Arc::new(|this, value| {
+                        setter: fruity_core::introspect::SetterCaller::Mut(std::sync::Arc::new(|this, value| {
                             fn convert<
-                                T: std::convert::TryFrom<fruity_introspect::serialized::Serialized>,
+                                T: std::convert::TryFrom<fruity_core::serialize::serialized::Serialized>,
                             >(
-                                value: fruity_introspect::serialized::Serialized,
+                                value: fruity_core::serialize::serialized::Serialized,
                             ) -> Result<
                                 T,
                                 <T as std::convert::TryFrom<
-                                    fruity_introspect::serialized::Serialized,
+                                    fruity_core::serialize::serialized::Serialized,
                                 >>::Error,
                             > {
                                 T::try_from(value)
@@ -151,7 +151,7 @@ pub fn derive_introspect_object_trait(input: TokenStream)  -> TokenStream {
             });
 
             quote! {
-                fn get_field_infos(&self) -> Vec<fruity_introspect::FieldInfo> {
+                fn get_field_infos(&self) -> Vec<fruity_core::introspect::FieldInfo> {
                     vec![
                         #(#recurse_infos)*
                     ]
@@ -163,14 +163,14 @@ pub fn derive_introspect_object_trait(input: TokenStream)  -> TokenStream {
     };
 
     let output = quote! {
-        impl fruity_introspect::IntrospectObject for #ident {
+        impl fruity_core::introspect::IntrospectObject for #ident {
             fn get_class_name(&self) -> String {
                 #struct_name.to_string()
             }
 
             #body
 
-            fn get_method_infos(&self) -> Vec<fruity_introspect::MethodInfo> {
+            fn get_method_infos(&self) -> Vec<fruity_core::introspect::MethodInfo> {
                 vec![]
             }
         }
@@ -183,18 +183,18 @@ fn derive_component_instantiable_object_trait(input: TokenStream)  -> TokenStrea
     let DeriveInput { ident, .. } = parse_macro_input!(input);
 
     let output = quote! {
-        impl fruity_introspect::InstantiableObject for #ident {
-            fn get_constructor() -> fruity_introspect::Constructor {
-                use fruity_introspect::IntrospectObject;
+        impl fruity_core::introspect::InstantiableObject for #ident {
+            fn get_constructor() -> fruity_core::introspect::Constructor {
+                use fruity_core::introspect::IntrospectObject;
 
-                std::sync::Arc::new(|mut args: Vec<fruity_introspect::serialized::Serialized>| {
+                std::sync::Arc::new(|_resource_container: std::sync::Arc<fruity_core::resource::resource_container::ResourceContainer>, mut args: Vec<fruity_core::serialize::serialized::Serialized>| {
                     let mut new_object = #ident::default();
 
                     if args.len() > 0 {
                         let serialized = args.remove(0);
                         let new_object_fields = new_object.get_field_infos();
 
-                        if let fruity_introspect::serialized::Serialized::SerializedObject { fields, .. } =
+                        if let fruity_core::serialize::serialized::Serialized::SerializedObject { fields, .. } =
                             serialized
                         {
                             fields.into_iter().for_each(|(key, value)| {
@@ -204,20 +204,20 @@ fn derive_component_instantiable_object_trait(input: TokenStream)  -> TokenStrea
 
                                 if let Some(field_info) = field_info {
                                     match &field_info.setter {
-                                        fruity_introspect::SetterCaller::Const(call) => {
+                                        fruity_core::introspect::SetterCaller::Const(call) => {
                                             call(new_object.as_any_ref(), value);
                                         }
-                                        fruity_introspect::SetterCaller::Mut(call) => {
+                                        fruity_core::introspect::SetterCaller::Mut(call) => {
                                             call(new_object.as_any_mut(), value);
                                         }
-                                        fruity_introspect::SetterCaller::None => (),
+                                        fruity_core::introspect::SetterCaller::None => (),
                                     }
                                 }
                             })
                         };
                     };
         
-                    Ok(fruity_introspect::serialized::Serialized::NativeObject(Box::new(fruity_ecs::component::component::AnyComponent::new(new_object))))
+                    Ok(fruity_core::serialize::serialized::Serialized::NativeObject(Box::new(fruity_ecs::component::component::AnyComponent::new(new_object))))
                 })
             }
         }
@@ -231,18 +231,18 @@ pub fn derive_instantiable_object_trait(input: TokenStream)  -> TokenStream {
     let DeriveInput { ident, .. } = parse_macro_input!(input);
 
     let output = quote! {
-        impl fruity_introspect::InstantiableObject for #ident {
-            fn get_constructor() -> fruity_introspect::Constructor {
-                use fruity_introspect::IntrospectObject;
+        impl fruity_core::introspect::InstantiableObject for #ident {
+            fn get_constructor() -> fruity_core::introspect::Constructor {
+                use fruity_core::introspect::IntrospectObject;
 
-                std::sync::Arc::new(|mut args: Vec<fruity_introspect::serialized::Serialized>| {
+                std::sync::Arc::new(|_resource_container: std::sync::Arc<fruity_core::resource::resource_container::ResourceContainer>, mut args: Vec<fruity_core::serialize::serialized::Serialized>| {
                     let mut new_object = #ident::default();
 
                     if args.len() > 0 {
                         let serialized = args.remove(0);
                         let new_object_fields = new_object.get_field_infos();
 
-                        if let fruity_introspect::serialized::Serialized::SerializedObject { fields, .. } =
+                        if let fruity_core::serialize::serialized::Serialized::SerializedObject { fields, .. } =
                             serialized
                         {
                             fields.into_iter().for_each(|(key, value)| {
@@ -252,13 +252,13 @@ pub fn derive_instantiable_object_trait(input: TokenStream)  -> TokenStream {
 
                                 if let Some(field_info) = field_info {
                                     match &field_info.setter {
-                                        fruity_introspect::SetterCaller::Const(call) => {
+                                        fruity_core::introspect::SetterCaller::Const(call) => {
                                             call(new_object.as_any_ref(), value);
                                         }
-                                        fruity_introspect::SetterCaller::Mut(call) => {
+                                        fruity_core::introspect::SetterCaller::Mut(call) => {
                                             call(new_object.as_any_mut(), value);
                                         }
-                                        fruity_introspect::SetterCaller::None => (),
+                                        fruity_core::introspect::SetterCaller::None => (),
                                     }
                                 }
                             })

@@ -23,7 +23,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let javascript_service = JavascriptService::new(resource_container.clone());
 
     resource_container
-        .add_require::<JavascriptService>("javascript_service", Box::new(javascript_service))
+        .add::<JavascriptService>("javascript_service", Box::new(javascript_service))
         .unwrap();
 
     resource_container.add_resource_loader("js", load_js_script);

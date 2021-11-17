@@ -2,13 +2,13 @@ use crate::component::component_guard::ComponentReadGuard;
 use crate::component::component_guard::ComponentWriteGuard;
 use crate::entity::archetype::rwlock::EntitySharedRwLock;
 use fruity_any::*;
-use fruity_introspect::serializable_object::SerializableObject;
-use fruity_introspect::serialized::serialize::Serialize;
-use fruity_introspect::serialized::Serialized;
-use fruity_introspect::FieldInfo;
-use fruity_introspect::IntrospectObject;
-use fruity_introspect::MethodInfo;
-use fruity_introspect::SetterCaller;
+use fruity_core::introspect::FieldInfo;
+use fruity_core::introspect::IntrospectObject;
+use fruity_core::introspect::MethodInfo;
+use fruity_core::introspect::SetterCaller;
+use fruity_core::serialize::serialized::SerializableObject;
+use fruity_core::serialize::serialized::Serialized;
+use fruity_core::serialize::Serialize;
 use std::sync::Arc;
 
 /// A read write locker for a component instance

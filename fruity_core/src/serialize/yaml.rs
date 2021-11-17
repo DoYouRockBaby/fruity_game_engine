@@ -1,4 +1,4 @@
-use crate::Serialized;
+use crate::serialize::Serialized;
 use linked_hash_map::LinkedHashMap;
 use std::collections::HashMap;
 use std::io::Read;

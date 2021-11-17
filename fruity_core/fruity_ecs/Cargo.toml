@@ -15,4 +15,3 @@ maplit = "1.0.2"
 fruity_ecs_derive = { path = "fruity_ecs_derive" }
 fruity_any = { path = "../fruity_any" }
 fruity_core = { path = ".." }
-fruity_introspect = { path = "../fruity_introspect" }

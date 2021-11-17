@@ -4,14 +4,14 @@ use crate::component::component_rwlock::ComponentRwLock;
 use crate::entity::archetype::rwlock::EntitySharedRwLock;
 use crate::entity::entity::EntityId;
 use fruity_any::*;
-use fruity_introspect::serializable_object::SerializableObject;
-use fruity_introspect::serialized::Serialized;
-use fruity_introspect::utils::cast_introspect_ref;
-use fruity_introspect::utils::ArgumentCaster;
-use fruity_introspect::FieldInfo;
-use fruity_introspect::IntrospectObject;
-use fruity_introspect::MethodCaller;
-use fruity_introspect::MethodInfo;
+use fruity_core::introspect::FieldInfo;
+use fruity_core::introspect::IntrospectObject;
+use fruity_core::introspect::MethodCaller;
+use fruity_core::introspect::MethodInfo;
+use fruity_core::serialize::serialized::SerializableObject;
+use fruity_core::serialize::serialized::Serialized;
+use fruity_core::utils::introspect::cast_introspect_ref;
+use fruity_core::utils::introspect::ArgumentCaster;
 use std::sync::Arc;
 
 /// A read write locker for a component list instance

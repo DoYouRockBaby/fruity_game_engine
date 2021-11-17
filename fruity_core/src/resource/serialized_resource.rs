@@ -1,10 +1,10 @@
+use crate::introspect::FieldInfo;
+use crate::introspect::IntrospectObject;
+use crate::introspect::MethodCaller;
+use crate::introspect::MethodInfo;
 use crate::resource::resource::Resource;
+use crate::serialize::serialized::Serialized;
 use fruity_any::*;
-use fruity_introspect::serialized::Serialized;
-use fruity_introspect::FieldInfo;
-use fruity_introspect::IntrospectObject;
-use fruity_introspect::MethodCaller;
-use fruity_introspect::MethodInfo;
 use std::sync::Arc;
 
 /// A wrapper for resource that come from scripting languages as serialized

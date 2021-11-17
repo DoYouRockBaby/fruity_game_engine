@@ -831,10 +831,10 @@ name = "fruity_core"
 version = "0.1.0"
 dependencies = [
  "fruity_any",
- "fruity_introspect",
  "hot_reload_lib",
  "lazy_static 1.4.0",
  "libloading 0.7.1",
+ "linked-hash-map",
  "log",
  "rayon",
  "topological-sort",
@@ -848,7 +848,6 @@ dependencies = [
  "fruity_any",
  "fruity_core",
  "fruity_ecs_derive",
- "fruity_introspect",
  "itertools",
  "log",
  "maplit",
@@ -877,7 +876,6 @@ dependencies = [
  "fruity_core",
  "fruity_ecs",
  "fruity_graphic",
- "fruity_introspect",
  "fruity_windows",
  "image",
  "lazy_static 1.4.0",
@@ -898,7 +896,6 @@ dependencies = [
  "fruity_graphic",
  "fruity_graphic_2d",
  "fruity_input",
- "fruity_introspect",
  "log",
  "rayon",
 ]
@@ -913,7 +910,6 @@ dependencies = [
  "fruity_ecs",
  "fruity_editor",
  "fruity_graphic",
- "fruity_introspect",
  "log",
  "maplit",
  "rayon",
@@ -933,7 +929,6 @@ dependencies = [
  "fruity_ecs",
  "fruity_editor",
  "fruity_graphic",
- "fruity_introspect",
  "fruity_wgpu_graphic",
  "fruity_windows",
  "fruity_winit_windows",
@@ -960,7 +955,6 @@ dependencies = [
  "fruity_graphic",
  "fruity_graphic_2d",
  "fruity_input",
- "fruity_introspect",
  "fruity_javascript",
  "fruity_wgpu_graphic",
  "fruity_wgpu_graphic_2d",
@@ -984,7 +978,6 @@ dependencies = [
  "fruity_any",
  "fruity_core",
  "fruity_ecs",
- "fruity_introspect",
  "fruity_windows",
  "log",
  "yaml-rust",
@@ -1000,7 +993,6 @@ dependencies = [
  "fruity_core",
  "fruity_ecs",
  "fruity_graphic",
- "fruity_introspect",
  "fruity_windows",
  "log",
  "maplit",
@@ -1014,18 +1006,7 @@ dependencies = [
  "fruity_any",
  "fruity_core",
  "fruity_ecs",
- "fruity_introspect",
  "fruity_windows",
-]
-
-[[package]]
-name = "fruity_introspect"
-version = "0.1.0"
-dependencies = [
- "fruity_any",
- "linked-hash-map",
- "log",
- "yaml-rust",
 ]
 
 [[package]]
@@ -1036,7 +1017,6 @@ dependencies = [
  "fruity_any",
  "fruity_core",
  "fruity_ecs",
- "fruity_introspect",
  "lazy_static 1.4.0",
  "log",
  "pretty_env_logger",
@@ -1055,7 +1035,6 @@ dependencies = [
  "fruity_core",
  "fruity_ecs",
  "fruity_graphic",
- "fruity_introspect",
  "fruity_windows",
  "fruity_winit_windows",
  "image",
@@ -1077,7 +1056,6 @@ dependencies = [
  "fruity_ecs",
  "fruity_graphic",
  "fruity_graphic_2d",
- "fruity_introspect",
  "fruity_wgpu_graphic",
  "fruity_windows",
  "image",
@@ -1095,7 +1073,6 @@ dependencies = [
  "fruity_any",
  "fruity_core",
  "fruity_ecs",
- "fruity_introspect",
 ]
 
 [[package]]
@@ -1106,7 +1083,6 @@ dependencies = [
  "fruity_core",
  "fruity_ecs",
  "fruity_input",
- "fruity_introspect",
  "fruity_windows",
  "fruity_winit_windows",
  "winit",
@@ -1119,7 +1095,6 @@ dependencies = [
  "fruity_any",
  "fruity_core",
  "fruity_ecs",
- "fruity_introspect",
  "fruity_windows",
  "winit",
 ]

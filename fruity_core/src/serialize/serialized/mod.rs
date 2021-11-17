@@ -15,18 +15,8 @@ pub mod impl_containers;
 /// Implementation of serialized conversions for tuples
 pub mod impl_tuples;
 
-/// Provides a factory for the introspect types
-pub mod object_factory;
-
-/// Provides a function to serialize and deserialize
-pub mod serialize;
-
-/// Provides functions to serialize and deserialize a serialized value to yaml
-pub mod yaml;
-
-use crate::serializable_object::SerializableObject;
-use crate::serialized::object_factory::ObjectFactory;
-use crate::IntrospectError;
+use crate::introspect::IntrospectError;
+use crate::introspect::IntrospectObject;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::Debug;
@@ -171,5 +161,23 @@ impl Debug for Serialized {
         _formatter: &mut std::fmt::Formatter<'_>,
     ) -> std::result::Result<(), std::fmt::Error> {
         Ok(())
+    }
+}
+
+/// Provides trait to implement a self duplication for an introspect object that can be stored in serialized
+pub trait SerializableObject: IntrospectObject {
+    /// Create a copy of self
+    fn duplicate(&self) -> Box<dyn SerializableObject>;
+}
+
+impl<T: IntrospectObject + ?Sized> SerializableObject for Arc<T> {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<dyn SerializableObject> {
+    fn clone(&self) -> Self {
+        self.duplicate()
     }
 }

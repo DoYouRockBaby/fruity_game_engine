@@ -1,5 +1,5 @@
-use crate::IntrospectObject;
-use crate::Serialized;
+use crate::introspect::IntrospectObject;
+use crate::serialize::serialized::Serialized;
 use std::convert::TryFrom;
 use std::sync::Arc;
 use std::sync::RwLock;

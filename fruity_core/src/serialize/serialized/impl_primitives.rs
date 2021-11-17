@@ -1,4 +1,4 @@
-use crate::Serialized;
+use crate::serialize::serialized::Serialized;
 use std::convert::TryFrom;
 
 macro_rules! impl_numeric_from_serialized {

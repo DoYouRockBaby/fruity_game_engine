@@ -1,7 +1,7 @@
 use crate::js_value::utils::get_intern_value_from_v8_object;
 use crate::serialize::serialize::serialize_v8;
 use crate::JsObject;
-use fruity_introspect::serialized::Serialized;
+use fruity_core::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 use std::convert::TryFrom;
 use std::sync::Arc;

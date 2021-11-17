@@ -1,6 +1,6 @@
 use crate::js_value::value::JsValue;
 use crate::serialize::serialize::serialize_v8;
-use fruity_introspect::serialized::Serialized;
+use fruity_core::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 use std::fmt::Debug;
 

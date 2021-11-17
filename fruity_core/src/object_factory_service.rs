@@ -1,16 +1,16 @@
+use crate::introspect::Constructor;
+use crate::introspect::FieldInfo;
+use crate::introspect::InstantiableObject;
+use crate::introspect::IntrospectObject;
+use crate::introspect::MethodCaller;
+use crate::introspect::MethodInfo;
 use crate::resource::resource::Resource;
+use crate::serialize::serialized::Serialized;
+use crate::utils::introspect::cast_introspect_ref;
+use crate::utils::introspect::ArgumentCaster;
 use crate::ResourceContainer;
 use fruity_any::*;
-use fruity_introspect::serialized::object_factory::ObjectFactory;
-use fruity_introspect::serialized::Serialized;
-use fruity_introspect::utils::cast_introspect_ref;
-use fruity_introspect::utils::ArgumentCaster;
-use fruity_introspect::Constructor;
-use fruity_introspect::FieldInfo;
-use fruity_introspect::InstantiableObject;
-use fruity_introspect::IntrospectObject;
-use fruity_introspect::MethodCaller;
-use fruity_introspect::MethodInfo;
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -18,7 +18,8 @@ use std::sync::Arc;
 /// This will be used by the scripting language to expose object creation
 #[derive(FruityAny)]
 pub struct ObjectFactoryService {
-    object_factory: ObjectFactory,
+    resource_container: Arc<ResourceContainer>,
+    factories: HashMap<String, Constructor>,
 }
 
 impl Debug for ObjectFactoryService {
@@ -29,9 +30,10 @@ impl Debug for ObjectFactoryService {
 
 impl ObjectFactoryService {
     /// Returns an ObjectFactoryService
-    pub fn new(_resource_container: Arc<ResourceContainer>) -> ObjectFactoryService {
+    pub fn new(resource_container: Arc<ResourceContainer>) -> ObjectFactoryService {
         ObjectFactoryService {
-            object_factory: ObjectFactory::new(),
+            resource_container,
+            factories: HashMap::new(),
         }
     }
 
@@ -47,7 +49,8 @@ impl ObjectFactoryService {
     where
         T: InstantiableObject,
     {
-        self.object_factory.register::<T>(object_type);
+        self.factories
+            .insert(object_type.to_string(), T::get_constructor());
     }
 
     /// Instantiate an object from it's factory
@@ -57,17 +60,14 @@ impl ObjectFactoryService {
     /// * `serialized` - A serialized value that will populate the new component
     ///
     pub fn instantiate(&self, object_type: &str, args: Vec<Serialized>) -> Option<Serialized> {
-        self.object_factory.instantiate(object_type, args)
+        let factory = self.factories.get(object_type)?;
+        let instantied = factory(self.resource_container.clone(), args).ok()?;
+        Some(instantied)
     }
 
     /// Iterate over all object factories
     pub fn iter(&self) -> impl Iterator<Item = (&String, &Constructor)> {
-        self.object_factory.iter()
-    }
-
-    /// Iterate over all object factories
-    pub fn get_object_factory(&self) -> &ObjectFactory {
-        &self.object_factory
+        self.factories.iter()
     }
 }
 

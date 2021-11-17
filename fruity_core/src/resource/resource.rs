@@ -1,4 +1,4 @@
-use fruity_introspect::IntrospectObject;
+use crate::introspect::IntrospectObject;
 use std::fmt::Debug;
 use std::sync::RwLock;
 

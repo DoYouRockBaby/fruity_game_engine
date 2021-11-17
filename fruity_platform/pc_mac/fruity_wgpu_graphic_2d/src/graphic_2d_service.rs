@@ -1,4 +1,7 @@
 use fruity_any::*;
+use fruity_core::introspect::FieldInfo;
+use fruity_core::introspect::IntrospectObject;
+use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
@@ -9,9 +12,6 @@ use fruity_graphic::resources::material_resource::MaterialResource;
 use fruity_graphic::resources::shader_resource::ShaderResource;
 use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
 use fruity_graphic_2d::math::vector2d::Vector2d;
-use fruity_introspect::FieldInfo;
-use fruity_introspect::IntrospectObject;
-use fruity_introspect::MethodInfo;
 use fruity_wgpu_graphic::graphic_service::WgpuGraphicManager;
 use fruity_wgpu_graphic::resources::material_resource::BufferIdentifier;
 use fruity_wgpu_graphic::resources::material_resource::Vertex;

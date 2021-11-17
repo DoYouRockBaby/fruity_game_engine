@@ -1,9 +1,9 @@
 use fruity_any::*;
+use fruity_core::introspect::FieldInfo;
+use fruity_core::introspect::IntrospectObject;
+use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_graphic::resources::texture_resource::TextureResource;
-use fruity_introspect::FieldInfo;
-use fruity_introspect::IntrospectObject;
-use fruity_introspect::MethodInfo;
 use image::GenericImageView;
 use std::num::NonZeroU32;
 
