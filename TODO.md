@@ -30,7 +30,7 @@
 [ ] Resources visualisation, take the material as an example and try to make it easy to edit in sprite component
 [X] Sprite gizmos
 [X] Run/Pause
-[ ] Save/Load
+[X] Save/Load
 
 ## Game tools
 

@@ -44,9 +44,6 @@ pub struct EditorService {
     state: EditorServiceState,
 }
 
-unsafe impl Send for EditorService {}
-unsafe impl Sync for EditorService {}
-
 impl Debug for EditorService {
     fn fmt(
         &self,

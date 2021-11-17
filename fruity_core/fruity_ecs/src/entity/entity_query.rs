@@ -19,7 +19,9 @@ impl ToString for EntityQueryError {
 
 trait EntityQueryParam: 'static {
     fn from_component_ref(component: &dyn Component) -> Result<&Self, EntityQueryError>;
-    fn from_component_mut(component: &mut dyn Component) -> Result<&mut Self, EntityQueryError>;
+    fn from_component_mut<'a, 'b>(
+        component: &'a mut dyn Component,
+    ) -> Result<&'b mut Self, EntityQueryError>;
 }
 
 impl<T: Component> EntityQueryParam for T {
@@ -30,7 +32,13 @@ impl<T: Component> EntityQueryParam for T {
         }
     }
 
-    fn from_component_mut(component: &mut dyn Component) -> Result<&mut Self, EntityQueryError> {
+    fn from_component_mut<'a, 'b>(
+        component: &'a mut dyn Component,
+    ) -> Result<&'b mut Self, EntityQueryError> {
+        // TODO: Find a way to remove it
+        let component =
+            unsafe { std::mem::transmute::<&mut dyn Component, &mut dyn Component>(component) };
+
         match component.as_any_mut().downcast_mut::<T>() {
             Some(component) => Ok(component),
             None => Err(EntityQueryError::WrongComponentType),
@@ -174,16 +182,9 @@ impl<T1: Component, T2: Component> EntityQueryWriteCallback for EntityQueryWrite
             let mut component_list = component_list.write();
             let mut components = component_list.get_components_mut();
 
-            // TODO: Find a way to remove it
-            let components_2 = unsafe {
-                std::mem::transmute::<&mut [&mut dyn Component], &mut [&mut dyn Component]>(
-                    &mut components,
-                )
-            };
-
             callback(
                 T1::from_component_mut(components[0]).unwrap(),
-                T2::from_component_mut(components_2[1]).unwrap(),
+                T2::from_component_mut(components[1]).unwrap(),
             )
         })
     }
@@ -240,24 +241,10 @@ impl<T1: Component, T2: Component, T3: Component> EntityQueryWriteCallback
             let mut component_list = component_list.write();
             let mut components = component_list.get_components_mut();
 
-            // TODO: Find a way to remove it
-            let components_2 = unsafe {
-                std::mem::transmute::<&mut [&mut dyn Component], &mut [&mut dyn Component]>(
-                    &mut components,
-                )
-            };
-
-            // TODO: Find a way to remove it
-            let components_3 = unsafe {
-                std::mem::transmute::<&mut [&mut dyn Component], &mut [&mut dyn Component]>(
-                    &mut components,
-                )
-            };
-
             callback(
                 T1::from_component_mut(components[0]).unwrap(),
-                T2::from_component_mut(components_2[1]).unwrap(),
-                T3::from_component_mut(components_3[2]).unwrap(),
+                T2::from_component_mut(components[1]).unwrap(),
+                T3::from_component_mut(components[2]).unwrap(),
             )
         })
     }
