@@ -51,10 +51,10 @@ impl SceneState {
         let mut entity_service = self.entity_service.write();
         let system_service = self.system_service.read();
 
-        self.snapshot = None;
         entity_service.restore(self.snapshot.as_ref().unwrap());
         inspector_state.unselect();
         system_service.set_paused(true);
+        self.snapshot = None;
     }
 
     pub fn is_running(&self) -> bool {
