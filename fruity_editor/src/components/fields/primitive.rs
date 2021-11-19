@@ -8,11 +8,11 @@ use crate::ui_element::layout::RowItem;
 use crate::ui_element::UIElement;
 use crate::ui_element::UISize;
 use crate::ui_element::UIWidget;
+use fruity_core::convert::FruityInto;
+use fruity_core::convert::FruityTryFrom;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::SetterCaller;
 use fruity_core::serialize::serialized::SerializableObject;
-use fruity_core::serialize::serialized::Serialized;
-use std::convert::TryFrom;
 use std::sync::Arc;
 
 macro_rules! impl_int_for_editable_component {
@@ -22,7 +22,7 @@ macro_rules! impl_int_for_editable_component {
             field_info: &FieldInfo,
         ) -> UIElement {
             let value = (field_info.getter)(introspect.as_any_ref());
-            let value = if let Ok(value) = $type::try_from(value) {
+            let value = if let Ok(value) = $type::fruity_try_from(value) {
                 value
             } else {
                 $type::default()
@@ -47,7 +47,7 @@ macro_rules! impl_int_for_editable_component {
                                 match &field_info.setter {
                                     SetterCaller::Const(setter) => setter(
                                         introspect.as_any_ref(),
-                                        Serialized::try_from(value as $type).unwrap(),
+                                        (value as $type).fruity_into(),
                                     ),
                                     SetterCaller::Mut(_) => (),
                                     SetterCaller::None => (),
@@ -82,7 +82,7 @@ macro_rules! impl_float_for_editable_component {
             field_info: &FieldInfo,
         ) -> UIElement {
             let value = (field_info.getter)(introspect.as_any_ref());
-            let value = if let Ok(value) = $type::try_from(value) {
+            let value = if let Ok(value) = $type::fruity_try_from(value) {
                 value
             } else {
                 $type::default()
@@ -107,7 +107,7 @@ macro_rules! impl_float_for_editable_component {
                                 match &field_info.setter {
                                     SetterCaller::Const(setter) => setter(
                                         introspect.as_any_ref(),
-                                        Serialized::try_from(value as $type).unwrap(),
+                                        (value as $type).fruity_into(),
                                     ),
                                     SetterCaller::Mut(_) => (),
                                     SetterCaller::None => (),
@@ -132,7 +132,7 @@ pub fn draw_editor_bool(
     field_info: &FieldInfo,
 ) -> UIElement {
     let value = (field_info.getter)(introspect.as_any_ref());
-    let value = if let Ok(value) = bool::try_from(value) {
+    let value = if let Ok(value) = bool::fruity_try_from(value) {
         value
     } else {
         bool::default()
@@ -144,10 +144,7 @@ pub fn draw_editor_bool(
         value: value,
         on_change: Arc::new(move |value| {
             match &field_info.setter {
-                SetterCaller::Const(setter) => setter(
-                    introspect.as_any_ref(),
-                    Serialized::try_from(value).unwrap(),
-                ),
+                SetterCaller::Const(setter) => setter(introspect.as_any_ref(), value.fruity_into()),
                 SetterCaller::Mut(_) => (),
                 SetterCaller::None => (),
             };
@@ -161,7 +158,7 @@ pub fn draw_editor_string(
     field_info: &FieldInfo,
 ) -> UIElement {
     let value = (field_info.getter)(introspect.as_any_ref());
-    let value = if let Ok(value) = String::try_from(value) {
+    let value = if let Ok(value) = String::fruity_try_from(value) {
         value
     } else {
         String::default()
@@ -185,10 +182,9 @@ pub fn draw_editor_string(
                     value: value,
                     on_change: Arc::new(move |value: &str| {
                         match &field_info.setter {
-                            SetterCaller::Const(setter) => setter(
-                                introspect.as_any_ref(),
-                                Serialized::try_from(value.to_string()).unwrap(),
-                            ),
+                            SetterCaller::Const(setter) => {
+                                setter(introspect.as_any_ref(), value.to_string().fruity_into())
+                            }
                             SetterCaller::Mut(_) => (),
                             SetterCaller::None => (),
                         };

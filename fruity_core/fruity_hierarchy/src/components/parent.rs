@@ -4,7 +4,8 @@ use fruity_ecs::*;
 
 #[derive(Debug, Clone, Component, FruityAny)]
 pub struct Parent {
-    pub parent: Option<SignalField<EntitySharedRwLock>>,
+    //pub parent: Option<SignalField<EntitySharedRwLock>>,
+    pub parent: Option<f32>,
 }
 
 impl Default for Parent {

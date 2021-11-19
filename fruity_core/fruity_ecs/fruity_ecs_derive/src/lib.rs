@@ -235,6 +235,7 @@ pub fn derive_instantiable_object_trait(input: TokenStream)  -> TokenStream {
     let output = quote! {
         impl fruity_core::introspect::InstantiableObject for #ident {
             fn get_constructor() -> fruity_core::introspect::Constructor {
+                use fruity_core::convert::FruityInto;
                 use fruity_core::introspect::IntrospectObject;
 
                 std::sync::Arc::new(|_resource_container: std::sync::Arc<fruity_core::resource::resource_container::ResourceContainer>, mut args: Vec<fruity_core::serialize::serialized::Serialized>| {
@@ -267,7 +268,7 @@ pub fn derive_instantiable_object_trait(input: TokenStream)  -> TokenStream {
                         };
                     };
         
-                    Ok(new_object.into())
+                    Ok(new_object.fruity_into())
                 })
             }
         }

@@ -15,7 +15,7 @@ pub fn draw_sprite(
     entity_service.for_each(
         entity_type!["Position", "Size", "Sprite"],
         EntityQueryReadCallback3::new(move |position: &Position, size: &Size, sprite: &Sprite| {
-            if let Some(material) = &sprite.material.0 {
+            if let Some(material) = &sprite.material {
                 let graphic_2d_service = graphic_2d_service.read();
 
                 graphic_2d_service.draw_square(

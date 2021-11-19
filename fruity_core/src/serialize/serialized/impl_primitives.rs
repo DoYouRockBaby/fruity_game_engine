@@ -2,6 +2,14 @@ use crate::convert::FruityInto;
 use crate::convert::FruityTryFrom;
 use crate::serialize::serialized::Serialized;
 
+impl FruityTryFrom<Serialized> for Serialized {
+    type Error = String;
+
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
+        Ok(value)
+    }
+}
+
 macro_rules! impl_numeric_from_serialized {
     ( $type:ident ) => {
         impl FruityTryFrom<Serialized> for $type {
@@ -60,6 +68,12 @@ impl FruityTryFrom<Serialized> for String {
             Serialized::String(value) => Ok(value),
             _ => Err(format!("Couldn't convert {:?} to bool", value)),
         }
+    }
+}
+
+impl FruityInto<Serialized> for Serialized {
+    fn fruity_into(self) -> Serialized {
+        self
     }
 }
 
