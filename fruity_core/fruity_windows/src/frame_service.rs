@@ -1,4 +1,5 @@
 use fruity_any::*;
+use fruity_core::convert::FruityInto;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodCaller;
@@ -67,7 +68,12 @@ impl IntrospectObject for FrameService {
             name: "delta".to_string(),
             ty: TypeId::of::<f32>(),
             serializable: false,
-            getter: Arc::new(|this| this.downcast_ref::<FrameService>().unwrap().delta.into()),
+            getter: Arc::new(|this| {
+                this.downcast_ref::<FrameService>()
+                    .unwrap()
+                    .delta
+                    .fruity_into()
+            }),
             setter: SetterCaller::None,
         }]
     }

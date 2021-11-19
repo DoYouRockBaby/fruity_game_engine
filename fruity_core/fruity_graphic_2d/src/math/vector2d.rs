@@ -1,4 +1,6 @@
 use fruity_any::*;
+use fruity_core::convert::FruityInto;
+use fruity_core::convert::FruityTryFrom;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodCaller;
@@ -227,10 +229,10 @@ impl DivAssign<f32> for Vector2d {
     }
 }
 
-impl TryFrom<Serialized> for Vector2d {
+impl FruityTryFrom<Serialized> for Vector2d {
     type Error = String;
 
-    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
         match value {
             Serialized::NativeObject(value) => match value.as_any_box().downcast::<Vector2d>() {
                 Ok(value) => Ok(*value),
@@ -241,8 +243,8 @@ impl TryFrom<Serialized> for Vector2d {
     }
 }
 
-impl Into<Serialized> for Vector2d {
-    fn into(self) -> Serialized {
+impl FruityInto<Serialized> for Vector2d {
+    fn fruity_into(self) -> Serialized {
         Serialized::NativeObject(Box::new(self))
     }
 }
@@ -260,7 +262,7 @@ impl IntrospectObject for Vector2d {
                     let this = cast_introspect_ref::<Vector2d>(this);
                     let result = this.horizontal();
 
-                    Ok(Some(result.into()))
+                    Ok(Some(result.fruity_into()))
                 })),
             },
             MethodInfo {
@@ -269,7 +271,7 @@ impl IntrospectObject for Vector2d {
                     let this = cast_introspect_ref::<Vector2d>(this);
                     let result = this.vertical();
 
-                    Ok(Some(result.into()))
+                    Ok(Some(result.fruity_into()))
                 })),
             },
             MethodInfo {
@@ -278,7 +280,7 @@ impl IntrospectObject for Vector2d {
                     let this = cast_introspect_ref::<Vector2d>(this);
                     let result = this.normal();
 
-                    Ok(Some(result.into()))
+                    Ok(Some(result.fruity_into()))
                 })),
             },
             MethodInfo {
@@ -291,7 +293,7 @@ impl IntrospectObject for Vector2d {
 
                     let result = this.dot(arg1);
 
-                    Ok(Some(result.into()))
+                    Ok(Some(result.fruity_into()))
                 })),
             },
             MethodInfo {
@@ -300,7 +302,7 @@ impl IntrospectObject for Vector2d {
                     let this = cast_introspect_ref::<Vector2d>(this);
                     let result = this.length_squared();
 
-                    Ok(Some(result.into()))
+                    Ok(Some(result.fruity_into()))
                 })),
             },
             MethodInfo {
@@ -314,7 +316,7 @@ impl IntrospectObject for Vector2d {
 
                     let result = this.lerp(arg1, arg2);
 
-                    Ok(Some(result.into()))
+                    Ok(Some(result.fruity_into()))
                 })),
             },
             MethodInfo {
@@ -323,7 +325,7 @@ impl IntrospectObject for Vector2d {
                     let this = cast_introspect_ref::<Vector2d>(this);
                     let result = this.length();
 
-                    Ok(Some(result.into()))
+                    Ok(Some(result.fruity_into()))
                 })),
             },
             MethodInfo {
@@ -332,7 +334,7 @@ impl IntrospectObject for Vector2d {
                     let this = cast_introspect_ref::<Vector2d>(this);
                     let result = this.normalise();
 
-                    Ok(Some(result.into()))
+                    Ok(Some(result.fruity_into()))
                 })),
             },
             MethodInfo {
@@ -341,7 +343,7 @@ impl IntrospectObject for Vector2d {
                     let this = cast_introspect_ref::<Vector2d>(this);
                     let result = this.angle();
 
-                    Ok(Some(result.into()))
+                    Ok(Some(result.fruity_into()))
                 })),
             },
             MethodInfo {
@@ -354,7 +356,7 @@ impl IntrospectObject for Vector2d {
 
                     let result = this.add(arg1);
 
-                    Ok(Some(result.into()))
+                    Ok(Some(result.fruity_into()))
                 })),
             },
             MethodInfo {
@@ -367,7 +369,7 @@ impl IntrospectObject for Vector2d {
 
                     let result = this.sub(arg1);
 
-                    Ok(Some(result.into()))
+                    Ok(Some(result.fruity_into()))
                 })),
             },
             MethodInfo {
@@ -380,7 +382,7 @@ impl IntrospectObject for Vector2d {
 
                     let result = this.mul(arg1);
 
-                    Ok(Some(result.into()))
+                    Ok(Some(result.fruity_into()))
                 })),
             },
             MethodInfo {
@@ -393,7 +395,7 @@ impl IntrospectObject for Vector2d {
 
                     let result = this.div(arg1);
 
-                    Ok(Some(result.into()))
+                    Ok(Some(result.fruity_into()))
                 })),
             },
         ]
@@ -405,11 +407,11 @@ impl IntrospectObject for Vector2d {
                 name: "x".to_string(),
                 ty: TypeId::of::<f32>(),
                 serializable: true,
-                getter: Arc::new(|this| this.downcast_ref::<Vector2d>().unwrap().x.into()),
+                getter: Arc::new(|this| this.downcast_ref::<Vector2d>().unwrap().x.fruity_into()),
                 setter: SetterCaller::Mut(std::sync::Arc::new(|this, value| {
                     let this = this.downcast_mut::<Vector2d>().unwrap();
 
-                    match f32::try_from(value) {
+                    match f32::fruity_try_from(value) {
                         Ok(value) => this.x = value,
                         Err(_) => {
                             log::error!("Expected a f32 for property x");
@@ -421,11 +423,11 @@ impl IntrospectObject for Vector2d {
                 name: "y".to_string(),
                 ty: TypeId::of::<f32>(),
                 serializable: true,
-                getter: Arc::new(|this| this.downcast_ref::<Vector2d>().unwrap().y.into()),
+                getter: Arc::new(|this| this.downcast_ref::<Vector2d>().unwrap().y.fruity_into()),
                 setter: SetterCaller::Mut(std::sync::Arc::new(|this, value| {
                     let this = this.downcast_mut::<Vector2d>().unwrap();
 
-                    match f32::try_from(value) {
+                    match f32::fruity_try_from(value) {
                         Ok(value) => this.y = value,
                         Err(_) => {
                             log::error!("Expected a f32 for property y");

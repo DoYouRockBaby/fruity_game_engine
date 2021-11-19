@@ -9,6 +9,7 @@ use crate::entity::entity_query::EntityQueryReadCallback;
 use crate::entity::entity_query::EntityQueryWriteCallback;
 use crate::ResourceContainer;
 use fruity_any::*;
+use fruity_core::convert::FruityInto;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodCaller;
@@ -393,7 +394,7 @@ impl IntrospectObject for EntityService {
                     let arg2 = caster.cast_next::<Vec<AnyComponent>>()?;
                     let id = this.create(arg1, arg2);
 
-                    Ok(Some(id.into()))
+                    Ok(Some(id.fruity_into()))
                 })),
             },
             MethodInfo {
@@ -421,7 +422,7 @@ impl IntrospectObject for EntityService {
                     .unwrap()
                     .on_entity_created
                     .clone()
-                    .into()
+                    .fruity_into()
             }),
             setter: SetterCaller::None,
         }]

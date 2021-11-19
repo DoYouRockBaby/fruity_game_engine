@@ -1,4 +1,5 @@
 use fruity_any::*;
+use fruity_core::convert::FruityInto;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodCaller;
@@ -9,8 +10,8 @@ use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::serialize::serialized::Serialized;
 use fruity_core::settings::Settings;
 use fruity_core::signal::Signal;
-use fruity_core::utils::introspect::ArgumentCaster;
 use fruity_core::utils::introspect::cast_introspect_ref;
+use fruity_core::utils::introspect::ArgumentCaster;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -160,7 +161,7 @@ impl IntrospectObject for InputService {
                         .unwrap()
                         .on_pressed
                         .clone()
-                        .into()
+                        .fruity_into()
                 }),
                 setter: SetterCaller::None,
             },
@@ -173,7 +174,7 @@ impl IntrospectObject for InputService {
                         .unwrap()
                         .on_released
                         .clone()
-                        .into()
+                        .fruity_into()
                 }),
                 setter: SetterCaller::None,
             },

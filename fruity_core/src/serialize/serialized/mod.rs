@@ -15,10 +15,10 @@ pub mod impl_containers;
 /// Implementation of serialized conversions for tuples
 pub mod impl_tuples;
 
+use crate::convert::FruityTryFrom;
 use crate::introspect::IntrospectError;
 use crate::introspect::IntrospectObject;
 use std::collections::HashMap;
-use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -108,24 +108,24 @@ pub enum Serialized {
     NativeObject(Box<dyn SerializableObject>),
 }
 
-impl<T: TryFrom<Serialized> + ?Sized> TryFrom<Serialized> for Vec<T> {
+impl<T: FruityTryFrom<Serialized> + ?Sized> FruityTryFrom<Serialized> for Vec<T> {
     type Error = String;
 
-    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
         match value {
             Serialized::Array(value) => Ok(value
                 .into_iter()
-                .filter_map(|elem| T::try_from(elem).ok())
+                .filter_map(|elem| T::fruity_try_from(elem).ok())
                 .collect()),
             _ => Err(format!("Couldn't convert {:?} to array", value)),
         }
     }
 }
 
-impl TryFrom<Serialized> for Callback {
+impl FruityTryFrom<Serialized> for Callback {
     type Error = String;
 
-    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
         match value {
             Serialized::Callback(value) => Ok(value.clone()),
             _ => Err(format!("Couldn't convert {:?} to callback", value)),
@@ -133,10 +133,10 @@ impl TryFrom<Serialized> for Callback {
     }
 }
 
-impl TryFrom<Serialized> for ObjectFields {
+impl FruityTryFrom<Serialized> for ObjectFields {
     type Error = String;
 
-    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
         match value {
             Serialized::SerializedObject { fields, .. } => Ok(fields),
             _ => Err(format!("Couldn't convert {:?} to field hashmap", value)),
@@ -144,10 +144,10 @@ impl TryFrom<Serialized> for ObjectFields {
     }
 }
 
-impl TryFrom<Serialized> for Box<dyn SerializableObject> {
+impl FruityTryFrom<Serialized> for Box<dyn SerializableObject> {
     type Error = String;
 
-    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
         match value {
             Serialized::NativeObject(value) => Ok(value),
             _ => Err(format!("Couldn't convert {:?} to native object", value)),

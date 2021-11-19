@@ -1,7 +1,7 @@
+use crate::convert::FruityTryFrom;
 use crate::introspect::IntrospectError;
 use crate::serialize::serialized::Serialized;
 use std::any::Any;
-use std::convert::TryFrom;
 use std::iter::Enumerate;
 use std::vec::IntoIter as VecIntoIter;
 
@@ -72,11 +72,13 @@ impl<'s> ArgumentCaster<'s> {
     /// # Generic Arguments
     /// * `T` - The type to cast
     ///
-    pub fn cast_next<T: TryFrom<Serialized> + ?Sized>(&mut self) -> Result<T, IntrospectError> {
+    pub fn cast_next<T: FruityTryFrom<Serialized> + ?Sized>(
+        &mut self,
+    ) -> Result<T, IntrospectError> {
         match self.iter.next() {
             Some((index, arg)) => {
                 self.last_index = index + 1;
-                T::try_from(arg).map_err(|_| IntrospectError::IncorrectArgument {
+                T::fruity_try_from(arg).map_err(|_| IntrospectError::IncorrectArgument {
                     method: self.method.to_string(),
                     arg_index: index,
                 })
@@ -94,11 +96,11 @@ impl<'s> ArgumentCaster<'s> {
     /// # Generic Arguments
     /// * `T` - The type to cast
     ///
-    pub fn cast_next_optional<T: TryFrom<Serialized> + ?Sized>(&mut self) -> Option<T> {
+    pub fn cast_next_optional<T: FruityTryFrom<Serialized> + ?Sized>(&mut self) -> Option<T> {
         match self.iter.next() {
             Some((index, arg)) => {
                 self.last_index = index + 1;
-                T::try_from(arg)
+                T::fruity_try_from(arg)
                     .map_err(|_| IntrospectError::IncorrectArgument {
                         method: self.method.to_string(),
                         arg_index: index,

@@ -10,6 +10,7 @@ use crate::entity::archetype::Component;
 use crate::entity::archetype::EntityCellHead;
 use crate::entity::archetype::EntityTypeIdentifier;
 use fruity_any::*;
+use fruity_core::convert::FruityInto;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodCaller;
@@ -365,7 +366,7 @@ impl IntrospectObject for EntitySharedRwLock {
                     let this = cast_introspect_ref::<EntitySharedRwLock>(this);
                     let reader = this.read();
 
-                    reader.entity_id.into()
+                    reader.entity_id.fruity_into()
                 }),
                 setter: SetterCaller::None,
             },
@@ -377,7 +378,7 @@ impl IntrospectObject for EntitySharedRwLock {
                     let this = cast_introspect_ref::<EntitySharedRwLock>(this);
                     let reader = this.read();
 
-                    reader.on_deleted.clone().into()
+                    reader.on_deleted.clone().fruity_into()
                 }),
                 setter: SetterCaller::None,
             },
@@ -406,8 +407,8 @@ impl SerializableObject for EntitySharedRwLock {
     }
 }
 
-impl Into<Serialized> for EntitySharedRwLock {
-    fn into(self) -> Serialized {
+impl FruityInto<Serialized> for EntitySharedRwLock {
+    fn fruity_into(self) -> Serialized {
         Serialized::NativeObject(Box::new(self.clone()))
     }
 }

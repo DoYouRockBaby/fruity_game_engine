@@ -33,6 +33,9 @@ pub mod resource;
 /// Provides a tool to inject resources into functions
 pub mod inject;
 
+/// Traits similar to into and from but without some limitations
+pub mod convert;
+
 /// An observer pattern
 pub mod signal;
 

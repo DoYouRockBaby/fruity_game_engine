@@ -1,5 +1,6 @@
 use crate::ResourceContainer;
 use fruity_any::*;
+use fruity_core::convert::FruityInto;
 use fruity_core::inject::Inject;
 use fruity_core::inject::Inject0;
 use fruity_core::introspect::log_introspect_error;
@@ -463,7 +464,7 @@ impl IntrospectObject for SystemService {
 
                     let result = this.is_paused();
 
-                    Ok(Some(result.into()))
+                    Ok(Some(result.fruity_into()))
                 })),
             },
             MethodInfo {

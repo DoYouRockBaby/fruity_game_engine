@@ -1,16 +1,22 @@
+use crate::convert::FruityInto;
+use crate::convert::FruityTryFrom;
+use crate::introspect::FieldInfo;
 use crate::introspect::IntrospectObject;
+use crate::introspect::MethodCaller;
+use crate::introspect::MethodInfo;
+use crate::introspect::SetterCaller;
+use crate::serialize::serialized::SerializableObject;
 use crate::serialize::serialized::Serialized;
-use std::convert::TryFrom;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-impl<T: IntrospectObject + ?Sized> TryFrom<Serialized> for Arc<RwLock<Box<T>>> {
+impl<T: IntrospectObject + ?Sized> FruityTryFrom<Serialized> for RwLock<Box<T>> {
     type Error = String;
 
-    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
         match value {
             Serialized::NativeObject(value) => {
-                match value.as_any_box().downcast::<Arc<RwLock<Box<T>>>>() {
+                match value.as_any_box().downcast::<RwLock<Box<T>>>() {
                     Ok(value) => Ok(*value),
                     _ => Err(format!("Couldn't convert a Serialized to native object")),
                 }
@@ -20,40 +26,50 @@ impl<T: IntrospectObject + ?Sized> TryFrom<Serialized> for Arc<RwLock<Box<T>>> {
     }
 }
 
-impl<T: IntrospectObject + ?Sized> TryFrom<Serialized> for Option<Arc<T>> {
+impl<T: IntrospectObject + ?Sized> FruityTryFrom<Serialized> for Arc<T> {
     type Error = String;
 
-    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
         match value {
             Serialized::NativeObject(value) => {
                 match value.clone().as_any_box().downcast::<Arc<T>>() {
-                    Ok(value) => Ok(Some(*value)),
-                    _ => match value.as_any_box().downcast::<Option<Arc<T>>>() {
-                        Ok(value) => Ok(*value),
-                        _ => Err(format!("Couldn't convert a Serialized to native object")),
-                    },
+                    Ok(value) => Ok(*value),
+                    _ => Err(format!("Couldn't convert a Serialized to native object")),
                 }
             }
-            Serialized::Null => Ok(None),
             _ => Err(format!("Couldn't convert {:?} to native object", value)),
         }
     }
 }
 
-impl<T: Into<Serialized>> Into<Serialized> for Vec<T> {
-    fn into(self) -> Serialized {
-        Serialized::Array(self.into_iter().map(|elem| elem.into()).collect::<Vec<_>>())
+impl<T: FruityInto<Serialized>> FruityInto<Serialized> for Vec<T> {
+    fn fruity_into(self) -> Serialized {
+        Serialized::Array(
+            self.into_iter()
+                .map(|elem| elem.fruity_into())
+                .collect::<Vec<_>>(),
+        )
     }
 }
 
-impl<T: TryFrom<Serialized>> TryFrom<Serialized> for Option<T> {
+impl<T: FruityTryFrom<Serialized, Error = String> + 'static> FruityTryFrom<Serialized>
+    for Option<T>
+{
     type Error = String;
 
-    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
         if let Serialized::Null = value {
             Ok(None)
+        } else if let Serialized::NativeObject(native_value) = value.clone() {
+            match native_value.as_any_box().downcast::<Option<T>>() {
+                Ok(native_value) => Ok(*native_value),
+                _ => match T::fruity_try_from(value) {
+                    Ok(value) => Ok(Some(value)),
+                    Err(err) => Err(err.to_string()),
+                },
+            }
         } else {
-            match T::try_from(value) {
+            match T::fruity_try_from(value) {
                 Ok(value) => Ok(Some(value)),
                 Err(err) => Err(err.to_string()),
             }
@@ -61,11 +77,101 @@ impl<T: TryFrom<Serialized>> TryFrom<Serialized> for Option<T> {
     }
 }
 
-impl<T: Into<Serialized>> Into<Serialized> for Option<T> {
-    fn into(self) -> Serialized {
+impl<T: FruityInto<Serialized>> FruityInto<Serialized> for Option<T> {
+    fn fruity_into(self) -> Serialized {
         match self {
-            Some(value) => value.into(),
+            Some(value) => value.fruity_into(),
             None => Serialized::Null,
         }
+    }
+}
+
+// TODO: Complete that
+impl<T: IntrospectObject> IntrospectObject for Option<T> {
+    fn get_class_name(&self) -> String {
+        if let Some(value) = &self {
+            value.get_class_name()
+        } else {
+            "null".to_string()
+        }
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        if let Some(value) = &self {
+            value
+                .get_field_infos()
+                .into_iter()
+                .map(|field_info| {
+                    let getter = field_info.getter.clone();
+                    let setter = field_info.setter.clone();
+
+                    FieldInfo {
+                        name: field_info.name,
+                        ty: field_info.ty,
+                        serializable: false,
+                        getter: Arc::new(move |this| {
+                            let this = this.downcast_ref::<Option<T>>().unwrap();
+
+                            getter(this.as_ref().unwrap().as_any_ref())
+                        }),
+                        setter: match setter {
+                            SetterCaller::Const(call) => {
+                                SetterCaller::Const(Arc::new(move |this, args| {
+                                    let this = this.downcast_ref::<Option<T>>().unwrap();
+
+                                    call(this.as_ref().unwrap().as_any_ref(), args)
+                                }))
+                            }
+                            SetterCaller::Mut(call) => {
+                                SetterCaller::Mut(Arc::new(move |this, args| {
+                                    let this = this.downcast_mut::<Option<T>>().unwrap();
+
+                                    call(this.as_mut().unwrap().as_any_mut(), args)
+                                }))
+                            }
+                            SetterCaller::None => SetterCaller::None,
+                        },
+                    }
+                })
+                .collect::<Vec<_>>()
+        } else {
+            vec![]
+        }
+    }
+
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        if let Some(value) = &self {
+            value
+                .get_method_infos()
+                .into_iter()
+                .map(|method_info| MethodInfo {
+                    name: method_info.name,
+                    call: match method_info.call {
+                        MethodCaller::Const(call) => {
+                            MethodCaller::Const(Arc::new(move |this, args| {
+                                let this = this.downcast_ref::<Option<T>>().unwrap();
+
+                                call(this.as_ref().unwrap().as_any_ref(), args)
+                            }))
+                        }
+                        MethodCaller::Mut(call) => {
+                            MethodCaller::Mut(Arc::new(move |this, args| {
+                                let this = this.downcast_mut::<Option<T>>().unwrap();
+
+                                call(this.as_mut().unwrap().as_any_mut(), args)
+                            }))
+                        }
+                    },
+                })
+                .collect::<Vec<_>>()
+        } else {
+            vec![]
+        }
+    }
+}
+
+impl<T: Clone + IntrospectObject> SerializableObject for Option<T> {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
     }
 }

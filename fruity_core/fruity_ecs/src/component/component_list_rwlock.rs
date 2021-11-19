@@ -4,6 +4,7 @@ use crate::component::component_rwlock::ComponentRwLock;
 use crate::entity::archetype::rwlock::EntitySharedRwLock;
 use crate::entity::entity::EntityId;
 use fruity_any::*;
+use fruity_core::convert::FruityInto;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodCaller;
@@ -115,7 +116,7 @@ impl IntrospectObject for ComponentListRwLock {
                 name: "entity_id".to_string(),
                 call: MethodCaller::Const(Arc::new(move |this, _args| {
                     let this = cast_introspect_ref::<ComponentListRwLock>(this);
-                    Ok(Some(this.entity_id().into()))
+                    Ok(Some(this.entity_id().fruity_into()))
                 })),
             },
         ]

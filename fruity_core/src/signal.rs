@@ -1,3 +1,4 @@
+use crate::convert::FruityInto;
 use crate::introspect::log_introspect_error;
 use crate::introspect::FieldInfo;
 use crate::introspect::IntrospectObject;
@@ -9,7 +10,6 @@ use crate::serialize::serialized::Serialized;
 use crate::utils::introspect::cast_introspect_mut;
 use crate::utils::introspect::ArgumentCaster;
 use fruity_any::FruityAny;
-use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -83,7 +83,7 @@ impl<T> Signal<T> {
     }
 }
 
-impl<T: Into<Serialized> + Debug + Clone + 'static> IntrospectObject for Signal<T> {
+impl<T: FruityInto<Serialized> + Debug + Clone + 'static> IntrospectObject for Signal<T> {
     fn get_class_name(&self) -> String {
         "Signal".to_string()
     }
@@ -98,7 +98,7 @@ impl<T: Into<Serialized> + Debug + Clone + 'static> IntrospectObject for Signal<
                 let arg1 = caster.cast_next::<Callback>()?;
 
                 this.add_observer(move |arg| {
-                    let arg: Serialized = arg.clone().into();
+                    let arg: Serialized = arg.clone().fruity_into();
                     match arg1(vec![arg]) {
                         Ok(_) => (),
                         Err(err) => log_introspect_error(&err),
@@ -115,14 +115,14 @@ impl<T: Into<Serialized> + Debug + Clone + 'static> IntrospectObject for Signal<
     }
 }
 
-impl<T: Into<Serialized> + Debug + Clone + 'static> SerializableObject for Signal<T> {
+impl<T: FruityInto<Serialized> + Debug + Clone + 'static> SerializableObject for Signal<T> {
     fn duplicate(&self) -> Box<dyn SerializableObject> {
         Box::new(self.clone())
     }
 }
 
 // TODO: Improve the macro to handle the generics
-impl<T: Into<Serialized> + Debug + Clone + 'static> FruityAny for InternSignal<T> {
+impl<T: FruityInto<Serialized> + Debug + Clone + 'static> FruityAny for InternSignal<T> {
     fn as_any_ref(&self) -> &dyn std::any::Any {
         self
     }
@@ -141,7 +141,7 @@ impl<T: Into<Serialized> + Debug + Clone + 'static> FruityAny for InternSignal<T
 }
 
 // TODO: Improve the macro to handle the generics
-impl<T: Into<Serialized> + Debug + Clone + 'static> FruityAny for Signal<T> {
+impl<T: FruityInto<Serialized> + Debug + Clone + 'static> FruityAny for Signal<T> {
     fn as_any_ref(&self) -> &dyn std::any::Any {
         self
     }
@@ -159,8 +159,8 @@ impl<T: Into<Serialized> + Debug + Clone + 'static> FruityAny for Signal<T> {
     }
 }
 
-impl<T: Into<Serialized> + Debug + Clone + 'static> Into<Serialized> for Signal<T> {
-    fn into(self) -> Serialized {
+impl<T: FruityInto<Serialized> + Debug + Clone + 'static> FruityInto<Serialized> for Signal<T> {
+    fn fruity_into(self) -> Serialized {
         Serialized::NativeObject(Box::new(self))
     }
 }
@@ -188,7 +188,7 @@ impl<T: Send + Sync> SignalProperty<T> {
     }
 }
 
-impl<T: Into<Serialized> + Send + Sync + Debug + Clone + 'static> IntrospectObject
+impl<T: FruityInto<Serialized> + Send + Sync + Debug + Clone + 'static> IntrospectObject
     for SignalProperty<T>
 {
     fn get_class_name(&self) -> String {
@@ -205,7 +205,7 @@ impl<T: Into<Serialized> + Send + Sync + Debug + Clone + 'static> IntrospectObje
                 let arg1 = caster.cast_next::<Callback>()?;
 
                 this.add_observer(move |arg| {
-                    let arg: Serialized = arg.clone().into();
+                    let arg: Serialized = arg.clone().fruity_into();
                     match arg1(vec![arg]) {
                         Ok(_) => (),
                         Err(err) => log_introspect_error(&err),
@@ -222,7 +222,7 @@ impl<T: Into<Serialized> + Send + Sync + Debug + Clone + 'static> IntrospectObje
     }
 }
 
-impl<T: Into<Serialized> + Send + Sync + Debug + Clone + 'static> SerializableObject
+impl<T: FruityInto<Serialized> + Send + Sync + Debug + Clone + 'static> SerializableObject
     for SignalProperty<T>
 {
     fn duplicate(&self) -> Box<dyn SerializableObject> {
@@ -231,7 +231,9 @@ impl<T: Into<Serialized> + Send + Sync + Debug + Clone + 'static> SerializableOb
 }
 
 // TODO: Improve the macro to handle the generics
-impl<T: Into<Serialized> + Send + Sync + Debug + Clone + 'static> FruityAny for SignalProperty<T> {
+impl<T: FruityInto<Serialized> + Send + Sync + Debug + Clone + 'static> FruityAny
+    for SignalProperty<T>
+{
     fn as_any_ref(&self) -> &dyn std::any::Any {
         self
     }
@@ -249,10 +251,10 @@ impl<T: Into<Serialized> + Send + Sync + Debug + Clone + 'static> FruityAny for 
     }
 }
 
-impl<T: Into<Serialized> + Send + Sync + Debug + Clone + 'static> Into<Serialized>
+impl<T: FruityInto<Serialized> + Send + Sync + Debug + Clone + 'static> FruityInto<Serialized>
     for SignalProperty<T>
 {
-    fn into(self) -> Serialized {
+    fn fruity_into(self) -> Serialized {
         Serialized::NativeObject(Box::new(self))
     }
 }

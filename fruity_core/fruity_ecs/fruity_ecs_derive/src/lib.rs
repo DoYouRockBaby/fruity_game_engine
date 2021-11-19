@@ -116,19 +116,19 @@ pub fn derive_introspect_object_trait(input: TokenStream)  -> TokenStream {
                         name: #name_as_string.to_string(),
                         ty: std::any::TypeId::of::<#ty>(),
                         serializable: true,
-                        getter: std::sync::Arc::new(|this| this.downcast_ref::<#ident>().unwrap().#name.clone().into()),
+                        getter: std::sync::Arc::new(|this| this.downcast_ref::<#ident>().unwrap().#name.clone().fruity_into()),
                         setter: fruity_core::introspect::SetterCaller::Mut(std::sync::Arc::new(|this, value| {
                             fn convert<
-                                T: std::convert::TryFrom<fruity_core::serialize::serialized::Serialized>,
+                                T: fruity_core::convert::FruityTryFrom<fruity_core::serialize::serialized::Serialized>,
                             >(
                                 value: fruity_core::serialize::serialized::Serialized,
                             ) -> Result<
                                 T,
-                                <T as std::convert::TryFrom<
+                                <T as fruity_core::convert::FruityTryFrom<
                                     fruity_core::serialize::serialized::Serialized,
                                 >>::Error,
                             > {
-                                T::try_from(value)
+                                T::fruity_try_from(value)
                             }
         
                             let this = this.downcast_mut::<#ident>().unwrap();
@@ -152,6 +152,8 @@ pub fn derive_introspect_object_trait(input: TokenStream)  -> TokenStream {
 
             quote! {
                 fn get_field_infos(&self) -> Vec<fruity_core::introspect::FieldInfo> {
+                    use fruity_core::convert::FruityInto;
+
                     vec![
                         #(#recurse_infos)*
                     ]

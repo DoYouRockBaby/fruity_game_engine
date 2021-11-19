@@ -1,5 +1,6 @@
 use crate::component::serialized_component::SerializedComponent;
 use fruity_any::*;
+use fruity_core::convert::FruityTryFrom;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodCaller;
@@ -9,7 +10,6 @@ use fruity_core::object_factory_service::ObjectFactoryService;
 use fruity_core::serialize::serialized::SerializableObject;
 use fruity_core::serialize::serialized::Serialized;
 use fruity_core::serialize::Deserialize;
-use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -65,10 +65,10 @@ impl Deref for AnyComponent {
     }
 }
 
-impl TryFrom<Serialized> for AnyComponent {
+impl FruityTryFrom<Serialized> for AnyComponent {
     type Error = String;
 
-    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
         match value {
             Serialized::NativeObject(value) => {
                 match value.as_any_box().downcast::<AnyComponent>() {
