@@ -45,3 +45,27 @@ impl<T: Into<Serialized>> Into<Serialized> for Vec<T> {
         Serialized::Array(self.into_iter().map(|elem| elem.into()).collect::<Vec<_>>())
     }
 }
+
+impl<T: TryFrom<Serialized>> TryFrom<Serialized> for Option<T> {
+    type Error = String;
+
+    fn try_from(value: Serialized) -> Result<Self, Self::Error> {
+        if let Serialized::Null = value {
+            Ok(None)
+        } else {
+            match T::try_from(value) {
+                Ok(value) => Ok(Some(value)),
+                Err(err) => Err(err.to_string()),
+            }
+        }
+    }
+}
+
+impl<T: Into<Serialized>> Into<Serialized> for Option<T> {
+    fn into(self) -> Serialized {
+        match self {
+            Some(value) => value.into(),
+            None => Serialized::Null,
+        }
+    }
+}

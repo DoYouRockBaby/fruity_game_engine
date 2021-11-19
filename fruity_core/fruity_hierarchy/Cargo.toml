@@ -1,0 +1,11 @@
+[package]
+name = "fruity_hierarchy"
+version = "0.1.0"
+edition = "2018"
+resolver = "2"
+
+[dependencies]
+log = "0.4.14"
+fruity_any = { path = "../fruity_any" }
+fruity_core = { path = ".." }
+fruity_ecs = { path = "../fruity_ecs" }

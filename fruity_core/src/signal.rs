@@ -9,6 +9,7 @@ use crate::serialize::serialized::Serialized;
 use crate::utils::introspect::cast_introspect_mut;
 use crate::utils::introspect::ArgumentCaster;
 use fruity_any::FruityAny;
+use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -165,6 +166,98 @@ impl<T: Into<Serialized> + Debug + Clone + 'static> Into<Serialized> for Signal<
 }
 
 impl<T> Debug for Signal<T> {
+    fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        Ok(())
+    }
+}
+
+/// A variable with a signal that is notified on update
+#[derive(Clone)]
+pub struct SignalProperty<T: Send + Sync> {
+    value: T,
+    on_updated: Signal<T>,
+}
+
+impl<T: Send + Sync> SignalProperty<T> {
+    /// Returns a SignalProperty
+    pub fn new(value: T) -> Self {
+        Self {
+            value,
+            on_updated: Signal::new(),
+        }
+    }
+}
+
+impl<T: Into<Serialized> + Send + Sync + Debug + Clone + 'static> IntrospectObject
+    for SignalProperty<T>
+{
+    fn get_class_name(&self) -> String {
+        "SignalProperty".to_string()
+    }
+
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![MethodInfo {
+            name: "add_observer".to_string(),
+            call: MethodCaller::Mut(Arc::new(|this, args| {
+                let this = cast_introspect_mut::<Signal<T>>(this);
+
+                let mut caster = ArgumentCaster::new("add_observer", args);
+                let arg1 = caster.cast_next::<Callback>()?;
+
+                this.add_observer(move |arg| {
+                    let arg: Serialized = arg.clone().into();
+                    match arg1(vec![arg]) {
+                        Ok(_) => (),
+                        Err(err) => log_introspect_error(&err),
+                    };
+                });
+
+                Ok(None)
+            })),
+        }]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+}
+
+impl<T: Into<Serialized> + Send + Sync + Debug + Clone + 'static> SerializableObject
+    for SignalProperty<T>
+{
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
+    }
+}
+
+// TODO: Improve the macro to handle the generics
+impl<T: Into<Serialized> + Send + Sync + Debug + Clone + 'static> FruityAny for SignalProperty<T> {
+    fn as_any_ref(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
+    fn as_any_box(self: Box<Self>) -> Box<dyn std::any::Any> {
+        self
+    }
+
+    fn as_any_arc(self: std::sync::Arc<Self>) -> std::sync::Arc<dyn std::any::Any + Send + Sync> {
+        self
+    }
+}
+
+impl<T: Into<Serialized> + Send + Sync + Debug + Clone + 'static> Into<Serialized>
+    for SignalProperty<T>
+{
+    fn into(self) -> Serialized {
+        Serialized::NativeObject(Box::new(self))
+    }
+}
+
+impl<T: Send + Sync> Debug for SignalProperty<T> {
     fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         Ok(())
     }

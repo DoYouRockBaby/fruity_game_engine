@@ -287,7 +287,6 @@ impl<'a> EntityWriteGuard<'a> {
 impl<'a> Drop for EntityWriteGuard<'a> {
     fn drop(&mut self) {
         std::mem::drop(self.entity_writer.take());
-        self.entity_head.on_updated.notify(());
     }
 }
 
@@ -371,14 +370,14 @@ impl IntrospectObject for EntitySharedRwLock {
                 setter: SetterCaller::None,
             },
             FieldInfo {
-                name: "on_updated".to_string(),
+                name: "on_deleted".to_string(),
                 ty: TypeId::of::<Signal<()>>(),
                 serializable: false,
                 getter: Arc::new(|this| {
                     let this = cast_introspect_ref::<EntitySharedRwLock>(this);
                     let reader = this.read();
 
-                    reader.on_updated.clone().into()
+                    reader.on_deleted.clone().into()
                 }),
                 setter: SetterCaller::None,
             },

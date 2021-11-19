@@ -27,7 +27,7 @@ pub struct EntityCellHead {
     pub deleted: bool,
 
     /// A signal that is sent when the a write lock on the entity is released
-    pub on_updated: Signal<()>,
+    pub on_deleted: Signal<()>,
 
     /// The locker for the entity, used to avoir multithread collisions
     pub(crate) lock: RwLock<()>,
@@ -41,7 +41,7 @@ impl EntityCellHead {
             name,
             enabled: true,
             deleted: false,
-            on_updated: Signal::new(),
+            on_deleted: Signal::new(),
             lock: RwLock::new(()),
         }
     }
@@ -185,6 +185,7 @@ impl InnerArchetype {
             // Get the write lock on the entity
             let entity = InnerArchetype::get_by_index(this.clone(), entity_index);
             let mut entity_writer = entity.write();
+            entity_writer.on_deleted.notify(());
             entity_writer.deleted = true;
             std::mem::drop(entity_writer);
 

@@ -970,6 +970,7 @@ dependencies = [
  "fruity_egui_editor",
  "fruity_graphic",
  "fruity_graphic_2d",
+ "fruity_hierarchy",
  "fruity_input",
  "fruity_javascript",
  "fruity_wgpu_graphic",
@@ -1013,6 +1014,16 @@ dependencies = [
  "log",
  "maplit",
  "rayon",
+]
+
+[[package]]
+name = "fruity_hierarchy"
+version = "0.1.0"
+dependencies = [
+ "fruity_any",
+ "fruity_core",
+ "fruity_ecs",
+ "log",
 ]
 
 [[package]]
