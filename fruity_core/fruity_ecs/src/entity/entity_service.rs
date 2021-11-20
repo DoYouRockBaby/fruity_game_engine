@@ -22,7 +22,6 @@ use fruity_core::serialize::serialized::Serialized;
 use fruity_core::serialize::Deserialize;
 use fruity_core::serialize::Serialize;
 use fruity_core::signal::Signal;
-use fruity_core::utils::introspect::cast_introspect_mut;
 use fruity_core::utils::introspect::cast_introspect_ref;
 use fruity_core::utils::introspect::ArgumentCaster;
 use maplit::hashmap;
@@ -38,11 +37,16 @@ pub enum RemoveEntityError {
     NotFound,
 }
 
+#[derive(Debug)]
+struct InnerEntityService {
+    id_incrementer: u64,
+    archetypes: Vec<Archetype>,
+}
+
 /// A storage for every entities, use [’Archetypes’] to store entities of different types
 #[derive(Debug, FruityAny)]
 pub struct EntityService {
-    id_incrementer: u64,
-    archetypes: Vec<Archetype>,
+    inner: Arc<RwLock<InnerEntityService>>,
     object_factory_service: ResourceReference<ObjectFactoryService>,
 
     /// Signal propagated when a new entity is inserted into the collection
@@ -60,8 +64,10 @@ impl EntityService {
     /// Returns an EntityService
     pub fn new(resource_container: Arc<ResourceContainer>) -> EntityService {
         EntityService {
-            id_incrementer: 0,
-            archetypes: Vec::new(),
+            inner: Arc::new(RwLock::new(InnerEntityService {
+                id_incrementer: 0,
+                archetypes: Vec::new(),
+            })),
             object_factory_service: resource_container.require::<ObjectFactoryService>(),
             on_entity_created: Signal::new(),
             on_entity_removed: Signal::new(),
@@ -86,14 +92,17 @@ impl EntityService {
     /// * `entity_id` - The entity id
     ///
     pub fn get(&self, entity_id: EntityId) -> Option<EntitySharedRwLock> {
-        self.archetypes
+        let inner = self.inner.read().unwrap();
+        inner
+            .archetypes
             .iter()
             .find_map(|archetype| archetype.get(entity_id))
     }
 
     /// Iterate over all entities
     pub fn iter_all_entities(&self) -> impl Iterator<Item = EntitySharedRwLock> {
-        let archetypes = unsafe { &*(&self.archetypes as *const _) } as &Vec<Archetype>;
+        let inner = self.inner.read().unwrap();
+        let archetypes = unsafe { &*(&inner.archetypes as *const _) } as &Vec<Archetype>;
         archetypes
             .iter()
             .map(|archetype| archetype.iter())
@@ -110,7 +119,8 @@ impl EntityService {
         &self,
         entity_identifier: EntityTypeIdentifier,
     ) -> impl Iterator<Item = EntitySharedRwLock> {
-        let archetypes = unsafe { &*(&self.archetypes as *const _) } as &Vec<Archetype>;
+        let inner = self.inner.read().unwrap();
+        let archetypes = unsafe { &*(&inner.archetypes as *const _) } as &Vec<Archetype>;
         archetypes
             .iter()
             .filter(move |archetype| archetype.get_type_identifier().contains(&entity_identifier))
@@ -185,9 +195,12 @@ impl EntityService {
     /// # Arguments
     /// * `entity` - The entity that will be added
     ///
-    pub fn create(&mut self, name: String, components: Vec<AnyComponent>) -> EntityId {
-        self.id_incrementer += 1;
-        let entity_id = self.id_incrementer;
+    pub fn create(&self, name: String, components: Vec<AnyComponent>) -> EntityId {
+        let mut inner = self.inner.write().unwrap();
+        inner.id_incrementer += 1;
+        let entity_id = inner.id_incrementer;
+        std::mem::drop(inner);
+
         let entity_identifier = get_type_identifier_by_any(&components);
 
         match self.archetype_by_identifier(entity_identifier) {
@@ -195,8 +208,9 @@ impl EntityService {
                 archetype.add(entity_id, name, components);
             }
             None => {
+                let mut inner = self.inner.write().unwrap();
                 let archetype = Archetype::new(entity_id, name, components);
-                self.archetypes.push(archetype);
+                inner.archetypes.push(archetype);
             }
         }
 
@@ -209,10 +223,12 @@ impl EntityService {
     /// # Arguments
     /// * `entity_id` - The entity id
     ///
-    pub fn remove(&mut self, entity_id: EntityId) {
+    pub fn remove(&self, entity_id: EntityId) {
+        let inner = self.inner.read().unwrap();
         if let Some(_) =
-            self.archetypes
-                .iter_mut()
+            inner
+                .archetypes
+                .iter()
                 .find_map(|archetype| match archetype.remove(entity_id) {
                     Ok(entity) => Some(entity),
                     Err(err) => match err {
@@ -233,24 +249,33 @@ impl EntityService {
         &self,
         entity_identifier: EntityTypeIdentifier,
     ) -> Option<&Archetype> {
-        self.archetypes
+        let inner = self.inner.read().unwrap();
+
+        let result = inner
+            .archetypes
             .iter()
-            .find(|archetype| *archetype.get_type_identifier() == entity_identifier)
+            .find(|archetype| *archetype.get_type_identifier() == entity_identifier);
+
+        unsafe { std::mem::transmute::<Option<&Archetype>, Option<&Archetype>>(result) }
     }
 
     /// Clear all the entities
-    pub fn clear(&mut self) {
+    pub fn clear(&self) {
+        let inner = self.inner.read().unwrap();
+
         // Propagate all entity removed events
-        self.archetypes.iter().for_each(|archetype| {
+        inner.archetypes.iter().for_each(|archetype| {
             archetype.iter().for_each(|entity| {
                 let entity = entity.read();
                 self.on_entity_removed.notify(entity.entity_id);
             })
         });
+        std::mem::drop(inner);
 
         // Clear all entities
-        self.id_incrementer = 0;
-        self.archetypes.clear();
+        let mut inner = self.inner.write().unwrap();
+        inner.id_incrementer = 0;
+        inner.archetypes.clear();
     }
 
     /// Create a snapshot over all the entities
@@ -287,7 +312,7 @@ impl EntityService {
     /// # Arguments
     /// * `snapshot` - The snapshot
     ///
-    pub fn restore(&mut self, snapshot: &EntityServiceSnapshot) {
+    pub fn restore(&self, snapshot: &EntityServiceSnapshot) {
         self.clear();
 
         if let Serialized::Array(entities) = &snapshot.0 {
@@ -297,7 +322,7 @@ impl EntityService {
         }
     }
 
-    fn restore_entity(&mut self, serialized_entity: &Serialized) {
+    fn restore_entity(&self, serialized_entity: &Serialized) {
         let object_factory_service = self.object_factory_service.read();
 
         if let Serialized::SerializedObject { fields, .. } = serialized_entity {
@@ -386,8 +411,8 @@ impl IntrospectObject for EntityService {
             },
             MethodInfo {
                 name: "create".to_string(),
-                call: MethodCaller::Mut(Arc::new(move |this, args| {
-                    let this = cast_introspect_mut::<EntityService>(this);
+                call: MethodCaller::Const(Arc::new(move |this, args| {
+                    let this = cast_introspect_ref::<EntityService>(this);
 
                     let mut caster = ArgumentCaster::new("create", args);
                     let arg1 = caster.cast_next::<String>()?;
@@ -399,8 +424,8 @@ impl IntrospectObject for EntityService {
             },
             MethodInfo {
                 name: "remove".to_string(),
-                call: MethodCaller::Mut(Arc::new(move |this, args| {
-                    let this = cast_introspect_mut::<EntityService>(this);
+                call: MethodCaller::Const(Arc::new(move |this, args| {
+                    let this = cast_introspect_ref::<EntityService>(this);
 
                     let mut caster = ArgumentCaster::new("remove", args);
                     let arg1 = caster.cast_next::<EntityId>()?;

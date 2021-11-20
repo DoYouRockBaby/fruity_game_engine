@@ -11,6 +11,7 @@ use fruity_editor_javascript::initialize as initialize_editor_javascript;
 use fruity_egui_editor::initialize as initialize_egui_editor;
 use fruity_graphic::initialize as initialize_graphic;
 use fruity_graphic_2d::initialize as initialize_graphic_2d;
+use fruity_hierarchy::initialize as initialize_hierarchy;
 use fruity_input::initialize as initialize_input;
 use fruity_javascript::initialize as initialize_javascript;
 use fruity_wgpu_graphic::initialize as initialize_wgpu_graphic;
@@ -43,6 +44,7 @@ fn main() {
     initialize_ecs(world.resource_container.clone());
     world.run(
         |resource_container, settings| {
+            initialize_hierarchy(resource_container.clone(), settings);
             initialize_winit_window(resource_container.clone(), settings);
             initialize_window(resource_container.clone(), settings);
             initialize_input(resource_container.clone(), settings);

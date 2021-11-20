@@ -1,4 +1,5 @@
 use crate::convert::FruityInto;
+use crate::convert::FruityTryFrom;
 use crate::introspect::log_introspect_error;
 use crate::introspect::FieldInfo;
 use crate::introspect::IntrospectObject;
@@ -11,6 +12,8 @@ use crate::utils::introspect::cast_introspect_mut;
 use crate::utils::introspect::ArgumentCaster;
 use fruity_any::FruityAny;
 use std::fmt::Debug;
+use std::ops::Deref;
+use std::ops::DerefMut;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -70,6 +73,21 @@ impl<T> Signal<T> {
         intern.observers.push((identifier, Box::new(observer)));
 
         identifier
+    }
+
+    /// Remove an observer from the signal
+    pub fn remove_observer(&self, observer_id: ObserverIdentifier) {
+        let mut intern = self.intern.lock().unwrap();
+        let observer_index = intern
+            .observers
+            .iter()
+            .enumerate()
+            .find(|(_index, elem)| elem.0 == observer_id)
+            .map(|elem| elem.0);
+
+        if let Some(observer_index) = observer_index {
+            intern.observers.remove(observer_index);
+        }
     }
 
     /// Notify that the event happened
@@ -171,14 +189,47 @@ impl<T> Debug for Signal<T> {
     }
 }
 
-/// A variable with a signal that is notified on update
-#[derive(Clone)]
-pub struct SignalProperty<T: Send + Sync> {
-    value: T,
-    on_updated: Signal<T>,
+/// A write guard over a signal property, when it's dropped, the update signal is sent
+pub struct SignalWriteGuard<'a, T: Send + Sync + Clone> {
+    target: &'a mut SignalProperty<T>,
 }
 
-impl<T: Send + Sync> SignalProperty<T> {
+impl<'a, T: Send + Sync + Clone> Drop for SignalWriteGuard<'a, T> {
+    fn drop(&mut self) {
+        self.target.on_updated.notify(self.target.value.clone())
+    }
+}
+
+impl<'a, T: Send + Sync + Clone> Deref for SignalWriteGuard<'a, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.target.value
+    }
+}
+
+impl<'a, T: Send + Sync + Clone> DerefMut for SignalWriteGuard<'a, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.target.value
+    }
+}
+
+/// A variable with a signal that is notified on update
+#[derive(Clone)]
+pub struct SignalProperty<T: Send + Sync + Clone> {
+    value: T,
+
+    /// A signal sent when the property is updated
+    pub on_updated: Signal<T>,
+}
+
+impl<T: Send + Sync + Clone + Default> Default for SignalProperty<T> {
+    fn default() -> Self {
+        Self::new(T::default())
+    }
+}
+
+impl<T: Send + Sync + Clone> SignalProperty<T> {
     /// Returns a SignalProperty
     pub fn new(value: T) -> Self {
         Self {
@@ -186,13 +237,26 @@ impl<T: Send + Sync> SignalProperty<T> {
             on_updated: Signal::new(),
         }
     }
+
+    /// Returns a SignalProperty
+    pub fn write(&mut self) -> SignalWriteGuard<T> {
+        SignalWriteGuard::<T> { target: self }
+    }
 }
 
-impl<T: FruityInto<Serialized> + Send + Sync + Debug + Clone + 'static> IntrospectObject
+impl<T: Send + Sync + Clone> Deref for SignalProperty<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
+}
+
+impl<T: FruityInto<Serialized> + Send + Sync + Debug + Clone + IntrospectObject> IntrospectObject
     for SignalProperty<T>
 {
     fn get_class_name(&self) -> String {
-        "SignalProperty".to_string()
+        self.value.get_class_name()
     }
 
     fn get_method_infos(&self) -> Vec<MethodInfo> {
@@ -222,7 +286,7 @@ impl<T: FruityInto<Serialized> + Send + Sync + Debug + Clone + 'static> Introspe
     }
 }
 
-impl<T: FruityInto<Serialized> + Send + Sync + Debug + Clone + 'static> SerializableObject
+impl<T: FruityInto<Serialized> + Send + Sync + Debug + Clone + IntrospectObject> SerializableObject
     for SignalProperty<T>
 {
     fn duplicate(&self) -> Box<dyn SerializableObject> {
@@ -251,15 +315,28 @@ impl<T: FruityInto<Serialized> + Send + Sync + Debug + Clone + 'static> FruityAn
     }
 }
 
-impl<T: FruityInto<Serialized> + Send + Sync + Debug + Clone + 'static> FruityInto<Serialized>
-    for SignalProperty<T>
+impl<T: FruityInto<Serialized> + Send + Sync + Debug + Clone + IntrospectObject>
+    FruityInto<Serialized> for SignalProperty<T>
 {
     fn fruity_into(self) -> Serialized {
-        Serialized::NativeObject(Box::new(self))
+        self.value.fruity_into()
     }
 }
 
-impl<T: Send + Sync> Debug for SignalProperty<T> {
+impl<T: FruityTryFrom<Serialized, Error = String> + Send + Sync + Debug + Clone + 'static>
+    FruityTryFrom<Serialized> for SignalProperty<T>
+{
+    type Error = String;
+
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match T::fruity_try_from(value) {
+            Ok(value) => Ok(SignalProperty::new(value)),
+            Err(err) => Err(err.to_string()),
+        }
+    }
+}
+
+impl<T: Send + Sync + Clone> Debug for SignalProperty<T> {
     fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         Ok(())
     }

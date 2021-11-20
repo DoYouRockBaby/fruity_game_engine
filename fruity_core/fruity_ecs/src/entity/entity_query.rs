@@ -1,5 +1,6 @@
 use crate::component::component::Component;
 use crate::component::component_list_rwlock::ComponentListRwLock;
+use crate::entity::entity::EntityId;
 use std::sync::Arc;
 
 #[derive(Clone, Debug)]
@@ -94,11 +95,11 @@ impl EntityQueryWriteCallback for EntityQueryWriteCallback0 {
 
 /// A shortcut for a boxed entity callback
 #[derive(Clone)]
-pub struct EntityQueryReadCallback1<T1>(Arc<dyn Fn(&T1) + Send + Sync>);
+pub struct EntityQueryReadCallback1<T1>(Arc<dyn Fn(EntityId, &T1) + Send + Sync>);
 
 impl<T1> EntityQueryReadCallback1<T1> {
     /// New instance
-    pub fn new(val: impl Fn(&T1) + Send + Sync + 'static) -> Self {
+    pub fn new(val: impl Fn(EntityId, &T1) + Send + Sync + 'static) -> Self {
         Self(Arc::new(val))
     }
 }
@@ -118,10 +119,13 @@ impl<T1: Component> EntityQueryReadCallback for EntityQueryReadCallback1<T1> {
     fn inject_components(&self) -> Box<dyn Fn(ComponentListRwLock) + Send + Sync> {
         let callback = self.0.clone();
         Box::new(move |component_list| {
-            let component_list = component_list.read();
-            let components = component_list.get_components();
+            let component_list_reader = component_list.read();
+            let components = component_list_reader.get_components();
 
-            callback(T1::from_component_ref(components[0]).unwrap())
+            callback(
+                component_list.entity_id(),
+                T1::from_component_ref(components[0]).unwrap(),
+            )
         })
     }
 }
@@ -140,11 +144,11 @@ impl<T1: Component> EntityQueryWriteCallback for EntityQueryWriteCallback1<T1> {
 
 /// A shortcut for a boxed entity callback
 #[derive(Clone)]
-pub struct EntityQueryReadCallback2<T1, T2>(Arc<dyn Fn(&T1, &T2) + Send + Sync>);
+pub struct EntityQueryReadCallback2<T1, T2>(Arc<dyn Fn(EntityId, &T1, &T2) + Send + Sync>);
 
 impl<T1, T2> EntityQueryReadCallback2<T1, T2> {
     /// New instance
-    pub fn new(val: impl Fn(&T1, &T2) + Send + Sync + 'static) -> Self {
+    pub fn new(val: impl Fn(EntityId, &T1, &T2) + Send + Sync + 'static) -> Self {
         Self(Arc::new(val))
     }
 }
@@ -164,10 +168,11 @@ impl<T1: Component, T2: Component> EntityQueryReadCallback for EntityQueryReadCa
     fn inject_components(&self) -> Box<dyn Fn(ComponentListRwLock) + Send + Sync> {
         let callback = self.0.clone();
         Box::new(move |component_list| {
-            let component_list = component_list.read();
-            let components = component_list.get_components();
+            let component_list_reader = component_list.read();
+            let components = component_list_reader.get_components();
 
             callback(
+                component_list.entity_id(),
                 T1::from_component_ref(components[0]).unwrap(),
                 T2::from_component_ref(components[1]).unwrap(),
             )
@@ -192,11 +197,11 @@ impl<T1: Component, T2: Component> EntityQueryWriteCallback for EntityQueryWrite
 
 /// A shortcut for a boxed entity callback
 #[derive(Clone)]
-pub struct EntityQueryReadCallback3<T1, T2, T3>(Arc<dyn Fn(&T1, &T2, &T3) + Send + Sync>);
+pub struct EntityQueryReadCallback3<T1, T2, T3>(Arc<dyn Fn(EntityId, &T1, &T2, &T3) + Send + Sync>);
 
 impl<T1, T2, T3> EntityQueryReadCallback3<T1, T2, T3> {
     /// New instance
-    pub fn new(val: impl Fn(&T1, &T2, &T3) + Send + Sync + 'static) -> Self {
+    pub fn new(val: impl Fn(EntityId, &T1, &T2, &T3) + Send + Sync + 'static) -> Self {
         Self(Arc::new(val))
     }
 }
@@ -220,10 +225,11 @@ impl<T1: Component, T2: Component, T3: Component> EntityQueryReadCallback
     fn inject_components(&self) -> Box<dyn Fn(ComponentListRwLock) + Send + Sync> {
         let callback = self.0.clone();
         Box::new(move |component_list| {
-            let component_list = component_list.read();
-            let components = component_list.get_components();
+            let component_list_reader = component_list.read();
+            let components = component_list_reader.get_components();
 
             callback(
+                component_list.entity_id(),
                 T1::from_component_ref(components[0]).unwrap(),
                 T2::from_component_ref(components[1]).unwrap(),
                 T3::from_component_ref(components[2]).unwrap(),

@@ -5,12 +5,12 @@ use crate::entity::archetype::encode_entity::decode_components_mut;
 use crate::entity::archetype::encode_entity::decode_entity_head;
 use crate::entity::archetype::encode_entity::decode_entity_head_mut;
 use crate::entity::archetype::get_type_identifier;
-use crate::entity::archetype::inner_archetype::InnerArchetype;
 use crate::entity::archetype::Component;
 use crate::entity::archetype::EntityCellHead;
 use crate::entity::archetype::EntityTypeIdentifier;
 use fruity_any::*;
 use fruity_core::convert::FruityInto;
+use fruity_core::convert::FruityTryFrom;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodCaller;
@@ -37,30 +37,59 @@ use std::sync::RwLockWriteGuard;
 /// reference RwLock functionalities
 #[derive(FruityAny, Clone)]
 pub struct EntitySharedRwLock {
-    inner_archetype: Arc<RwLock<InnerArchetype>>,
+    buffer: Arc<RwLock<Vec<u8>>>,
     buffer_index: usize,
+    identifier: EntityTypeIdentifier,
+    components_per_entity: usize,
+    entity_size: usize,
 }
 
 impl EntitySharedRwLock {
     /// Returns an EntitySharedRwLock
     pub(crate) fn new(
-        inner_archetype: Arc<RwLock<InnerArchetype>>,
+        buffer: Arc<RwLock<Vec<u8>>>,
         buffer_index: usize,
+        identifier: EntityTypeIdentifier,
+        components_per_entity: usize,
+        entity_size: usize,
     ) -> EntitySharedRwLock {
         EntitySharedRwLock {
-            inner_archetype,
+            buffer,
             buffer_index,
+            identifier,
+            components_per_entity,
+            entity_size,
         }
     }
 
     /// Create a read guard over the entity RwLock
     pub fn read(&self) -> EntityReadGuard {
-        EntityReadGuard::new(&self.inner_archetype, self.buffer_index)
+        let buffer_reader = self.buffer.read().unwrap();
+
+        // TODO: Try a way to remove that (ignore the fact that buffer reader is local)
+        let buffer = unsafe { &*(&buffer_reader as *const _) } as &[u8];
+
+        EntityReadGuard::new(
+            buffer,
+            self.buffer_index,
+            self.components_per_entity,
+            self.entity_size,
+        )
     }
 
     /// Create a write guard over the entity RwLock
     pub fn write(&self) -> EntityWriteGuard {
-        EntityWriteGuard::new(&self.inner_archetype, self.buffer_index)
+        let buffer_reader = self.buffer.read().unwrap();
+
+        // TODO: Try a way to remove that (ignore the fact that buffer reader is local)
+        let buffer = unsafe { &*(&buffer_reader as *const _) } as &[u8];
+
+        EntityWriteGuard::new(
+            buffer,
+            self.buffer_index,
+            self.components_per_entity,
+            self.entity_size,
+        )
     }
 
     /// Get a component rwlock
@@ -112,10 +141,6 @@ impl EntitySharedRwLock {
         &self,
         target_identifier: &EntityTypeIdentifier,
     ) -> impl Iterator<Item = ComponentListRwLock> {
-        let inner_archetype = self.inner_archetype.read().unwrap();
-        let intern_identifier = inner_archetype.get_type_identifier().clone();
-        std::mem::drop(inner_archetype);
-
         // Get a collection of indexes, this contains the component indexes ordered
         // in the same order of the given identifier
         let component_indexes = target_identifier
@@ -123,7 +148,7 @@ impl EntitySharedRwLock {
             .0
             .into_iter()
             .map(|type_identifier| {
-                intern_identifier
+                self.identifier
                     .0
                     .iter()
                     .enumerate()
@@ -157,27 +182,25 @@ impl Debug for EntitySharedRwLock {
 pub struct EntityReadGuard<'a> {
     entity_head: &'a EntityCellHead,
     components: Vec<&'a dyn Component>,
-    _archetype_reader: RwLockReadGuard<'a, InnerArchetype>,
     _entity_reader: RwLockReadGuard<'a, ()>,
 }
 
 impl<'a> EntityReadGuard<'a> {
     pub(crate) fn new(
-        inner_archetype: &'a Arc<RwLock<InnerArchetype>>,
+        buffer: &'a [u8],
         buffer_index: usize,
+        components_per_entity: usize,
+        entity_size: usize,
     ) -> EntityReadGuard<'a> {
-        let archetype_reader = inner_archetype.read().unwrap();
-
         // TODO: Try a way to remove that (ignore the fact that archetype reader is local)
-        let archetype_ref = unsafe { &*(&archetype_reader as *const _) } as &InnerArchetype;
+        let buffer = unsafe { &*(&buffer as *const _) } as &[u8];
 
-        let entity_head = decode_entity_head(archetype_ref, buffer_index);
-        let components = decode_components(archetype_ref, entity_head);
+        let entity_head = decode_entity_head(buffer, buffer_index);
+        let components = decode_components(buffer, entity_head, components_per_entity, entity_size);
 
         EntityReadGuard {
             entity_head,
             components,
-            _archetype_reader: archetype_reader,
             _entity_reader: entity_head.lock.read().unwrap(),
         }
     }
@@ -225,33 +248,32 @@ impl<'a> Debug for EntityReadGuard<'a> {
 pub struct EntityWriteGuard<'a> {
     entity_head: &'a mut EntityCellHead,
     components: Vec<&'a mut dyn Component>,
-    _archetype_reader: RwLockReadGuard<'a, InnerArchetype>,
-    entity_writer: Option<RwLockWriteGuard<'a, ()>>,
+    _entity_writer: Option<RwLockWriteGuard<'a, ()>>,
 }
 
 impl<'a> EntityWriteGuard<'a> {
     pub(crate) fn new(
-        inner_archetype: &'a Arc<RwLock<InnerArchetype>>,
+        buffer: &'a [u8],
         buffer_index: usize,
+        components_per_entity: usize,
+        entity_size: usize,
     ) -> EntityWriteGuard<'a> {
-        let archetype_reader = inner_archetype.read().unwrap();
-
-        let archetype_mut = unsafe {
-            &mut *(&archetype_reader as &InnerArchetype as *const InnerArchetype
-                as *mut InnerArchetype)
-        } as &mut InnerArchetype;
-        let mut entity_head = decode_entity_head_mut(archetype_mut, buffer_index);
-        let entity_head_2 = unsafe { &mut *(&mut entity_head as *mut _) } as &mut EntityCellHead;
-
         // TODO: Try a way to remove that (ignore the fact that archetype reader is local)
-        let archetype_ref = unsafe { &*(&archetype_reader as *const _) } as &InnerArchetype;
-        let components = decode_components_mut(archetype_ref, entity_head);
+        let buffer = unsafe { &*(&buffer as *const _) } as &[u8];
+        let buffer = unsafe { &mut *(&buffer as &[u8] as *const [u8] as *mut [u8]) } as &mut [u8];
+        let buffer_2 =
+            unsafe { &mut *(&buffer as &[u8] as *const [u8] as *mut [u8]) } as &mut [u8];
+
+        let mut entity_head = decode_entity_head_mut(buffer, buffer_index);
+        let entity_head_2 = unsafe { &mut *(&mut entity_head as *mut _) } as &mut EntityCellHead;
+        let entity_head_3 = unsafe { &mut *(&mut entity_head as *mut _) } as &mut EntityCellHead;
+        let components =
+            decode_components_mut(buffer_2, entity_head_2, components_per_entity, entity_size);
 
         EntityWriteGuard {
-            entity_head: entity_head_2,
+            entity_head,
             components,
-            _archetype_reader: archetype_reader,
-            entity_writer: Some(entity_head.lock.write().unwrap()),
+            _entity_writer: Some(entity_head_3.lock.write().unwrap()),
         }
     }
 
@@ -282,12 +304,6 @@ impl<'a> EntityWriteGuard<'a> {
             },
             None => None,
         }
-    }
-}
-
-impl<'a> Drop for EntityWriteGuard<'a> {
-    fn drop(&mut self) {
-        std::mem::drop(self.entity_writer.take());
     }
 }
 
@@ -410,5 +426,23 @@ impl SerializableObject for EntitySharedRwLock {
 impl FruityInto<Serialized> for EntitySharedRwLock {
     fn fruity_into(self) -> Serialized {
         Serialized::NativeObject(Box::new(self.clone()))
+    }
+}
+
+impl FruityTryFrom<Serialized> for EntitySharedRwLock {
+    type Error = String;
+
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::NativeObject(value) => {
+                match value.clone().as_any_box().downcast::<EntitySharedRwLock>() {
+                    Ok(value) => Ok(*value),
+                    Err(_) => Err(format!(
+                        "Couldn't convert a EntitySharedRwLock to native object"
+                    )),
+                }
+            }
+            _ => Err(format!("Couldn't convert {:?} to native object", value)),
+        }
     }
 }

@@ -60,36 +60,37 @@ entityService.onEntityCreated.addObserver((entity) => {
     }
 });
 
-let player_entity_id = 0;
+let player_entity_id = entityService.create("Player", [
+    new Position({ pos: new Vector2d({ x: -0.25, y: 0.25 }) }),
+    new Size({ size: new Vector2d({ x: 0.3, y: 0.3 }) }),
+    new Sprite({
+        material: resourceContainer.get("assets/material.material"),
+        z_index: 1,
+    }),
+    new Move({ velocity: 0.2 }),
+]);
+
+entityService.create("Image 1", [
+    new Parent({ parent_id: player_entity_id }),
+    new Position({ pos: new Vector2d({ x: 0.25, y: 0.25 }) }),
+    new Size({ size: new Vector2d({ x: 0.5, y: 0.5 }) }),
+    new Sprite({
+        material: resourceContainer.get("assets/material.material"),
+        z_index: 0,
+    }),
+    new TestVec({ size: new Vector2d({ x: 0.5, y: 0.5 }) }),
+]);
+
+entityService.create("Camera", [
+    new Position({ pos: new Vector2d({ x: -1.5, y: -1.3 }) }),
+    new Size({ size: new Vector2d({ x: 3, y: 2 }) }),
+    new Camera({}),
+    // new Velocity({ vel: new Vector2d({ x: 0.05, y: 0.05 }) }),
+]);
+
+console.log("ENTITIES CREATED");
+
 systemService.addBeginSystem(() => {
-    entityService.create("Image 1", [
-        new Position({ pos: new Vector2d({ x: 0.25, y: 0.25 }) }),
-        new Size({ size: new Vector2d({ x: 0.5, y: 0.5 }) }),
-        new Sprite({
-            material: resourceContainer.get("assets/material.material"),
-            z_index: 0,
-        }),
-        new TestVec({ size: new Vector2d({ x: 0.5, y: 0.5 }) }),
-    ]);
-
-    player_entity_id = entityService.create("Player", [
-        new Position({ pos: new Vector2d({ x: -0.25, y: 0.25 }) }),
-        new Size({ size: new Vector2d({ x: 0.3, y: 0.3 }) }),
-        new Sprite({
-            material: resourceContainer.get("assets/material.material"),
-            z_index: 1,
-        }),
-        new Move({ velocity: 0.2 }),
-    ]);
-
-    entityService.create("Camera", [
-        new Position({ pos: new Vector2d({ x: -1.5, y: -1.3 }) }),
-        new Size({ size: new Vector2d({ x: 3, y: 2 }) }),
-        new Camera({}),
-        // new Velocity({ vel: new Vector2d({ x: 0.05, y: 0.05 }) }),
-    ]);
-
-    console.log("ENTITIES CREATED");
 });
 
 systemService.addSystem(() => {
@@ -120,6 +121,7 @@ systemService.addSystem(() => {
 
             if (inputService.isPressed("Down")) {
                 vel.y -= components.get(1).velocity;
+                entityService.remove(player_entity_id);
             }
 
             components.get(0).pos = components.get(0).pos.add(vel.mul(frameService.delta));

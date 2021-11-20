@@ -60,14 +60,6 @@ impl<T: FruityTryFrom<Serialized, Error = String> + 'static> FruityTryFrom<Seria
     fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
         if let Serialized::Null = value {
             Ok(None)
-        } else if let Serialized::NativeObject(native_value) = value.clone() {
-            match native_value.as_any_box().downcast::<Option<T>>() {
-                Ok(native_value) => Ok(*native_value),
-                _ => match T::fruity_try_from(value) {
-                    Ok(value) => Ok(Some(value)),
-                    Err(err) => Err(err.to_string()),
-                },
-            }
         } else {
             match T::fruity_try_from(value) {
                 Ok(value) => Ok(Some(value)),

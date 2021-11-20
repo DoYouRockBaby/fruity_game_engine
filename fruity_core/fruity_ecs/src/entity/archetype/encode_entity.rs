@@ -1,9 +1,8 @@
-use crate::entity::archetype::inner_archetype::ComponentDecodingInfos;
 use crate::entity::archetype::AnyComponent;
 use crate::entity::archetype::Component;
+use crate::entity::archetype::ComponentDecodingInfos;
 use crate::entity::archetype::EntityCellHead;
 use crate::entity::archetype::EntityId;
-use crate::entity::archetype::InnerArchetype;
 use fruity_core::utils::slice::copy;
 use std::mem::size_of;
 
@@ -107,12 +106,9 @@ pub(crate) fn encode_entity(
 /// # Arguments
 /// * `components` - The list of the entity components
 ///
-pub(crate) fn decode_entity_head<'a>(
-    inner_archetype: &'a InnerArchetype,
-    buffer_index: usize,
-) -> &'a EntityCellHead {
+pub(crate) fn decode_entity_head<'a>(buffer: &'a [u8], buffer_index: usize) -> &'a EntityCellHead {
     let buffer_end = buffer_index + size_of::<EntityCellHead>();
-    let entity_lock_buffer = &inner_archetype.buffer[buffer_index..buffer_end];
+    let entity_lock_buffer = &buffer[buffer_index..buffer_end];
     let (_head, body, _tail) = unsafe { entity_lock_buffer.align_to::<EntityCellHead>() };
     &body[0]
 }
@@ -123,11 +119,11 @@ pub(crate) fn decode_entity_head<'a>(
 /// * `components` - The list of the entity components
 ///
 pub(crate) fn decode_entity_head_mut<'a>(
-    inner_archetype: &'a mut InnerArchetype,
+    buffer: &'a mut [u8],
     buffer_index: usize,
 ) -> &'a mut EntityCellHead {
     let buffer_end = buffer_index + size_of::<EntityCellHead>();
-    let entity_lock_buffer = &mut inner_archetype.buffer[buffer_index..buffer_end];
+    let entity_lock_buffer = &mut buffer[buffer_index..buffer_end];
     let (_head, body, _tail) = unsafe { entity_lock_buffer.align_to_mut::<EntityCellHead>() };
     &mut body[0]
 }
@@ -138,10 +134,13 @@ pub(crate) fn decode_entity_head_mut<'a>(
 /// * `components` - The list of the entity components
 ///
 pub(crate) fn decode_components<'a>(
-    inner_archetype: &InnerArchetype,
+    buffer: &'a [u8],
     head: &'a EntityCellHead,
+    components_per_entity: usize,
+    entity_size: usize,
 ) -> Vec<&'a dyn Component> {
-    let (_, component_infos_buffer, components_buffer) = get_entry_buffers(inner_archetype, head);
+    let (_, component_infos_buffer, components_buffer) =
+        get_entry_buffers(buffer, head, components_per_entity, entity_size);
 
     // Get component decoding infos
     let component_decoding_infos = get_component_decoding_infos(component_infos_buffer);
@@ -162,11 +161,13 @@ pub(crate) fn decode_components<'a>(
 }
 
 pub(crate) fn decode_components_mut<'a>(
-    inner_archetype: &InnerArchetype,
+    buffer: &'a [u8],
     head: &'a EntityCellHead,
+    components_per_entity: usize,
+    entity_size: usize,
 ) -> Vec<&'a mut dyn Component> {
     let (_, component_infos_buffer, components_buffer) =
-        get_entry_buffers_mut(inner_archetype, head);
+        get_entry_buffers_mut(buffer, head, components_per_entity, entity_size);
 
     // Get component decoding infos
     let component_decoding_infos = get_component_decoding_infos(component_infos_buffer);
@@ -193,12 +194,12 @@ pub(crate) fn decode_components_mut<'a>(
 // Split the entity buffer into three other ones, one for the lock, one
 // for the encoding infos and one for the component datas
 fn get_entry_buffers<'a>(
-    inner_archetype: &InnerArchetype,
+    buffer: &'a [u8],
     head: &'a EntityCellHead,
+    components_per_entity: usize,
+    entity_size: usize,
 ) -> (&'a [u8], &'a [u8], &'a [u8]) {
     // Get the whole entity buffer
-    let components_per_entity = inner_archetype.components_per_entity;
-    let entity_size = inner_archetype.entity_size;
     let entity_buffer = unsafe {
         std::slice::from_raw_parts((&*head as *const EntityCellHead) as *const u8, entity_size)
     };
@@ -215,12 +216,12 @@ fn get_entry_buffers<'a>(
 // Split the entity buffer into three other ones, one for the lock, one
 // for the encoding infos and one for the component datas
 fn get_entry_buffers_mut<'a>(
-    inner_archetype: &InnerArchetype,
+    buffer: &'a [u8],
     head: &'a EntityCellHead,
+    components_per_entity: usize,
+    entity_size: usize,
 ) -> (&'a mut [u8], &'a mut [u8], &'a mut [u8]) {
     // Get the whole entity buffer
-    let components_per_entity = inner_archetype.components_per_entity;
-    let entity_size = inner_archetype.entity_size;
     let entity_buffer = unsafe {
         std::slice::from_raw_parts_mut(
             (&*head as *const EntityCellHead as *mut EntityCellHead) as *mut u8,

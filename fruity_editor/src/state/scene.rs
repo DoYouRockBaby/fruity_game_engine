@@ -33,11 +33,15 @@ impl SceneState {
 
     pub fn run(&mut self) {
         let inspector_state = use_global::<InspectorState>();
-        let entity_service = self.entity_service.read();
-        let system_service = self.system_service.read();
 
+        let entity_service = self.entity_service.read();
         self.snapshot = Some(entity_service.snapshot());
         inspector_state.unselect();
+        entity_service.restore(self.snapshot.as_ref().unwrap());
+        std::mem::drop(entity_service);
+
+        let system_service = self.system_service.read();
+        system_service.run_begin();
         system_service.set_paused(false);
     }
 
@@ -48,7 +52,7 @@ impl SceneState {
 
     pub fn stop(&mut self) {
         let inspector_state = use_global::<InspectorState>();
-        let mut entity_service = self.entity_service.write();
+        let entity_service = self.entity_service.read();
         let system_service = self.system_service.read();
 
         entity_service.restore(self.snapshot.as_ref().unwrap());
@@ -74,7 +78,7 @@ impl SceneState {
             if let Ok(mut reader) = File::open(&filepath) {
                 if let Some(snapshot) = deserialize_yaml(&mut reader) {
                     let inspector_state = use_global::<InspectorState>();
-                    let mut entity_service = self.entity_service.write();
+                    let entity_service = self.entity_service.read();
                     let system_service = self.system_service.read();
 
                     entity_service.restore(&EntityServiceSnapshot(snapshot));
