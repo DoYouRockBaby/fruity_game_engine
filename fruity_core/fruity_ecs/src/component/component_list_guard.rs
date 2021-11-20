@@ -1,7 +1,10 @@
 use crate::component::component::Component;
 use crate::entity::archetype::rwlock::EntityReadGuard;
 use crate::entity::archetype::rwlock::EntityWriteGuard;
+use crate::entity::archetype::EntityCellHead;
 use std::fmt::Debug;
+use std::ops::Deref;
+use std::ops::DerefMut;
 
 /// RAII structure used to release the shared read access of a lock when dropped.
 ///
@@ -41,6 +44,14 @@ impl<'s> ComponentListReadGuard<'s> {
                 *result
             })
             .collect::<Vec<_>>()
+    }
+}
+
+impl<'a> Deref for ComponentListReadGuard<'a> {
+    type Target = EntityCellHead;
+
+    fn deref(&self) -> &<Self as std::ops::Deref>::Target {
+        self.guard.deref()
     }
 }
 
@@ -93,6 +104,20 @@ impl<'s> ComponentListWriteGuard<'s> {
                 result
             })
             .collect::<Vec<_>>()
+    }
+}
+
+impl<'a> Deref for ComponentListWriteGuard<'a> {
+    type Target = EntityCellHead;
+
+    fn deref(&self) -> &<Self as std::ops::Deref>::Target {
+        self.guard.deref()
+    }
+}
+
+impl<'a> DerefMut for ComponentListWriteGuard<'a> {
+    fn deref_mut(&mut self) -> &mut <Self as std::ops::Deref>::Target {
+        self.guard.deref_mut()
     }
 }
 

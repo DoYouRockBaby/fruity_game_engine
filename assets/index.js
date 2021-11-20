@@ -72,6 +72,7 @@ let player_entity_id = entityService.create("Player", [
 
 entityService.create("Image 1", [
     new Parent({ parent_id: player_entity_id }),
+    new LocalPosition({ pos: new Vector2d({ x: 0.1, y: 0.1 }) }),
     new Position({ pos: new Vector2d({ x: 0.25, y: 0.25 }) }),
     new Size({ size: new Vector2d({ x: 0.5, y: 0.5 }) }),
     new Sprite({

@@ -20,6 +20,7 @@ fruity_editor_javascript = { path = "fruity_editor/fruity_editor_javascript" }
 fruity_graphic = { path = "fruity_core/fruity_graphic" }
 fruity_graphic_2d = { path = "fruity_core/fruity_graphic_2d" }
 fruity_hierarchy = { path = "fruity_core/fruity_hierarchy" }
+fruity_hierarchy_2d = { path = "fruity_core/fruity_hierarchy_2d" }
 fruity_input = { path = "fruity_core/fruity_input" }
 fruity_javascript = { path = "fruity_core/fruity_javascript" }
 fruity_windows = { path = "fruity_core/fruity_windows" }

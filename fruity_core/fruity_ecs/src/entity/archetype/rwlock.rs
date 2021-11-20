@@ -248,7 +248,7 @@ impl<'a> Debug for EntityReadGuard<'a> {
 pub struct EntityWriteGuard<'a> {
     entity_head: &'a mut EntityCellHead,
     components: Vec<&'a mut dyn Component>,
-    _entity_writer: Option<RwLockWriteGuard<'a, ()>>,
+    _entity_writer: RwLockWriteGuard<'a, ()>,
 }
 
 impl<'a> EntityWriteGuard<'a> {
@@ -270,7 +270,7 @@ impl<'a> EntityWriteGuard<'a> {
         EntityWriteGuard {
             entity_head,
             components,
-            _entity_writer: Some(entity_head_3.lock.write().unwrap()),
+            _entity_writer: entity_head_3.lock.write().unwrap(),
         }
     }
 
