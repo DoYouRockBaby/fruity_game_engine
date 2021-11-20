@@ -196,7 +196,7 @@ impl<'a> EntityReadGuard<'a> {
         let buffer = unsafe { &*(&buffer as *const _) } as &[u8];
 
         let entity_head = decode_entity_head(buffer, buffer_index);
-        let components = decode_components(buffer, entity_head, components_per_entity, entity_size);
+        let components = decode_components(entity_head, components_per_entity, entity_size);
 
         EntityReadGuard {
             entity_head,
@@ -261,14 +261,11 @@ impl<'a> EntityWriteGuard<'a> {
         // TODO: Try a way to remove that (ignore the fact that archetype reader is local)
         let buffer = unsafe { &*(&buffer as *const _) } as &[u8];
         let buffer = unsafe { &mut *(&buffer as &[u8] as *const [u8] as *mut [u8]) } as &mut [u8];
-        let buffer_2 =
-            unsafe { &mut *(&buffer as &[u8] as *const [u8] as *mut [u8]) } as &mut [u8];
 
         let mut entity_head = decode_entity_head_mut(buffer, buffer_index);
         let entity_head_2 = unsafe { &mut *(&mut entity_head as *mut _) } as &mut EntityCellHead;
         let entity_head_3 = unsafe { &mut *(&mut entity_head as *mut _) } as &mut EntityCellHead;
-        let components =
-            decode_components_mut(buffer_2, entity_head_2, components_per_entity, entity_size);
+        let components = decode_components_mut(entity_head_2, components_per_entity, entity_size);
 
         EntityWriteGuard {
             entity_head,

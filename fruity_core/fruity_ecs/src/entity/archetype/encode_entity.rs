@@ -134,13 +134,12 @@ pub(crate) fn decode_entity_head_mut<'a>(
 /// * `components` - The list of the entity components
 ///
 pub(crate) fn decode_components<'a>(
-    buffer: &'a [u8],
     head: &'a EntityCellHead,
     components_per_entity: usize,
     entity_size: usize,
 ) -> Vec<&'a dyn Component> {
     let (_, component_infos_buffer, components_buffer) =
-        get_entry_buffers(buffer, head, components_per_entity, entity_size);
+        get_entry_buffers(head, components_per_entity, entity_size);
 
     // Get component decoding infos
     let component_decoding_infos = get_component_decoding_infos(component_infos_buffer);
@@ -161,13 +160,12 @@ pub(crate) fn decode_components<'a>(
 }
 
 pub(crate) fn decode_components_mut<'a>(
-    buffer: &'a [u8],
     head: &'a EntityCellHead,
     components_per_entity: usize,
     entity_size: usize,
 ) -> Vec<&'a mut dyn Component> {
     let (_, component_infos_buffer, components_buffer) =
-        get_entry_buffers_mut(buffer, head, components_per_entity, entity_size);
+        get_entry_buffers_mut(head, components_per_entity, entity_size);
 
     // Get component decoding infos
     let component_decoding_infos = get_component_decoding_infos(component_infos_buffer);
@@ -194,7 +192,6 @@ pub(crate) fn decode_components_mut<'a>(
 // Split the entity buffer into three other ones, one for the lock, one
 // for the encoding infos and one for the component datas
 fn get_entry_buffers<'a>(
-    buffer: &'a [u8],
     head: &'a EntityCellHead,
     components_per_entity: usize,
     entity_size: usize,
@@ -216,7 +213,6 @@ fn get_entry_buffers<'a>(
 // Split the entity buffer into three other ones, one for the lock, one
 // for the encoding infos and one for the component datas
 fn get_entry_buffers_mut<'a>(
-    buffer: &'a [u8],
     head: &'a EntityCellHead,
     components_per_entity: usize,
     entity_size: usize,
