@@ -55,6 +55,7 @@ pub struct EntityCellHead {
 }
 
 pub(crate) struct ComponentDecodingInfos {
+    pub(crate) name: String,
     pub(crate) relative_index: usize,
     pub(crate) size: usize,
     pub(crate) decoder: ComponentDecoder,

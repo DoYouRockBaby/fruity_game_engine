@@ -1,36 +1,12 @@
 use bytemuck::{Pod, Zeroable};
-use cgmath::SquareMatrix;
 use css_color_parser::Color as CssColor;
 use fruity_core::settings::Settings;
 use std::convert::TryFrom;
 use std::str::FromStr;
 
-#[derive(Debug, Clone, Copy)]
-pub struct Matrix4(pub [[f32; 4]; 4]);
-
-impl Matrix4 {
-    pub fn identity() -> Matrix4 {
-        Matrix4(cgmath::Matrix4::identity().into())
-    }
-
-    pub fn from_rect(left: f32, right: f32, bottom: f32, top: f32, near: f32, far: f32) -> Matrix4 {
-        Matrix4(cgmath::ortho(left, right, bottom, top, near, far).into())
-    }
-
-    pub fn invert(&self) -> Matrix4 {
-        if let Some(result) = cgmath::Matrix4::from(self.0).invert() {
-            Matrix4(result.into())
-        } else {
-            Matrix4::identity()
-        }
-    }
-}
-
-impl Into<[[f32; 4]; 4]> for Matrix4 {
-    fn into(self) -> [[f32; 4]; 4] {
-        self.0
-    }
-}
+pub mod matrix3;
+pub mod matrix4;
+pub mod vector2d;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Pod, Zeroable)]

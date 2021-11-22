@@ -1,4 +1,4 @@
-use crate::math::Matrix4;
+use crate::math::matrix4::Matrix4;
 use fruity_core::resource::resource::Resource;
 use fruity_core::signal::Signal;
 

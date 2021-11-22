@@ -195,12 +195,14 @@ impl EntityService {
     /// # Arguments
     /// * `entity` - The entity that will be added
     ///
-    pub fn create(&self, name: String, components: Vec<AnyComponent>) -> EntityId {
-        let mut inner = self.inner.write().unwrap();
-        inner.id_incrementer += 1;
-        let entity_id = inner.id_incrementer;
-        std::mem::drop(inner);
+    pub fn create(&self, name: String, mut components: Vec<AnyComponent>) -> EntityId {
+        let entity_id = {
+            let mut inner = self.inner.write().unwrap();
+            inner.id_incrementer += 1;
+            inner.id_incrementer
+        };
 
+        components.sort_by(|a, b| a.get_class_name().cmp(&b.get_class_name()));
         let entity_identifier = get_type_identifier_by_any(&components);
 
         match self.archetype_by_identifier(entity_identifier) {

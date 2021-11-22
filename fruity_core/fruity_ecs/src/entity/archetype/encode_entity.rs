@@ -66,6 +66,7 @@ pub(crate) fn encode_entity(
         let infos_buffer = &mut entity_buffer[buffer_index..buffer_end];
 
         let decoding_infos = ComponentDecodingInfos {
+            name: component.get_class_name(),
             relative_index,
             size: component.encode_size(),
             decoder: component.get_decoder(),
@@ -81,6 +82,7 @@ pub(crate) fn encode_entity(
             )
         };
 
+        std::mem::forget(decoding_infos);
         copy(infos_buffer, encoded_infos);
     }
 
@@ -234,7 +236,15 @@ fn get_entry_buffers_mut<'a>(
 }
 
 // Get the components decoding infos for an entity in the inner_archetype
-fn get_component_decoding_infos(entity_bufer: &[u8]) -> &[ComponentDecodingInfos] {
+fn get_component_decoding_infos(entity_bufer: &[u8]) -> Vec<&ComponentDecodingInfos> {
+    entity_bufer
+        .chunks(size_of::<ComponentDecodingInfos>())
+        .map(|chunk| get_component_decoding_info(chunk))
+        .collect::<Vec<_>>()
+}
+
+// Get the components decoding infos for an entity component in the inner_archetype
+fn get_component_decoding_info(entity_bufer: &[u8]) -> &ComponentDecodingInfos {
     let (_head, body, _tail) = unsafe { entity_bufer.align_to::<ComponentDecodingInfos>() };
-    body
+    &body[0]
 }

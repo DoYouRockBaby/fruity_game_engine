@@ -10,7 +10,7 @@ use fruity_editor::ui_element::layout::RowItem;
 use fruity_editor::ui_element::UIElement;
 use fruity_editor::ui_element::UISize;
 use fruity_editor::ui_element::UIWidget;
-use fruity_graphic_2d::math::vector2d::Vector2d;
+use fruity_graphic::math::vector2d::Vector2d;
 use std::sync::Arc;
 
 pub fn draw_editor_vector_2d(

@@ -12,6 +12,8 @@ input:
   - "Keyboard/Left"
   "Down":
   - "Keyboard/Down"
+  "Rotate":
+  - "Keyboard/A"
 resources:
 - name: "assets/logo.png"
   path: "assets/logo.png"

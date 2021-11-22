@@ -6,12 +6,13 @@ use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_graphic::graphic_service::GraphicService;
+use fruity_graphic::math::matrix3::Matrix3;
+use fruity_graphic::math::matrix4::Matrix4;
+use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
-use fruity_graphic::math::Matrix4;
 use fruity_graphic::resources::material_resource::MaterialResource;
 use fruity_graphic::resources::shader_resource::ShaderResource;
 use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
-use fruity_graphic_2d::math::vector2d::Vector2d;
 use fruity_wgpu_graphic::graphic_service::WgpuGraphicManager;
 use fruity_wgpu_graphic::resources::material_resource::BufferIdentifier;
 use fruity_wgpu_graphic::resources::material_resource::Vertex;
@@ -55,8 +56,7 @@ impl Graphic2dService for WgpuGraphic2dManager {
 
     fn draw_square(
         &self,
-        pos: Vector2d,
-        size: Vector2d,
+        transform: Matrix3,
         z_index: usize,
         material: ResourceReference<dyn MaterialResource>,
     ) {
@@ -70,21 +70,24 @@ impl Graphic2dService for WgpuGraphic2dManager {
         let config = graphic_service.get_config();
 
         // Create the main render pipeline
+        let bottom_left = transform * Vector2d::new(0.0, 0.0);
+        let top_right = transform * Vector2d::new(1.0, 1.0);
+
         let vertices: &[Vertex] = &[
             Vertex {
-                position: [pos.x, pos.y, 0.0],
+                position: [bottom_left.x, bottom_left.y, 0.0],
                 tex_coords: [0.0, 1.0],
             },
             Vertex {
-                position: [pos.x + size.x, pos.y, 0.0],
+                position: [top_right.x, bottom_left.y, 0.0],
                 tex_coords: [1.0, 1.0],
             },
             Vertex {
-                position: [pos.x + size.x, pos.y + size.y, 0.0],
+                position: [top_right.x, top_right.y, 0.0],
                 tex_coords: [1.0, 0.0],
             },
             Vertex {
-                position: [pos.x, pos.y + size.y, 0.0],
+                position: [bottom_left.x, top_right.y, 0.0],
                 tex_coords: [0.0, 0.0],
             },
         ];

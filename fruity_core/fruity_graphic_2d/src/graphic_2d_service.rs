@@ -1,8 +1,9 @@
-use crate::Vector2d;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_reference::ResourceReference;
+use fruity_graphic::math::matrix3::Matrix3;
+use fruity_graphic::math::matrix4::Matrix4;
+use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
-use fruity_graphic::math::Matrix4;
 use fruity_graphic::resources::material_resource::MaterialResource;
 
 pub trait Graphic2dService: Resource {
@@ -10,8 +11,7 @@ pub trait Graphic2dService: Resource {
     fn end_pass(&self);
     fn draw_square(
         &self,
-        pos: Vector2d,
-        size: Vector2d,
+        transform: Matrix3,
         z_index: usize,
         material: ResourceReference<dyn MaterialResource>,
     );

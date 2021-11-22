@@ -6,7 +6,7 @@ use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use fruity_ecs::system::system_service::SystemService;
 use fruity_editor::introspect_editor_service::IntrospectEditorService;
-use fruity_graphic_2d::math::vector2d::Vector2d;
+use fruity_graphic::math::vector2d::Vector2d;
 use std::sync::Arc;
 
 pub mod components;

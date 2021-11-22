@@ -5,8 +5,8 @@ use fruity_editor::hooks::use_global;
 use fruity_editor::state::inspector::InspectorState;
 use fruity_graphic::math::GREEN;
 use fruity_graphic::math::RED;
-use fruity_graphic_2d::components::position::Position;
-use fruity_graphic_2d::components::size::Size;
+use fruity_graphic_2d::components::scale_2d::Scale2d;
+use fruity_graphic_2d::components::translate_2d::Translate2d;
 
 pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
     let inspector_state = use_global::<InspectorState>();
@@ -22,21 +22,22 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
         // Get the selected entity bounds
         let (bottom_left, top_right) = {
             let entity_reader = entity.read();
-            let position =
-                if let Some(position) = entity_reader.get_component::<Position>("Position") {
-                    position
-                } else {
-                    return;
-                };
-
-            let size = if let Some(size) = entity_reader.get_component::<Size>("Size") {
-                size
+            let translate = if let Some(translate) =
+                entity_reader.get_component::<Translate2d>("Translate2d")
+            {
+                translate
             } else {
                 return;
             };
 
-            let bottom_left = position.pos;
-            let top_right = position.pos + size.size;
+            let scale = if let Some(scale) = entity_reader.get_component::<Scale2d>("Scale2d") {
+                scale
+            } else {
+                return;
+            };
+
+            let bottom_left = translate.vec;
+            let top_right = translate.vec + scale.vec;
 
             (bottom_left, top_right)
         };
@@ -51,40 +52,44 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
             move |move_x, move_y, drag_action| {
                 let selected_entity = entity.clone();
 
-                // Get the position origin
-                let position_origin = {
+                // Get the translate origin
+                let translate_origin = {
                     let entity_reader = selected_entity.read();
-                    let position = entity_reader.get_component::<Position>("Position").unwrap();
-                    position.pos
+                    let translate = entity_reader
+                        .get_component::<Translate2d>("Translate2d")
+                        .unwrap();
+                    translate.vec
                 };
 
                 drag_action.while_dragging(move |cursor_position, start_pos| {
                     let mut entity_writer = selected_entity.write();
-                    let position = entity_writer
-                        .get_component_mut::<Position>("Position")
+                    let translate = entity_writer
+                        .get_component_mut::<Translate2d>("Translate2d")
                         .unwrap();
 
                     // Move the entity with the cursor
                     let cursor_movement = cursor_position - start_pos;
                     if move_x {
-                        position.pos.x = position_origin.x + cursor_movement.x;
+                        translate.vec.x = translate_origin.x + cursor_movement.x;
                     }
 
                     if move_y {
-                        position.pos.y = position_origin.y + cursor_movement.y;
+                        translate.vec.y = translate_origin.y + cursor_movement.y;
                     }
                 });
             },
             move |fixed_x, fixed_y, drag_action| {
                 let selected_entity = selected_entity_2.clone();
 
-                // Get the position and the size origin
-                let (position_origin, size_origin) = {
+                // Get the translate and the scale origin
+                let (translate_origin, scale_origin) = {
                     let entity_reader = selected_entity.read();
-                    let position = entity_reader.get_component::<Position>("Position").unwrap();
-                    let size = entity_reader.get_component::<Size>("Size").unwrap();
+                    let translate = entity_reader
+                        .get_component::<Translate2d>("Translate2d")
+                        .unwrap();
+                    let scale = entity_reader.get_component::<Scale2d>("Scale2d").unwrap();
 
-                    (position.pos, size.size)
+                    (translate.vec, scale.vec)
                 };
 
                 drag_action.while_dragging(move |cursor_position, start_pos| {
@@ -93,33 +98,37 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
                     let cursor_movement = cursor_position - start_pos;
 
                     // Move the entity with the cursor
-                    let position = entity_writer
-                        .get_component_mut::<Position>("Position")
+                    let translate = entity_writer
+                        .get_component_mut::<Translate2d>("Translate2d")
                         .unwrap();
-                    position.pos.x = if fixed_x {
-                        position_origin.x
+
+                    translate.vec.x = if fixed_x {
+                        translate_origin.x
                     } else {
-                        position_origin.x + cursor_movement.x
+                        translate_origin.x + cursor_movement.x
                     };
 
-                    position.pos.y = if fixed_y {
-                        position_origin.y
+                    translate.vec.y = if fixed_y {
+                        translate_origin.y
                     } else {
-                        position_origin.y + cursor_movement.y
+                        translate_origin.y + cursor_movement.y
                     };
 
                     // Resize the entity with the cursor
-                    let size = entity_writer.get_component_mut::<Size>("Size").unwrap();
-                    size.size.x = if fixed_x {
-                        size_origin.x + cursor_movement.x
+                    let scale = entity_writer
+                        .get_component_mut::<Scale2d>("Scale2d")
+                        .unwrap();
+
+                    scale.vec.x = if fixed_x {
+                        scale_origin.x + cursor_movement.x
                     } else {
-                        size_origin.x - cursor_movement.x
+                        scale_origin.x - cursor_movement.x
                     };
 
-                    size.size.y = if fixed_y {
-                        size_origin.y + cursor_movement.y
+                    scale.vec.y = if fixed_y {
+                        scale_origin.y + cursor_movement.y
                     } else {
-                        size_origin.y - cursor_movement.y
+                        scale_origin.y - cursor_movement.y
                     };
                 });
             },

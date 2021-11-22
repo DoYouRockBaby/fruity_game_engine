@@ -45,11 +45,11 @@ inputService.onReleased.addObserver((key) => {
 });
 
 entityService.onEntityCreated.addObserver((entity) => {
-    if (entity.contains(["Position", "Camera"])) {
-        let position = entity.getComponent("Position");
+    if (entity.contains(["Translate2d", "Camera"])) {
+        let translate = entity.getComponent("Translate2d");
         let camera = entity.getComponent("Camera");
         console.log("New camera");
-        console.log("Position", position.pos.x, position.pos.y);
+        console.log("Translate2d", translate.vec.x, translate.vec.y);
         console.log("Camera", camera.near, camera.far);
         console.log("Unknown", entity.getComponent("Unknown"));
 
@@ -61,32 +61,34 @@ entityService.onEntityCreated.addObserver((entity) => {
 });
 
 let player_entity_id = entityService.create("Player", [
-    new Position({ pos: new Vector2d({ x: -0.25, y: 0.25 }) }),
-    new Size({ size: new Vector2d({ x: 0.3, y: 0.3 }) }),
+    new Translate2d({ vec: new Vector2d({ x: -0.25, y: 0.25 }) }),
+    new Scale2d({ vec: new Vector2d({ x: 0.3, y: 0.3 }) }),
     new Sprite({
         material: resourceContainer.get("assets/material.material"),
         z_index: 1,
     }),
     new Move({ velocity: 0.2 }),
+    new Transform2d({}),
 ]);
 
 entityService.create("Image 1", [
     new Parent({ parent_id: player_entity_id }),
-    new LocalPosition({ pos: new Vector2d({ x: 0.1, y: 0.1 }) }),
-    new Position({ pos: new Vector2d({ x: 0.25, y: 0.25 }) }),
-    new Size({ size: new Vector2d({ x: 0.5, y: 0.5 }) }),
+    new Translate2d({ vec: new Vector2d({ x: 0.1, y: 0.1 }) }),
+    new Scale2d({ vec: new Vector2d({ x: 0.5, y: 0.5 }) }),
     new Sprite({
         material: resourceContainer.get("assets/material.material"),
         z_index: 0,
     }),
-    new TestVec({ size: new Vector2d({ x: 0.5, y: 0.5 }) }),
+    new TestVec({ scale: new Vector2d({ x: 0.5, y: 0.5 }) }),
+    new Transform2d({}),
 ]);
 
 entityService.create("Camera", [
-    new Position({ pos: new Vector2d({ x: -1.5, y: -1.3 }) }),
-    new Size({ size: new Vector2d({ x: 3, y: 2 }) }),
+    new Translate2d({ vec: new Vector2d({ x: -1.5, y: -1.3 }) }),
+    new Scale2d({ vec: new Vector2d({ x: 3, y: 2 }) }),
     new Camera({}),
     // new Velocity({ vel: new Vector2d({ x: 0.05, y: 0.05 }) }),
+    new Transform2d({}),
 ]);
 
 console.log("ENTITIES CREATED");
@@ -96,15 +98,15 @@ systemService.addBeginSystem(() => {
 
 systemService.addSystem(() => {
     entityService
-        .iterComponents(["Position", "Velocity"])
+        .iterComponents(["Translate2d", "Velocity"])
         .forEach(components => {
-            components.get(0).pos = components.get(0).pos.add(components.get(1).vel.mul(frameService.delta));
+            components.get(0).vec = components.get(0).vec.add(components.get(1).vel.mul(frameService.delta));
         });
 });
 
 systemService.addSystem(() => {
     entityService
-        .iterComponents(["Position", "Move"])
+        .iterComponents(["Translate2d", "Move"])
         .forEach(components => {
             let vel = new Vector2d({ x: 0, y: 0 });
 
@@ -125,6 +127,16 @@ systemService.addSystem(() => {
                 entityService.remove(player_entity_id);
             }
 
-            components.get(0).pos = components.get(0).pos.add(vel.mul(frameService.delta));
+            components.get(0).vec = components.get(0).vec.add(vel.mul(frameService.delta));
+        });
+});
+
+systemService.addSystem(() => {
+    entityService
+        .iterComponents(["Rotate2d", "Move"])
+        .forEach(components => {
+            if (inputService.isPressed("Rotate")) {
+                components.get(0).angle += components.get(1).velocity * frameService.delta;
+            }
         });
 });

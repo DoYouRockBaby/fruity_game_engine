@@ -1,3 +1,5 @@
+use crate::math::matrix3::Matrix3;
+use crate::math::matrix4::Matrix4;
 use fruity_any::*;
 use fruity_core::convert::FruityInto;
 use fruity_core::convert::FruityTryFrom;
@@ -11,7 +13,6 @@ use fruity_core::serialize::serialized::Serialized;
 use fruity_core::utils::introspect::cast_introspect_ref;
 use fruity_core::utils::introspect::ArgumentCaster;
 use fruity_ecs::*;
-use fruity_graphic::math::Matrix4;
 use std::any::TypeId;
 use std::ops::Add;
 use std::ops::AddAssign;
@@ -188,13 +189,28 @@ impl Mul<f32> for Vector2d {
     }
 }
 
+impl Mul<Vector2d> for Matrix3 {
+    type Output = Vector2d;
+
+    fn mul(self, rhs: Vector2d) -> Self::Output {
+        let cgmath_vec = cgmath::Vector3::new(rhs.x, rhs.y, 1.0);
+        let cgmath_matrix = cgmath::Matrix3::from(self.0);
+        let cgmath_result = cgmath_matrix * cgmath_vec;
+
+        Vector2d {
+            x: cgmath_result.x,
+            y: cgmath_result.y,
+        }
+    }
+}
+
 impl Mul<Vector2d> for Matrix4 {
     type Output = Vector2d;
 
     fn mul(self, rhs: Vector2d) -> Self::Output {
         let cgmath_vec = cgmath::Vector4::new(rhs.x, rhs.y, 0.0, 1.0);
-        let cgmath_matrix4 = cgmath::Matrix4::from(self.0);
-        let cgmath_result = cgmath_matrix4 * cgmath_vec;
+        let cgmath_matrix = cgmath::Matrix4::from(self.0);
+        let cgmath_result = cgmath_matrix * cgmath_vec;
 
         Vector2d {
             x: cgmath_result.x,
