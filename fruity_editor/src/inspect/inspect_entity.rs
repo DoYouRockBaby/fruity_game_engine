@@ -28,18 +28,14 @@ pub struct SelectEntityWrapper(pub Vec<ComponentReference>);
 
 impl SelectEntityWrapper {
     pub fn read_component<T: Component>(&self) -> Option<TypedComponentReadGuard<T>> {
-        let component = self
-            .0
-            .iter()
-            .find_map(|component| {
-                let component_reader = component.read();
-                if let Some(_) = component_reader.deref().as_any_ref().downcast_ref::<T>() {
-                    Some(component)
-                } else {
-                    None
-                }
-            })
-            .unwrap();
+        let component = self.0.iter().find_map(|component| {
+            let component_reader = component.read();
+            if let Some(_) = component_reader.deref().as_any_ref().downcast_ref::<T>() {
+                Some(component)
+            } else {
+                None
+            }
+        })?;
 
         let component = component.read();
         component.downcast::<T>()
@@ -149,6 +145,7 @@ pub fn inspect_entity(entity_wrapper: &mut SelectEntityWrapper) -> UIElement {
                 let component_reader = component.read();
                 Collapsible {
                     title: component_reader.get_class_name(),
+                    on_click: None,
                     child: edit_introspect_fields(Box::new(component.clone())),
                 }
                 .elem()

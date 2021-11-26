@@ -2,6 +2,7 @@ use crate::ui_element::UIAlign;
 use crate::ui_element::UIElement;
 use crate::ui_element::UISize;
 use crate::ui_element::UIWidget;
+use std::sync::Arc;
 
 #[derive(Default)]
 pub struct Empty {}
@@ -74,6 +75,7 @@ impl UIWidget for Scroll {
 
 pub struct Collapsible {
     pub title: String,
+    pub on_click: Option<Arc<dyn Fn() + Send + Sync>>,
     pub child: UIElement,
 }
 

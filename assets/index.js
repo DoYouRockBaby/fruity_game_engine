@@ -58,7 +58,7 @@ let player_entity_id = entityService.create("Player", [
 
 let image_1 = entityService.create("Image 1", [
     new Parent({ parent_id: player_entity_id }),
-    new Translate2d({ vec: new Vector2d({ x: 0.1, y: 0.1 }) }),
+    new Translate2d({ vec: new Vector2d({ x: 0.63, y: 0.32 }) }),
     new Scale2d({ vec: new Vector2d({ x: 0.5, y: 0.5 }) }),
     new Sprite({
         material: resourceContainer.get("assets/material.material"),

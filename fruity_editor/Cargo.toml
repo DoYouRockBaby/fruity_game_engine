@@ -22,5 +22,6 @@ fruity_any = { path = "../fruity_core/fruity_any" }
 fruity_core = { path = "../fruity_core" }
 fruity_ecs = { path = "../fruity_core/fruity_ecs" }
 fruity_graphic = { path = "../fruity_core/fruity_graphic" }
+fruity_hierarchy = { path = "../fruity_core/fruity_hierarchy" }
 fruity_windows = { path = "../fruity_core/fruity_windows" }
 log = "0.4.14"

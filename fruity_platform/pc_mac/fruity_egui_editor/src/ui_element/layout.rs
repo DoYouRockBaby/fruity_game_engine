@@ -1,5 +1,6 @@
 use crate::ui_element::app::DrawContext;
 use crate::ui_element::draw_element;
+use egui::CollapsingHeader;
 use egui::ScrollArea;
 use fruity_editor::ui_element::layout::Collapsible;
 use fruity_editor::ui_element::layout::Column;
@@ -98,5 +99,14 @@ pub fn draw_scroll<'a>(elem: Scroll, ui: &mut egui::Ui, ctx: &mut DrawContext) {
 
 pub fn draw_collapsible<'a>(elem: Collapsible, ui: &mut egui::Ui, ctx: &mut DrawContext) {
     let title = elem.title.clone();
-    ui.collapsing(title, |ui| draw_element(elem.child, ui, ctx));
+    let on_click = elem.on_click.clone();
+    let response = CollapsingHeader::new(title)
+        .selectable(true)
+        .show(ui, |ui| draw_element(elem.child, ui, ctx));
+
+    if response.header_response.clicked() {
+        if let Some(on_click) = on_click {
+            on_click();
+        }
+    }
 }

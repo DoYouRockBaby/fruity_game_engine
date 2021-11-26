@@ -26,7 +26,7 @@
 [X] Wrap the DOM system with iced
 [ ] Expose the GUI API to javascript to create custom component editor
 [X] Components visualization
-[P] Entity hierarchy visualisation
+[X] Entity hierarchy visualisation
 [ ] Resources browser
 [ ] Resources visualisation, take the material as an example and try to make it easy to edit in sprite component
 [X] Sprite gizmos

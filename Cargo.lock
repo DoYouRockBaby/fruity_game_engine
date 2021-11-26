@@ -876,6 +876,7 @@ dependencies = [
  "fruity_core",
  "fruity_ecs",
  "fruity_graphic",
+ "fruity_hierarchy",
  "fruity_windows",
  "image",
  "lazy_static 1.4.0",
