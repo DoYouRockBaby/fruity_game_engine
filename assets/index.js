@@ -117,7 +117,6 @@ systemService.addSystem(() => {
 
             if (inputService.isPressed("Down")) {
                 vel.y -= move.velocity;
-                entityService.remove(player_entity_id);
             }
 
             translate.vec = translate.vec.add(vel.mul(frameService.delta));

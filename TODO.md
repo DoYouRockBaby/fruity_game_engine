@@ -12,11 +12,7 @@
 [X] Split abstractions and implementations for all crates
 [X] Make native systems easy to use
 [X] Move ECS structure to a struct of array instead an array of struct (more efficient, easier to implement)
-[ ] Implement ECS hierarchy
-- We can add a group strategy to archetypes
-- There is an option to run groups by group index
-- We affect one group per hierarchy nesting level
-- For transforms, we execute each transformation by nested level (translate all non nested, translate all nested 1, translate all nested 2, ...)
+[X] Implement ECS hierarchy
 [ ] Add an exception when you try to access a deleted entity, propagate it into js
 [ ] There should be some memory leak in archetype
 [ ] Test and stabilize ECS

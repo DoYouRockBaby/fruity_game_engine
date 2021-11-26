@@ -113,16 +113,111 @@ impl GizmosService {
         is_hover
     }
 
-    pub fn draw_resize_helper<FMove, FResize>(
+    pub fn draw_move_helper<FMove>(
+        &self,
+        center: Vector2d,
+        size: Vector2d,
+        color: Color,
+        hover_color: Color,
+        on_move: FMove,
+    ) where
+        FMove: Fn(bool, bool, DragAction) + Send + Sync + 'static,
+    {
+        let move_handle_size = Vector2d::new(0.05, 0.05);
+        let top_right = Vector2d::new(center.x + size.x / 2.0, center.y + size.y / 2.0);
+
+        // Draw free move helper
+        let is_hover_free_move =
+            self.draw_square_helper(center, center + move_handle_size, color, hover_color);
+
+        // Draw the X arrow
+        let from = (center + Vector2d::new(top_right.x, center.y)) / 2.0;
+        let to = Vector2d::new(top_right.x + 0.1, center.y);
+        let is_hover_x_arrow = self.draw_arrow_helper(from, to, color, hover_color);
+
+        // Draw the Y arrow
+        let from = (center + Vector2d::new(center.x, top_right.y)) / 2.0;
+        let to = Vector2d::new(center.x, top_right.y + 0.1);
+        let is_hover_y_arrow = self.draw_arrow_helper(from, to, color, hover_color);
+
+        // Implement the logic
+        let input_service = self.input_service.read();
+        let graphic_2d_service = self.graphic_2d_service.read();
+        let cursor_pos = graphic_2d_service.get_cursor_position();
+
+        // Handle moving
+        let on_move = Arc::new(on_move);
+        if is_hover_free_move && input_service.is_source_pressed_this_frame("Mouse/Left") {
+            let on_move = on_move.clone();
+            DragAction::start(
+                move |action| on_move(true, true, action),
+                cursor_pos,
+                self.input_service.clone(),
+                self.graphic_2d_service.clone(),
+            );
+        }
+
+        if is_hover_x_arrow && input_service.is_source_pressed_this_frame("Mouse/Left") {
+            let on_move = on_move.clone();
+            DragAction::start(
+                move |action| on_move(true, false, action),
+                cursor_pos,
+                self.input_service.clone(),
+                self.graphic_2d_service.clone(),
+            );
+        }
+
+        if is_hover_y_arrow && input_service.is_source_pressed_this_frame("Mouse/Left") {
+            let on_move = on_move.clone();
+            DragAction::start(
+                move |action| on_move(false, true, action),
+                cursor_pos,
+                self.input_service.clone(),
+                self.graphic_2d_service.clone(),
+            );
+        }
+
+        // Handle moving
+        let on_move = Arc::new(on_move);
+        if is_hover_free_move && input_service.is_source_pressed_this_frame("Mouse/Left") {
+            let on_move = on_move.clone();
+            DragAction::start(
+                move |action| on_move(true, true, action),
+                cursor_pos,
+                self.input_service.clone(),
+                self.graphic_2d_service.clone(),
+            );
+        }
+
+        if is_hover_x_arrow && input_service.is_source_pressed_this_frame("Mouse/Left") {
+            let on_move = on_move.clone();
+            DragAction::start(
+                move |action| on_move(true, false, action),
+                cursor_pos,
+                self.input_service.clone(),
+                self.graphic_2d_service.clone(),
+            );
+        }
+
+        if is_hover_y_arrow && input_service.is_source_pressed_this_frame("Mouse/Left") {
+            let on_move = on_move.clone();
+            DragAction::start(
+                move |action| on_move(false, true, action),
+                cursor_pos,
+                self.input_service.clone(),
+                self.graphic_2d_service.clone(),
+            );
+        }
+    }
+
+    pub fn draw_resize_helper<FResize>(
         &self,
         corner1: Vector2d,
         corner2: Vector2d,
         color: Color,
         hover_color: Color,
-        on_move: FMove,
         on_resize: FResize,
     ) where
-        FMove: Fn(bool, bool, DragAction) + Send + Sync + 'static,
         FResize: Fn(bool, bool, DragAction) + Send + Sync + 'static,
     {
         let bottom_left = Vector2d::new(
@@ -136,11 +231,10 @@ impl GizmosService {
 
         let bottom_right = Vector2d::new(top_right.x, bottom_left.y);
         let top_left = Vector2d::new(bottom_left.x, top_right.y);
-        let center = (bottom_left + top_right) / 2.0;
         let resize_handle_size = Vector2d::new(0.025, 0.025);
 
         // Draw the boundings
-        let is_hover_bounds = self.draw_square_helper(bottom_left, top_right, color, hover_color);
+        self.draw_square_helper(bottom_left, top_right, color, hover_color);
 
         // Draw bottom left
         let is_hover_resize_bottom_left = self.draw_square_helper(
@@ -174,58 +268,10 @@ impl GizmosService {
             hover_color,
         );
 
-        // Draw the X arrow
-        let from = (center + Vector2d::new(top_right.x, center.y)) / 2.0;
-        let to = Vector2d::new(bottom_right.x + 0.1, center.y);
-        let is_hover_x_arrow = self.draw_arrow_helper(from, to, color, hover_color);
-
-        // Draw the Y arrow
-        let from = (center + Vector2d::new(center.x, top_right.y)) / 2.0;
-        let to = Vector2d::new(center.x, top_left.y + 0.1);
-        let is_hover_y_arrow = self.draw_arrow_helper(from, to, color, hover_color);
-
         // Implement the logic
         let input_service = self.input_service.read();
         let graphic_2d_service = self.graphic_2d_service.read();
         let cursor_pos = graphic_2d_service.get_cursor_position();
-
-        // Handle moving
-        let on_move = Arc::new(on_move);
-        if is_hover_bounds
-            && !is_hover_resize_top_right
-            && !is_hover_resize_bottom_right
-            && !is_hover_resize_top_left
-            && !is_hover_resize_bottom_left
-            && input_service.is_source_pressed_this_frame("Mouse/Left")
-        {
-            let on_move = on_move.clone();
-            DragAction::start(
-                move |action| on_move(true, true, action),
-                cursor_pos,
-                self.input_service.clone(),
-                self.graphic_2d_service.clone(),
-            );
-        }
-
-        if is_hover_x_arrow && input_service.is_source_pressed_this_frame("Mouse/Left") {
-            let on_move = on_move.clone();
-            DragAction::start(
-                move |action| on_move(true, false, action),
-                cursor_pos,
-                self.input_service.clone(),
-                self.graphic_2d_service.clone(),
-            );
-        }
-
-        if is_hover_y_arrow && input_service.is_source_pressed_this_frame("Mouse/Left") {
-            let on_move = on_move.clone();
-            DragAction::start(
-                move |action| on_move(false, true, action),
-                cursor_pos,
-                self.input_service.clone(),
-                self.graphic_2d_service.clone(),
-            );
-        }
 
         // Handle resize
         let on_resize = Arc::new(on_resize);
