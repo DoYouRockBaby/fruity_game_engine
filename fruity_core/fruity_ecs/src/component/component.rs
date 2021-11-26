@@ -17,9 +17,6 @@ use std::sync::Arc;
 /// A function to decode an object from byte array to an any reference
 pub type ComponentDecoder = fn(buffer: &[u8]) -> &dyn Component;
 
-/// A function to decode an object from byte array to an any mutable reference
-pub type ComponentDecoderMut = fn(buffer: &mut [u8]) -> &mut dyn Component;
-
 /// An abstraction over a component, should be implemented for every component
 pub trait Component: IntrospectObject + Debug {
     /// Return the size that is required to encode the object
@@ -34,9 +31,6 @@ pub trait Component: IntrospectObject + Debug {
 
     /// Return a function to decode an object from byte array to an any reference
     fn get_decoder(&self) -> ComponentDecoder;
-
-    /// Return a function to decode an object from byte array to an any mutable reference
-    fn get_decoder_mut(&self) -> ComponentDecoderMut;
 
     /// Create a new component that is a clone of self
     fn duplicate(&self) -> Box<dyn Component>;

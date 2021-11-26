@@ -53,13 +53,6 @@ fn derive_component_trait(input: TokenStream) -> TokenStream {
                 }
             }
 
-            fn get_decoder_mut(&self) -> fruity_ecs::component::component::ComponentDecoderMut {
-                |data| {
-                    let (_head, body, _tail) = unsafe { data.align_to_mut::<Self>() };
-                    &mut body[0]
-                }
-            }
-
             fn duplicate(&self) -> Box<dyn fruity_ecs::component::component::Component> {
                 Box::new(self.clone())
             }

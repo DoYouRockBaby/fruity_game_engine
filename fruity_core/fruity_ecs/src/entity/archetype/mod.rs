@@ -1,79 +1,31 @@
 use crate::component::component::AnyComponent;
 use crate::component::component::Component;
 use crate::component::component::ComponentDecoder;
-use crate::component::component::ComponentDecoderMut;
-use crate::entity::archetype::encode_entity::encode_entity;
-use crate::entity::archetype::encode_entity::entity_size;
-use crate::entity::archetype::rwlock::EntitySharedRwLock;
-use crate::entity::entity::get_type_identifier;
+use crate::component::component_reference::ComponentReference;
+use crate::entity::archetype::component_array::ComponentArray;
+use crate::entity::archetype::entity::Entity;
 use crate::entity::entity::get_type_identifier_by_any;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
-use crate::entity::entity_service::RemoveEntityError;
-use fruity_core::signal::Signal;
 use std::collections::HashMap;
-use std::fmt::Debug;
-use std::sync::Arc;
+use std::default::Default;
+use std::ops::Deref;
+use std::ops::DerefMut;
+use std::sync::Mutex;
 use std::sync::RwLock;
 
-/// Utils to encode and decode entity
-pub mod encode_entity;
+/// This store all the information that are common accross all entities
+pub mod entity;
 
-/// Provides a threadsafe lock for entities
-pub mod rwlock;
+/// An array of component
+pub mod component_array;
 
 /// A collection of entities that share the same component structure
+/// Stored as a Struct Of Array
 pub struct Archetype {
     identifier: EntityTypeIdentifier,
-    pub(crate) components_per_entity: usize,
-    pub(crate) entity_size: usize,
-    index_map: RwLock<HashMap<EntityId, usize>>,
-    removed_entities: RwLock<Vec<usize>>,
-    pub(crate) buffer: Arc<RwLock<Vec<u8>>>,
-}
-
-/// This store all the information related to a specific entity, is intended to be used by inner_archetype
-/// Extern users are not supposed to have access to that
-pub struct EntityCellHead {
-    /// The entity id
-    pub entity_id: EntityId,
-
-    /// the entity name
-    pub name: String,
-
-    /// If false, the entity will be ignored by the systems
-    pub enabled: bool,
-
-    /// A marker for an entity that is deleted but that is not yet free into memory
-    pub deleted: bool,
-
-    /// A signal that is sent when the a write lock on the entity is released
-    pub on_deleted: Signal<()>,
-
-    /// The locker for the entity, used to avoir multithread collisions
-    pub(crate) lock: RwLock<()>,
-}
-
-pub(crate) struct ComponentDecodingInfos {
-    pub(crate) name: String,
-    pub(crate) relative_index: usize,
-    pub(crate) size: usize,
-    pub(crate) decoder: ComponentDecoder,
-    pub(crate) decoder_mut: ComponentDecoderMut,
-}
-
-impl EntityCellHead {
-    /// Returns a EntityCellHead
-    pub(crate) fn new(entity_id: EntityId, name: String) -> EntityCellHead {
-        EntityCellHead {
-            entity_id,
-            name,
-            enabled: true,
-            deleted: false,
-            on_deleted: Signal::new(),
-            lock: RwLock::new(()),
-        }
-    }
+    component_arrays: RwLock<HashMap<String, ComponentArray>>,
+    removed_entities: Mutex<Vec<usize>>,
 }
 
 impl Archetype {
@@ -81,33 +33,31 @@ impl Archetype {
     ///
     /// # Arguments
     /// * `entity_id` - The first entity id
+    /// * `name` - The first entity name
     /// * `components` - The first entity components
     ///
-    /// # Generic Arguments
-    /// * `T` - The type of the entities stored into the archetype
-    ///
-    pub fn new(entity_id: EntityId, name: String, components: Vec<AnyComponent>) -> Archetype {
+    pub fn new(entity_id: EntityId, name: &str, mut components: Vec<AnyComponent>) -> Archetype {
+        // Inject the common Entity component
+        components.push(AnyComponent::new(Entity {
+            entity_id,
+            name: name.to_string(),
+            ..Entity::default()
+        }));
+
         // Deduce the archetype properties from the components
         let identifier = get_type_identifier_by_any(&components);
 
-        let components_per_entity = components.len();
-
-        let entity_size: usize = entity_size(&components);
-
         // Build the archetype
-        let archetype = Archetype {
-            identifier,
-            index_map: RwLock::new(HashMap::new()),
-            removed_entities: RwLock::new(Vec::new()),
-            buffer: Arc::new(RwLock::new(Vec::with_capacity(entity_size))),
-            components_per_entity,
-            entity_size,
-        };
+        let mut component_arrays = HashMap::new();
+        for component in components {
+            component_arrays.insert(component.get_class_name(), ComponentArray::new(component));
+        }
 
-        // Create the first entity
-        archetype.add(entity_id, name, components);
-
-        archetype
+        Archetype {
+            identifier: identifier,
+            component_arrays: RwLock::new(component_arrays),
+            removed_entities: Mutex::new(Vec::new()),
+        }
     }
 
     /// Returns the entity type identifier of the archetype
@@ -115,220 +65,188 @@ impl Archetype {
         &self.identifier
     }
 
-    /// Get a locked entity
+    /// Get an iterator over all the components of all the entities
+    pub fn iter(
+        &self,
+        component_identifier: EntityTypeIdentifier,
+    ) -> impl Iterator<Item = Vec<ComponentReference>> {
+        // TODO: Find a way to remove that
+        let this = unsafe { &*(self as *const _) } as &Archetype;
+
+        let component_arrays = this.component_arrays.read().unwrap();
+
+        // TODO: Find a way to remove that
+        let component_arrays =
+            unsafe { &*(component_arrays.deref() as *const _) } as &HashMap<String, ComponentArray>;
+
+        let entity_array = component_arrays
+            .iter()
+            .find(|(identifier, _)| *identifier == "Entity")
+            .unwrap()
+            .1;
+
+        (0..self.len())
+            .filter(move |index| {
+                let entity = entity_array.get(index);
+                let entity = entity.read();
+                let entity = entity.as_any_ref().downcast_ref::<Entity>().unwrap();
+
+                entity.enabled && !entity.deleted
+            })
+            .map(move |index| this.get_components(index, component_identifier.clone()))
+    }
+
+    /// Get an iterator over all the components of all the entities
+    pub fn iter_all_components(&self) -> impl Iterator<Item = Vec<ComponentReference>> {
+        // TODO: Find a way to remove that
+        let this = unsafe { &*(self as *const _) } as &Archetype;
+        (0..self.len()).map(move |index| this.get_components(index, this.identifier.clone()))
+    }
+
+    /// Get components from an entity by index in the archetype storage
     ///
     /// # Arguments
     /// * `entity_id` - The entity id
+    /// * `identifier` - The components identifiers
     ///
-    pub fn get(&self, entity_id: EntityId) -> Option<EntitySharedRwLock> {
-        let buffer_index = {
-            let index_map_reader = self.index_map.read().unwrap();
-            index_map_reader.get(&entity_id).map(|elem| *elem)
-        };
+    pub fn get_components(
+        &self,
+        index: usize,
+        component_identifier: EntityTypeIdentifier,
+    ) -> Vec<ComponentReference> {
+        let component_arrays = self.component_arrays.read().unwrap();
 
-        if let Some(buffer_index) = buffer_index {
-            self.get_by_index(buffer_index)
-        } else {
-            None
-        }
+        component_identifier
+            .0
+            .iter()
+            .filter_map(|identifier| component_arrays.get(identifier))
+            .map(|component_array| component_array.get(&index))
+            .collect::<Vec<_>>()
     }
 
-    /// Get a locked entity by first component index
+    /// Get all components from an entity by index in the archetype storage
     ///
     /// # Arguments
-    /// * `entity_id` - The entity id
+    /// * `index` - The entity index
     ///
-    pub fn get_by_index(&self, index: usize) -> Option<EntitySharedRwLock> {
-        let buffer_len = {
-            let buffer = self.buffer.read().unwrap();
-            buffer.len()
-        };
+    pub fn get_full_entity(&self, index: usize) -> Vec<ComponentReference> {
+        let component_arrays = self.component_arrays.read().unwrap();
 
-        if f32::floor(index as f32 / self.entity_size as f32)
-            < f32::floor(buffer_len as f32 / self.entity_size as f32)
-        {
-            Some(EntitySharedRwLock::new(
-                self.buffer.clone(),
-                index,
-                self.identifier.clone(),
-                self.components_per_entity,
-                self.entity_size,
-            ))
-        } else {
-            None
-        }
+        component_arrays
+            .iter()
+            .map(|(_, component_array)| component_array.get(&index))
+            .collect::<Vec<_>>()
     }
 
-    /// Iterate over all entities of the archetype
-    pub(crate) fn iter(&self) -> Iter<'_> {
-        Iter {
-            archetype: self,
-            current_index: 0,
-            entity_size: self.entity_size,
+    /// Get entity count
+    pub fn len(&self) -> usize {
+        let component_arrays = self.component_arrays.read().unwrap();
+
+        let entity_array = component_arrays.get("Entity");
+        if let Some(entity_array) = entity_array {
+            entity_array.len()
+        } else {
+            0
         }
     }
 
     /// Add an entity into the archetype
     ///
     /// # Arguments
-    /// * `entity_id` - The entity id
-    /// * `entity` - The entity datas
+    /// * `entity_id` - The first entity id
+    /// * `name` - The first entity name
+    /// * `components` - The first entity components
     ///
-    /// # Generic Arguments
-    /// * `T` - The type of the new entity
-    ///
-    pub fn add(&self, entity_id: EntityId, name: String, components: Vec<AnyComponent>) {
-        let free_cell = {
-            let mut removed_entities = self.removed_entities.write().unwrap();
-            removed_entities.pop()
-        };
+    pub fn add(&self, entity_id: EntityId, name: &str, mut components: Vec<AnyComponent>) {
+        let mut component_arrays = self.component_arrays.write().unwrap();
 
-        // Use an existing entity cell if possible
-        if let Some(free_cell) = free_cell {
-            // Write directly into the entity buffer
-            {
-                let mut buffer = self.buffer.write().unwrap();
-                let mut entity_buffer = &mut buffer[free_cell..(free_cell + self.entity_size)];
-                encode_entity(entity_id, name, &mut entity_buffer, components);
+        // Inject the common Entity component
+        components.push(AnyComponent::new(Entity {
+            entity_id,
+            name: name.to_string(),
+            ..Entity::default()
+        }));
+
+        for component in components {
+            let component_array = component_arrays.get_mut(&component.get_class_name());
+            if let Some(component_array) = component_array {
+                component_array.add(component);
             }
-
-            let mut index_map = self.index_map.write().unwrap();
-            index_map.insert(entity_id, free_cell);
-        } else {
-            // Create the entity buffer
-            let entity_index = {
-                let buffer = self.buffer.read().unwrap();
-                buffer.len()
-            };
-
-            let mut entity_buffer: Vec<u8> = vec![0; self.entity_size];
-            encode_entity(entity_id, name, &mut entity_buffer, components);
-
-            // Store the entity
-            {
-                let mut buffer = self.buffer.write().unwrap();
-                buffer.append(&mut entity_buffer);
-            }
-
-            // Store the id of the entity
-            let mut index_map = self.index_map.write().unwrap();
-            index_map.insert(entity_id, entity_index);
         }
+
+        // TODO: Use the remaining spaces to fill the new entity if possible
     }
 
     /// Remove an entity based on its id
     ///
     /// # Arguments
-    /// * `entity_id` - The entity id
+    /// * `index` - The entity index
     ///
-    pub fn remove(&self, entity_id: EntityId) -> Result<(), RemoveEntityError> {
-        let entity_index = {
-            let mut index_map = self.index_map.write().unwrap();
-            index_map.remove(&entity_id)
+    pub fn remove(&self, index: usize) {
+        // Get the entity
+        let components = self.get_full_entity(index);
+
+        // TODO: Can probably be more consize with a specific Vec func
+        let entity = components
+            .iter()
+            .find(|component| {
+                let component = component.read();
+                if let Some(_) = component.deref().as_any_ref().downcast_ref::<Entity>() {
+                    true
+                } else {
+                    false
+                }
+            })
+            .unwrap();
+
+        let other_components = components
+            .iter()
+            .filter(|component| {
+                let component = component.read();
+                if let Some(_) = component.deref().as_any_ref().downcast_ref::<Entity>() {
+                    false
+                } else {
+                    true
+                }
+            })
+            .collect::<Vec<_>>();
+
+        // propagate the deleted signal
+        {
+            let entity = entity.read();
+            let entity = entity
+                .deref()
+                .as_any_ref()
+                .downcast_ref::<Entity>()
+                .unwrap();
+
+            entity.on_deleted.notify(());
+        }
+
+        // Update the entity to set it as deleted
+        {
+            let _components_lock = other_components
+                .iter()
+                .map(|component| component.write())
+                .collect::<Vec<_>>();
+
+            let mut entity = entity.write();
+            let mut entity = entity
+                .deref_mut()
+                .as_any_mut()
+                .downcast_mut::<Entity>()
+                .unwrap();
+
+            entity.deleted = true;
+        }
+
+        // Remember that the old entity cell is now free
+        // so we will be able to erase it
+        {
+            let mut removed_entities = self.removed_entities.lock().unwrap();
+            removed_entities.push(index)
         };
 
-        // Get the entity
-        if let Some(entity_index) = entity_index {
-            if let Some(entity) = self.get_by_index(entity_index) {
-                // propagate the deleted signal
-                {
-                    let entity_reader = entity.read();
-                    entity_reader.on_deleted.notify(());
-                }
-
-                // Update the entity
-                {
-                    let mut entity_writer = entity.write();
-                    entity_writer.deleted = true;
-                }
-
-                // Remember that the old entity cell is now free
-                // so we will be able to erase it
-                {
-                    let mut removed_entities = self.removed_entities.write().unwrap();
-                    removed_entities.push(entity_index)
-                };
-
-                // TODO: Notify all the shared lock that the referenced entity has been removed
-
-                Ok(())
-            } else {
-                Err(RemoveEntityError::NotFound)
-            }
-        } else {
-            Err(RemoveEntityError::NotFound)
-        }
-    }
-}
-
-/// Iterator over entities of an archetype
-pub struct Iter<'a> {
-    /// The targeted archetype
-    archetype: &'a Archetype,
-
-    /// The memory size of a unique entity of the archetype
-    entity_size: usize,
-
-    /// A counter to know the iterator current index
-    current_index: usize,
-}
-
-impl<'a> Iterator for Iter<'a> {
-    type Item = EntitySharedRwLock;
-
-    fn next(&mut self) -> Option<EntitySharedRwLock> {
-        let entity = self.archetype.get_by_index(self.current_index);
-        self.current_index += self.entity_size;
-
-        if let Some(entity) = entity {
-            // Skip if removed
-            let entity_reader = entity.read();
-            if entity_reader.deleted {
-                std::mem::drop(entity_reader);
-                self.next()
-            } else {
-                std::mem::drop(entity_reader);
-                Some(entity)
-            }
-        } else {
-            None
-        }
-    }
-}
-
-impl Debug for Archetype {
-    fn fmt(
-        &self,
-        formatter: &mut std::fmt::Formatter<'_>,
-    ) -> std::result::Result<(), std::fmt::Error> {
-        let fmt_error = self.iter().find_map(|elem| match elem.fmt(formatter) {
-            Ok(()) => None,
-            Err(err) => Some(err),
-        });
-
-        match fmt_error {
-            Some(err) => Err(err),
-            None => Ok(()),
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[derive(Debug, Clone, Component, FruityAny)]
-    struct Component1 {
-        pub field1: f32,
-        pub field2: usize,
-    }
-
-    #[derive(Debug, Clone, Component, FruityAny)]
-    struct Component2 {
-        pub field1: String,
-        pub field2: usize,
-    }
-
-    #[test]
-    fn create_() {
-        assert_eq!(2 + 2, 4);
+        // TODO: Notify all the shared lock that the referenced entity has been removed
     }
 }

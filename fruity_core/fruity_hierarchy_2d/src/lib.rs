@@ -2,7 +2,6 @@ use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use std::sync::Arc;
 
-pub mod components;
 pub mod systems;
 
 // #[no_mangle]

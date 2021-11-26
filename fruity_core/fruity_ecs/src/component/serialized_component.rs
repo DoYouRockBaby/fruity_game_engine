@@ -1,6 +1,5 @@
 use crate::component::component::Component;
 use crate::component::component::ComponentDecoder;
-use crate::component::component::ComponentDecoderMut;
 use fruity_any::FruityAny;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
@@ -47,13 +46,6 @@ impl Component for SerializedComponent {
         |data| {
             let (_head, body, _tail) = unsafe { data.align_to::<Self>() };
             &body[0]
-        }
-    }
-
-    fn get_decoder_mut(&self) -> ComponentDecoderMut {
-        |data| {
-            let (_head, body, _tail) = unsafe { data.align_to_mut::<Self>() };
-            &mut body[0]
         }
     }
 

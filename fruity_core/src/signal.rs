@@ -50,6 +50,12 @@ pub struct Signal<T> {
     intern: Arc<Mutex<InternSignal<T>>>,
 }
 
+impl<T> Default for Signal<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> Signal<T> {
     /// Returns a Signal
     pub fn new() -> Signal<T> {
@@ -86,7 +92,7 @@ impl<T> Signal<T> {
             .map(|elem| elem.0);
 
         if let Some(observer_index) = observer_index {
-            intern.observers.remove(observer_index);
+            let _ = intern.observers.remove(observer_index);
         }
     }
 

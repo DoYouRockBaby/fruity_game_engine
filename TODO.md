@@ -5,13 +5,18 @@
 [X] Make serialized able to be extended in modules (put it into introspect, make intropect better ...)
 [X] Make the archetype able to store datas in plain array for performances
 [X] Add a "field changed" signal on every entities
-[P] Implement entity hierarchy
 [X] Put a get_constructor function into introspect
 [X] Implements entity deletion
 [X] Resources and services containers should be merged
 [X] Abstract resources
 [X] Split abstractions and implementations for all crates
 [X] Make native systems easy to use
+[ ] Move ECS structure to a struct of array instead an array of struct (more efficient, easier to implement)
+[ ] Implement ECS hierarchy
+- We can add a group strategy to archetypes
+- There is an option to run groups by group index
+- We affect one group per hierarchy nesting level
+- For transforms, we execute each transformation by nested level (translate all non nested, translate all nested 1, translate all nested 2, ...)
 [ ] Add an exception when you try to access a deleted entity, propagate it into js
 [ ] There should be some memory leak in archetype
 [ ] Test and stabilize ECS

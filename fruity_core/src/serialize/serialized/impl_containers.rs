@@ -78,7 +78,6 @@ impl<T: FruityInto<Serialized>> FruityInto<Serialized> for Option<T> {
     }
 }
 
-// TODO: Complete that
 impl<T: IntrospectObject> IntrospectObject for Option<T> {
     fn get_class_name(&self) -> String {
         if let Some(value) = &self {

@@ -41,10 +41,10 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let system_service = resource_container.require::<SystemService>();
     let mut system_service = system_service.write();
 
-    system_service.add_system_that_ignore_pause(Inject1::new(reset_transform_2d), Some(1));
-    system_service.add_system_that_ignore_pause(Inject1::new(translate_2d), Some(2));
-    system_service.add_system_that_ignore_pause(Inject1::new(rotate_2d), Some(3));
-    system_service.add_system_that_ignore_pause(Inject1::new(scale_2d), Some(4));
+    system_service.add_system_that_ignore_pause(Inject1::new(reset_transform_2d), Some(93));
+    system_service.add_system_that_ignore_pause(Inject1::new(translate_2d), Some(94));
+    system_service.add_system_that_ignore_pause(Inject1::new(rotate_2d), Some(95));
+    system_service.add_system_that_ignore_pause(Inject1::new(scale_2d), Some(96));
     system_service.add_system_that_ignore_pause(Inject3::new(draw_camera), Some(97));
     system_service.add_system_that_ignore_pause(Inject2::new(draw_sprite), Some(98));
 

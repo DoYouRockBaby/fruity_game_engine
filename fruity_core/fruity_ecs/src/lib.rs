@@ -27,14 +27,6 @@ pub mod entity;
 /// Provides collection for systems
 pub mod system;
 
-/// Create an entity, use it like entity![Box::new(component1), Box::new(component2)])
-#[macro_export]
-macro_rules! entity {
-    ($($component:expr),*) => {
-        fruity_ecs::entity::entity::Entity::new(vec![$ ($component),*])
-    };
-}
-
 /// Create an entity type, use it like entity_type!["Component1", "Component2"])
 #[macro_export]
 macro_rules! entity_type {

@@ -114,3 +114,21 @@ impl<T: FruityAny> FruityAny for Option<T> {
         self
     }
 }
+
+impl<T: FruityAny> FruityAny for Vec<T> {
+    fn as_any_ref(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn as_any_box(self: Box<Self>) -> Box<dyn Any> {
+        self
+    }
+
+    fn as_any_arc(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
+        self
+    }
+}

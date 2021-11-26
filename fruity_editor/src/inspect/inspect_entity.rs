@@ -10,14 +10,103 @@ use crate::ui_element::UIAlign;
 use crate::ui_element::UIElement;
 use crate::ui_element::UISize;
 use crate::ui_element::UIWidget;
-use fruity_ecs::entity::archetype::rwlock::EntitySharedRwLock;
+use fruity_any::*;
+use fruity_core::introspect::FieldInfo;
+use fruity_core::introspect::IntrospectObject;
+use fruity_core::introspect::MethodInfo;
+use fruity_core::serialize::serialized::SerializableObject;
+use fruity_ecs::component::component::Component;
+use fruity_ecs::component::component_guard::TypedComponentReadGuard;
+use fruity_ecs::component::component_guard::TypedComponentWriteGuard;
+use fruity_ecs::component::component_reference::ComponentReference;
+use fruity_ecs::entity::archetype::entity::Entity;
+use std::ops::Deref;
 use std::sync::Arc;
 
-pub fn inspect_entity(entity: &mut EntitySharedRwLock) -> UIElement {
-    let entity_reader = entity.read();
+#[derive(Debug, FruityAny, Clone)]
+pub struct SelectEntityWrapper(pub Vec<ComponentReference>);
 
-    let entity_2 = entity.clone();
-    let entity_3 = entity.clone();
+impl SelectEntityWrapper {
+    pub fn read_component<T: Component>(&self) -> Option<TypedComponentReadGuard<T>> {
+        let component = self
+            .0
+            .iter()
+            .find_map(|component| {
+                let component_reader = component.read();
+                if let Some(_) = component_reader.deref().as_any_ref().downcast_ref::<T>() {
+                    Some(component)
+                } else {
+                    None
+                }
+            })
+            .unwrap();
+
+        let component = component.read();
+        component.downcast::<T>()
+    }
+
+    pub fn write_component<T: Component>(&self) -> Option<TypedComponentWriteGuard<T>> {
+        let component = self
+            .0
+            .iter()
+            .find_map(|component| {
+                let component_reader = component.read();
+                if let Some(_) = component_reader.deref().as_any_ref().downcast_ref::<T>() {
+                    Some(component)
+                } else {
+                    None
+                }
+            })
+            .unwrap();
+
+        let component = component.write();
+        component.downcast::<T>()
+    }
+}
+
+impl IntrospectObject for SelectEntityWrapper {
+    fn get_class_name(&self) -> String {
+        "SelectEntityWrapper".to_string()
+    }
+
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+}
+
+impl SerializableObject for SelectEntityWrapper {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
+    }
+}
+
+pub fn inspect_entity(entity_wrapper: &mut SelectEntityWrapper) -> UIElement {
+    // TODO: Can probably be more consize with a specific Vec func
+    let entity = entity_wrapper.read_component::<Entity>().unwrap();
+
+    let other_components = entity_wrapper
+        .0
+        .iter()
+        .filter_map(|component| {
+            let component_reader = component.read();
+            if let Some(_) = component_reader
+                .deref()
+                .as_any_ref()
+                .downcast_ref::<Entity>()
+            {
+                None
+            } else {
+                Some(component.clone())
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let entity_wrapper_2 = entity_wrapper.clone();
+    let entity_wrapper_3 = entity_wrapper.clone();
     let head = Column {
         children: vec![Row {
             children: vec![
@@ -25,9 +114,9 @@ pub fn inspect_entity(entity: &mut EntitySharedRwLock) -> UIElement {
                     size: UISize::Units(50.0),
                     child: Checkbox {
                         label: "".to_string(),
-                        value: entity_reader.enabled,
+                        value: entity.enabled,
                         on_change: Arc::new(move |value| {
-                            let mut entity = entity_2.write();
+                            let mut entity = entity_wrapper_2.write_component::<Entity>().unwrap();
                             entity.enabled = value;
                         }),
                     }
@@ -36,10 +125,10 @@ pub fn inspect_entity(entity: &mut EntitySharedRwLock) -> UIElement {
                 RowItem {
                     size: UISize::Fill,
                     child: Input {
-                        value: entity_reader.name.to_string(),
+                        value: entity.name.to_string(),
                         placeholder: "Name ...".to_string(),
                         on_change: Arc::new(move |value: &str| {
-                            let mut entity = entity_3.write();
+                            let mut entity = entity_wrapper_3.write_component::<Entity>().unwrap();
                             entity.name = value.to_string();
                         }),
                     }
@@ -54,8 +143,8 @@ pub fn inspect_entity(entity: &mut EntitySharedRwLock) -> UIElement {
     .elem();
 
     let components = Column {
-        children: entity
-            .iter_all_components()
+        children: other_components
+            .iter()
             .map(|component| {
                 let component_reader = component.read();
                 Collapsible {

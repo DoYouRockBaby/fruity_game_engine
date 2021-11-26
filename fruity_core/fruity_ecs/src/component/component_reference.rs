@@ -1,6 +1,6 @@
+use crate::component::component::Component;
 use crate::component::component_guard::ComponentReadGuard;
 use crate::component::component_guard::ComponentWriteGuard;
-use crate::entity::archetype::rwlock::EntitySharedRwLock;
 use fruity_any::*;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
@@ -10,25 +10,28 @@ use fruity_core::serialize::serialized::SerializableObject;
 use fruity_core::serialize::serialized::Serialized;
 use fruity_core::serialize::Serialize;
 use std::sync::Arc;
+use std::sync::RwLock;
 
-/// A read write locker for a component instance
+/// A reference over a component stored into an Archetype
 #[derive(Debug, Clone, FruityAny)]
-pub struct ComponentRwLock {
-    entity: EntitySharedRwLock,
-    component_index: usize,
+pub struct ComponentReference {
+    rwlock: &'static RwLock<()>,
+    component: &'static dyn Component,
 }
 
-impl ComponentRwLock {
-    /// Returns an RwLockReadGuard which is unlocked.
+impl ComponentReference {
+    /// Returns a [’ComponentReference’]
     ///
     /// # Arguments
-    /// * `inner_guard` - The typed [`RwLockReadGuard`]
+    /// * `rwlock` - The rwlock reference from the archetype storage
+    /// * `component` - The components references from the archetype storage
     ///
-    pub fn new(entity: EntitySharedRwLock, component_index: usize) -> ComponentRwLock {
-        ComponentRwLock {
-            entity,
-            component_index,
-        }
+    pub(crate) fn new(rwlock: &RwLock<()>, component: &dyn Component) -> Self {
+        // TODO: Find a way to know when the targeted datas are deleted
+        let rwlock = unsafe { &*(rwlock as *const _) } as &RwLock<()>;
+        let component = unsafe { &*(component as *const _) } as &dyn Component;
+
+        Self { rwlock, component }
     }
 
     /// Locks this rwlock with shared read access, blocking the current thread
@@ -45,7 +48,7 @@ impl ComponentRwLock {
     /// This function might panic when called if the lock is already held by the current thread.
     ///
     pub fn read(&self) -> ComponentReadGuard {
-        ComponentReadGuard::new(self.entity.read(), self.component_index)
+        ComponentReadGuard::new(self.rwlock.read().unwrap(), self.component)
     }
 
     /// Locks this rwlock with exclusive write access, blocking the current
@@ -62,11 +65,11 @@ impl ComponentRwLock {
     /// This function might panic when called if the lock is already held by the current thread.
     ///
     pub fn write(&self) -> ComponentWriteGuard {
-        ComponentWriteGuard::new(self.entity.write(), self.component_index)
+        ComponentWriteGuard::new(self.rwlock.write().unwrap(), self.component)
     }
 }
 
-impl Serialize for ComponentRwLock {
+impl Serialize for ComponentReference {
     fn serialize(&self) -> Option<Serialized> {
         let native_serialized = Serialized::NativeObject(Box::new(self.clone()));
         let serialized = native_serialized.serialize_native_objects();
@@ -74,7 +77,7 @@ impl Serialize for ComponentRwLock {
     }
 }
 
-impl IntrospectObject for ComponentRwLock {
+impl IntrospectObject for ComponentReference {
     fn get_class_name(&self) -> String {
         let component = self.read();
         component.get_class_name()
@@ -98,7 +101,7 @@ impl IntrospectObject for ComponentRwLock {
                     ty: field_info.ty,
                     serializable: field_info.serializable,
                     getter: Arc::new(move |this| {
-                        let this = this.downcast_ref::<ComponentRwLock>().unwrap();
+                        let this = this.downcast_ref::<ComponentReference>().unwrap();
                         let reader = this.read();
 
                         getter(reader.as_any_ref())
@@ -106,7 +109,7 @@ impl IntrospectObject for ComponentRwLock {
                     setter: match setter {
                         SetterCaller::Const(call) => {
                             SetterCaller::Const(Arc::new(move |this, args| {
-                                let this = this.downcast_ref::<ComponentRwLock>().unwrap();
+                                let this = this.downcast_ref::<ComponentReference>().unwrap();
                                 let reader = this.read();
 
                                 call(reader.as_any_ref(), args)
@@ -114,7 +117,7 @@ impl IntrospectObject for ComponentRwLock {
                         }
                         SetterCaller::Mut(call) => {
                             SetterCaller::Const(Arc::new(move |this, args| {
-                                let this = this.downcast_ref::<ComponentRwLock>().unwrap();
+                                let this = this.downcast_ref::<ComponentReference>().unwrap();
                                 let mut writer = this.write();
 
                                 call(writer.as_any_mut(), args)
@@ -128,7 +131,7 @@ impl IntrospectObject for ComponentRwLock {
     }
 }
 
-impl SerializableObject for ComponentRwLock {
+impl SerializableObject for ComponentReference {
     fn duplicate(&self) -> Box<dyn SerializableObject> {
         Box::new(self.clone())
     }
