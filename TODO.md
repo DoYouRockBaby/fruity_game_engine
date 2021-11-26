@@ -11,7 +11,7 @@
 [X] Abstract resources
 [X] Split abstractions and implementations for all crates
 [X] Make native systems easy to use
-[ ] Move ECS structure to a struct of array instead an array of struct (more efficient, easier to implement)
+[X] Move ECS structure to a struct of array instead an array of struct (more efficient, easier to implement)
 [ ] Implement ECS hierarchy
 - We can add a group strategy to archetypes
 - There is an option to run groups by group index

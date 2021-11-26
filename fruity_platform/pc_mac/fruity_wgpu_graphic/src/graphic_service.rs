@@ -327,12 +327,7 @@ impl GraphicService for WgpuGraphicManager {
         // TODO: There is probably a way to optimize that with an ordered list
         render_bundle_queue.sort_by(|a, b| a.z_index.cmp(&b.z_index));
 
-        // TODO: Try to remove that
-        let render_bundle_queue = render_bundle_queue.deref();
-        let render_bundle_queue =
-            unsafe { &*(render_bundle_queue as *const _) } as &Vec<RenderBundleEntry>;
-
-        render_bundle_queue.iter().for_each(|bundle| {
+        render_bundle_queue.iter().for_each(move |bundle| {
             render_pass.execute_bundles(iter::once(&bundle.bundle));
         });
     }

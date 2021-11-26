@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use std::default::Default;
 use std::ops::Deref;
 use std::ops::DerefMut;
+use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::RwLock;
 
@@ -24,7 +25,7 @@ pub mod component_array;
 /// Stored as a Struct Of Array
 pub struct Archetype {
     identifier: EntityTypeIdentifier,
-    component_arrays: RwLock<HashMap<String, ComponentArray>>,
+    component_arrays: Arc<HashMap<String, Arc<RwLock<ComponentArray>>>>,
     removed_entities: Mutex<Vec<usize>>,
 }
 
@@ -50,12 +51,15 @@ impl Archetype {
         // Build the archetype
         let mut component_arrays = HashMap::new();
         for component in components {
-            component_arrays.insert(component.get_class_name(), ComponentArray::new(component));
+            component_arrays.insert(
+                component.get_class_name(),
+                Arc::new(RwLock::new(ComponentArray::new(component))),
+            );
         }
 
         Archetype {
             identifier: identifier,
-            component_arrays: RwLock::new(component_arrays),
+            component_arrays: Arc::new(component_arrays),
             removed_entities: Mutex::new(Vec::new()),
         }
     }
@@ -70,30 +74,37 @@ impl Archetype {
         &self,
         component_identifier: EntityTypeIdentifier,
     ) -> impl Iterator<Item = Vec<ComponentReference>> {
-        // TODO: Find a way to remove that
-        let this = unsafe { &*(self as *const _) } as &Archetype;
-
-        let component_arrays = this.component_arrays.read().unwrap();
-
-        // TODO: Find a way to remove that
-        let component_arrays =
-            unsafe { &*(component_arrays.deref() as *const _) } as &HashMap<String, ComponentArray>;
+        let component_arrays = self.component_arrays.clone();
+        let component_arrays_2 = self.component_arrays.clone();
 
         let entity_array = component_arrays
             .iter()
             .find(|(identifier, _)| *identifier == "Entity")
             .unwrap()
-            .1;
+            .1
+            .clone();
 
         (0..self.len())
             .filter(move |index| {
+                let entity_array = entity_array.read().unwrap();
                 let entity = entity_array.get(index);
                 let entity = entity.read();
                 let entity = entity.as_any_ref().downcast_ref::<Entity>().unwrap();
 
                 entity.enabled && !entity.deleted
             })
-            .map(move |index| this.get_components(index, component_identifier.clone()))
+            .map(move |index| {
+                let component_arrays = component_arrays_2.clone();
+                component_identifier
+                    .0
+                    .iter()
+                    .filter_map(move |identifier| {
+                        let component_array = component_arrays.get(identifier)?;
+                        let component_array = component_array.read().unwrap();
+                        Some(component_array.get(&index))
+                    })
+                    .collect::<Vec<_>>()
+            })
     }
 
     /// Get an iterator over all the components of all the entities
@@ -114,13 +125,15 @@ impl Archetype {
         index: usize,
         component_identifier: EntityTypeIdentifier,
     ) -> Vec<ComponentReference> {
-        let component_arrays = self.component_arrays.read().unwrap();
-
+        let component_arrays = self.component_arrays.clone();
         component_identifier
             .0
             .iter()
             .filter_map(|identifier| component_arrays.get(identifier))
-            .map(|component_array| component_array.get(&index))
+            .map(|component_array| {
+                let component_array = component_array.read().unwrap();
+                component_array.get(&index)
+            })
             .collect::<Vec<_>>()
     }
 
@@ -130,20 +143,20 @@ impl Archetype {
     /// * `index` - The entity index
     ///
     pub fn get_full_entity(&self, index: usize) -> Vec<ComponentReference> {
-        let component_arrays = self.component_arrays.read().unwrap();
-
-        component_arrays
+        self.component_arrays
             .iter()
-            .map(|(_, component_array)| component_array.get(&index))
+            .map(|(_, component_array)| {
+                let component_array = component_array.read().unwrap();
+                component_array.get(&index)
+            })
             .collect::<Vec<_>>()
     }
 
     /// Get entity count
     pub fn len(&self) -> usize {
-        let component_arrays = self.component_arrays.read().unwrap();
-
-        let entity_array = component_arrays.get("Entity");
+        let entity_array = self.component_arrays.get("Entity");
         if let Some(entity_array) = entity_array {
+            let entity_array = entity_array.read().unwrap();
             entity_array.len()
         } else {
             0
@@ -158,8 +171,6 @@ impl Archetype {
     /// * `components` - The first entity components
     ///
     pub fn add(&self, entity_id: EntityId, name: &str, mut components: Vec<AnyComponent>) {
-        let mut component_arrays = self.component_arrays.write().unwrap();
-
         // Inject the common Entity component
         components.push(AnyComponent::new(Entity {
             entity_id,
@@ -168,8 +179,9 @@ impl Archetype {
         }));
 
         for component in components {
-            let component_array = component_arrays.get_mut(&component.get_class_name());
+            let component_array = self.component_arrays.get(&component.get_class_name());
             if let Some(component_array) = component_array {
+                let mut component_array = component_array.write().unwrap();
                 component_array.add(component);
             }
         }
