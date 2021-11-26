@@ -24,7 +24,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let system_service = resource_container.require::<SystemService>();
     let mut system_service = system_service.write();
 
-    system_service.add_system_that_ignore_pause(Inject1::new(draw_gizmos_2d), Some(98));
+    system_service.add_system_that_ignore_pause(Inject1::new(draw_gizmos_2d), Some(99));
 
     let introspect_editor_service = resource_container.require::<IntrospectEditorService>();
     let mut introspect_editor_service = introspect_editor_service.write();

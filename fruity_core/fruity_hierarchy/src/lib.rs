@@ -1,5 +1,6 @@
 use crate::components::parent::Parent;
 use crate::systems::delete_cascade::delete_cascade;
+use crate::systems::update_nested_level::update_nested_level;
 use fruity_core::inject::Inject1;
 use fruity_core::object_factory_service::ObjectFactoryService;
 use fruity_core::resource::resource_container::ResourceContainer;
@@ -21,4 +22,5 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let mut system_service = system_service.write();
 
     system_service.add_begin_system(Inject1::new(delete_cascade), None);
+    system_service.add_begin_system(Inject1::new(update_nested_level), None);
 }

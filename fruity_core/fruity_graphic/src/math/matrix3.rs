@@ -29,7 +29,7 @@ impl Matrix3 {
     }
 
     pub fn rotation(angle: f32) -> Matrix3 {
-        Matrix3(cgmath::Matrix3::from_angle_x(cgmath::Rad(angle)).into())
+        Matrix3(cgmath::Matrix3::from_angle_z(cgmath::Rad(angle)).into())
     }
 
     pub fn scaling(vec: Vector2d) -> Matrix3 {

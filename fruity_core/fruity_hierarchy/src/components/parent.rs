@@ -6,4 +6,5 @@ use fruity_ecs::*;
 #[derive(Debug, Clone, Default, Component, FruityAny)]
 pub struct Parent {
     pub parent_id: SignalProperty<Option<EntityId>>,
+    pub nested_level: usize,
 }

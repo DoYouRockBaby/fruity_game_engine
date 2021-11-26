@@ -40,8 +40,8 @@ pub fn draw_camera(
             // Render the draw system pool and avoir the normal system treatment
             {
                 let system_service = system_service.read();
-                system_service.ignore_pool_once(&98);
-                system_service.run_pool(&98);
+                system_service.ignore_pool_once(&99);
+                system_service.run_pool(&99);
             }
 
             // End the pass

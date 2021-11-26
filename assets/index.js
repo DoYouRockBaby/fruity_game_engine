@@ -46,6 +46,7 @@ inputService.onReleased.addObserver((key) => {
 
 let player_entity_id = entityService.create("Player", [
     new Translate2d({ vec: new Vector2d({ x: -0.25, y: 0.25 }) }),
+    new Rotate2d({ angle: 0.0 }),
     new Scale2d({ vec: new Vector2d({ x: 0.3, y: 0.3 }) }),
     new Sprite({
         material: resourceContainer.get("assets/material.material"),
@@ -88,9 +89,6 @@ entityService.create("Camera", [
 
 console.log("ENTITIES CREATED");
 
-systemService.addBeginSystem(() => {
-});
-
 systemService.addSystem(() => {
     entityService
         .iterComponents(["Translate2d", "Velocity"])
@@ -129,9 +127,9 @@ systemService.addSystem(() => {
 systemService.addSystem(() => {
     entityService
         .iterComponents(["Rotate2d", "Move"])
-        .forEach(components => {
+        .forEach(([rotate, move]) => {
             if (inputService.isPressed("Rotate")) {
-                components.get(0).angle += components.get(1).velocity * frameService.delta;
+                rotate.angle += move.velocity * frameService.delta;
             }
         });
 });

@@ -70,8 +70,8 @@ impl Graphic2dService for WgpuGraphic2dManager {
         let config = graphic_service.get_config();
 
         // Create the main render pipeline
-        let bottom_left = transform * Vector2d::new(0.0, 0.0);
-        let top_right = transform * Vector2d::new(1.0, 1.0);
+        let bottom_left = transform * Vector2d::new(-0.5, -0.5);
+        let top_right = transform * Vector2d::new(0.5, 0.5);
 
         let vertices: &[Vertex] = &[
             Vertex {

@@ -55,8 +55,8 @@ pub struct SystemPool<T> {
 /// There is a pool system, when you add a system, you can provide a pool, every systems of the same pool will be executed in parallel
 /// Try to use it realy rarely, cause parallel execution is realy usefull
 /// Pools from 0 to 10 and from 90 to 100 are reservec by the engine, you should avoid to create pool outside this range
-/// Pool 97 is for camera
-/// Pool 98 is for drawing
+/// Pool 98 is for camera
+/// Pool 99 is for drawing
 ///
 #[derive(FruityAny)]
 pub struct SystemService {

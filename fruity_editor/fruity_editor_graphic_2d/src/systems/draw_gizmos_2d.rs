@@ -33,8 +33,8 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
                 return;
             };
 
-            let bottom_left = translate.vec;
-            let top_right = translate.vec + scale.vec;
+            let bottom_left = translate.vec - scale.vec / 2.0;
+            let top_right = bottom_left + scale.vec;
 
             (bottom_left, top_right)
         };
@@ -88,17 +88,7 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
 
                     // Move the entity with the cursor
                     let mut translate = selected_entity.write_component::<Translate2d>().unwrap();
-                    translate.vec.x = if fixed_x {
-                        translate_origin.x
-                    } else {
-                        translate_origin.x + cursor_movement.x
-                    };
-
-                    translate.vec.y = if fixed_y {
-                        translate_origin.y
-                    } else {
-                        translate_origin.y + cursor_movement.y
-                    };
+                    translate.vec = translate_origin + cursor_movement / 2.0;
 
                     // Resize the entity with the cursor
                     let mut scale = selected_entity.write_component::<Scale2d>().unwrap();
