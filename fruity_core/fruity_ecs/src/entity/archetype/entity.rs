@@ -85,7 +85,7 @@ impl IntrospectObject for Entity {
             FieldInfo {
                 name: "entity_id".to_string(),
                 ty: TypeId::of::<EntityId>(),
-                serializable: false,
+                serializable: true,
                 getter: Arc::new(|this| {
                     this.downcast_ref::<Entity>()
                         .unwrap()

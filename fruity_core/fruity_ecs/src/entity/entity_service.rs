@@ -166,11 +166,33 @@ impl EntityService {
     /// # Arguments
     /// * `entity` - The entity that will be added
     ///
-    pub fn create(&self, name: &str, mut components: Vec<AnyComponent>) -> EntityId {
+    pub fn create(&self, name: &str, components: Vec<AnyComponent>) -> EntityId {
         let entity_id = {
             let mut inner = self.inner.write().unwrap();
             inner.id_incrementer += 1;
             inner.id_incrementer
+        };
+
+        self.create_with_id(entity_id, name, components)
+    }
+
+    /// Add a new entity in the storage
+    /// Create the archetype if it don't exists
+    /// Returns the newly created entity id
+    ///
+    /// # Arguments
+    /// * `entity` - The entity that will be added
+    ///
+    pub fn create_with_id(
+        &self,
+        entity_id: EntityId,
+        name: &str,
+        mut components: Vec<AnyComponent>,
+    ) -> EntityId {
+        let entity_id = {
+            let mut inner = self.inner.write().unwrap();
+            inner.id_incrementer = u64::max(entity_id + 1, inner.id_incrementer);
+            entity_id
         };
 
         components.sort_by(|a, b| a.get_class_name().cmp(&b.get_class_name()));
