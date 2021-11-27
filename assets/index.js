@@ -80,7 +80,7 @@ entityService.create("Image 2", [
 ]);
 
 entityService.create("Camera", [
-    new Translate2d({ vec: new Vector2d({ x: -1.5, y: -1.3 }) }),
+    new Translate2d({ vec: new Vector2d({ x: 0, y: 0 }) }),
     new Scale2d({ vec: new Vector2d({ x: 3, y: 2 }) }),
     new Camera({}),
     // new Velocity({ vel: new Vector2d({ x: 0.05, y: 0.05 }) }),

@@ -19,8 +19,8 @@ pub fn draw_camera(
     entity_service.for_each(
         entity_type!["Transform2d", "Camera"],
         Inject2::new(move |transform: Read<Transform2d>, camera: Read<Camera>| {
-            let bottom_left = transform.transform * Vector2d::new(0.0, 0.0);
-            let top_right = transform.transform * Vector2d::new(1.0, 1.0);
+            let bottom_left = transform.transform * Vector2d::new(-0.5, -0.5);
+            let top_right = transform.transform * Vector2d::new(0.5, 0.5);
 
             let view_proj = Matrix4::from_rect(
                 bottom_left.x,
