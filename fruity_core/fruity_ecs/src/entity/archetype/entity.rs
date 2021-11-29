@@ -13,7 +13,6 @@ use fruity_core::serialize::serialized::Serialized;
 use fruity_core::serialize::Deserialize;
 use fruity_core::signal::Signal;
 use fruity_core::utils::slice::copy;
-use std::any::TypeId;
 use std::sync::Arc;
 
 /// This store all the information that are common accross all entities
@@ -84,7 +83,6 @@ impl IntrospectObject for Entity {
         vec![
             FieldInfo {
                 name: "entity_id".to_string(),
-                ty: TypeId::of::<EntityId>(),
                 serializable: true,
                 getter: Arc::new(|this| {
                     this.downcast_ref::<Entity>()
@@ -105,7 +103,6 @@ impl IntrospectObject for Entity {
             },
             FieldInfo {
                 name: "name".to_string(),
-                ty: TypeId::of::<String>(),
                 serializable: true,
                 getter: Arc::new(|this| {
                     this.downcast_ref::<Entity>()
@@ -126,7 +123,6 @@ impl IntrospectObject for Entity {
             },
             FieldInfo {
                 name: "enabled".to_string(),
-                ty: TypeId::of::<bool>(),
                 serializable: true,
                 getter: Arc::new(|this| {
                     this.downcast_ref::<Entity>()
@@ -147,7 +143,6 @@ impl IntrospectObject for Entity {
             },
             FieldInfo {
                 name: "deleted".to_string(),
-                ty: TypeId::of::<bool>(),
                 serializable: false,
                 getter: Arc::new(|this| {
                     this.downcast_ref::<Entity>()
@@ -168,7 +163,6 @@ impl IntrospectObject for Entity {
             },
             FieldInfo {
                 name: "on_deleted".to_string(),
-                ty: TypeId::of::<Signal<()>>(),
                 serializable: false,
                 getter: Arc::new(|this| {
                     this.downcast_ref::<Entity>()

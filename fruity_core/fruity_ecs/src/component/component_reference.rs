@@ -98,7 +98,6 @@ impl IntrospectObject for ComponentReference {
 
                 FieldInfo {
                     name: field_info.name,
-                    ty: field_info.ty,
                     serializable: field_info.serializable,
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<ComponentReference>().unwrap();

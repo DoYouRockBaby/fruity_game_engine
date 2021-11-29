@@ -5,7 +5,6 @@ use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodInfo;
 use fruity_core::introspect::SetterCaller;
-use fruity_core::serialize::serialized::type_from_serialized_value;
 use fruity_core::serialize::serialized::Serialized;
 use fruity_core::utils::slice::copy;
 use std::collections::HashMap;
@@ -65,14 +64,13 @@ impl IntrospectObject for SerializedComponent {
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         self.fields
             .iter()
-            .map(|(key, field)| {
+            .map(|(key, _)| {
                 let key1 = key.clone();
                 let key2 = key.clone();
 
                 FieldInfo {
                     name: key.clone(),
                     serializable: true,
-                    ty: type_from_serialized_value(field),
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<SerializedComponent>().unwrap();
                         this.fields.get(&key1).unwrap().clone()

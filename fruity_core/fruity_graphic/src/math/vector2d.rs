@@ -13,7 +13,6 @@ use fruity_core::serialize::serialized::Serialized;
 use fruity_core::utils::introspect::cast_introspect_ref;
 use fruity_core::utils::introspect::ArgumentCaster;
 use fruity_ecs::*;
-use std::any::TypeId;
 use std::ops::Add;
 use std::ops::AddAssign;
 use std::ops::Div;
@@ -420,7 +419,6 @@ impl IntrospectObject for Vector2d {
         vec![
             FieldInfo {
                 name: "x".to_string(),
-                ty: TypeId::of::<f32>(),
                 serializable: true,
                 getter: Arc::new(|this| this.downcast_ref::<Vector2d>().unwrap().x.fruity_into()),
                 setter: SetterCaller::Mut(std::sync::Arc::new(|this, value| {
@@ -436,7 +434,6 @@ impl IntrospectObject for Vector2d {
             },
             FieldInfo {
                 name: "y".to_string(),
-                ty: TypeId::of::<f32>(),
                 serializable: true,
                 getter: Arc::new(|this| this.downcast_ref::<Vector2d>().unwrap().y.fruity_into()),
                 setter: SetterCaller::Mut(std::sync::Arc::new(|this, value| {

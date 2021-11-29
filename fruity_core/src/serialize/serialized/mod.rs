@@ -183,30 +183,3 @@ impl Clone for Box<dyn SerializableObject> {
         self.duplicate()
     }
 }
-
-/// Get the rust type id associated with a serialized value
-///
-/// # Arguments
-/// * `serialized` - The serialized value
-///
-// TODO: Complete that
-pub fn type_from_serialized_value(serialized: &Serialized) -> TypeId {
-    match serialized {
-        Serialized::U8(_) => TypeId::of::<u8>(),
-        Serialized::U16(_) => TypeId::of::<u16>(),
-        Serialized::U32(_) => TypeId::of::<u32>(),
-        Serialized::U64(_) => TypeId::of::<u64>(),
-        Serialized::USize(_) => TypeId::of::<usize>(),
-        Serialized::I8(_) => TypeId::of::<i8>(),
-        Serialized::I16(_) => TypeId::of::<i16>(),
-        Serialized::I32(_) => TypeId::of::<i32>(),
-        Serialized::I64(_) => TypeId::of::<i64>(),
-        Serialized::ISize(_) => TypeId::of::<isize>(),
-        Serialized::F32(_) => TypeId::of::<f32>(),
-        Serialized::F64(_) => TypeId::of::<f64>(),
-        Serialized::Bool(_) => TypeId::of::<bool>(),
-        Serialized::String(_) => TypeId::of::<String>(),
-        Serialized::NativeObject(value) => value.deref().type_id(),
-        _ => TypeId::of::<()>(),
-    }
-}

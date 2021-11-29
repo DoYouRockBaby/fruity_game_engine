@@ -15,7 +15,6 @@ use fruity_graphic::resources::shader_resource::ShaderBindingType;
 use fruity_graphic::resources::shader_resource::ShaderBindingVisibility;
 use fruity_graphic::resources::shader_resource::ShaderParams;
 use fruity_graphic::resources::shader_resource::ShaderResource;
-use std::any::TypeId;
 use std::io::Read;
 use std::sync::Arc;
 
@@ -132,7 +131,6 @@ impl IntrospectObject for WgpuShaderResource {
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![FieldInfo {
             name: "params".to_string(),
-            ty: TypeId::of::<ShaderParams>(),
             serializable: true,
             getter: Arc::new(|this| {
                 this.downcast_ref::<WgpuShaderResource>()

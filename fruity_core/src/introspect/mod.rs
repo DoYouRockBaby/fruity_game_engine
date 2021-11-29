@@ -98,9 +98,6 @@ pub struct FieldInfo {
     /// The name of the field
     pub name: String,
 
-    /// The type of the field
-    pub ty: TypeId,
-
     /// If true, this fields will be ignored by serialize
     pub serializable: bool,
 
@@ -173,7 +170,6 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Box<T> {
 
                 FieldInfo {
                     name: field_info.name,
-                    ty: field_info.ty,
                     serializable: field_info.serializable,
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<Box<T>>().unwrap();
@@ -242,7 +238,6 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Arc<T> {
 
                 FieldInfo {
                     name: field_info.name,
-                    ty: field_info.ty,
                     serializable: field_info.serializable,
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<Arc<T>>().unwrap();
@@ -307,7 +302,6 @@ impl<T: IntrospectObject> IntrospectObject for RwLock<T> {
 
                 FieldInfo {
                     name: field_info.name,
-                    ty: field_info.ty,
                     serializable: field_info.serializable,
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<RwLock<T>>().unwrap();

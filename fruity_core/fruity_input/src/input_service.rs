@@ -12,7 +12,6 @@ use fruity_core::settings::Settings;
 use fruity_core::signal::Signal;
 use fruity_core::utils::introspect::cast_introspect_ref;
 use fruity_core::utils::introspect::ArgumentCaster;
-use std::any::TypeId;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::convert::TryFrom;
@@ -154,7 +153,6 @@ impl IntrospectObject for InputService {
         vec![
             FieldInfo {
                 name: "on_pressed".to_string(),
-                ty: TypeId::of::<Signal<String>>(),
                 serializable: false,
                 getter: Arc::new(|this| {
                     this.downcast_ref::<InputService>()
@@ -167,7 +165,6 @@ impl IntrospectObject for InputService {
             },
             FieldInfo {
                 name: "on_released".to_string(),
-                ty: TypeId::of::<Signal<String>>(),
                 serializable: false,
                 getter: Arc::new(|this| {
                     this.downcast_ref::<InputService>()

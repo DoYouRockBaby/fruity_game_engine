@@ -98,7 +98,6 @@ impl<T: IntrospectObject> IntrospectObject for Option<T> {
 
                     FieldInfo {
                         name: field_info.name,
-                        ty: field_info.ty,
                         serializable: false,
                         getter: Arc::new(move |this| {
                             let this = this.downcast_ref::<Option<T>>().unwrap();

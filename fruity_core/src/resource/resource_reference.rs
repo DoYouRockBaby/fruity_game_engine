@@ -85,7 +85,6 @@ impl IntrospectObject for AnyResourceReference {
 
                 FieldInfo {
                     name: field_info.name,
-                    ty: field_info.ty,
                     serializable: false,
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<AnyResourceReference>().unwrap();
@@ -115,7 +114,6 @@ impl IntrospectObject for AnyResourceReference {
 
         fields_infos.append(&mut vec![FieldInfo {
             name: "resource_name".to_string(),
-            ty: TypeId::of::<String>(),
             serializable: true,
             getter: Arc::new(move |this| {
                 let this = this.downcast_ref::<AnyResourceReference>().unwrap();
@@ -258,7 +256,6 @@ impl<T: Resource + ?Sized> IntrospectObject for ResourceReference<T> {
 
                 FieldInfo {
                     name: field_info.name,
-                    ty: field_info.ty,
                     serializable: false,
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<ResourceReference<T>>().unwrap();
@@ -288,7 +285,6 @@ impl<T: Resource + ?Sized> IntrospectObject for ResourceReference<T> {
 
         fields_infos.append(&mut vec![FieldInfo {
             name: "resource_name".to_string(),
-            ty: TypeId::of::<String>(),
             serializable: true,
             getter: Arc::new(move |this| {
                 let this = this.downcast_ref::<ResourceReference<T>>().unwrap();

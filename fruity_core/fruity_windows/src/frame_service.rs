@@ -9,7 +9,6 @@ use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::serialize::serialized::Serialized;
 use fruity_core::utils::introspect::cast_introspect_ref;
-use std::any::TypeId;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::Instant;
@@ -66,7 +65,6 @@ impl IntrospectObject for FrameService {
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![FieldInfo {
             name: "delta".to_string(),
-            ty: TypeId::of::<f32>(),
             serializable: false,
             getter: Arc::new(|this| {
                 this.downcast_ref::<FrameService>()
