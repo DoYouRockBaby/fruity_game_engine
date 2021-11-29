@@ -13,7 +13,6 @@ use crate::serialize::serialized::Serialized;
 use crate::utils::introspect::ArgumentCaster;
 use crate::ResourceContainer;
 use fruity_any::FruityAny;
-use std::any::TypeId;
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::Arc;

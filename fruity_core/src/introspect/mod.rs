@@ -9,7 +9,6 @@ use crate::serialize::serialized::Serialized;
 use crate::ResourceContainer;
 use fruity_any::FruityAny;
 use std::any::Any;
-use std::any::TypeId;
 use std::fmt::Debug;
 use std::ops::Deref;
 use std::ops::DerefMut;

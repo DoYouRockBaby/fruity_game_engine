@@ -18,10 +18,8 @@ pub mod impl_tuples;
 use crate::convert::FruityTryFrom;
 use crate::introspect::IntrospectError;
 use crate::introspect::IntrospectObject;
-use std::any::TypeId;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::ops::Deref;
 use std::sync::Arc;
 use std::sync::RwLock;
 
