@@ -1,9 +1,12 @@
 use crate::GraphicService;
 use crate::WgpuGraphicManager;
 use fruity_any::*;
+use fruity_core::convert::FruityInto;
+use fruity_core::convert::FruityTryFrom;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodInfo;
+use fruity_core::introspect::SetterCaller;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
@@ -12,11 +15,13 @@ use fruity_graphic::resources::shader_resource::ShaderBindingType;
 use fruity_graphic::resources::shader_resource::ShaderBindingVisibility;
 use fruity_graphic::resources::shader_resource::ShaderParams;
 use fruity_graphic::resources::shader_resource::ShaderResource;
+use std::any::TypeId;
 use std::io::Read;
 use std::sync::Arc;
 
 #[derive(Debug, FruityAny)]
 pub struct WgpuShaderResource {
+    pub params: ShaderParams,
     pub shader: wgpu::ShaderModule,
     pub bind_group_layout: wgpu::BindGroupLayout,
 }
@@ -26,7 +31,7 @@ impl WgpuShaderResource {
         device: &wgpu::Device,
         buffer: &str,
         label: &str,
-        params: ShaderParams,
+        params: &ShaderParams,
     ) -> WgpuShaderResource {
         // Create the shader
         let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
@@ -68,6 +73,7 @@ impl WgpuShaderResource {
         });
 
         WgpuShaderResource {
+            params: params.clone(),
             shader,
             bind_group_layout,
         }
@@ -102,7 +108,7 @@ pub fn load_shader(
     let shader_params = load_shader_settings(&settings, resource_container.clone());
 
     // Build the resource
-    let resource = WgpuShaderResource::new(device, &buffer, identifier, shader_params);
+    let resource = WgpuShaderResource::new(device, &buffer, identifier, &shader_params);
 
     // Store the resource
     if let Err(_) = resource_container.add::<dyn ShaderResource>(identifier, Box::new(resource)) {
@@ -124,6 +130,27 @@ impl IntrospectObject for WgpuShaderResource {
     }
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
-        vec![]
+        vec![FieldInfo {
+            name: "params".to_string(),
+            ty: TypeId::of::<ShaderParams>(),
+            serializable: true,
+            getter: Arc::new(|this| {
+                this.downcast_ref::<WgpuShaderResource>()
+                    .unwrap()
+                    .params
+                    .clone()
+                    .fruity_into()
+            }),
+            setter: SetterCaller::Mut(std::sync::Arc::new(|this, value| {
+                let this = this.downcast_mut::<WgpuShaderResource>().unwrap();
+
+                match ShaderParams::fruity_try_from(value) {
+                    Ok(value) => this.params = value,
+                    Err(_) => {
+                        log::error!("Expected a ShaderParams for property params");
+                    }
+                }
+            })),
+        }]
     }
 }

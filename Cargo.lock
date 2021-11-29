@@ -999,6 +999,7 @@ dependencies = [
  "fruity_ecs",
  "fruity_windows",
  "log",
+ "maplit",
  "yaml-rust",
 ]
 

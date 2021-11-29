@@ -49,7 +49,7 @@ let player_entity_id = entityService.create("Player", [
     new Rotate2d({ angle: 0.0 }),
     new Scale2d({ vec: new Vector2d({ x: 0.3, y: 0.3 }) }),
     new Sprite({
-        material: resourceContainer.get("assets/material.material"),
+        material: resourceContainer.get("./assets/material.material"),
         z_index: 10,
     }),
     new Move({ velocity: 0.2 }),
@@ -61,7 +61,7 @@ let image_1 = entityService.create("Image 1", [
     new Translate2d({ vec: new Vector2d({ x: 0.63, y: 0.32 }) }),
     new Scale2d({ vec: new Vector2d({ x: 0.5, y: 0.5 }) }),
     new Sprite({
-        material: resourceContainer.get("assets/material.material"),
+        material: resourceContainer.get("./assets/material.material"),
         z_index: 0,
     }),
     new TestVec({ scale: new Vector2d({ x: 0.5, y: 0.5 }) }),
@@ -73,7 +73,7 @@ entityService.create("Image 2", [
     new Translate2d({ vec: new Vector2d({ x: -0.15, y: 0.05 }) }),
     new Scale2d({ vec: new Vector2d({ x: 0.5, y: 0.5 }) }),
     new Sprite({
-        material: resourceContainer.get("assets/material.material"),
+        material: resourceContainer.get("./assets/material.material"),
         z_index: 1,
     }),
     new Transform2d({}),

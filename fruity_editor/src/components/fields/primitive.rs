@@ -1,3 +1,4 @@
+use crate::components::fields::Serialized;
 use crate::ui_element::display::Text;
 use crate::ui_element::input::Checkbox;
 use crate::ui_element::input::FloatInput;
@@ -10,31 +11,27 @@ use crate::ui_element::UISize;
 use crate::ui_element::UIWidget;
 use fruity_core::convert::FruityInto;
 use fruity_core::convert::FruityTryFrom;
-use fruity_core::introspect::FieldInfo;
-use fruity_core::introspect::SetterCaller;
-use fruity_core::serialize::serialized::SerializableObject;
 use std::sync::Arc;
 
 macro_rules! impl_int_for_editable_component {
     ( $fn_name:ident, $type:ident ) => {
         pub fn $fn_name(
-            introspect: Box<dyn SerializableObject>,
-            field_info: &FieldInfo,
+            name: &str,
+            value: Serialized,
+            on_update: impl Fn(Serialized) + Send + Sync + 'static,
         ) -> UIElement {
-            let value = (field_info.getter)(introspect.as_any_ref());
             let value = if let Ok(value) = $type::fruity_try_from(value) {
                 value
             } else {
                 $type::default()
             };
 
-            let field_info = field_info.clone();
             Row {
                 children: vec![
                     RowItem {
                         size: UISize::Units(40.0),
                         child: Text {
-                            text: field_info.name.to_string(),
+                            text: name.to_string(),
                             ..Default::default()
                         }
                         .elem(),
@@ -44,14 +41,7 @@ macro_rules! impl_int_for_editable_component {
                         child: IntegerInput {
                             value: value as i64,
                             on_change: Arc::new(move |value| {
-                                match &field_info.setter {
-                                    SetterCaller::Const(setter) => setter(
-                                        introspect.as_any_ref(),
-                                        (value as $type).fruity_into(),
-                                    ),
-                                    SetterCaller::Mut(_) => (),
-                                    SetterCaller::None => (),
-                                };
+                                on_update((value as $type).fruity_into());
                             }),
                         }
                         .elem(),
@@ -78,23 +68,22 @@ impl_int_for_editable_component!(draw_editor_isize, isize);
 macro_rules! impl_float_for_editable_component {
     ( $fn_name:ident, $type:ident ) => {
         pub fn $fn_name(
-            introspect: Box<dyn SerializableObject>,
-            field_info: &FieldInfo,
+            name: &str,
+            value: Serialized,
+            on_update: impl Fn(Serialized) + Send + Sync + 'static,
         ) -> UIElement {
-            let value = (field_info.getter)(introspect.as_any_ref());
             let value = if let Ok(value) = $type::fruity_try_from(value) {
                 value
             } else {
                 $type::default()
             };
 
-            let field_info = field_info.clone();
             Row {
                 children: vec![
                     RowItem {
                         size: UISize::Units(40.0),
                         child: Text {
-                            text: field_info.name.to_string(),
+                            text: name.to_string(),
                             ..Default::default()
                         }
                         .elem(),
@@ -104,14 +93,7 @@ macro_rules! impl_float_for_editable_component {
                         child: FloatInput {
                             value: value as f64,
                             on_change: Arc::new(move |value| {
-                                match &field_info.setter {
-                                    SetterCaller::Const(setter) => setter(
-                                        introspect.as_any_ref(),
-                                        (value as $type).fruity_into(),
-                                    ),
-                                    SetterCaller::Mut(_) => (),
-                                    SetterCaller::None => (),
-                                };
+                                on_update((value as $type).fruity_into());
                             }),
                         }
                         .elem(),
@@ -128,49 +110,43 @@ impl_float_for_editable_component!(draw_editor_f32, f32);
 impl_float_for_editable_component!(draw_editor_f64, f64);
 
 pub fn draw_editor_bool(
-    introspect: Box<dyn SerializableObject>,
-    field_info: &FieldInfo,
+    name: &str,
+    value: Serialized,
+    on_update: impl Fn(Serialized) + Send + Sync + 'static,
 ) -> UIElement {
-    let value = (field_info.getter)(introspect.as_any_ref());
     let value = if let Ok(value) = bool::fruity_try_from(value) {
         value
     } else {
         bool::default()
     };
 
-    let field_info = field_info.clone();
     Checkbox {
-        label: field_info.name.to_string(),
+        label: name.to_string(),
         value: value,
         on_change: Arc::new(move |value| {
-            match &field_info.setter {
-                SetterCaller::Const(setter) => setter(introspect.as_any_ref(), value.fruity_into()),
-                SetterCaller::Mut(_) => (),
-                SetterCaller::None => (),
-            };
+            on_update(value.fruity_into());
         }),
     }
     .elem()
 }
 
 pub fn draw_editor_string(
-    introspect: Box<dyn SerializableObject>,
-    field_info: &FieldInfo,
+    name: &str,
+    value: Serialized,
+    on_update: impl Fn(Serialized) + Send + Sync + 'static,
 ) -> UIElement {
-    let value = (field_info.getter)(introspect.as_any_ref());
     let value = if let Ok(value) = String::fruity_try_from(value) {
         value
     } else {
         String::default()
     };
 
-    let field_info = field_info.clone();
     Row {
         children: vec![
             RowItem {
                 size: UISize::Units(40.0),
                 child: Text {
-                    text: field_info.name.to_string(),
+                    text: name.to_string(),
                     ..Default::default()
                 }
                 .elem(),
@@ -181,13 +157,7 @@ pub fn draw_editor_string(
                     placeholder: "".to_string(),
                     value: value,
                     on_change: Arc::new(move |value: &str| {
-                        match &field_info.setter {
-                            SetterCaller::Const(setter) => {
-                                setter(introspect.as_any_ref(), value.to_string().fruity_into())
-                            }
-                            SetterCaller::Mut(_) => (),
-                            SetterCaller::None => (),
-                        };
+                        on_update(value.to_string().fruity_into());
                     }),
                 }
                 .elem(),

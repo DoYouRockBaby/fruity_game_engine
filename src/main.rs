@@ -70,7 +70,7 @@ fn main() {
 
             // Load js script
             resource_container
-                .load_resource_file("assets/index.js", "js")
+                .load_resource_file("./assets/index.js", "js")
                 .unwrap();
 
             // Load entry scene

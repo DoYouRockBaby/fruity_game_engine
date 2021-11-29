@@ -11,21 +11,25 @@ use yaml_rust::YamlLoader;
 
 pub trait MaterialResource: Resource {}
 
+#[derive(Debug, Clone)]
 pub struct MaterialParams {
     pub shader: ResourceReference<dyn ShaderResource>,
     pub binding_groups: Vec<MaterialParamsBindingGroup>,
 }
 
+#[derive(Debug, Clone)]
 pub struct MaterialParamsBindingGroup {
     pub index: u32,
     pub ty: MaterialParamsBindingGroupType,
 }
 
+#[derive(Debug, Clone)]
 pub struct MaterialParamsBinding {
     pub index: u32,
     pub ty: MaterialParamsBindingType,
 }
 
+#[derive(Debug, Clone)]
 pub enum MaterialParamsBindingType {
     Texture {
         texture: ResourceReference<dyn TextureResource>,
@@ -36,6 +40,7 @@ pub enum MaterialParamsBindingType {
     Uniform,
 }
 
+#[derive(Debug, Clone)]
 pub enum MaterialParamsBindingGroupType {
     Camera,
     Custom(Vec<MaterialParamsBinding>),

@@ -1,17 +1,3 @@
-use crate::components::fields::primitive::draw_editor_bool;
-use crate::components::fields::primitive::draw_editor_f32;
-use crate::components::fields::primitive::draw_editor_f64;
-use crate::components::fields::primitive::draw_editor_i16;
-use crate::components::fields::primitive::draw_editor_i32;
-use crate::components::fields::primitive::draw_editor_i64;
-use crate::components::fields::primitive::draw_editor_i8;
-use crate::components::fields::primitive::draw_editor_isize;
-use crate::components::fields::primitive::draw_editor_string;
-use crate::components::fields::primitive::draw_editor_u16;
-use crate::components::fields::primitive::draw_editor_u32;
-use crate::components::fields::primitive::draw_editor_u64;
-use crate::components::fields::primitive::draw_editor_u8;
-use crate::components::fields::primitive::draw_editor_usize;
 use crate::file_explorer_service::FileExplorerService;
 use crate::hooks::declare_global;
 use crate::inspect::inspect_entity::inspect_entity;
@@ -79,24 +65,5 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let mut inspector_service = inspector_service.write();
 
     inspector_service.register_inspect_type(inspect_entity);
-
-    let introspect_editor_service = resource_container.require::<IntrospectEditorService>();
-    let mut introspect_editor_service = introspect_editor_service.write();
-
-    introspect_editor_service.register_field_editor::<i8, _>(draw_editor_i8);
-    introspect_editor_service.register_field_editor::<i16, _>(draw_editor_i16);
-    introspect_editor_service.register_field_editor::<i32, _>(draw_editor_i32);
-    introspect_editor_service.register_field_editor::<i64, _>(draw_editor_i64);
-    introspect_editor_service.register_field_editor::<isize, _>(draw_editor_isize);
-    introspect_editor_service.register_field_editor::<u8, _>(draw_editor_u8);
-    introspect_editor_service.register_field_editor::<u16, _>(draw_editor_u16);
-    introspect_editor_service.register_field_editor::<u32, _>(draw_editor_u32);
-    introspect_editor_service.register_field_editor::<u64, _>(draw_editor_u64);
-    introspect_editor_service.register_field_editor::<usize, _>(draw_editor_usize);
-    introspect_editor_service.register_field_editor::<f32, _>(draw_editor_f32);
-    introspect_editor_service.register_field_editor::<f64, _>(draw_editor_f64);
-    introspect_editor_service.register_field_editor::<bool, _>(draw_editor_bool);
-    introspect_editor_service.register_field_editor::<String, _>(draw_editor_string);
-
     load_default_resources(resource_container);
 }

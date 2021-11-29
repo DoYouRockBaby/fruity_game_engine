@@ -5,6 +5,7 @@ use crate::WgpuGraphicManager;
 use fruity_any::*;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
+use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
@@ -17,7 +18,6 @@ use fruity_graphic::resources::material_resource::MaterialParamsBindingGroupType
 use fruity_graphic::resources::material_resource::MaterialParamsBindingType;
 use fruity_graphic::resources::material_resource::MaterialResource;
 use fruity_graphic::resources::shader_resource::ShaderResource;
-use fruity_core::introspect::MethodInfo;
 use std::collections::HashMap;
 use std::io::Read;
 use std::sync::Arc;
@@ -67,7 +67,7 @@ pub struct WgpuMaterialResource {
 impl WgpuMaterialResource {
     fn new(
         label: &str,
-        material_params: MaterialParams,
+        material_params: &MaterialParams,
         graphic_service: &WgpuGraphicManager,
     ) -> WgpuMaterialResource {
         let surface_config = graphic_service.get_config();
@@ -80,6 +80,7 @@ impl WgpuMaterialResource {
 
         // Create the bind groups
         let bind_groups = material_params
+            .clone()
             .binding_groups
             .into_iter()
             .map(|binding_group| {
@@ -255,7 +256,7 @@ impl WgpuMaterialResource {
         });
 
         WgpuMaterialResource {
-            shader: material_params.shader,
+            shader: material_params.shader.clone(),
             uniform_buffers,
             bind_groups: bind_groups
                 .into_iter()
@@ -311,7 +312,7 @@ pub fn load_material(
     };
 
     // Build the resource
-    let resource = WgpuMaterialResource::new(identifier, material_settings, graphic_service);
+    let resource = WgpuMaterialResource::new(identifier, &material_settings, graphic_service);
 
     // Store the resource
     if let Err(_) =

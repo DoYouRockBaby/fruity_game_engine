@@ -11,8 +11,16 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-pub type IntrospectFieldEditor =
-    Arc<dyn Fn(Box<dyn SerializableObject>, &FieldInfo) -> UIElement + Send + Sync + 'static>;
+pub type IntrospectFieldEditor = Arc<
+    dyn Fn(
+            &str,
+            Box<dyn SerializableObject>,
+            Box<dyn Fn(Box<dyn SerializableObject>) + Send + Sync + 'static>,
+        ) -> UIElement
+        + Send
+        + Sync
+        + 'static,
+>;
 
 #[derive(FruityAny)]
 pub struct IntrospectEditorService {
@@ -29,7 +37,14 @@ impl IntrospectEditorService {
     pub fn register_field_editor<T, F>(&mut self, editor: F)
     where
         T: 'static,
-        F: Fn(Box<dyn SerializableObject>, &FieldInfo) -> UIElement + Send + Sync + 'static,
+        F: Fn(
+                &str,
+                Box<dyn SerializableObject>,
+                Box<dyn Fn(Box<dyn SerializableObject>) + Send + Sync + 'static>,
+            ) -> UIElement
+            + Send
+            + Sync
+            + 'static,
     {
         let editor = Arc::new(editor);
         self.component_field_editors
