@@ -3,9 +3,12 @@ use crate::resources::texture_resource::WgpuTextureResource;
 use crate::GraphicService;
 use crate::WgpuGraphicManager;
 use fruity_any::*;
+use fruity_core::convert::FruityInto;
+use fruity_core::convert::FruityTryFrom;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodInfo;
+use fruity_core::introspect::SetterCaller;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
@@ -58,6 +61,7 @@ pub struct BufferIdentifier(pub u32, pub u32);
 
 #[derive(Debug, FruityAny)]
 pub struct WgpuMaterialResource {
+    pub params: MaterialParams,
     pub shader: ResourceReference<dyn ShaderResource>,
     pub uniform_buffers: HashMap<BufferIdentifier, wgpu::Buffer>,
     pub bind_groups: Vec<(u32, wgpu::BindGroup)>,
@@ -67,19 +71,19 @@ pub struct WgpuMaterialResource {
 impl WgpuMaterialResource {
     fn new(
         label: &str,
-        material_params: &MaterialParams,
+        params: &MaterialParams,
         graphic_service: &WgpuGraphicManager,
     ) -> WgpuMaterialResource {
         let surface_config = graphic_service.get_config();
         let device = graphic_service.get_device();
         let mut uniform_buffers: HashMap<BufferIdentifier, wgpu::Buffer> = HashMap::new();
-        let shader = material_params.shader.clone();
+        let shader = params.shader.clone();
 
         let shader = shader.read();
         let shader = shader.downcast_ref::<WgpuShaderResource>();
 
         // Create the bind groups
-        let bind_groups = material_params
+        let bind_groups = params
             .clone()
             .binding_groups
             .into_iter()
@@ -256,7 +260,8 @@ impl WgpuMaterialResource {
         });
 
         WgpuMaterialResource {
-            shader: material_params.shader.clone(),
+            params: params.clone(),
+            shader: params.shader.clone(),
             uniform_buffers,
             bind_groups: bind_groups
                 .into_iter()
@@ -336,6 +341,26 @@ impl IntrospectObject for WgpuMaterialResource {
     }
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
-        vec![]
+        vec![FieldInfo {
+            name: "params".to_string(),
+            serializable: true,
+            getter: Arc::new(|this| {
+                this.downcast_ref::<WgpuMaterialResource>()
+                    .unwrap()
+                    .params
+                    .clone()
+                    .fruity_into()
+            }),
+            setter: SetterCaller::Mut(std::sync::Arc::new(|this, value| {
+                let this = this.downcast_mut::<WgpuMaterialResource>().unwrap();
+
+                match MaterialParams::fruity_try_from(value) {
+                    Ok(value) => this.params = value,
+                    Err(_) => {
+                        log::error!("Expected a ShaderParams for property params");
+                    }
+                }
+            })),
+        }]
     }
 }
