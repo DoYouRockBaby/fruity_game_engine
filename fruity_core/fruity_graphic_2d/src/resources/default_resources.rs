@@ -1,13 +1,11 @@
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use maplit::hashmap;
-use std::collections::HashMap;
 use std::io::Cursor;
 use std::sync::Arc;
 
 pub fn load_default_resources(resource_container: Arc<ResourceContainer>) {
     load_draw_line_shader(resource_container.clone());
-    load_draw_line_material(resource_container.clone());
 }
 
 pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
@@ -57,29 +55,5 @@ pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
     let mut shader_src = Cursor::new(shader_src);
     resource_container
         .load_resource("Shaders/Draw Line", "wgsl", &mut shader_src, settings)
-        .unwrap();
-}
-
-pub fn load_draw_line_material(resource_container: Arc<ResourceContainer>) {
-    let settings = Settings::Object(HashMap::default());
-
-    let material_src = "
-shader: \"Shaders/Draw Line\"
-binding_groups:
-- type: custom
-  index: 0
-  bindings:
-  - type: uniform
-    index: 0"
-        .to_string();
-
-    let mut material_src = Cursor::new(material_src);
-    resource_container
-        .load_resource(
-            "Materials/Draw Line",
-            "material",
-            &mut material_src,
-            settings,
-        )
         .unwrap();
 }

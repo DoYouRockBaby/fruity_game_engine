@@ -33,6 +33,13 @@
 [X] Run/Pause
 [X] Save/Load
 
+## Graphics
+
+[ ] Material should be a full data, no abstraction over wgpu
+[ ] Material should now be a data field instead a resource
+[ ] Material fields should now be a string identifier
+[ ] Sprite now dimply edit a field of material
+
 ## Game tools
 
 [X] Inputs

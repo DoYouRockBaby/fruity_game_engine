@@ -1,5 +1,4 @@
 use crate::graphic_service::WgpuGraphicManager;
-use crate::resources::material_resource::load_material;
 use crate::resources::shader_resource::load_shader;
 use crate::resources::texture_resource::load_texture;
 use fruity_core::resource::resource_container::ResourceContainer;
@@ -26,5 +25,4 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     resource_container.add_resource_loader("ico", load_texture);
     resource_container.add_resource_loader("tiff", load_texture);
     resource_container.add_resource_loader("wgsl", load_shader);
-    resource_container.add_resource_loader("material", load_material);
 }

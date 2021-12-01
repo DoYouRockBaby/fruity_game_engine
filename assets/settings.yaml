@@ -27,5 +27,3 @@ resources:
   - id: 1
     visibility: fragment
     type: sampler
-- name: "./assets/material.material"
-  path: "./assets/material.material"

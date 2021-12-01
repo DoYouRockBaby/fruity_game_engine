@@ -1,19 +1,9 @@
 use fruity_any::*;
-use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_ecs::*;
-use fruity_graphic::resources::material_resource::MaterialResource;
+use fruity_graphic::math::material::Material;
 
-#[derive(Debug, Clone, Component, FruityAny)]
+#[derive(Debug, Clone, Default, Component, FruityAny)]
 pub struct Sprite {
-    pub material: Option<ResourceReference<dyn MaterialResource>>,
+    pub material: Material,
     pub z_index: usize,
-}
-
-impl Default for Sprite {
-    fn default() -> Self {
-        Self {
-            material: None,
-            z_index: 0,
-        }
-    }
 }

@@ -1,6 +1,7 @@
 use crate::introspect::Constructor;
 use crate::introspect::FieldInfo;
 use crate::introspect::InstantiableObject;
+use crate::introspect::IntrospectError;
 use crate::introspect::IntrospectObject;
 use crate::introspect::MethodCaller;
 use crate::introspect::MethodInfo;
@@ -51,6 +52,24 @@ impl ObjectFactoryService {
     {
         self.factories
             .insert(object_type.to_string(), T::get_constructor());
+    }
+
+    /// Register a new object factory from a function constructor
+    ///
+    /// # Arguments
+    /// * `object_type` - The object type identifier
+    /// * `constructor` - The constructor
+    ///
+    pub fn register_func(
+        &mut self,
+        object_type: &str,
+        constructor: impl Fn(Arc<ResourceContainer>, Vec<Serialized>) -> Result<Serialized, IntrospectError>
+            + Send
+            + Sync
+            + 'static,
+    ) {
+        self.factories
+            .insert(object_type.to_string(), Arc::new(constructor));
     }
 
     /// Instantiate an object from it's factory

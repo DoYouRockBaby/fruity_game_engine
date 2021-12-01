@@ -7,4 +7,5 @@ pub mod single_thread_wrapper;
 /// Provides utility functions to help the implementation of introspection
 pub mod introspect;
 
+/// Utility functions related with [’String’]
 pub mod string;

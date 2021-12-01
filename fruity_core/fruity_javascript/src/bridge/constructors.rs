@@ -62,14 +62,6 @@ pub fn configure_constructors(runtime: &mut JsRuntime, resource_container: Arc<R
                     .filter_map(|index| deserialize_v8(scope, args.get(index)))
                     .collect::<Vec<_>>();
 
-                if deserialized_args.len() != 1 {
-                    log::error!(
-                        "Failed to call method get cause you provided {} arguments, expected 1",
-                        args.length(),
-                    );
-                    return ();
-                }
-
                 // Call the function
                 let result =
                     object_factory_service.instantiate(&object_identifier, deserialized_args);

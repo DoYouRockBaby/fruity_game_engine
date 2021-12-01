@@ -1,7 +1,5 @@
 use crate::file_type::image::get_thumbnail_image;
 use crate::file_type::image::on_selected_image;
-use crate::file_type::material::get_thumbnail_material;
-use crate::file_type::material::on_selected_material;
 use crate::file_type::shader::get_thumbnail_shader;
 use crate::file_type::shader::on_selected_shader;
 use crate::resources::default_resources::load_default_resources;
@@ -26,11 +24,6 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     file_explorer_service.register_file_type("ico", get_thumbnail_image, on_selected_image);
     file_explorer_service.register_file_type("tiff", get_thumbnail_image, on_selected_image);
     file_explorer_service.register_file_type("wgsl", get_thumbnail_shader, on_selected_shader);
-    file_explorer_service.register_file_type(
-        "material",
-        get_thumbnail_material,
-        on_selected_material,
-    );
 
     load_default_resources(resource_container.clone());
 }

@@ -15,15 +15,9 @@ pub fn draw_sprite(
     entity_service.for_each(
         entity_type!["Transform2d", "Sprite"],
         Inject2::new(move |transform: Read<Transform2d>, sprite: Read<Sprite>| {
-            if let Some(material) = &sprite.material {
-                let graphic_2d_service = graphic_2d_service.read();
+            let graphic_2d_service = graphic_2d_service.read();
 
-                graphic_2d_service.draw_square(
-                    transform.transform,
-                    sprite.z_index,
-                    material.clone(),
-                );
-            }
+            graphic_2d_service.draw_square(transform.transform, sprite.z_index, &sprite.material);
         }),
     )
 }

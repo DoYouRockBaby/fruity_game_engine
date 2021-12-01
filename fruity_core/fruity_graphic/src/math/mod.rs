@@ -4,6 +4,7 @@ use fruity_core::settings::Settings;
 use std::convert::TryFrom;
 use std::str::FromStr;
 
+pub mod material;
 pub mod matrix3;
 pub mod matrix4;
 pub mod vector2d;

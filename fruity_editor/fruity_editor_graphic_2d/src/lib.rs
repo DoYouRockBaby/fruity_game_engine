@@ -1,4 +1,3 @@
-use crate::fields::material_reference::draw_editor_material_reference;
 use crate::fields::shader_reference::draw_editor_shader_reference;
 use crate::fields::texture_reference::draw_editor_texture_reference;
 use crate::fields::vector2d::draw_editor_vector_2d;
@@ -11,7 +10,6 @@ use fruity_core::settings::Settings;
 use fruity_ecs::system::system_service::SystemService;
 use fruity_editor::introspect_editor_service::IntrospectEditorService;
 use fruity_graphic::math::vector2d::Vector2d;
-use fruity_graphic::resources::material_resource::MaterialResource;
 use fruity_graphic::resources::shader_resource::ShaderResource;
 use fruity_graphic::resources::texture_resource::TextureResource;
 use std::sync::Arc;
@@ -41,8 +39,5 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     );
     introspect_editor_service.register_field_editor::<ResourceReference<dyn ShaderResource>, _>(
         draw_editor_shader_reference,
-    );
-    introspect_editor_service.register_field_editor::<ResourceReference<dyn MaterialResource>, _>(
-        draw_editor_material_reference,
     );
 }

@@ -6,21 +6,51 @@ use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_graphic::graphic_service::GraphicService;
+use fruity_graphic::math::material::Binding;
+use fruity_graphic::math::material::BindingGroup;
+use fruity_graphic::math::material::Material;
 use fruity_graphic::math::matrix3::Matrix3;
 use fruity_graphic::math::matrix4::Matrix4;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
-use fruity_graphic::resources::material_resource::MaterialResource;
+use fruity_graphic::math::RED;
 use fruity_graphic::resources::shader_resource::ShaderResource;
 use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
 use fruity_wgpu_graphic::graphic_service::WgpuGraphicManager;
-use fruity_wgpu_graphic::resources::material_resource::BufferIdentifier;
-use fruity_wgpu_graphic::resources::material_resource::Vertex;
-use fruity_wgpu_graphic::resources::material_resource::WgpuMaterialResource;
 use fruity_wgpu_graphic::resources::shader_resource::WgpuShaderResource;
+use fruity_wgpu_graphic::resources::texture_resource::WgpuTextureResource;
 use fruity_windows::window_service::WindowService;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct Vertex {
+    pub position: [f32; 3],
+    pub tex_coords: [f32; 2],
+}
+
+impl Vertex {
+    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
+        use std::mem;
+        wgpu::VertexBufferLayout {
+            array_stride: mem::size_of::<Vertex>() as wgpu::BufferAddress,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &[
+                wgpu::VertexAttribute {
+                    offset: 0,
+                    shader_location: 0,
+                    format: wgpu::VertexFormat::Float32x3,
+                },
+                wgpu::VertexAttribute {
+                    offset: mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                    shader_location: 1,
+                    format: wgpu::VertexFormat::Float32x2,
+                },
+            ],
+        }
+    }
+}
 
 #[derive(Debug, FruityAny)]
 pub struct WgpuGraphic2dManager {
@@ -54,17 +84,9 @@ impl Graphic2dService for WgpuGraphic2dManager {
         graphic_service.end_pass();
     }
 
-    fn draw_square(
-        &self,
-        transform: Matrix3,
-        z_index: usize,
-        material: ResourceReference<dyn MaterialResource>,
-    ) {
+    fn draw_square(&self, transform: Matrix3, z_index: usize, material: &Material) {
         let graphic_service = self.graphic_service.read();
         let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
-
-        let material = material.read();
-        let material = material.downcast_ref::<WgpuMaterialResource>();
 
         let device = graphic_service.get_device();
         let config = graphic_service.get_config();
@@ -115,18 +137,26 @@ impl Graphic2dService for WgpuGraphic2dManager {
                 sample_count: 1,
             });
 
-        encoder.set_pipeline(&material.render_pipeline);
-        material.bind_groups.iter().for_each(|(index, bind_group)| {
-            encoder.set_bind_group(*index, &bind_group, &[]);
-        });
-        encoder.set_vertex_buffer(0, vertex_buffer.slice(..));
-        encoder.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-        encoder.draw_indexed(0..num_indices, 0, 0..1);
-        let bundle = encoder.finish(&wgpu::RenderBundleDescriptor {
-            label: Some("main"),
-        });
+        let render_pipeline = self.build_render_pipeline(material);
+        let bind_groups = self.build_bind_groups(material);
 
-        graphic_service.push_render_bundle(bundle, z_index);
+        if let Some(render_pipeline) = render_pipeline {
+            encoder.set_pipeline(&render_pipeline);
+            bind_groups
+                .iter()
+                .enumerate()
+                .for_each(|(index, bind_group)| {
+                    encoder.set_bind_group(index as u32, &bind_group, &[]);
+                });
+            encoder.set_vertex_buffer(0, vertex_buffer.slice(..));
+            encoder.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            encoder.draw_indexed(0..num_indices, 0, 0..1);
+            let bundle = encoder.finish(&wgpu::RenderBundleDescriptor {
+                label: Some("main"),
+            });
+
+            graphic_service.push_render_bundle(bundle, z_index);
+        }
     }
 
     fn draw_line(&self, pos1: Vector2d, pos2: Vector2d, width: u32, color: Color, z_index: usize) {
@@ -134,26 +164,18 @@ impl Graphic2dService for WgpuGraphic2dManager {
         let graphic_service = self.graphic_service.read();
         let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
 
-        let queue = graphic_service.get_queue();
         let device = graphic_service.get_device();
         let config = graphic_service.get_config();
         let camera_transform = graphic_service.get_camera_transform().clone();
         let viewport_size = window_service.get_size().clone();
 
         // Get resources
-        let material = self
-            .resource_container
-            .get::<dyn MaterialResource>("Materials/Draw Line")
-            .unwrap();
-        let material = material.read();
-        let material = material.downcast_ref::<WgpuMaterialResource>();
-
         let shader = self
             .resource_container
             .get::<dyn ShaderResource>("Shaders/Draw Line")
             .unwrap();
-        let shader = shader.read();
-        let shader = shader.downcast_ref::<WgpuShaderResource>();
+        let shader_reader = shader.read();
+        let shader_reader = shader_reader.downcast_ref::<WgpuShaderResource>();
 
         // Calculate the geometry
         let diff = pos2 - pos1;
@@ -199,12 +221,6 @@ impl Graphic2dService for WgpuGraphic2dManager {
         });
 
         // Update material color
-        material.write_buffer(
-            &BufferIdentifier(0, 0),
-            queue,
-            bytemuck::cast_slice(&[color.clone()]),
-        );
-
         let color_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Uniform Buffer"),
             contents: bytemuck::cast_slice(&[color.clone()]),
@@ -213,7 +229,7 @@ impl Graphic2dService for WgpuGraphic2dManager {
 
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Color buffer"),
-            layout: &shader.bind_group_layout,
+            layout: &shader_reader.bind_group_layout,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
                 resource: color_buffer.as_entire_binding(),
@@ -229,7 +245,14 @@ impl Graphic2dService for WgpuGraphic2dManager {
                 sample_count: 1,
             });
 
-        encoder.set_pipeline(&material.render_pipeline);
+        let render_pipeline = self
+            .build_render_pipeline(&Material {
+                shader: Some(shader.clone()),
+                binding_groups: vec![BindingGroup::Custom(vec![Binding::Uniform])],
+            })
+            .unwrap();
+
+        encoder.set_pipeline(&render_pipeline);
         encoder.set_bind_group(0, &bind_group, &[]);
         encoder.set_vertex_buffer(0, vertex_buffer.slice(..));
         encoder.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
@@ -259,6 +282,189 @@ impl Graphic2dService for WgpuGraphic2dManager {
         );
 
         camera_transform.invert() * cursor_pos
+    }
+}
+
+impl WgpuGraphic2dManager {
+    fn build_render_pipeline(&self, material: &Material) -> Option<wgpu::RenderPipeline> {
+        let graphic_service = self.graphic_service.read();
+        let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
+        let device = graphic_service.get_device();
+        let config = graphic_service.get_config();
+
+        let shader = if let Some(shader) = material.shader.as_ref().map(|shader| shader.read()) {
+            shader
+        } else {
+            return None;
+        };
+        let shader = shader.downcast_ref::<WgpuShaderResource>();
+
+        let binding_groups_layout = material
+            .binding_groups
+            .iter()
+            .map(|binding_group| match binding_group {
+                BindingGroup::Camera => graphic_service.get_camera_bind_group_layout(),
+                BindingGroup::Custom(_) => &shader.bind_group_layout,
+            })
+            .collect::<Vec<_>>();
+
+        let render_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: None,
+                bind_group_layouts: &binding_groups_layout,
+                push_constant_ranges: &[],
+            });
+
+        Some(
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: None,
+                layout: Some(&render_pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &shader.shader,
+                    entry_point: "main",
+                    buffers: &[Vertex::desc()],
+                },
+                fragment: Some(wgpu::FragmentState {
+                    module: &shader.shader,
+                    entry_point: "main",
+                    targets: &[wgpu::ColorTargetState {
+                        format: config.format,
+                        blend: Some(wgpu::BlendState {
+                            color: wgpu::BlendComponent::REPLACE,
+                            alpha: wgpu::BlendComponent::REPLACE,
+                        }),
+                        write_mask: wgpu::ColorWrites::ALL,
+                    }],
+                }),
+                primitive: wgpu::PrimitiveState {
+                    topology: wgpu::PrimitiveTopology::TriangleList,
+                    strip_index_format: None,
+                    front_face: wgpu::FrontFace::Ccw,
+                    cull_mode: Some(wgpu::Face::Back),
+                    polygon_mode: wgpu::PolygonMode::Fill,
+                    clamp_depth: false,
+                    conservative: false,
+                },
+                depth_stencil: None,
+                multisample: wgpu::MultisampleState {
+                    count: 1,
+                    ..Default::default()
+                },
+            }),
+        )
+    }
+
+    fn build_bind_groups(&self, material: &Material) -> Vec<wgpu::BindGroup> {
+        let graphic_service = self.graphic_service.read();
+        let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
+        let device = graphic_service.get_device();
+
+        let shader = if let Some(shader) = material.shader.as_ref().map(|shader| shader.read()) {
+            shader
+        } else {
+            return Vec::new();
+        };
+        let shader = shader.downcast_ref::<WgpuShaderResource>();
+
+        material
+            .binding_groups
+            .iter()
+            .map(|binding_group| {
+                match binding_group {
+                    BindingGroup::Camera => device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        layout: &graphic_service.get_camera_bind_group_layout(),
+                        entries: &[wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: graphic_service.get_camera_buffer().as_entire_binding(),
+                        }],
+                        label: Some("camera_bind_group"),
+                    }),
+                    BindingGroup::Custom(bindings) => {
+                        device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            layout: &shader.bind_group_layout,
+                            entries: &bindings
+                                .into_iter()
+                                .enumerate()
+                                .map(|(index, binding)| {
+                                    match binding {
+                                        Binding::Texture(texture) => {
+                                            let texture = texture.read();
+                                            let texture =
+                                                texture.downcast_ref::<WgpuTextureResource>();
+
+                                            // TODO: Find a way to remove it
+                                            let texture = unsafe {
+                                                std::mem::transmute::<
+                                                    &WgpuTextureResource,
+                                                    &WgpuTextureResource,
+                                                >(
+                                                    texture
+                                                )
+                                            };
+
+                                            wgpu::BindGroupEntry {
+                                                binding: index as u32,
+                                                resource: wgpu::BindingResource::TextureView(
+                                                    &texture.view,
+                                                ),
+                                            }
+                                        }
+                                        Binding::Sampler(texture) => {
+                                            let texture = texture.read();
+                                            let texture =
+                                                texture.downcast_ref::<WgpuTextureResource>();
+
+                                            // TODO: Find a way to remove it
+                                            let texture = unsafe {
+                                                std::mem::transmute::<
+                                                    &WgpuTextureResource,
+                                                    &WgpuTextureResource,
+                                                >(
+                                                    texture
+                                                )
+                                            };
+
+                                            wgpu::BindGroupEntry {
+                                                binding: index as u32,
+                                                resource: wgpu::BindingResource::Sampler(
+                                                    &texture.sampler,
+                                                ),
+                                            }
+                                        }
+                                        Binding::Uniform => {
+                                            let color = RED;
+                                            let color_buffer = device.create_buffer_init(
+                                                &wgpu::util::BufferInitDescriptor {
+                                                    label: Some("Uniform Buffer"),
+                                                    contents: bytemuck::cast_slice(
+                                                        &[color.clone()],
+                                                    ),
+                                                    usage: wgpu::BufferUsages::UNIFORM
+                                                        | wgpu::BufferUsages::COPY_DST,
+                                                },
+                                            );
+
+                                            // TODO: Find a way to remove it
+                                            let color_buffer = unsafe {
+                                                std::mem::transmute::<&wgpu::Buffer, &wgpu::Buffer>(
+                                                    &color_buffer,
+                                                )
+                                            };
+
+                                            wgpu::BindGroupEntry {
+                                                binding: 0,
+                                                resource: color_buffer.as_entire_binding(),
+                                            }
+                                        }
+                                    }
+                                })
+                                .collect::<Vec<_>>(),
+                            label: None,
+                        })
+                    }
+                }
+            })
+            .collect::<Vec<_>>()
     }
 }
 
