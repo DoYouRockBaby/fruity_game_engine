@@ -41,6 +41,23 @@ impl AnyResourceReference {
             resource_container,
         }
     }
+
+    /// Get the name of the referenced resource
+    pub fn get_name(&self) -> String {
+        self.name.clone()
+    }
+
+    /// Get the name of the referenced resource
+    pub fn downcast<T: Resource + ?Sized>(&self) -> Option<ResourceReference<T>> {
+        self.resource
+            .clone()
+            .as_any_arc()
+            .downcast::<RwLock<Box<T>>>()
+            .ok()
+            .map(|resource| {
+                ResourceReference::new(&self.name, resource, self.resource_container.clone())
+            })
+    }
 }
 
 impl InstantiableObject for AnyResourceReference {
@@ -190,6 +207,11 @@ impl<T: Resource + ?Sized> ResourceReference<T> {
             resource,
             resource_container,
         }
+    }
+
+    /// Get the name of the referenced resource
+    pub fn get_name(&self) -> String {
+        self.name.clone()
     }
 
     /// Create a read guard over the resource

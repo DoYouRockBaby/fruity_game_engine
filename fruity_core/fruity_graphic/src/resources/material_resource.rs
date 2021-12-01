@@ -343,13 +343,5 @@ impl FruityInto<Serialized> for MaterialParamsBindingGroupType {
                 fields: HashMap::new(),
             },
         }
-
-        /*Serialized::SerializedObject {
-            class_name: "unknown".to_string(),
-            fields: hashmap! {
-                "index".to_string() => self.index.fruity_into(),
-                "type".to_string() => self.ty.fruity_into(),
-            },
-        }*/
     }
 }

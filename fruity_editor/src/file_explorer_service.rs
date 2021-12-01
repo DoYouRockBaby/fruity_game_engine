@@ -5,10 +5,10 @@ use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
+use fruity_core::utils::string::get_file_type_from_path;
 use fruity_graphic::resources::texture_resource::TextureResource;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::path::Path;
 use std::sync::Arc;
 
 struct FileTypeEntry {
@@ -65,7 +65,7 @@ impl FileExplorerService {
 
     // TODO: There should be a way to use the ? without having to do that
     fn inner_notify_selected(&self, file_path: &str) -> Option<()> {
-        let file_type = Self::get_file_type_from_path(file_path)?;
+        let file_type = get_file_type_from_path(file_path)?;
         let file_type = self.file_types.get(&file_type)?;
         (file_type.on_selected)(file_path);
 
@@ -76,14 +76,9 @@ impl FileExplorerService {
         &self,
         file_path: &str,
     ) -> Option<ResourceReference<dyn TextureResource>> {
-        let file_type = Self::get_file_type_from_path(file_path)?;
+        let file_type = get_file_type_from_path(file_path)?;
         let file_type = self.file_types.get(&file_type)?;
         (file_type.get_thumbnail)(file_path)
-    }
-
-    fn get_file_type_from_path(file_path: &str) -> Option<String> {
-        let path = Path::new(file_path);
-        Some(path.extension()?.to_str()?.to_string())
     }
 }
 
