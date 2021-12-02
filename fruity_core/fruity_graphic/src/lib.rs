@@ -2,7 +2,6 @@ use crate::math::material::camera_binding_group_constructor;
 use crate::math::material::custom_binding_group_constructor;
 use crate::math::material::sampler_binding_constructor;
 use crate::math::material::texture_binding_constructor;
-use crate::math::material::uniform_binding_constructor;
 use crate::math::material::Material;
 use crate::math::matrix3::Matrix3;
 use crate::math::matrix4::Matrix4;
@@ -29,5 +28,4 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     object_factory_service.register_func("CustomBindingGroup", custom_binding_group_constructor);
     object_factory_service.register_func("TextureBinding", texture_binding_constructor);
     object_factory_service.register_func("SamplerBinding", sampler_binding_constructor);
-    object_factory_service.register_func("UniformBinding", uniform_binding_constructor);
 }

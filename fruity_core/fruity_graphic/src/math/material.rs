@@ -125,12 +125,12 @@ impl FruityInto<Serialized> for BindingGroup {
 pub enum Binding {
     Texture(ResourceReference<dyn TextureResource>),
     Sampler(ResourceReference<dyn TextureResource>),
-    Uniform,
+    None,
 }
 
 impl Default for Binding {
     fn default() -> Self {
-        Self::Uniform
+        Self::None
     }
 }
 
@@ -152,13 +152,6 @@ pub fn sampler_binding_constructor(
     let arg1 = caster.cast_next::<ResourceReference<dyn TextureResource>>()?;
 
     Ok(Serialized::NativeObject(Box::new(Binding::Sampler(arg1))))
-}
-
-pub fn uniform_binding_constructor(
-    _: Arc<ResourceContainer>,
-    _: Vec<Serialized>,
-) -> Result<Serialized, IntrospectError> {
-    Ok(Serialized::NativeObject(Box::new(Binding::Uniform)))
 }
 
 // TODO: Complete that

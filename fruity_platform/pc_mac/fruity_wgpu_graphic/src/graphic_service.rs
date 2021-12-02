@@ -33,7 +33,6 @@ pub struct State {
     pub rendering_view: wgpu::TextureView,
     pub camera_transform: Matrix4,
     pub camera_buffer: wgpu::Buffer,
-    pub camera_bind_group_layout: wgpu::BindGroupLayout,
 }
 
 #[derive(Debug)]
@@ -164,7 +163,7 @@ impl WgpuGraphicManager {
                 .create_view(&wgpu::TextureViewDescriptor::default());
 
             // Create camera bind group
-            let (camera_buffer, camera_bind_group_layout) = Self::initialize_camera(&device);
+            let camera_buffer = Self::initialize_camera(&device);
 
             // Update state
             State {
@@ -175,7 +174,6 @@ impl WgpuGraphicManager {
                 rendering_view,
                 camera_transform: Matrix4::identity(),
                 camera_buffer,
-                camera_bind_group_layout,
             }
         };
 
@@ -219,11 +217,7 @@ impl WgpuGraphicManager {
         self.current_encoder.as_ref()
     }
 
-    pub fn get_camera_bind_group_layout(&self) -> &wgpu::BindGroupLayout {
-        &self.state.camera_bind_group_layout
-    }
-
-    fn initialize_camera(device: &wgpu::Device) -> (wgpu::Buffer, wgpu::BindGroupLayout) {
+    fn initialize_camera(device: &wgpu::Device) -> wgpu::Buffer {
         let camera_uniform = CameraUniform(Matrix4::identity().into());
 
         let camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -232,22 +226,7 @@ impl WgpuGraphicManager {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
-        let camera_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                entries: &[wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                }],
-                label: Some("camera_bind_group_layout"),
-            });
-
-        (camera_buffer, camera_bind_group_layout)
+        camera_buffer
     }
 }
 

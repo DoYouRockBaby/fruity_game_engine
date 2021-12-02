@@ -24,6 +24,7 @@ use std::sync::Arc;
 #[derive(Debug, FruityAny)]
 pub struct WgpuShaderResource {
     pub params: ShaderParams,
+    pub shader_module: wgpu::ShaderModule,
     pub render_pipeline: wgpu::RenderPipeline,
     pub binding_groups_layout: Vec<wgpu::BindGroupLayout>,
 }
@@ -37,7 +38,7 @@ impl WgpuShaderResource {
         params: &ShaderParams,
     ) -> WgpuShaderResource {
         // Create the shader
-        let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+        let shader_module = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
             label: Some(label),
             source: wgpu::ShaderSource::Wgsl(buffer.into()),
         });
@@ -50,7 +51,7 @@ impl WgpuShaderResource {
 
         let render_pipeline = Self::build_render_pipeline(
             &binding_groups_layout,
-            &shader,
+            &shader_module,
             label,
             device,
             surface_config,
@@ -58,6 +59,7 @@ impl WgpuShaderResource {
 
         WgpuShaderResource {
             params: params.clone(),
+            shader_module,
             render_pipeline,
             binding_groups_layout,
         }
@@ -65,14 +67,14 @@ impl WgpuShaderResource {
 
     fn build_render_pipeline(
         binding_groups_layout: &[wgpu::BindGroupLayout],
-        shader: &wgpu::ShaderModule,
+        shader_module: &wgpu::ShaderModule,
         label: &str,
         device: &wgpu::Device,
         surface_config: &wgpu::SurfaceConfiguration,
     ) -> wgpu::RenderPipeline {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: None,
+                label: Some(label),
                 bind_group_layouts: &binding_groups_layout.iter().collect::<Vec<_>>(),
                 push_constant_ranges: &[],
             });
@@ -81,12 +83,12 @@ impl WgpuShaderResource {
             label: Some(label),
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
-                module: &shader,
+                module: &shader_module,
                 entry_point: "main",
                 buffers: &[Vertex::desc()],
             },
             fragment: Some(wgpu::FragmentState {
-                module: &shader,
+                module: &shader_module,
                 entry_point: "main",
                 targets: &[wgpu::ColorTargetState {
                     format: surface_config.format,

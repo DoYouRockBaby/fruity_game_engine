@@ -13,7 +13,6 @@ use fruity_graphic::math::matrix3::Matrix3;
 use fruity_graphic::math::matrix4::Matrix4;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
-use fruity_graphic::math::RED;
 use fruity_graphic::resources::shader_resource::ShaderResource;
 use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
 use fruity_wgpu_graphic::graphic_service::WgpuGraphicManager;
@@ -111,6 +110,8 @@ impl Graphic2dService for WgpuGraphic2dManager {
             usage: wgpu::BufferUsages::INDEX,
         });
 
+        let bind_groups = self.build_bind_groups(material);
+
         let mut encoder =
             device.create_render_bundle_encoder(&wgpu::RenderBundleEncoderDescriptor {
                 label: Some("draw_square_bundle"),
@@ -118,8 +119,6 @@ impl Graphic2dService for WgpuGraphic2dManager {
                 depth_stencil: None,
                 sample_count: 1,
             });
-
-        let bind_groups = self.build_bind_groups(material);
 
         encoder.set_pipeline(&shader_reader.render_pipeline);
         bind_groups
@@ -277,7 +276,7 @@ impl WgpuGraphic2dManager {
             .map(|(index, binding_group)| {
                 match binding_group {
                     BindingGroup::Camera => device.create_bind_group(&wgpu::BindGroupDescriptor {
-                        layout: &graphic_service.get_camera_bind_group_layout(),
+                        layout: &shader.binding_groups_layout.get(index).unwrap(),
                         entries: &[wgpu::BindGroupEntry {
                             binding: 0,
                             resource: graphic_service.get_camera_buffer().as_entire_binding(),
@@ -291,7 +290,7 @@ impl WgpuGraphic2dManager {
                             entries: &bindings
                                 .into_iter()
                                 .enumerate()
-                                .map(|(index, binding)| {
+                                .filter_map(|(index, binding)| {
                                     match binding {
                                         Binding::Texture(texture) => {
                                             let texture = texture.read();
@@ -308,12 +307,12 @@ impl WgpuGraphic2dManager {
                                                 )
                                             };
 
-                                            wgpu::BindGroupEntry {
+                                            Some(wgpu::BindGroupEntry {
                                                 binding: index as u32,
                                                 resource: wgpu::BindingResource::TextureView(
                                                     &texture.view,
                                                 ),
-                                            }
+                                            })
                                         }
                                         Binding::Sampler(texture) => {
                                             let texture = texture.read();
@@ -330,38 +329,14 @@ impl WgpuGraphic2dManager {
                                                 )
                                             };
 
-                                            wgpu::BindGroupEntry {
+                                            Some(wgpu::BindGroupEntry {
                                                 binding: index as u32,
                                                 resource: wgpu::BindingResource::Sampler(
                                                     &texture.sampler,
                                                 ),
-                                            }
+                                            })
                                         }
-                                        Binding::Uniform => {
-                                            let color = RED;
-                                            let color_buffer = device.create_buffer_init(
-                                                &wgpu::util::BufferInitDescriptor {
-                                                    label: Some("Uniform Buffer"),
-                                                    contents: bytemuck::cast_slice(
-                                                        &[color.clone()],
-                                                    ),
-                                                    usage: wgpu::BufferUsages::UNIFORM
-                                                        | wgpu::BufferUsages::COPY_DST,
-                                                },
-                                            );
-
-                                            // TODO: Find a way to remove it
-                                            let color_buffer = unsafe {
-                                                std::mem::transmute::<&wgpu::Buffer, &wgpu::Buffer>(
-                                                    &color_buffer,
-                                                )
-                                            };
-
-                                            wgpu::BindGroupEntry {
-                                                binding: 0,
-                                                resource: color_buffer.as_entire_binding(),
-                                            }
-                                        }
+                                        Binding::None => None,
                                     }
                                 })
                                 .collect::<Vec<_>>(),
