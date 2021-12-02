@@ -17,40 +17,12 @@ use fruity_graphic::math::RED;
 use fruity_graphic::resources::shader_resource::ShaderResource;
 use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
 use fruity_wgpu_graphic::graphic_service::WgpuGraphicManager;
+use fruity_wgpu_graphic::math::vertex::Vertex;
 use fruity_wgpu_graphic::resources::shader_resource::WgpuShaderResource;
 use fruity_wgpu_graphic::resources::texture_resource::WgpuTextureResource;
 use fruity_windows::window_service::WindowService;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct Vertex {
-    pub position: [f32; 3],
-    pub tex_coords: [f32; 2],
-}
-
-impl Vertex {
-    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
-        use std::mem;
-        wgpu::VertexBufferLayout {
-            array_stride: mem::size_of::<Vertex>() as wgpu::BufferAddress,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &[
-                wgpu::VertexAttribute {
-                    offset: 0,
-                    shader_location: 0,
-                    format: wgpu::VertexFormat::Float32x3,
-                },
-                wgpu::VertexAttribute {
-                    offset: mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
-                    shader_location: 1,
-                    format: wgpu::VertexFormat::Float32x2,
-                },
-            ],
-        }
-    }
-}
 
 #[derive(Debug, FruityAny)]
 pub struct WgpuGraphic2dManager {
@@ -90,6 +62,16 @@ impl Graphic2dService for WgpuGraphic2dManager {
 
         let device = graphic_service.get_device();
         let config = graphic_service.get_config();
+
+        // Get resources
+        let shader = if let Some(shader) = &material.shader {
+            shader
+        } else {
+            return;
+        };
+
+        let shader_reader = shader.read();
+        let shader_reader = shader_reader.downcast_ref::<WgpuShaderResource>();
 
         // Create the main render pipeline
         let bottom_left = transform * Vector2d::new(-0.5, -0.5);
@@ -137,26 +119,23 @@ impl Graphic2dService for WgpuGraphic2dManager {
                 sample_count: 1,
             });
 
-        let render_pipeline = self.build_render_pipeline(material);
         let bind_groups = self.build_bind_groups(material);
 
-        if let Some(render_pipeline) = render_pipeline {
-            encoder.set_pipeline(&render_pipeline);
-            bind_groups
-                .iter()
-                .enumerate()
-                .for_each(|(index, bind_group)| {
-                    encoder.set_bind_group(index as u32, &bind_group, &[]);
-                });
-            encoder.set_vertex_buffer(0, vertex_buffer.slice(..));
-            encoder.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-            encoder.draw_indexed(0..num_indices, 0, 0..1);
-            let bundle = encoder.finish(&wgpu::RenderBundleDescriptor {
-                label: Some("main"),
+        encoder.set_pipeline(&shader_reader.render_pipeline);
+        bind_groups
+            .iter()
+            .enumerate()
+            .for_each(|(index, bind_group)| {
+                encoder.set_bind_group(index as u32, &bind_group, &[]);
             });
+        encoder.set_vertex_buffer(0, vertex_buffer.slice(..));
+        encoder.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+        encoder.draw_indexed(0..num_indices, 0, 0..1);
+        let bundle = encoder.finish(&wgpu::RenderBundleDescriptor {
+            label: Some("main"),
+        });
 
-            graphic_service.push_render_bundle(bundle, z_index);
-        }
+        graphic_service.push_render_bundle(bundle, z_index);
     }
 
     fn draw_line(&self, pos1: Vector2d, pos2: Vector2d, width: u32, color: Color, z_index: usize) {
@@ -229,7 +208,7 @@ impl Graphic2dService for WgpuGraphic2dManager {
 
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Color buffer"),
-            layout: &shader_reader.bind_group_layout,
+            layout: &shader_reader.binding_groups_layout.get(0).unwrap(),
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
                 resource: color_buffer.as_entire_binding(),
@@ -245,14 +224,7 @@ impl Graphic2dService for WgpuGraphic2dManager {
                 sample_count: 1,
             });
 
-        let render_pipeline = self
-            .build_render_pipeline(&Material {
-                shader: Some(shader.clone()),
-                binding_groups: vec![BindingGroup::Custom(vec![Binding::Uniform])],
-            })
-            .unwrap();
-
-        encoder.set_pipeline(&render_pipeline);
+        encoder.set_pipeline(&shader_reader.render_pipeline);
         encoder.set_bind_group(0, &bind_group, &[]);
         encoder.set_vertex_buffer(0, vertex_buffer.slice(..));
         encoder.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
@@ -286,74 +258,6 @@ impl Graphic2dService for WgpuGraphic2dManager {
 }
 
 impl WgpuGraphic2dManager {
-    fn build_render_pipeline(&self, material: &Material) -> Option<wgpu::RenderPipeline> {
-        let graphic_service = self.graphic_service.read();
-        let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
-        let device = graphic_service.get_device();
-        let config = graphic_service.get_config();
-
-        let shader = if let Some(shader) = material.shader.as_ref().map(|shader| shader.read()) {
-            shader
-        } else {
-            return None;
-        };
-        let shader = shader.downcast_ref::<WgpuShaderResource>();
-
-        let binding_groups_layout = material
-            .binding_groups
-            .iter()
-            .map(|binding_group| match binding_group {
-                BindingGroup::Camera => graphic_service.get_camera_bind_group_layout(),
-                BindingGroup::Custom(_) => &shader.bind_group_layout,
-            })
-            .collect::<Vec<_>>();
-
-        let render_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: None,
-                bind_group_layouts: &binding_groups_layout,
-                push_constant_ranges: &[],
-            });
-
-        Some(
-            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: None,
-                layout: Some(&render_pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &shader.shader,
-                    entry_point: "main",
-                    buffers: &[Vertex::desc()],
-                },
-                fragment: Some(wgpu::FragmentState {
-                    module: &shader.shader,
-                    entry_point: "main",
-                    targets: &[wgpu::ColorTargetState {
-                        format: config.format,
-                        blend: Some(wgpu::BlendState {
-                            color: wgpu::BlendComponent::REPLACE,
-                            alpha: wgpu::BlendComponent::REPLACE,
-                        }),
-                        write_mask: wgpu::ColorWrites::ALL,
-                    }],
-                }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
-                    strip_index_format: None,
-                    front_face: wgpu::FrontFace::Ccw,
-                    cull_mode: Some(wgpu::Face::Back),
-                    polygon_mode: wgpu::PolygonMode::Fill,
-                    clamp_depth: false,
-                    conservative: false,
-                },
-                depth_stencil: None,
-                multisample: wgpu::MultisampleState {
-                    count: 1,
-                    ..Default::default()
-                },
-            }),
-        )
-    }
-
     fn build_bind_groups(&self, material: &Material) -> Vec<wgpu::BindGroup> {
         let graphic_service = self.graphic_service.read();
         let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
@@ -369,7 +273,8 @@ impl WgpuGraphic2dManager {
         material
             .binding_groups
             .iter()
-            .map(|binding_group| {
+            .enumerate()
+            .map(|(index, binding_group)| {
                 match binding_group {
                     BindingGroup::Camera => device.create_bind_group(&wgpu::BindGroupDescriptor {
                         layout: &graphic_service.get_camera_bind_group_layout(),
@@ -381,7 +286,8 @@ impl WgpuGraphic2dManager {
                     }),
                     BindingGroup::Custom(bindings) => {
                         device.create_bind_group(&wgpu::BindGroupDescriptor {
-                            layout: &shader.bind_group_layout,
+                            // TODO: Error message in case the material don't match the shader
+                            layout: &shader.binding_groups_layout.get(index).unwrap(),
                             entries: &bindings
                                 .into_iter()
                                 .enumerate()

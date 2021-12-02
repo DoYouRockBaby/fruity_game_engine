@@ -20,10 +20,10 @@ resources:
   type: texture
 - name: "./assets/shader.wgsl"
   path: "./assets/shader.wgsl"
-  bindings:
-  - id: 0
-    visibility: fragment
-    type: texture
-  - id: 1
-    visibility: fragment
-    type: sampler
+  binding_groups:
+  - - visibility: fragment
+      type: texture
+    - visibility: fragment
+      type: sampler
+  - - visibility: vertex
+      type: uniform

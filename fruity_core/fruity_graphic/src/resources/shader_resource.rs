@@ -3,16 +3,113 @@ use fruity_core::convert::FruityInto;
 use fruity_core::convert::FruityTryFrom;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
+use fruity_core::serialize::serialized::SerializableObject;
 use fruity_core::serialize::serialized::Serialized;
 use fruity_core::settings::Settings;
-use maplit::hashmap;
+use fruity_ecs::*;
 use std::sync::Arc;
 
 pub trait ShaderResource: Resource {}
 
-#[derive(Debug, Clone, FruityAny)]
+#[derive(Debug, Default, Clone, FruityAny, IntrospectObject, InstantiableObject)]
 pub struct ShaderParams {
+    pub binding_groups: Vec<ShaderBindingGroup>,
+}
+
+impl SerializableObject for ShaderParams {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
+    }
+}
+
+impl FruityTryFrom<Serialized> for ShaderParams {
+    type Error = String;
+
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::NativeObject(value) => {
+                match value.as_any_box().downcast::<ShaderParams>() {
+                    Ok(value) => Ok(*value),
+                    Err(_) => Err(format!("Couldn't convert a ShaderParams to native object")),
+                }
+            }
+            _ => Err(format!("Couldn't convert {:?} to native object", value)),
+        }
+    }
+}
+
+impl FruityInto<Serialized> for ShaderParams {
+    fn fruity_into(self) -> Serialized {
+        Serialized::NativeObject(Box::new(self))
+    }
+}
+
+#[derive(Debug, Default, Clone, FruityAny, IntrospectObject, InstantiableObject)]
+pub struct ShaderBindingGroup {
     pub bindings: Vec<ShaderBinding>,
+}
+
+impl SerializableObject for ShaderBindingGroup {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
+    }
+}
+
+impl FruityTryFrom<Serialized> for ShaderBindingGroup {
+    type Error = String;
+
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::NativeObject(value) => {
+                match value.as_any_box().downcast::<ShaderBindingGroup>() {
+                    Ok(value) => Ok(*value),
+                    Err(_) => Err(format!(
+                        "Couldn't convert a ShaderBindingGroup to native object"
+                    )),
+                }
+            }
+            _ => Err(format!("Couldn't convert {:?} to native object", value)),
+        }
+    }
+}
+
+impl FruityInto<Serialized> for ShaderBindingGroup {
+    fn fruity_into(self) -> Serialized {
+        Serialized::NativeObject(Box::new(self))
+    }
+}
+
+#[derive(Debug, Default, Clone, FruityAny, IntrospectObject, InstantiableObject)]
+pub struct ShaderBinding {
+    pub visibility: ShaderBindingVisibility,
+    pub ty: ShaderBindingType,
+}
+
+impl SerializableObject for ShaderBinding {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
+    }
+}
+
+impl FruityTryFrom<Serialized> for ShaderBinding {
+    type Error = String;
+
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::NativeObject(value) => match value.as_any_box().downcast::<ShaderBinding>()
+            {
+                Ok(value) => Ok(*value),
+                Err(_) => Err(format!("Couldn't convert a ShaderBinding to native object")),
+            },
+            _ => Err(format!("Couldn't convert {:?} to native object", value)),
+        }
+    }
+}
+
+impl FruityInto<Serialized> for ShaderBinding {
+    fn fruity_into(self) -> Serialized {
+        Serialized::NativeObject(Box::new(self))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -24,108 +121,6 @@ pub enum ShaderBindingVisibility {
 impl Default for ShaderBindingVisibility {
     fn default() -> Self {
         ShaderBindingVisibility::Vertex
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum ShaderBindingType {
-    Texture,
-    Sampler,
-    Uniform,
-}
-
-impl Default for ShaderBindingType {
-    fn default() -> Self {
-        ShaderBindingType::Texture
-    }
-}
-
-#[derive(Debug, Clone, FruityAny)]
-pub struct ShaderBinding {
-    pub id: u32,
-    pub visibility: ShaderBindingVisibility,
-    pub ty: ShaderBindingType,
-}
-
-pub fn load_shader_settings(
-    settings: &Settings,
-    _resource_container: Arc<ResourceContainer>,
-) -> ShaderParams {
-    let bindings = settings.get::<Vec<Settings>>("bindings", Vec::new());
-    let bindings = bindings
-        .iter()
-        .map(|params| ShaderBinding {
-            id: params.get::<u32>("id", 0),
-            visibility: match &params.get::<String>("visibility", String::default()) as &str {
-                "vertex" => ShaderBindingVisibility::Vertex,
-                "fragment" => ShaderBindingVisibility::Fragment,
-                _ => ShaderBindingVisibility::default(),
-            },
-            ty: match &params.get::<String>("type", String::default()) as &str {
-                "texture" => ShaderBindingType::Texture,
-                "sampler" => ShaderBindingType::Sampler,
-                "uniform" => ShaderBindingType::Uniform,
-                _ => ShaderBindingType::default(),
-            },
-        })
-        .collect::<Vec<_>>();
-
-    ShaderParams { bindings }
-}
-
-impl FruityTryFrom<Serialized> for ShaderParams {
-    type Error = String;
-
-    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
-        if let Serialized::SerializedObject { fields, .. } = value {
-            Ok(ShaderParams {
-                bindings: Vec::<ShaderBinding>::fruity_try_from(fields.get("bindings"))
-                    .unwrap_or_default(),
-            })
-        } else {
-            Err(format!("Couldn't convert {:?} to object", value))
-        }
-    }
-}
-
-impl FruityInto<Serialized> for ShaderParams {
-    fn fruity_into(self) -> Serialized {
-        Serialized::SerializedObject {
-            class_name: "unknown".to_string(),
-            fields: hashmap! {
-                "bindings".to_string() => self.bindings.fruity_into(),
-            },
-        }
-    }
-}
-
-impl FruityTryFrom<Serialized> for ShaderBinding {
-    type Error = String;
-
-    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
-        if let Serialized::SerializedObject { fields, .. } = value {
-            Ok(ShaderBinding {
-                id: u32::fruity_try_from(fields.get("id")).unwrap_or_default(),
-                visibility: ShaderBindingVisibility::fruity_try_from(fields.get("visibility"))
-                    .unwrap_or_default(),
-                ty: ShaderBindingType::fruity_try_from(fields.get("type")).unwrap_or_default(),
-            })
-        } else {
-            Err(format!("Couldn't convert {:?} to object", value))
-        }
-    }
-}
-
-impl FruityInto<Serialized> for ShaderBinding {
-    fn fruity_into(self) -> Serialized {
-        Serialized::SerializedObject {
-            class_name: "unknown".to_string(),
-            fields: hashmap! {
-                "id".to_string() => self.id.fruity_into(),
-                "visibility".to_string() => self.visibility.fruity_into(),
-                "type".to_string() => self.ty.fruity_into(),
-            },
-        }
     }
 }
 
@@ -163,6 +158,19 @@ impl FruityInto<Serialized> for ShaderBindingVisibility {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum ShaderBindingType {
+    Texture,
+    Sampler,
+    Uniform,
+}
+
+impl Default for ShaderBindingType {
+    fn default() -> Self {
+        ShaderBindingType::Texture
+    }
+}
+
 impl FruityTryFrom<Serialized> for ShaderBindingType {
     type Error = String;
 
@@ -191,4 +199,48 @@ impl FruityInto<Serialized> for ShaderBindingType {
             .to_string(),
         )
     }
+}
+
+pub fn load_shader_settings(
+    settings: &Settings,
+    _resource_container: Arc<ResourceContainer>,
+) -> ShaderParams {
+    let binding_groups = settings.get::<Vec<Settings>>("binding_groups", Vec::new());
+    let binding_groups = binding_groups
+        .iter()
+        .filter_map(|params| {
+            if let Settings::Array(params) = params {
+                Some(params)
+            } else {
+                None
+            }
+        })
+        .map(|params| load_shader_binding_group_settings(params, _resource_container.clone()))
+        .collect::<Vec<_>>();
+
+    ShaderParams { binding_groups }
+}
+
+pub fn load_shader_binding_group_settings(
+    settings: &Vec<Settings>,
+    _resource_container: Arc<ResourceContainer>,
+) -> ShaderBindingGroup {
+    let bindings = settings
+        .iter()
+        .map(|params| ShaderBinding {
+            visibility: match &params.get::<String>("visibility", String::default()) as &str {
+                "vertex" => ShaderBindingVisibility::Vertex,
+                "fragment" => ShaderBindingVisibility::Fragment,
+                _ => ShaderBindingVisibility::default(),
+            },
+            ty: match &params.get::<String>("type", String::default()) as &str {
+                "texture" => ShaderBindingType::Texture,
+                "sampler" => ShaderBindingType::Sampler,
+                "uniform" => ShaderBindingType::Uniform,
+                _ => ShaderBindingType::default(),
+            },
+        })
+        .collect::<Vec<_>>();
+
+    ShaderBindingGroup { bindings }
 }

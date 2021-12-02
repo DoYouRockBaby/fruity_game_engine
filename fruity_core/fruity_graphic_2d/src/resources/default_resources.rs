@@ -10,12 +10,13 @@ pub fn load_default_resources(resource_container: Arc<ResourceContainer>) {
 
 pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
     let settings = Settings::Object(hashmap! {
-        "bindings".to_string() => Settings::Array(vec![
-            Settings::Object(hashmap!{
-                "id".to_string() => Settings::I64(0),
-                "visibility".to_string() => Settings::String("vertex".to_string()),
-                "type".to_string() => Settings::String("uniform".to_string()),
-            })
+        "binding_groups".to_string() => Settings::Array(vec![
+            Settings::Array(vec![
+                Settings::Object(hashmap!{
+                    "visibility".to_string() => Settings::String("vertex".to_string()),
+                    "type".to_string() => Settings::String("uniform".to_string()),
+                })
+            ])
         ])
     });
 

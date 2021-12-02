@@ -7,6 +7,7 @@ use fruity_graphic::graphic_service::GraphicService;
 use std::sync::Arc;
 
 pub mod graphic_service;
+pub mod math;
 pub mod resources;
 
 // #[no_mangle]
