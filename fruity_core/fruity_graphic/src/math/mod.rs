@@ -1,10 +1,10 @@
 use bytemuck::{Pod, Zeroable};
 use css_color_parser::Color as CssColor;
+use fruity_core::convert::FruityTryFrom;
 use fruity_core::settings::Settings;
-use std::convert::TryFrom;
 use std::str::FromStr;
 
-pub mod material;
+pub mod material_reference;
 pub mod matrix3;
 pub mod matrix4;
 pub mod vector2d;
@@ -30,10 +30,10 @@ impl FromStr for Color {
     }
 }
 
-impl TryFrom<Settings> for Color {
+impl FruityTryFrom<Settings> for Color {
     type Error = String;
 
-    fn try_from(value: Settings) -> Result<Self, Self::Error> {
+    fn fruity_try_from(value: Settings) -> Result<Self, Self::Error> {
         match value {
             Settings::String(value) => Color::from_str(&value),
             _ => Err(format!("Couldn't convert {:?} to Color", value)),

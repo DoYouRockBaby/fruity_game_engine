@@ -7,6 +7,7 @@ use fruity_ecs::entity::entity_query::Inject2;
 use fruity_ecs::entity::entity_query::Read;
 use fruity_ecs::entity::entity_service::EntityService;
 use fruity_ecs::entity_type;
+use std::ops::Deref;
 
 pub fn draw_sprite(
     entity_service: Const<EntityService>,
@@ -17,7 +18,13 @@ pub fn draw_sprite(
         Inject2::new(move |transform: Read<Transform2d>, sprite: Read<Sprite>| {
             let graphic_2d_service = graphic_2d_service.read();
 
-            graphic_2d_service.draw_square(transform.transform, sprite.z_index, &sprite.material);
+            if let Some(material) = &sprite.material {
+                graphic_2d_service.draw_square(
+                    transform.transform,
+                    sprite.z_index,
+                    material.deref(),
+                );
+            }
         }),
     )
 }

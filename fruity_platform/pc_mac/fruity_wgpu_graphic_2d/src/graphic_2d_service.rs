@@ -6,9 +6,7 @@ use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_graphic::graphic_service::GraphicService;
-use fruity_graphic::math::material::Binding;
-use fruity_graphic::math::material::BindingGroup;
-use fruity_graphic::math::material::Material;
+use fruity_graphic::math::material_reference::MaterialReference;
 use fruity_graphic::math::matrix3::Matrix3;
 use fruity_graphic::math::matrix4::Matrix4;
 use fruity_graphic::math::vector2d::Vector2d;
@@ -16,9 +14,9 @@ use fruity_graphic::math::Color;
 use fruity_graphic::resources::shader_resource::ShaderResource;
 use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
 use fruity_wgpu_graphic::graphic_service::WgpuGraphicManager;
+use fruity_wgpu_graphic::math::material_reference::WgpuMaterialReference;
 use fruity_wgpu_graphic::math::vertex::Vertex;
 use fruity_wgpu_graphic::resources::shader_resource::WgpuShaderResource;
-use fruity_wgpu_graphic::resources::texture_resource::WgpuTextureResource;
 use fruity_windows::window_service::WindowService;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
@@ -55,7 +53,7 @@ impl Graphic2dService for WgpuGraphic2dManager {
         graphic_service.end_pass();
     }
 
-    fn draw_square(&self, transform: Matrix3, z_index: usize, material: &Material) {
+    fn draw_square(&self, transform: Matrix3, z_index: usize, material: &dyn MaterialReference) {
         let graphic_service = self.graphic_service.read();
         let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
 
@@ -63,6 +61,15 @@ impl Graphic2dService for WgpuGraphic2dManager {
         let config = graphic_service.get_config();
 
         // Get resources
+        let (material_reference, material) = if let Some(material) = material
+            .as_any_ref()
+            .downcast_ref::<WgpuMaterialReference>(
+        ) {
+            (material, material.read())
+        } else {
+            return;
+        };
+
         let shader = if let Some(shader) = &material.shader {
             shader
         } else {
@@ -110,8 +117,6 @@ impl Graphic2dService for WgpuGraphic2dManager {
             usage: wgpu::BufferUsages::INDEX,
         });
 
-        let bind_groups = self.build_bind_groups(material);
-
         let mut encoder =
             device.create_render_bundle_encoder(&wgpu::RenderBundleEncoderDescriptor {
                 label: Some("draw_square_bundle"),
@@ -121,7 +126,8 @@ impl Graphic2dService for WgpuGraphic2dManager {
             });
 
         encoder.set_pipeline(&shader_reader.render_pipeline);
-        bind_groups
+        material_reference
+            .binding_groups
             .iter()
             .enumerate()
             .for_each(|(index, bind_group)| {
@@ -256,98 +262,7 @@ impl Graphic2dService for WgpuGraphic2dManager {
     }
 }
 
-impl WgpuGraphic2dManager {
-    fn build_bind_groups(&self, material: &Material) -> Vec<wgpu::BindGroup> {
-        let graphic_service = self.graphic_service.read();
-        let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
-        let device = graphic_service.get_device();
-
-        let shader = if let Some(shader) = material.shader.as_ref().map(|shader| shader.read()) {
-            shader
-        } else {
-            return Vec::new();
-        };
-        let shader = shader.downcast_ref::<WgpuShaderResource>();
-
-        material
-            .binding_groups
-            .iter()
-            .enumerate()
-            .map(|(index, binding_group)| {
-                match binding_group {
-                    BindingGroup::Camera => device.create_bind_group(&wgpu::BindGroupDescriptor {
-                        layout: &shader.binding_groups_layout.get(index).unwrap(),
-                        entries: &[wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: graphic_service.get_camera_buffer().as_entire_binding(),
-                        }],
-                        label: Some("camera_bind_group"),
-                    }),
-                    BindingGroup::Custom(bindings) => {
-                        device.create_bind_group(&wgpu::BindGroupDescriptor {
-                            // TODO: Error message in case the material don't match the shader
-                            layout: &shader.binding_groups_layout.get(index).unwrap(),
-                            entries: &bindings
-                                .into_iter()
-                                .enumerate()
-                                .filter_map(|(index, binding)| {
-                                    match binding {
-                                        Binding::Texture(texture) => {
-                                            let texture = texture.read();
-                                            let texture =
-                                                texture.downcast_ref::<WgpuTextureResource>();
-
-                                            // TODO: Find a way to remove it
-                                            let texture = unsafe {
-                                                std::mem::transmute::<
-                                                    &WgpuTextureResource,
-                                                    &WgpuTextureResource,
-                                                >(
-                                                    texture
-                                                )
-                                            };
-
-                                            Some(wgpu::BindGroupEntry {
-                                                binding: index as u32,
-                                                resource: wgpu::BindingResource::TextureView(
-                                                    &texture.view,
-                                                ),
-                                            })
-                                        }
-                                        Binding::Sampler(texture) => {
-                                            let texture = texture.read();
-                                            let texture =
-                                                texture.downcast_ref::<WgpuTextureResource>();
-
-                                            // TODO: Find a way to remove it
-                                            let texture = unsafe {
-                                                std::mem::transmute::<
-                                                    &WgpuTextureResource,
-                                                    &WgpuTextureResource,
-                                                >(
-                                                    texture
-                                                )
-                                            };
-
-                                            Some(wgpu::BindGroupEntry {
-                                                binding: index as u32,
-                                                resource: wgpu::BindingResource::Sampler(
-                                                    &texture.sampler,
-                                                ),
-                                            })
-                                        }
-                                        Binding::None => None,
-                                    }
-                                })
-                                .collect::<Vec<_>>(),
-                            label: None,
-                        })
-                    }
-                }
-            })
-            .collect::<Vec<_>>()
-    }
-}
+impl WgpuGraphic2dManager {}
 
 impl IntrospectObject for WgpuGraphic2dManager {
     fn get_class_name(&self) -> String {

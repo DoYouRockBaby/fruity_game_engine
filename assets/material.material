@@ -1,0 +1,14 @@
+shader: "./assets/shader.wgsl"
+fields:
+- type: texture
+  name: sprite
+  default: "./assets/logo.png"
+  bind_group: 0
+  bind: 0
+- type: sampler
+  name: sprite
+  default: "./assets/logo.png"
+  bind_group: 0
+  bind: 1
+- type: camera
+  bind_group: 1

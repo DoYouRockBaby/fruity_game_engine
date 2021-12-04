@@ -1,12 +1,16 @@
+use crate::math::material_reference::WgpuMaterialReference;
 use fruity_any::*;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
+use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::signal::Signal;
 use fruity_graphic::graphic_service::GraphicService;
+use fruity_graphic::math::material_reference::MaterialReference;
 use fruity_graphic::math::matrix4::Matrix4;
+use fruity_graphic::resources::material_resource::MaterialResource;
 use fruity_windows::window_service::WindowService;
 use fruity_winit_windows::window_service::WinitWindowService;
 use std::fmt::Debug;
@@ -340,6 +344,13 @@ impl GraphicService for WgpuGraphicManager {
 
     fn on_after_draw_end(&self) -> &Signal<()> {
         &self.on_after_draw_end
+    }
+
+    fn material_reference_from_resource_reference(
+        &self,
+        resource_reference: ResourceReference<MaterialResource>,
+    ) -> Box<dyn MaterialReference> {
+        Box::new(WgpuMaterialReference::new(self, resource_reference))
     }
 }
 

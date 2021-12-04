@@ -1,5 +1,6 @@
 use fruity_any::*;
 use fruity_core::convert::FruityInto;
+use fruity_core::convert::FruityTryFrom;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodCaller;
@@ -14,7 +15,6 @@ use fruity_core::utils::introspect::cast_introspect_ref;
 use fruity_core::utils::introspect::ArgumentCaster;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -56,7 +56,7 @@ impl InputService {
         let settings = settings.get_settings("input");
         if let Settings::Object(input_map) = settings {
             input_map.iter().for_each(|(input, sources)| {
-                let sources = Vec::<String>::try_from(sources.clone());
+                let sources = Vec::<String>::fruity_try_from(sources.clone());
 
                 if let Ok(sources) = sources {
                     sources

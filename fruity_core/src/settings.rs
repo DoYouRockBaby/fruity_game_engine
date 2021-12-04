@@ -1,10 +1,10 @@
+use crate::convert::FruityTryFrom;
 use crate::introspect::FieldInfo;
 use crate::introspect::IntrospectObject;
 use crate::introspect::MethodInfo;
 use crate::resource::resource::Resource;
 use fruity_any::*;
 use std::collections::HashMap;
-use std::convert::TryFrom;
 use std::io::Read;
 use yaml_rust::Yaml;
 use yaml_rust::YamlLoader;
@@ -46,10 +46,10 @@ impl Settings {
     /// # Generic Arguments
     /// * `T` - The type to cast the value
     ///
-    pub fn get<T: TryFrom<Settings> + ?Sized>(&self, key: &str, default: T) -> T {
+    pub fn get<T: FruityTryFrom<Settings> + ?Sized>(&self, key: &str, default: T) -> T {
         match self {
             Settings::Object(fields) => match fields.get(key) {
-                Some(value) => T::try_from(value.clone()).unwrap_or(default),
+                Some(value) => T::fruity_try_from(value.clone()).unwrap_or(default),
                 None => default,
             },
             _ => default,
@@ -145,10 +145,10 @@ pub fn build_settings_from_yaml(yaml: &Yaml) -> Option<Settings> {
 
 macro_rules! impl_numeric_from_settings {
     ( $type:ident ) => {
-        impl TryFrom<Settings> for $type {
+        impl FruityTryFrom<Settings> for $type {
             type Error = String;
 
-            fn try_from(value: Settings) -> Result<Self, Self::Error> {
+            fn fruity_try_from(value: Settings) -> Result<Self, Self::Error> {
                 match value {
                     Settings::I64(value) => Ok(value as $type),
                     Settings::F64(value) => Ok(value as $type),
@@ -172,10 +172,10 @@ impl_numeric_from_settings!(usize);
 impl_numeric_from_settings!(f32);
 impl_numeric_from_settings!(f64);
 
-impl TryFrom<Settings> for bool {
+impl FruityTryFrom<Settings> for bool {
     type Error = String;
 
-    fn try_from(value: Settings) -> Result<Self, Self::Error> {
+    fn fruity_try_from(value: Settings) -> Result<Self, Self::Error> {
         match value {
             Settings::Bool(value) => Ok(value),
             _ => Err(format!("Couldn't convert {:?} to bool", value)),
@@ -183,10 +183,10 @@ impl TryFrom<Settings> for bool {
     }
 }
 
-impl TryFrom<Settings> for String {
+impl FruityTryFrom<Settings> for String {
     type Error = String;
 
-    fn try_from(value: Settings) -> Result<Self, Self::Error> {
+    fn fruity_try_from(value: Settings) -> Result<Self, Self::Error> {
         match value {
             Settings::String(value) => Ok(value),
             _ => Err(format!("Couldn't convert {:?} to bool", value)),
@@ -194,16 +194,32 @@ impl TryFrom<Settings> for String {
     }
 }
 
-impl<T: TryFrom<Settings> + ?Sized> TryFrom<Settings> for Vec<T> {
+impl FruityTryFrom<Settings> for Settings {
     type Error = String;
 
-    fn try_from(value: Settings) -> Result<Self, Self::Error> {
+    fn fruity_try_from(value: Settings) -> Result<Self, Self::Error> {
+        Ok(value)
+    }
+}
+
+impl<T: FruityTryFrom<Settings> + ?Sized> FruityTryFrom<Settings> for Vec<T> {
+    type Error = String;
+
+    fn fruity_try_from(value: Settings) -> Result<Self, Self::Error> {
         match value {
             Settings::Array(value) => Ok(value
                 .into_iter()
-                .filter_map(|elem| T::try_from(elem).ok())
+                .filter_map(|elem| T::fruity_try_from(elem).ok())
                 .collect()),
             _ => Err(format!("Couldn't convert {:?} to array", value)),
         }
+    }
+}
+
+impl<T: FruityTryFrom<Settings> + ?Sized> FruityTryFrom<Settings> for Option<T> {
+    type Error = String;
+
+    fn fruity_try_from(value: Settings) -> Result<Self, Self::Error> {
+        Ok(T::fruity_try_from(value).ok())
     }
 }

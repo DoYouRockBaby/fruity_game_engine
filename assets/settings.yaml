@@ -27,3 +27,5 @@ resources:
       type: sampler
   - - visibility: vertex
       type: uniform
+- name: "./assets/material.material"
+  path: "./assets/material.material"

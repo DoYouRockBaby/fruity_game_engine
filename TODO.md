@@ -35,10 +35,10 @@
 
 ## Graphics
 
-[ ] Material should be a full data, no abstraction over wgpu
-[ ] Material should now be a data field instead a resource
+[ ] Material should store wgpu bind groups
 [ ] Material fields should now be a string identifier
 [ ] Sprite now dimply edit a field of material
+[ ] Sprite vertex/indices should be shared accross all sprites
 
 ## Game tools
 

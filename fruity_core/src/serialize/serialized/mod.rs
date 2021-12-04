@@ -133,17 +133,6 @@ impl FruityTryFrom<Serialized> for Callback {
     }
 }
 
-impl FruityTryFrom<Serialized> for ObjectFields {
-    type Error = String;
-
-    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
-        match value {
-            Serialized::SerializedObject { fields, .. } => Ok(fields),
-            _ => Err(format!("Couldn't convert {:?} to field hashmap", value)),
-        }
-    }
-}
-
 impl FruityTryFrom<Serialized> for Box<dyn SerializableObject> {
     type Error = String;
 

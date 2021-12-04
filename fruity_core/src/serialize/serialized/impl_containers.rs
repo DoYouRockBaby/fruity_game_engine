@@ -7,6 +7,7 @@ use crate::introspect::MethodInfo;
 use crate::introspect::SetterCaller;
 use crate::serialize::serialized::SerializableObject;
 use crate::serialize::serialized::Serialized;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -163,5 +164,42 @@ impl<T: IntrospectObject> IntrospectObject for Option<T> {
 impl<T: Clone + IntrospectObject> SerializableObject for Option<T> {
     fn duplicate(&self) -> Box<dyn SerializableObject> {
         Box::new(self.clone())
+    }
+}
+
+impl<T: FruityTryFrom<Serialized, Error = String> + 'static> FruityTryFrom<Serialized>
+    for HashMap<String, T>
+{
+    type Error = String;
+
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
+        if let Serialized::SerializedObject { fields, .. } = value {
+            let mut result = HashMap::<String, T>::new();
+
+            fields.into_iter().for_each(|(key, value)| {
+                if let Some(value) = T::fruity_try_from(value).ok() {
+                    result.insert(key, value);
+                }
+            });
+
+            Ok(result)
+        } else {
+            Err(format!("Couldn't convert {:?} to HashMap", value))
+        }
+    }
+}
+
+impl<T: FruityInto<Serialized>> FruityInto<Serialized> for HashMap<String, T> {
+    fn fruity_into(self) -> Serialized {
+        let mut fields = HashMap::<String, Serialized>::new();
+
+        self.into_iter().for_each(|(key, value)| {
+            fields.insert(key, value.fruity_into());
+        });
+
+        Serialized::SerializedObject {
+            class_name: "unknown".to_string(),
+            fields,
+        }
     }
 }
