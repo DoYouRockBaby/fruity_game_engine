@@ -9,3 +9,5 @@ pub mod introspect;
 
 /// Utility functions related with [’String’]
 pub mod string;
+
+pub mod collection;

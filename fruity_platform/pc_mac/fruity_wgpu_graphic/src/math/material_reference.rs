@@ -9,6 +9,7 @@ use fruity_core::introspect::MethodInfo;
 use fruity_core::introspect::SetterCaller;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::serialize::serialized::SerializableObject;
+use fruity_core::utils::collection::insert_in_hashmap_vec;
 use fruity_graphic::math::material_reference::MaterialReference;
 use fruity_graphic::resources::material_resource::MaterialField;
 use fruity_graphic::resources::material_resource::MaterialResource;
@@ -21,6 +22,7 @@ pub struct WgpuMaterialReference {
     material: ResourceReference<MaterialResource>,
     binding_names: HashMap<String, Vec<(u32, u32)>>,
     pub binding_groups: HashMap<u32, wgpu::BindGroup>,
+    pub binding_entries: HashMap<String, Vec<wgpu::BindGroupEntry<'static>>>,
 }
 
 pub enum NewMaterialReferenceError {
@@ -43,12 +45,14 @@ impl WgpuMaterialReference {
                     material,
                     binding_names: HashMap::new(),
                     binding_groups: HashMap::new(),
+                    binding_entries: HashMap::new(),
                 };
             };
 
         let shader = shader.downcast_ref::<WgpuShaderResource>();
         let mut binding_names = HashMap::<String, Vec<(u32, u32)>>::new();
-        let mut binding_group_entries = HashMap::<u32, Vec<wgpu::BindGroupEntry>>::new();
+        let mut entries_by_group = HashMap::<u32, Vec<wgpu::BindGroupEntry>>::new();
+        let mut entry_names_by_group = HashMap::<u32, Vec<String>>::new();
 
         // Build the binding entries from the configuration
         material_reader.fields.iter().for_each(|(key, fields)| {
@@ -76,11 +80,17 @@ impl WgpuMaterialReference {
                                 resource: wgpu::BindingResource::TextureView(&default.view),
                             };
 
-                            if let Some(binding_group) = binding_group_entries.get_mut(bind_group) {
-                                binding_group.push(bind_group_entry);
-                            } else {
-                                binding_group_entries.insert(*bind_group, vec![bind_group_entry]);
-                            }
+                            insert_in_hashmap_vec(
+                                &mut entries_by_group,
+                                *bind_group,
+                                bind_group_entry,
+                            );
+
+                            insert_in_hashmap_vec(
+                                &mut entry_names_by_group,
+                                *bind_group,
+                                key.clone(),
+                            );
 
                             Some((*bind_group, *bind))
                         }
@@ -104,11 +114,17 @@ impl WgpuMaterialReference {
                                 resource: wgpu::BindingResource::Sampler(&default.sampler),
                             };
 
-                            if let Some(binding_group) = binding_group_entries.get_mut(bind_group) {
-                                binding_group.push(bind_group_entry);
-                            } else {
-                                binding_group_entries.insert(*bind_group, vec![bind_group_entry]);
-                            }
+                            insert_in_hashmap_vec(
+                                &mut entries_by_group,
+                                *bind_group,
+                                bind_group_entry,
+                            );
+
+                            insert_in_hashmap_vec(
+                                &mut entry_names_by_group,
+                                *bind_group,
+                                key.clone(),
+                            );
 
                             Some((*bind_group, *bind))
                         }
@@ -118,11 +134,17 @@ impl WgpuMaterialReference {
                                 resource: graphic_service.get_camera_buffer().as_entire_binding(),
                             };
 
-                            if let Some(binding_group) = binding_group_entries.get_mut(bind_group) {
-                                binding_group.push(bind_group_entry);
-                            } else {
-                                binding_group_entries.insert(*bind_group, vec![bind_group_entry]);
-                            }
+                            insert_in_hashmap_vec(
+                                &mut entries_by_group,
+                                *bind_group,
+                                bind_group_entry,
+                            );
+
+                            insert_in_hashmap_vec(
+                                &mut entry_names_by_group,
+                                *bind_group,
+                                key.clone(),
+                            );
 
                             None
                         }
@@ -135,7 +157,8 @@ impl WgpuMaterialReference {
 
         // Createthe bind groups
         let mut binding_groups = HashMap::<u32, wgpu::BindGroup>::new();
-        binding_group_entries
+        let mut binding_entries = HashMap::<String, Vec<wgpu::BindGroupEntry<'static>>>::new();
+        entries_by_group
             .into_iter()
             .for_each(|(bind_group, entries)| {
                 binding_groups.insert(
@@ -149,12 +172,25 @@ impl WgpuMaterialReference {
                         label: Some("camera_bind_group"),
                     }),
                 );
+
+                let group_names = entry_names_by_group.get(&bind_group).unwrap();
+                entries.into_iter().enumerate().for_each(|(index, entry)| {
+                    let name = group_names.get(index).unwrap();
+
+                    // TODO: Find a way to remove it
+                    let entry = unsafe {
+                        std::mem::transmute::<wgpu::BindGroupEntry, wgpu::BindGroupEntry>(entry)
+                    };
+
+                    insert_in_hashmap_vec(&mut binding_entries, name.clone(), entry);
+                });
             });
 
         WgpuMaterialReference {
             material,
             binding_names,
             binding_groups,
+            binding_entries,
         }
     }
 }
