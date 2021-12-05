@@ -10,5 +10,6 @@ fields:
   default: "./assets/logo.png"
   bind_group: 0
   bind: 1
-- type: camera
+- name: camera
+  type: camera
   bind_group: 1

@@ -31,8 +31,8 @@ fn main() {
     builder.filter_module("naga", log::LevelFilter::Off);
     builder.filter_module("winit", log::LevelFilter::Off);
     builder.filter_module("mio", log::LevelFilter::Off);
-    builder.filter_module("wgpu_core", log::LevelFilter::Off);
-    builder.filter_module("wgpu_hal", log::LevelFilter::Off);
+    //builder.filter_module("wgpu_core", log::LevelFilter::Off);
+    //builder.filter_module("wgpu_hal", log::LevelFilter::Off);
     builder.try_init().unwrap();
 
     let mut file = File::open("assets/settings.yaml").unwrap();
@@ -55,12 +55,12 @@ fn main() {
             initialize_wgpu_graphic_2d(resource_container.clone(), settings);
             initialize_graphic_2d(resource_container.clone(), settings);
             initialize_hierarchy_2d(resource_container.clone(), settings);
-            initialize_editor(resource_container.clone(), settings);
+            //initialize_editor(resource_container.clone(), settings);
             initialize_javascript(resource_container.clone(), settings);
-            initialize_egui_editor(resource_container.clone(), settings);
+            /*initialize_egui_editor(resource_container.clone(), settings);
             initialize_editor_graphic(resource_container.clone(), settings);
             initialize_editor_graphic_2d(resource_container.clone(), settings);
-            initialize_editor_javascript(resource_container.clone(), settings);
+            initialize_editor_javascript(resource_container.clone(), settings);*/
 
             // Load resources
             let resource_settings = settings.get::<Vec<Settings>>("resources", Vec::new());

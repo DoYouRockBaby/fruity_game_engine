@@ -18,7 +18,7 @@ use std::sync::Arc;
 #[derive(Debug, Clone, FruityAny)]
 pub struct WgpuMaterialReference {
     material: ResourceReference<MaterialResource>,
-    binding_names: HashMap<String, (u32, u32)>,
+    binding_names: HashMap<String, Vec<(u32, u32)>>,
     pub binding_groups: Arc<Vec<wgpu::BindGroup>>,
 }
 
@@ -46,65 +46,89 @@ impl WgpuMaterialReference {
             };
 
         let shader = shader.downcast_ref::<WgpuShaderResource>();
-        let mut binding_names = HashMap::<String, (u32, u32)>::new();
+        let mut binding_names = HashMap::<String, Vec<(u32, u32)>>::new();
         let mut binding_groups = HashMap::<u32, Vec<wgpu::BindGroupEntry>>::new();
 
-        material_reader.fields.iter().for_each(|(key, field)| {
-            match field {
-                MaterialField::Texture {
-                    default,
-                    bind_group,
-                    bind,
-                } => {
-                    let default = default.read();
-                    let default = default.downcast_ref::<WgpuTextureResource>();
+        material_reader.fields.iter().for_each(|(key, fields)| {
+            let bindings = fields
+                .iter()
+                .filter_map(|field| {
+                    match field {
+                        MaterialField::Texture {
+                            default,
+                            bind_group,
+                            bind,
+                        } => {
+                            let default = default.read();
+                            let default = default.downcast_ref::<WgpuTextureResource>();
 
-                    // TODO: Find a way to remove it
-                    let default = unsafe {
-                        std::mem::transmute::<&WgpuTextureResource, &WgpuTextureResource>(default)
-                    };
+                            // TODO: Find a way to remove it
+                            let default = unsafe {
+                                std::mem::transmute::<&WgpuTextureResource, &WgpuTextureResource>(
+                                    default,
+                                )
+                            };
 
-                    binding_names.insert(key.to_string(), (*bind_group, *bind));
-                    binding_groups.insert(
-                        *bind_group,
-                        vec![wgpu::BindGroupEntry {
-                            binding: *bind,
-                            resource: wgpu::BindingResource::TextureView(&default.view),
-                        }],
-                    );
-                }
-                MaterialField::Sampler {
-                    default,
-                    bind_group,
-                    bind,
-                } => {
-                    let default = default.read();
-                    let default = default.downcast_ref::<WgpuTextureResource>();
+                            let bind_group_entry = wgpu::BindGroupEntry {
+                                binding: *bind,
+                                resource: wgpu::BindingResource::TextureView(&default.view),
+                            };
 
-                    // TODO: Find a way to remove it
-                    let default = unsafe {
-                        std::mem::transmute::<&WgpuTextureResource, &WgpuTextureResource>(default)
-                    };
+                            if let Some(binding_group) = binding_groups.get_mut(bind_group) {
+                                binding_group.push(bind_group_entry);
+                            } else {
+                                binding_groups.insert(*bind_group, vec![bind_group_entry]);
+                            }
 
-                    binding_names.insert(key.to_string(), (*bind_group, *bind));
-                    binding_groups.insert(
-                        *bind_group,
-                        vec![wgpu::BindGroupEntry {
-                            binding: *bind,
-                            resource: wgpu::BindingResource::Sampler(&default.sampler),
-                        }],
-                    );
-                }
-                MaterialField::Camera { bind_group } => {
-                    binding_groups.insert(
-                        *bind_group,
-                        vec![wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: graphic_service.get_camera_buffer().as_entire_binding(),
-                        }],
-                    );
-                }
-            }
+                            Some((*bind_group, *bind))
+                        }
+                        MaterialField::Sampler {
+                            default,
+                            bind_group,
+                            bind,
+                        } => {
+                            let default = default.read();
+                            let default = default.downcast_ref::<WgpuTextureResource>();
+
+                            // TODO: Find a way to remove it
+                            let default = unsafe {
+                                std::mem::transmute::<&WgpuTextureResource, &WgpuTextureResource>(
+                                    default,
+                                )
+                            };
+
+                            let bind_group_entry = wgpu::BindGroupEntry {
+                                binding: *bind,
+                                resource: wgpu::BindingResource::Sampler(&default.sampler),
+                            };
+
+                            if let Some(binding_group) = binding_groups.get_mut(bind_group) {
+                                binding_group.push(bind_group_entry);
+                            } else {
+                                binding_groups.insert(*bind_group, vec![bind_group_entry]);
+                            }
+
+                            Some((*bind_group, *bind))
+                        }
+                        MaterialField::Camera { bind_group } => {
+                            let bind_group_entry = wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: graphic_service.get_camera_buffer().as_entire_binding(),
+                            };
+
+                            if let Some(binding_group) = binding_groups.get_mut(bind_group) {
+                                binding_group.push(bind_group_entry);
+                            } else {
+                                binding_groups.insert(*bind_group, vec![bind_group_entry]);
+                            }
+
+                            None
+                        }
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            binding_names.insert(key.clone(), bindings);
         });
 
         let binding_groups = binding_groups

@@ -22,7 +22,7 @@ use yaml_rust::YamlLoader;
 #[derive(Debug, Clone, Default, FruityAny, IntrospectObject)]
 pub struct MaterialResource {
     pub shader: Option<ResourceReference<dyn ShaderResource>>,
-    pub fields: HashMap<String, MaterialField>,
+    pub fields: HashMap<String, Vec<MaterialField>>,
 }
 
 impl Resource for MaterialResource {}
@@ -129,13 +129,17 @@ pub fn build_material(
     let shader = resource_container.get::<dyn ShaderResource>(&shader_identifier);
 
     let fields_settings = settings.get::<Vec<Settings>>("fields", Vec::new());
-    let mut fields = HashMap::<String, MaterialField>::new();
+    let mut fields = HashMap::<String, Vec<MaterialField>>::new();
     fields_settings.iter().for_each(|params| {
-        let name = settings.get::<Option<String>>("name", None);
+        let name = params.get::<Option<String>>("name", None);
 
         if let Some(name) = name {
             if let Some(field) = build_material_field(params, resource_container.clone()) {
-                fields.insert(name, field);
+                if let Some(fields) = fields.get_mut(&name) {
+                    fields.push(field);
+                } else {
+                    fields.insert(name, vec![field]);
+                }
             }
         }
     });
