@@ -129,9 +129,8 @@ impl Graphic2dService for WgpuGraphic2dManager {
         material_reference
             .binding_groups
             .iter()
-            .enumerate()
             .for_each(|(index, bind_group)| {
-                encoder.set_bind_group(index as u32, &bind_group, &[]);
+                encoder.set_bind_group(*index, &bind_group, &[]);
             });
         encoder.set_vertex_buffer(0, vertex_buffer.slice(..));
         encoder.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);

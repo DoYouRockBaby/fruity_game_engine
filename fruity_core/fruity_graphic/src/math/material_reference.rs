@@ -12,12 +12,16 @@ use std::ops::Deref;
 use std::sync::RwLock;
 
 pub trait MaterialReference: IntrospectObject + SerializableObject + Debug {
-    fn duplicate(&self) -> Box<dyn MaterialReference>;
+    fn get_material(&self) -> ResourceReference<MaterialResource>;
 }
 
 impl Clone for Box<dyn MaterialReference> {
     fn clone(&self) -> Self {
-        MaterialReference::duplicate(self.deref())
+        let material = self.get_material();
+        let graphic_service = material.resource_container.require::<dyn GraphicService>();
+        let graphic_service = graphic_service.read();
+
+        graphic_service.material_reference_from_resource_reference(material)
     }
 }
 

@@ -4,6 +4,7 @@ use crate::resources::texture_resource::WgpuTextureResource;
 use fruity_any::*;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
+use fruity_core::introspect::MethodCaller;
 use fruity_core::introspect::MethodInfo;
 use fruity_core::introspect::SetterCaller;
 use fruity_core::resource::resource_reference::ResourceReference;
@@ -15,11 +16,11 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::Arc;
 
-#[derive(Debug, Clone, FruityAny)]
+#[derive(Debug, FruityAny)]
 pub struct WgpuMaterialReference {
     material: ResourceReference<MaterialResource>,
     binding_names: HashMap<String, Vec<(u32, u32)>>,
-    pub binding_groups: Arc<Vec<wgpu::BindGroup>>,
+    pub binding_groups: HashMap<u32, wgpu::BindGroup>,
 }
 
 pub enum NewMaterialReferenceError {
@@ -41,14 +42,15 @@ impl WgpuMaterialReference {
                 return Self {
                     material,
                     binding_names: HashMap::new(),
-                    binding_groups: Arc::new(Vec::new()),
+                    binding_groups: HashMap::new(),
                 };
             };
 
         let shader = shader.downcast_ref::<WgpuShaderResource>();
         let mut binding_names = HashMap::<String, Vec<(u32, u32)>>::new();
-        let mut binding_groups = HashMap::<u32, Vec<wgpu::BindGroupEntry>>::new();
+        let mut binding_group_entries = HashMap::<u32, Vec<wgpu::BindGroupEntry>>::new();
 
+        // Build the binding entries from the configuration
         material_reader.fields.iter().for_each(|(key, fields)| {
             let bindings = fields
                 .iter()
@@ -74,10 +76,10 @@ impl WgpuMaterialReference {
                                 resource: wgpu::BindingResource::TextureView(&default.view),
                             };
 
-                            if let Some(binding_group) = binding_groups.get_mut(bind_group) {
+                            if let Some(binding_group) = binding_group_entries.get_mut(bind_group) {
                                 binding_group.push(bind_group_entry);
                             } else {
-                                binding_groups.insert(*bind_group, vec![bind_group_entry]);
+                                binding_group_entries.insert(*bind_group, vec![bind_group_entry]);
                             }
 
                             Some((*bind_group, *bind))
@@ -102,10 +104,10 @@ impl WgpuMaterialReference {
                                 resource: wgpu::BindingResource::Sampler(&default.sampler),
                             };
 
-                            if let Some(binding_group) = binding_groups.get_mut(bind_group) {
+                            if let Some(binding_group) = binding_group_entries.get_mut(bind_group) {
                                 binding_group.push(bind_group_entry);
                             } else {
-                                binding_groups.insert(*bind_group, vec![bind_group_entry]);
+                                binding_group_entries.insert(*bind_group, vec![bind_group_entry]);
                             }
 
                             Some((*bind_group, *bind))
@@ -116,10 +118,10 @@ impl WgpuMaterialReference {
                                 resource: graphic_service.get_camera_buffer().as_entire_binding(),
                             };
 
-                            if let Some(binding_group) = binding_groups.get_mut(bind_group) {
+                            if let Some(binding_group) = binding_group_entries.get_mut(bind_group) {
                                 binding_group.push(bind_group_entry);
                             } else {
-                                binding_groups.insert(*bind_group, vec![bind_group_entry]);
+                                binding_group_entries.insert(*bind_group, vec![bind_group_entry]);
                             }
 
                             None
@@ -131,41 +133,39 @@ impl WgpuMaterialReference {
             binding_names.insert(key.clone(), bindings);
         });
 
-        let binding_groups = binding_groups
+        // Createthe bind groups
+        let mut binding_groups = HashMap::<u32, wgpu::BindGroup>::new();
+        binding_group_entries
             .into_iter()
-            .map(|(bind_group, entries)| {
-                device.create_bind_group(&wgpu::BindGroupDescriptor {
-                    layout: &shader
-                        .binding_groups_layout
-                        .get(bind_group as usize)
-                        .unwrap(),
-                    entries: &entries,
-                    label: Some("camera_bind_group"),
-                })
-            })
-            .collect::<Vec<_>>();
+            .for_each(|(bind_group, entries)| {
+                binding_groups.insert(
+                    bind_group,
+                    device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        layout: &shader
+                            .binding_groups_layout
+                            .get(bind_group as usize)
+                            .unwrap(),
+                        entries: &entries,
+                        label: Some("camera_bind_group"),
+                    }),
+                );
+            });
 
         WgpuMaterialReference {
             material,
             binding_names,
-            binding_groups: Arc::new(binding_groups),
+            binding_groups,
         }
     }
 }
 
 impl IntrospectObject for WgpuMaterialReference {
     fn get_class_name(&self) -> String {
-        let component = self.read();
-        component.get_class_name()
-    }
-
-    fn get_method_infos(&self) -> Vec<MethodInfo> {
-        vec![]
+        "MaterialReference".to_string()
     }
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
-        let component = self.read();
-        component
+        self.material
             .get_field_infos()
             .into_iter()
             .map(|field_info| {
@@ -177,25 +177,22 @@ impl IntrospectObject for WgpuMaterialReference {
                     serializable: field_info.serializable,
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<WgpuMaterialReference>().unwrap();
-                        let reader = this.read();
 
-                        getter(reader.as_any_ref())
+                        getter(this.material.as_any_ref())
                     }),
                     setter: match setter {
                         SetterCaller::Const(call) => {
                             SetterCaller::Const(Arc::new(move |this, args| {
                                 let this = this.downcast_ref::<WgpuMaterialReference>().unwrap();
-                                let reader = this.read();
 
-                                call(reader.as_any_ref(), args)
+                                call(this.material.as_any_ref(), args)
                             }))
                         }
                         SetterCaller::Mut(call) => {
-                            SetterCaller::Const(Arc::new(move |this, args| {
-                                let this = this.downcast_ref::<WgpuMaterialReference>().unwrap();
-                                let mut writer = this.write();
+                            SetterCaller::Mut(Arc::new(move |this, args| {
+                                let this = this.downcast_mut::<WgpuMaterialReference>().unwrap();
 
-                                call(writer.as_any_mut(), args)
+                                call(this.material.as_any_mut(), args)
                             }))
                         }
                         SetterCaller::None => SetterCaller::None,
@@ -204,17 +201,41 @@ impl IntrospectObject for WgpuMaterialReference {
             })
             .collect::<Vec<_>>()
     }
+
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        self.material
+            .get_method_infos()
+            .into_iter()
+            .map(|method_info| MethodInfo {
+                name: method_info.name,
+                call: match method_info.call {
+                    MethodCaller::Const(call) => {
+                        MethodCaller::Const(Arc::new(move |this, args| {
+                            let this = this.downcast_ref::<WgpuMaterialReference>().unwrap();
+
+                            call(this.material.as_any_ref(), args)
+                        }))
+                    }
+                    MethodCaller::Mut(call) => MethodCaller::Mut(Arc::new(move |this, args| {
+                        let this = this.downcast_mut::<WgpuMaterialReference>().unwrap();
+
+                        call(this.material.as_any_mut(), args)
+                    })),
+                },
+            })
+            .collect::<Vec<_>>()
+    }
 }
 
 impl MaterialReference for WgpuMaterialReference {
-    fn duplicate(&self) -> Box<dyn MaterialReference> {
-        Box::new(self.clone())
+    fn get_material(&self) -> ResourceReference<MaterialResource> {
+        self.material.clone()
     }
 }
 
 impl SerializableObject for WgpuMaterialReference {
     fn duplicate(&self) -> Box<dyn SerializableObject> {
-        Box::new(self.clone())
+        Box::new(self.material.clone())
     }
 }
 
