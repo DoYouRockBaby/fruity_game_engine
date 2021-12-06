@@ -9,6 +9,7 @@ use std::sync::Arc;
 pub mod graphic_service;
 pub mod math;
 pub mod resources;
+pub mod wgpu_bridge;
 
 // #[no_mangle]
 pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {

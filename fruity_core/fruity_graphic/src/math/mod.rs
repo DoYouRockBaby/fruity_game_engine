@@ -13,6 +13,12 @@ pub mod vector2d;
 #[derive(Debug, Copy, Clone, Pod, Zeroable)]
 pub struct Color(pub [f32; 4]);
 
+impl Default for Color {
+    fn default() -> Self {
+        RED
+    }
+}
+
 impl FromStr for Color {
     type Err = String;
 

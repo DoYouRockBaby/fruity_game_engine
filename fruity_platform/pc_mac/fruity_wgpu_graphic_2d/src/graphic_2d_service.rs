@@ -11,13 +11,15 @@ use fruity_graphic::math::matrix3::Matrix3;
 use fruity_graphic::math::matrix4::Matrix4;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
-use fruity_graphic::resources::shader_resource::ShaderResource;
+use fruity_graphic::resources::material_resource::MaterialResource;
+use fruity_graphic::resources::mesh_resource::MeshResource;
 use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
 use fruity_wgpu_graphic::graphic_service::WgpuGraphicManager;
 use fruity_wgpu_graphic::math::material_reference::WgpuMaterialReference;
-use fruity_wgpu_graphic::math::vertex::Vertex;
 use fruity_wgpu_graphic::resources::shader_resource::WgpuShaderResource;
+use fruity_wgpu_graphic::wgpu_bridge::Instance;
 use fruity_windows::window_service::WindowService;
+use std::f32::consts::PI;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
@@ -80,34 +82,18 @@ impl Graphic2dService for WgpuGraphic2dManager {
         let shader_reader = shader_reader.downcast_ref::<WgpuShaderResource>();
 
         // Create the main render pipeline
-        let bottom_left = transform * Vector2d::new(-0.5, -0.5);
-        let top_right = transform * Vector2d::new(0.5, 0.5);
-
-        let vertices: &[Vertex] = &[
-            Vertex {
-                position: [bottom_left.x, bottom_left.y, 0.0],
-                tex_coords: [0.0, 1.0],
-            },
-            Vertex {
-                position: [top_right.x, bottom_left.y, 0.0],
-                tex_coords: [1.0, 1.0],
-            },
-            Vertex {
-                position: [top_right.x, top_right.y, 0.0],
-                tex_coords: [1.0, 0.0],
-            },
-            Vertex {
-                position: [bottom_left.x, top_right.y, 0.0],
-                tex_coords: [0.0, 0.0],
-            },
-        ];
+        let mesh = self
+            .resource_container
+            .get::<MeshResource>("Meshes/Squad")
+            .unwrap();
+        let mesh = mesh.read();
 
         let indices: &[u16] = &[0, 1, 2, 3, 0, 2, /* padding */ 0];
         let num_indices = indices.len() as u32;
 
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(vertices),
+            contents: bytemuck::cast_slice(&mesh.vertices),
             usage: wgpu::BufferUsages::VERTEX,
         });
 
@@ -125,6 +111,15 @@ impl Graphic2dService for WgpuGraphic2dManager {
                 sample_count: 1,
             });
 
+        // TODO: Don't do it every frame (AKA: implements the instancied rendering)
+        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Instance Buffer"),
+            contents: bytemuck::cast_slice(&[Instance {
+                transform: transform.into(),
+            }]),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
         encoder.set_pipeline(&shader_reader.render_pipeline);
         material_reference
             .binding_groups
@@ -133,6 +128,7 @@ impl Graphic2dService for WgpuGraphic2dManager {
                 encoder.set_bind_group(*index, &bind_group, &[]);
             });
         encoder.set_vertex_buffer(0, vertex_buffer.slice(..));
+        encoder.set_vertex_buffer(1, instance_buffer.slice(..));
         encoder.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
         encoder.draw_indexed(0..num_indices, 0, 0..1);
         let bundle = encoder.finish(&wgpu::RenderBundleDescriptor {
@@ -142,102 +138,44 @@ impl Graphic2dService for WgpuGraphic2dManager {
         graphic_service.push_render_bundle(bundle, z_index);
     }
 
-    fn draw_line(&self, pos1: Vector2d, pos2: Vector2d, width: u32, color: Color, z_index: usize) {
+    fn draw_line(&self, pos1: Vector2d, pos2: Vector2d, _width: u32, color: Color, z_index: usize) {
         let window_service = self.window_service.read();
-        let graphic_service = self.graphic_service.read();
-        let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
 
-        let device = graphic_service.get_device();
-        let config = graphic_service.get_config();
-        let camera_transform = graphic_service.get_camera_transform().clone();
-        let viewport_size = window_service.get_size().clone();
+        // TODO: Use width to respect pixel width constraint
 
-        // Get resources
-        let shader = self
-            .resource_container
-            .get::<dyn ShaderResource>("Shaders/Draw Line")
-            .unwrap();
-        let shader_reader = shader.read();
-        let shader_reader = shader_reader.downcast_ref::<WgpuShaderResource>();
-
-        // Calculate the geometry
+        // Calculate squad transform
         let diff = pos2 - pos1;
-        let mut thick_vec = diff.normal().normalise() * width as f32;
-        thick_vec.x /= viewport_size.0 as f32;
-        thick_vec.y /= viewport_size.1 as f32;
+        let scale_factor = window_service.get_scale_factor();
 
-        let pos1 = camera_transform * pos1;
-        let pos2 = camera_transform * pos2;
+        let translate = (pos1 + pos2) / 2.0;
+        let rotate = (diff.y / diff.x).atan() + PI / 2.0;
+        let scale = Vector2d {
+            x: 1.0 / (scale_factor as f32) / 100.0,
+            y: diff.length(),
+        };
 
-        let vertices: &[Vertex] = &[
-            Vertex {
-                position: [pos1.x - thick_vec.x, pos1.y - thick_vec.y, 0.0],
-                tex_coords: [0.0, 1.0],
-            },
-            Vertex {
-                position: [pos1.x + thick_vec.x, pos1.y + thick_vec.y, 0.0],
-                tex_coords: [1.0, 0.0],
-            },
-            Vertex {
-                position: [pos2.x + thick_vec.x, pos2.y + thick_vec.y, 0.0],
-                tex_coords: [1.0, 1.0],
-            },
-            Vertex {
-                position: [pos2.x - thick_vec.x, pos2.y - thick_vec.y, 0.0],
-                tex_coords: [0.0, 0.0],
-            },
-        ];
+        // Calculate transform
+        let transform = Matrix3::identity()
+            * Matrix3::translation(translate)
+            * Matrix3::rotation(rotate)
+            * Matrix3::scaling(scale);
 
-        let indices: &[u16] = &[2, 1, 0, 2, 0, 3, /* padding */ 0];
-        let num_indices = indices.len() as u32;
+        // Create the material
+        let graphic_service_reader = self.graphic_service.read();
+        let graphic_service_reader = graphic_service_reader.downcast_ref::<WgpuGraphicManager>();
 
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(&vertices),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
+        let draw_line_material = self
+            .resource_container
+            .get::<MaterialResource>("Materials/Draw Line")
+            .unwrap();
 
-        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Index Buffer"),
-            contents: bytemuck::cast_slice(indices),
-            usage: wgpu::BufferUsages::INDEX,
-        });
+        // Update line color
+        let draw_line_material =
+            WgpuMaterialReference::new(graphic_service_reader, draw_line_material);
+        draw_line_material.set_color("color", color);
 
-        // Update material color
-        let color_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Uniform Buffer"),
-            contents: bytemuck::cast_slice(&[color.clone()]),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
-
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Color buffer"),
-            layout: &shader_reader.binding_groups_layout.get(0).unwrap(),
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: color_buffer.as_entire_binding(),
-            }],
-        });
-
-        // Draw
-        let mut encoder =
-            device.create_render_bundle_encoder(&wgpu::RenderBundleEncoderDescriptor {
-                label: None,
-                color_formats: &[config.format],
-                depth_stencil: None,
-                sample_count: 1,
-            });
-
-        encoder.set_pipeline(&shader_reader.render_pipeline);
-        encoder.set_bind_group(0, &bind_group, &[]);
-        encoder.set_vertex_buffer(0, vertex_buffer.slice(..));
-        encoder.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-        encoder.draw_indexed(0..num_indices, 0, 0..1);
-        let bundle = encoder.finish(&wgpu::RenderBundleDescriptor {
-            label: Some("main"),
-        });
-
-        graphic_service.push_render_bundle(bundle, z_index);
+        // Draw the line
+        self.draw_square(transform, z_index, &draw_line_material);
     }
 
     fn get_cursor_position(&self) -> Vector2d {

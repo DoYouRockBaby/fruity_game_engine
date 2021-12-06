@@ -1,4 +1,5 @@
-use crate::math::vertex::Vertex;
+use crate::wgpu_bridge::INSTANCE_DESC;
+use crate::wgpu_bridge::VERTEX_DESC;
 use crate::GraphicService;
 use crate::WgpuGraphicManager;
 use fruity_any::*;
@@ -85,7 +86,7 @@ impl WgpuShaderResource {
             vertex: wgpu::VertexState {
                 module: &shader_module,
                 entry_point: "main",
-                buffers: &[Vertex::desc()],
+                buffers: &[VERTEX_DESC.clone(), INSTANCE_DESC.clone()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader_module,

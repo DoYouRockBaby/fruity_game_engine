@@ -1,6 +1,7 @@
 use crate::math::matrix3::Matrix3;
 use crate::math::matrix4::Matrix4;
 use crate::math::vector2d::Vector2d;
+use crate::resources::default_resources::load_default_resources;
 use crate::resources::material_resource::load_material;
 use fruity_core::object_factory_service::ObjectFactoryService;
 use fruity_core::resource::resource_container::ResourceContainer;
@@ -21,4 +22,6 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     object_factory_service.register::<Matrix4>("Matrix4");
 
     resource_container.add_resource_loader("material", load_material);
+
+    load_default_resources(resource_container);
 }

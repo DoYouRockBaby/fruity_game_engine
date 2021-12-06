@@ -5,7 +5,6 @@ use crate::components::sprite::Sprite;
 use crate::components::transform_2d::Transform2d;
 use crate::components::translate_2d::Translate2d;
 use crate::graphic_2d_service::Graphic2dService;
-use crate::resources::default_resources::load_default_resources;
 use crate::systems::draw_camera::draw_camera;
 use crate::systems::draw_sprite::draw_sprite;
 use crate::systems::reset_transform_2d::reset_transform_2d;
@@ -23,7 +22,6 @@ use std::sync::Arc;
 
 pub mod components;
 pub mod graphic_2d_service;
-pub mod resources;
 pub mod systems;
 
 // #[no_mangle]
@@ -50,6 +48,4 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
 
     std::mem::drop(object_factory_service);
     std::mem::drop(system_service);
-
-    load_default_resources(resource_container);
 }

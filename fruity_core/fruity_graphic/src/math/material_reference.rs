@@ -1,4 +1,5 @@
 use crate::graphic_service::GraphicService;
+use crate::math::Color;
 use crate::resources::material_resource::MaterialResource;
 use fruity_core::convert::FruityInto;
 use fruity_core::convert::FruityTryFrom;
@@ -12,6 +13,7 @@ use std::ops::Deref;
 use std::sync::RwLock;
 
 pub trait MaterialReference: IntrospectObject + SerializableObject + Debug {
+    fn set_color(&self, entry_name: &str, color: Color);
     fn get_material(&self) -> ResourceReference<MaterialResource>;
 }
 

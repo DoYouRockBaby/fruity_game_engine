@@ -1,3 +1,4 @@
+use crate::math::Color;
 use crate::resources::shader_resource::ShaderResource;
 use crate::resources::texture_resource::TextureResource;
 use fruity_any::*;
@@ -36,6 +37,11 @@ pub enum MaterialField {
     },
     Sampler {
         default: ResourceReference<dyn TextureResource>,
+        bind_group: u32,
+        bind: u32,
+    },
+    Color {
+        default: Color,
         bind_group: u32,
         bind: u32,
     },
@@ -183,6 +189,17 @@ fn build_material_field(
             } else {
                 None
             }
+        }
+        "color" => {
+            let default = settings.get::<Color>("default", Color::default());
+            let bind_group = settings.get::<u32>("bind_group", u32::default());
+            let bind = settings.get::<u32>("bind", u32::default());
+
+            Some(MaterialField::Color {
+                default,
+                bind_group,
+                bind,
+            })
         }
         "camera" => {
             let bind_group = settings.get::<u32>("bind_group", u32::default());

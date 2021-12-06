@@ -1,4 +1,6 @@
 use crate::math::vector2d::Vector2d;
+use cgmath::Angle;
+use cgmath::Rad;
 use cgmath::SquareMatrix;
 use fruity_any::*;
 use fruity_core::convert::FruityInto;
@@ -29,7 +31,8 @@ impl Matrix3 {
     }
 
     pub fn rotation(angle: f32) -> Matrix3 {
-        Matrix3(cgmath::Matrix3::from_angle_z(cgmath::Rad(angle)).into())
+        let (s, c) = Rad::sin_cos(Rad(angle));
+        Matrix3([[c, s, 0.0], [-s, c, 0.0], [0.0, 0.0, 1.0]])
     }
 
     pub fn scaling(vec: Vector2d) -> Matrix3 {
@@ -48,6 +51,17 @@ impl Matrix3 {
 impl Into<[[f32; 3]; 3]> for Matrix3 {
     fn into(self) -> [[f32; 3]; 3] {
         self.0
+    }
+}
+
+impl Into<[[f32; 4]; 4]> for Matrix3 {
+    fn into(self) -> [[f32; 4]; 4] {
+        [
+            [self.0[0][0], self.0[0][1], 0.0, self.0[0][2]],
+            [self.0[1][0], self.0[1][1], 0.0, self.0[1][2]],
+            [0.0, 0.0, 1.0, 0.0],
+            [self.0[2][0], self.0[2][1], 0.0, self.0[2][2]],
+        ]
     }
 }
 

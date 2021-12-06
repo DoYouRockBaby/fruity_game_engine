@@ -10,12 +10,15 @@ use fruity_core::introspect::SetterCaller;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::serialize::serialized::SerializableObject;
 use fruity_core::utils::collection::insert_in_hashmap_vec;
+use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::material_reference::MaterialReference;
+use fruity_graphic::math::Color;
 use fruity_graphic::resources::material_resource::MaterialField;
 use fruity_graphic::resources::material_resource::MaterialResource;
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::Arc;
+use wgpu::util::DeviceExt;
 
 #[derive(Debug, FruityAny)]
 pub struct WgpuMaterialReference {
@@ -23,6 +26,7 @@ pub struct WgpuMaterialReference {
     binding_names: HashMap<String, Vec<(u32, u32)>>,
     pub binding_groups: HashMap<u32, wgpu::BindGroup>,
     pub binding_entries: HashMap<String, Vec<wgpu::BindGroupEntry<'static>>>,
+    pub buffers: HashMap<String, Vec<wgpu::Buffer>>,
 }
 
 pub enum NewMaterialReferenceError {
@@ -46,6 +50,7 @@ impl WgpuMaterialReference {
                     binding_names: HashMap::new(),
                     binding_groups: HashMap::new(),
                     binding_entries: HashMap::new(),
+                    buffers: HashMap::new(),
                 };
             };
 
@@ -53,6 +58,7 @@ impl WgpuMaterialReference {
         let mut binding_names = HashMap::<String, Vec<(u32, u32)>>::new();
         let mut entries_by_group = HashMap::<u32, Vec<wgpu::BindGroupEntry>>::new();
         let mut entry_names_by_group = HashMap::<u32, Vec<String>>::new();
+        let mut buffers = HashMap::<String, Vec<wgpu::Buffer>>::new();
 
         // Build the binding entries from the configuration
         material_reader.fields.iter().for_each(|(key, fields)| {
@@ -148,6 +154,47 @@ impl WgpuMaterialReference {
 
                             None
                         }
+                        MaterialField::Color {
+                            default,
+                            bind_group,
+                            bind,
+                        } => {
+                            let buffer =
+                                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                                    label: Some("Uniform Buffer"),
+                                    contents: bytemuck::cast_slice(&[default.clone()]),
+                                    usage: wgpu::BufferUsages::UNIFORM
+                                        | wgpu::BufferUsages::COPY_DST,
+                                });
+
+                            insert_in_hashmap_vec(&mut buffers, key.clone(), buffer);
+
+                            // TODO: Find a way to remove it
+                            let buffer = unsafe {
+                                std::mem::transmute::<&wgpu::Buffer, &wgpu::Buffer>(
+                                    buffers.get(key).unwrap().last().unwrap(),
+                                )
+                            };
+
+                            let bind_group_entry = wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: buffer.as_entire_binding(),
+                            };
+
+                            insert_in_hashmap_vec(
+                                &mut entries_by_group,
+                                *bind_group,
+                                bind_group_entry,
+                            );
+
+                            insert_in_hashmap_vec(
+                                &mut entry_names_by_group,
+                                *bind_group,
+                                key.clone(),
+                            );
+
+                            Some((*bind_group, *bind))
+                        }
                     }
                 })
                 .collect::<Vec<_>>();
@@ -155,7 +202,7 @@ impl WgpuMaterialReference {
             binding_names.insert(key.clone(), bindings);
         });
 
-        // Createthe bind groups
+        // Create the bind groups
         let mut binding_groups = HashMap::<u32, wgpu::BindGroup>::new();
         let mut binding_entries = HashMap::<String, Vec<wgpu::BindGroupEntry<'static>>>::new();
         entries_by_group
@@ -191,10 +238,35 @@ impl WgpuMaterialReference {
             binding_names,
             binding_groups,
             binding_entries,
+            buffers,
         }
     }
 }
 
+impl MaterialReference for WgpuMaterialReference {
+    fn set_color(&self, entry_name: &str, color: Color) {
+        if let Some(buffers) = self.buffers.get(entry_name) {
+            let graphic_service = self
+                .material
+                .resource_container
+                .require::<dyn GraphicService>();
+            let graphic_service = graphic_service.read();
+            let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
+
+            buffers.iter().for_each(|buffer| {
+                graphic_service
+                    .get_queue()
+                    .write_buffer(buffer, 0, bytemuck::cast_slice(&[color]));
+            })
+        }
+    }
+
+    fn get_material(&self) -> ResourceReference<MaterialResource> {
+        self.material.clone()
+    }
+}
+
+// TODO: Complete that
 impl IntrospectObject for WgpuMaterialReference {
     fn get_class_name(&self) -> String {
         "MaterialReference".to_string()
@@ -260,12 +332,6 @@ impl IntrospectObject for WgpuMaterialReference {
                 },
             })
             .collect::<Vec<_>>()
-    }
-}
-
-impl MaterialReference for WgpuMaterialReference {
-    fn get_material(&self) -> ResourceReference<MaterialResource> {
-        self.material.clone()
     }
 }
 

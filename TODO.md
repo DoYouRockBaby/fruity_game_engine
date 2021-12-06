@@ -35,10 +35,14 @@
 
 ## Graphics
 
-[ ] Material should store wgpu bind groups
+[X] Material should store wgpu bind groups
+[ ] Supports Meshes
 [ ] Material fields should now be a string identifier
-[ ] Sprite now dimply edit a field of material
+[ ] Sprites should simply edit a field of material
 [ ] Sprite vertex/indices should be shared accross all sprites
+[ ] Proceed instantied rendering
+[ ] Squad transform should be done in shader instead of CPU
+[ ] Implement rendering composers
 
 ## Game tools
 
