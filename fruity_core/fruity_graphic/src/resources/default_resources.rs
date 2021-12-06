@@ -31,6 +31,7 @@ pub fn load_squad_mesh(resource_container: Arc<ResourceContainer>) {
                 normal: [0.0, 0.0, -1.0],
             },
         ],
+        indices: vec![0, 1, 2, 3, 0, 2, /* padding */ 0],
     };
 
     resource_container

@@ -20,6 +20,7 @@ pub struct Vertex {
 #[derive(Debug, Clone, Default, FruityAny, IntrospectObject)]
 pub struct MeshResource {
     pub vertices: Vec<Vertex>,
+    pub indices: Vec<u16>,
 }
 
 impl Resource for MeshResource {}
