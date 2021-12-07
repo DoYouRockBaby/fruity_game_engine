@@ -276,36 +276,29 @@ impl IntrospectObject for WgpuMaterialReference {
         self.material
             .get_field_infos()
             .into_iter()
-            .map(|field_info| {
-                let getter = field_info.getter.clone();
-                let setter = field_info.setter.clone();
+            .map(|field_info| FieldInfo {
+                name: field_info.name,
+                serializable: field_info.serializable,
+                getter: Arc::new(move |this| {
+                    let this = this.downcast_ref::<WgpuMaterialReference>().unwrap();
 
-                FieldInfo {
-                    name: field_info.name,
-                    serializable: field_info.serializable,
-                    getter: Arc::new(move |this| {
-                        let this = this.downcast_ref::<WgpuMaterialReference>().unwrap();
+                    (field_info.getter)(this.material.as_any_ref())
+                }),
+                setter: match field_info.setter {
+                    SetterCaller::Const(call) => {
+                        SetterCaller::Const(Arc::new(move |this, args| {
+                            let this = this.downcast_ref::<WgpuMaterialReference>().unwrap();
 
-                        getter(this.material.as_any_ref())
-                    }),
-                    setter: match setter {
-                        SetterCaller::Const(call) => {
-                            SetterCaller::Const(Arc::new(move |this, args| {
-                                let this = this.downcast_ref::<WgpuMaterialReference>().unwrap();
+                            call(this.material.as_any_ref(), args)
+                        }))
+                    }
+                    SetterCaller::Mut(call) => SetterCaller::Mut(Arc::new(move |this, args| {
+                        let this = this.downcast_mut::<WgpuMaterialReference>().unwrap();
 
-                                call(this.material.as_any_ref(), args)
-                            }))
-                        }
-                        SetterCaller::Mut(call) => {
-                            SetterCaller::Mut(Arc::new(move |this, args| {
-                                let this = this.downcast_mut::<WgpuMaterialReference>().unwrap();
-
-                                call(this.material.as_any_mut(), args)
-                            }))
-                        }
-                        SetterCaller::None => SetterCaller::None,
-                    },
-                }
+                        call(this.material.as_any_mut(), args)
+                    })),
+                    SetterCaller::None => SetterCaller::None,
+                },
             })
             .collect::<Vec<_>>()
     }

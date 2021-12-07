@@ -100,36 +100,29 @@ impl IntrospectObject for AnyResourceReference {
             .resource
             .get_field_infos()
             .into_iter()
-            .map(|field_info| {
-                let getter = field_info.getter.clone();
-                let setter = field_info.setter.clone();
+            .map(|field_info| FieldInfo {
+                name: field_info.name,
+                serializable: false,
+                getter: Arc::new(move |this| {
+                    let this = this.downcast_ref::<AnyResourceReference>().unwrap();
 
-                FieldInfo {
-                    name: field_info.name,
-                    serializable: false,
-                    getter: Arc::new(move |this| {
-                        let this = this.downcast_ref::<AnyResourceReference>().unwrap();
+                    (field_info.getter)(this.resource.as_any_ref())
+                }),
+                setter: match field_info.setter {
+                    SetterCaller::Const(call) => {
+                        SetterCaller::Const(Arc::new(move |this, args| {
+                            let this = this.downcast_ref::<AnyResourceReference>().unwrap();
 
-                        getter(this.resource.as_any_ref())
-                    }),
-                    setter: match setter {
-                        SetterCaller::Const(call) => {
-                            SetterCaller::Const(Arc::new(move |this, args| {
-                                let this = this.downcast_ref::<AnyResourceReference>().unwrap();
+                            call(this.resource.as_any_ref(), args)
+                        }))
+                    }
+                    SetterCaller::Mut(call) => SetterCaller::Mut(Arc::new(move |this, args| {
+                        let this = this.downcast_mut::<AnyResourceReference>().unwrap();
 
-                                call(this.resource.as_any_ref(), args)
-                            }))
-                        }
-                        SetterCaller::Mut(call) => {
-                            SetterCaller::Mut(Arc::new(move |this, args| {
-                                let this = this.downcast_mut::<AnyResourceReference>().unwrap();
-
-                                call(this.resource.as_any_mut(), args)
-                            }))
-                        }
-                        SetterCaller::None => SetterCaller::None,
-                    },
-                }
+                        call(this.resource.as_any_mut(), args)
+                    })),
+                    SetterCaller::None => SetterCaller::None,
+                },
             })
             .collect::<Vec<_>>();
 
@@ -281,36 +274,29 @@ impl<T: Resource + ?Sized> IntrospectObject for ResourceReference<T> {
             .resource
             .get_field_infos()
             .into_iter()
-            .map(|field_info| {
-                let getter = field_info.getter.clone();
-                let setter = field_info.setter.clone();
+            .map(|field_info| FieldInfo {
+                name: field_info.name,
+                serializable: false,
+                getter: Arc::new(move |this| {
+                    let this = this.downcast_ref::<ResourceReference<T>>().unwrap();
 
-                FieldInfo {
-                    name: field_info.name,
-                    serializable: false,
-                    getter: Arc::new(move |this| {
-                        let this = this.downcast_ref::<ResourceReference<T>>().unwrap();
+                    (field_info.getter)(this.resource.as_any_ref())
+                }),
+                setter: match field_info.setter {
+                    SetterCaller::Const(call) => {
+                        SetterCaller::Const(Arc::new(move |this, args| {
+                            let this = this.downcast_ref::<ResourceReference<T>>().unwrap();
 
-                        getter(this.resource.as_any_ref())
-                    }),
-                    setter: match setter {
-                        SetterCaller::Const(call) => {
-                            SetterCaller::Const(Arc::new(move |this, args| {
-                                let this = this.downcast_ref::<ResourceReference<T>>().unwrap();
+                            call(this.resource.as_any_ref(), args)
+                        }))
+                    }
+                    SetterCaller::Mut(call) => SetterCaller::Mut(Arc::new(move |this, args| {
+                        let this = this.downcast_mut::<ResourceReference<T>>().unwrap();
 
-                                call(this.resource.as_any_ref(), args)
-                            }))
-                        }
-                        SetterCaller::Mut(call) => {
-                            SetterCaller::Mut(Arc::new(move |this, args| {
-                                let this = this.downcast_mut::<ResourceReference<T>>().unwrap();
-
-                                call(this.resource.as_any_mut(), args)
-                            }))
-                        }
-                        SetterCaller::None => SetterCaller::None,
-                    },
-                }
+                        call(this.resource.as_any_mut(), args)
+                    })),
+                    SetterCaller::None => SetterCaller::None,
+                },
             })
             .collect::<Vec<_>>();
 

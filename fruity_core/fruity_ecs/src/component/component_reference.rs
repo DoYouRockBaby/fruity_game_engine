@@ -92,39 +92,32 @@ impl IntrospectObject for ComponentReference {
         component
             .get_field_infos()
             .into_iter()
-            .map(|field_info| {
-                let getter = field_info.getter.clone();
-                let setter = field_info.setter.clone();
+            .map(|field_info| FieldInfo {
+                name: field_info.name,
+                serializable: field_info.serializable,
+                getter: Arc::new(move |this| {
+                    let this = this.downcast_ref::<ComponentReference>().unwrap();
+                    let reader = this.read();
 
-                FieldInfo {
-                    name: field_info.name,
-                    serializable: field_info.serializable,
-                    getter: Arc::new(move |this| {
+                    (field_info.getter)(reader.as_any_ref())
+                }),
+                setter: match field_info.setter {
+                    SetterCaller::Const(call) => {
+                        SetterCaller::Const(Arc::new(move |this, args| {
+                            let this = this.downcast_ref::<ComponentReference>().unwrap();
+                            let reader = this.read();
+
+                            call(reader.as_any_ref(), args)
+                        }))
+                    }
+                    SetterCaller::Mut(call) => SetterCaller::Const(Arc::new(move |this, args| {
                         let this = this.downcast_ref::<ComponentReference>().unwrap();
-                        let reader = this.read();
+                        let mut writer = this.write();
 
-                        getter(reader.as_any_ref())
-                    }),
-                    setter: match setter {
-                        SetterCaller::Const(call) => {
-                            SetterCaller::Const(Arc::new(move |this, args| {
-                                let this = this.downcast_ref::<ComponentReference>().unwrap();
-                                let reader = this.read();
-
-                                call(reader.as_any_ref(), args)
-                            }))
-                        }
-                        SetterCaller::Mut(call) => {
-                            SetterCaller::Const(Arc::new(move |this, args| {
-                                let this = this.downcast_ref::<ComponentReference>().unwrap();
-                                let mut writer = this.write();
-
-                                call(writer.as_any_mut(), args)
-                            }))
-                        }
-                        SetterCaller::None => SetterCaller::None,
-                    },
-                }
+                        call(writer.as_any_mut(), args)
+                    })),
+                    SetterCaller::None => SetterCaller::None,
+                },
             })
             .collect::<Vec<_>>()
     }

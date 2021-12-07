@@ -1,8 +1,7 @@
 [package]
 name = "fruity_winit_input"
 version = "0.1.0"
-edition = "2018"
-resolver = "2"
+edition = "2021"
 
 [dependencies]
 winit = "0.25.0"

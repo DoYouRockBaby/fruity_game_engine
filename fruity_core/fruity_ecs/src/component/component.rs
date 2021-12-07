@@ -89,33 +89,26 @@ impl IntrospectObject for AnyComponent {
             .as_ref()
             .get_field_infos()
             .into_iter()
-            .map(|field_info| {
-                let getter = field_info.getter.clone();
-                let setter = field_info.setter.clone();
-
-                FieldInfo {
-                    name: field_info.name,
-                    serializable: field_info.serializable,
-                    getter: Arc::new(move |this| {
-                        let this = this.downcast_ref::<AnyComponent>().unwrap();
-                        getter(this.component.as_ref().as_any_ref())
-                    }),
-                    setter: match setter {
-                        SetterCaller::Const(call) => {
-                            SetterCaller::Const(Arc::new(move |this, args| {
-                                let this = this.downcast_ref::<AnyComponent>().unwrap();
-                                call(this.component.as_ref().as_any_ref(), args)
-                            }))
-                        }
-                        SetterCaller::Mut(call) => {
-                            SetterCaller::Mut(Arc::new(move |this, args| {
-                                let this = this.downcast_mut::<AnyComponent>().unwrap();
-                                call(this.component.as_mut().as_any_mut(), args)
-                            }))
-                        }
-                        SetterCaller::None => SetterCaller::None,
-                    },
-                }
+            .map(|field_info| FieldInfo {
+                name: field_info.name,
+                serializable: field_info.serializable,
+                getter: Arc::new(move |this| {
+                    let this = this.downcast_ref::<AnyComponent>().unwrap();
+                    (field_info.getter)(this.component.as_ref().as_any_ref())
+                }),
+                setter: match field_info.setter {
+                    SetterCaller::Const(call) => {
+                        SetterCaller::Const(Arc::new(move |this, args| {
+                            let this = this.downcast_ref::<AnyComponent>().unwrap();
+                            call(this.component.as_ref().as_any_ref(), args)
+                        }))
+                    }
+                    SetterCaller::Mut(call) => SetterCaller::Mut(Arc::new(move |this, args| {
+                        let this = this.downcast_mut::<AnyComponent>().unwrap();
+                        call(this.component.as_mut().as_any_mut(), args)
+                    })),
+                    SetterCaller::None => SetterCaller::None,
+                },
             })
             .collect::<Vec<_>>()
     }

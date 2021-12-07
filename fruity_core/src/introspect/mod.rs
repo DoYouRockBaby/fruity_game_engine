@@ -163,36 +163,29 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Box<T> {
         self.as_ref()
             .get_field_infos()
             .into_iter()
-            .map(|field_info| {
-                let getter = field_info.getter.clone();
-                let setter = field_info.setter.clone();
+            .map(|field_info| FieldInfo {
+                name: field_info.name,
+                serializable: field_info.serializable,
+                getter: Arc::new(move |this| {
+                    let this = this.downcast_ref::<Box<T>>().unwrap();
 
-                FieldInfo {
-                    name: field_info.name,
-                    serializable: field_info.serializable,
-                    getter: Arc::new(move |this| {
-                        let this = this.downcast_ref::<Box<T>>().unwrap();
+                    (field_info.getter)(this.as_ref().as_any_ref())
+                }),
+                setter: match field_info.setter {
+                    SetterCaller::Const(call) => {
+                        SetterCaller::Const(Arc::new(move |this, args| {
+                            let this = this.downcast_ref::<Box<T>>().unwrap();
 
-                        getter(this.as_ref().as_any_ref())
-                    }),
-                    setter: match setter {
-                        SetterCaller::Const(call) => {
-                            SetterCaller::Const(Arc::new(move |this, args| {
-                                let this = this.downcast_ref::<Box<T>>().unwrap();
+                            call(this.as_ref().as_any_ref(), args)
+                        }))
+                    }
+                    SetterCaller::Mut(call) => SetterCaller::Mut(Arc::new(move |this, args| {
+                        let this = this.downcast_mut::<Box<T>>().unwrap();
 
-                                call(this.as_ref().as_any_ref(), args)
-                            }))
-                        }
-                        SetterCaller::Mut(call) => {
-                            SetterCaller::Mut(Arc::new(move |this, args| {
-                                let this = this.downcast_mut::<Box<T>>().unwrap();
-
-                                call(this.as_mut().as_any_mut(), args)
-                            }))
-                        }
-                        SetterCaller::None => SetterCaller::None,
-                    },
-                }
+                        call(this.as_mut().as_any_mut(), args)
+                    })),
+                    SetterCaller::None => SetterCaller::None,
+                },
             })
             .collect::<Vec<_>>()
     }
@@ -231,19 +224,15 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Arc<T> {
         self.as_ref()
             .get_field_infos()
             .into_iter()
-            .map(|field_info| {
-                let getter = field_info.getter.clone();
-                let setter = field_info.setter.clone();
-
-                FieldInfo {
+            .map(|field_info| FieldInfo {
                     name: field_info.name,
                     serializable: field_info.serializable,
                     getter: Arc::new(move |this| {
                         let this = this.downcast_ref::<Arc<T>>().unwrap();
 
-                        getter(this.as_ref().as_any_ref())
+                        (field_info.getter)(this.as_ref().as_any_ref())
                     }),
-                    setter: match setter {
+                    setter: match field_info.setter {
                         SetterCaller::Const(call) => {
                             SetterCaller::Const(Arc::new(move |this, args| {
                                 let this = this.downcast_ref::<Arc<T>>().unwrap();
@@ -257,7 +246,7 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Arc<T> {
                         SetterCaller::None => SetterCaller::None,
                     },
                 }
-            })
+            )
             .collect::<Vec<_>>()
     }
 
@@ -295,39 +284,32 @@ impl<T: IntrospectObject> IntrospectObject for RwLock<T> {
         reader
             .get_field_infos()
             .into_iter()
-            .map(|field_info| {
-                let getter = field_info.getter.clone();
-                let setter = field_info.setter.clone();
+            .map(|field_info| FieldInfo {
+                name: field_info.name,
+                serializable: field_info.serializable,
+                getter: Arc::new(move |this| {
+                    let this = this.downcast_ref::<RwLock<T>>().unwrap();
+                    let reader = this.read().unwrap();
 
-                FieldInfo {
-                    name: field_info.name,
-                    serializable: field_info.serializable,
-                    getter: Arc::new(move |this| {
+                    (field_info.getter)(reader.deref())
+                }),
+                setter: match field_info.setter {
+                    SetterCaller::Const(call) => {
+                        SetterCaller::Const(Arc::new(move |this, args| {
+                            let this = this.downcast_ref::<RwLock<T>>().unwrap();
+                            let reader = this.read().unwrap();
+
+                            call(reader.deref(), args)
+                        }))
+                    }
+                    SetterCaller::Mut(call) => SetterCaller::Const(Arc::new(move |this, args| {
                         let this = this.downcast_ref::<RwLock<T>>().unwrap();
-                        let reader = this.read().unwrap();
+                        let mut writer = this.write().unwrap();
 
-                        getter(reader.deref())
-                    }),
-                    setter: match setter {
-                        SetterCaller::Const(call) => {
-                            SetterCaller::Const(Arc::new(move |this, args| {
-                                let this = this.downcast_ref::<RwLock<T>>().unwrap();
-                                let reader = this.read().unwrap();
-
-                                call(reader.deref(), args)
-                            }))
-                        }
-                        SetterCaller::Mut(call) => {
-                            SetterCaller::Const(Arc::new(move |this, args| {
-                                let this = this.downcast_ref::<RwLock<T>>().unwrap();
-                                let mut writer = this.write().unwrap();
-
-                                call(writer.deref_mut(), args)
-                            }))
-                        }
-                        SetterCaller::None => SetterCaller::None,
-                    },
-                }
+                        call(writer.deref_mut(), args)
+                    })),
+                    SetterCaller::None => SetterCaller::None,
+                },
             })
             .collect::<Vec<_>>()
     }
