@@ -27,7 +27,7 @@
 [ ] Expose the GUI API to javascript to create custom component editor
 [X] Components visualization
 [X] Entity hierarchy visualisation
-[ ] Resources browser
+[X] Resources browser
 [ ] Resources visualisation, take the material as an example and try to make it easy to edit in sprite component
 [X] Sprite gizmos
 [X] Run/Pause
@@ -36,12 +36,12 @@
 ## Graphics
 
 [X] Material should store wgpu bind groups
-[ ] Supports Meshes
-[ ] Material fields should now be a string identifier
+[X] Supports Meshes
+[X] Material fields should now be a string identifier
+[X] Sprite vertex/indices should be shared accross all sprites
+[X] Squad transform should be done in shader instead of CPU
 [ ] Sprites should simply edit a field of material
-[ ] Sprite vertex/indices should be shared accross all sprites
 [ ] Proceed instantied rendering
-[ ] Squad transform should be done in shader instead of CPU
 [ ] Implement rendering composers
 
 ## Game tools
@@ -80,7 +80,7 @@
 
 [ ] Implement a basic sound features
 [X] Dynamic libraries rust
-[ ] Hot reload js
+[X] Hot reload js
 [ ] Hot reload rust
 
 # Code clean
