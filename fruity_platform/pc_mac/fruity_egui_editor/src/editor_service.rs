@@ -14,7 +14,7 @@ use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_graphic::graphic_service::GraphicService;
-use fruity_wgpu_graphic::graphic_service::WgpuGraphicManager;
+use fruity_wgpu_graphic::graphic_service::WgpuGraphicService;
 use fruity_windows::window_service::WindowService;
 use fruity_winit_windows::window_service::WinitWindowService;
 use std::fmt::Debug;
@@ -95,7 +95,7 @@ impl EditorService {
     ) -> EditorServiceState {
         let window_service = window_service.read();
         let graphic_service = graphic_service.read();
-        let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
+        let graphic_service = graphic_service.downcast_ref::<WgpuGraphicService>();
 
         // Get all what we need to initialize
         let device = graphic_service.get_device();
@@ -127,7 +127,7 @@ impl EditorService {
         let window_service = self.window_service.read();
         let window_service = window_service.downcast_ref::<WinitWindowService>();
         let graphic_service = self.graphic_service.read();
-        let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
+        let graphic_service = graphic_service.downcast_ref::<WgpuGraphicService>();
 
         let device = graphic_service.get_device();
         let config = graphic_service.get_config();

@@ -15,7 +15,7 @@ pub fn load_texture(
     settings: Settings,
     resource_container: Arc<ResourceContainer>,
 ) {
-    // Get the graphic manager state
+    // Get the graphic service state
     let graphic_service = resource_container.require::<dyn GraphicService>();
     let graphic_service = graphic_service.read();
 

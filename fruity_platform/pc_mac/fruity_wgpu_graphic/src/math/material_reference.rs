@@ -1,4 +1,4 @@
-use crate::graphic_service::WgpuGraphicManager;
+use crate::graphic_service::WgpuGraphicService;
 use crate::resources::shader_resource::WgpuShaderResource;
 use crate::resources::texture_resource::WgpuTextureResource;
 use fruity_any::*;
@@ -35,7 +35,7 @@ pub enum NewMaterialReferenceError {
 
 impl WgpuMaterialReference {
     pub fn new(
-        graphic_service: &WgpuGraphicManager,
+        graphic_service: &WgpuGraphicService,
         material: ResourceReference<MaterialResource>,
     ) -> Self {
         let material_reader = material.read();
@@ -251,7 +251,7 @@ impl MaterialReference for WgpuMaterialReference {
                 .resource_container
                 .require::<dyn GraphicService>();
             let graphic_service = graphic_service.read();
-            let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
+            let graphic_service = graphic_service.downcast_ref::<WgpuGraphicService>();
 
             buffers.iter().for_each(|buffer| {
                 graphic_service

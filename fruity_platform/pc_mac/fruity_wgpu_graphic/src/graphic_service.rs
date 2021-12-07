@@ -58,7 +58,7 @@ struct RenderBundleEntry {
 }
 
 #[derive(Debug, FruityAny)]
-pub struct WgpuGraphicManager {
+pub struct WgpuGraphicService {
     state: State,
     current_output: Option<wgpu::SurfaceTexture>,
     render_bundle_queue: Mutex<Vec<RenderBundleEntry>>,
@@ -67,8 +67,8 @@ pub struct WgpuGraphicManager {
     pub on_after_draw_end: Signal<()>,
 }
 
-impl WgpuGraphicManager {
-    pub fn new(resource_container: Arc<ResourceContainer>) -> WgpuGraphicManager {
+impl WgpuGraphicService {
+    pub fn new(resource_container: Arc<ResourceContainer>) -> WgpuGraphicService {
         let window_service = resource_container.require::<dyn WindowService>();
         let window_service = window_service.read();
         let window_service = window_service.downcast_ref::<WinitWindowService>();
@@ -78,7 +78,7 @@ impl WgpuGraphicManager {
         window_service.on_start_update().add_observer(move |_| {
             let graphic_service = resource_container_2.require::<dyn GraphicService>();
             let mut graphic_service = graphic_service.write();
-            let graphic_service = graphic_service.downcast_mut::<WgpuGraphicManager>();
+            let graphic_service = graphic_service.downcast_mut::<WgpuGraphicService>();
 
             graphic_service.start_draw();
         });
@@ -116,13 +116,13 @@ impl WgpuGraphicManager {
             });
 
         // Initialize the graphics
-        let state = WgpuGraphicManager::initialize(window_service.get_window());
+        let state = WgpuGraphicService::initialize(window_service.get_window());
 
         // Dispatch initialized event
         let on_initialized = Signal::new();
         on_initialized.notify(());
 
-        WgpuGraphicManager {
+        WgpuGraphicService {
             state,
             current_output: None,
             render_bundle_queue: Mutex::new(Vec::new()),
@@ -246,7 +246,7 @@ impl WgpuGraphicManager {
     }
 }
 
-impl GraphicService for WgpuGraphicManager {
+impl GraphicService for WgpuGraphicService {
     fn start_draw(&mut self) {
         // Get the texture view where the scene will be rendered
         let output = self.state.surface.get_current_texture().unwrap();
@@ -478,9 +478,9 @@ impl GraphicService for WgpuGraphicManager {
     }
 }
 
-impl IntrospectObject for WgpuGraphicManager {
+impl IntrospectObject for WgpuGraphicService {
     fn get_class_name(&self) -> String {
-        "GraphicManager".to_string()
+        "GraphicService".to_string()
     }
 
     fn get_method_infos(&self) -> Vec<MethodInfo> {
@@ -492,4 +492,4 @@ impl IntrospectObject for WgpuGraphicManager {
     }
 }
 
-impl Resource for WgpuGraphicManager {}
+impl Resource for WgpuGraphicService {}

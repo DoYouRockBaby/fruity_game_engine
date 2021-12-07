@@ -84,7 +84,7 @@ pub fn deserialize_v8<'a>(
                     callback.call(scope, recv, &args);
                 }
             } else {
-                // Otherwise, we fallback by running it from the javascript manager
+                // Otherwise, we fallback by running it from the javascript service
                 let javascript_service = resource_container.require::<JavascriptService>();
                 let javascript_service = javascript_service.read();
                 javascript_service.run_callback(callback_identifier, args);
