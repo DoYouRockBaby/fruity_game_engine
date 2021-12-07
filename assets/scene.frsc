@@ -18,11 +18,12 @@
           x: 0.3
   - class_name: Sprite
     fields:
+      z_index: 0
+      texture: ~
       material:
         class_name: ResourceReference
         fields:
-          resource_name: assets/material.material
-      z_index: 10
+          resource_name: "./assets/material.material"
   - class_name: Move
     fields:
       velocity: 0.2
@@ -33,20 +34,20 @@
         fields: {}
   - class_name: Entity
     fields:
-      enabled: true
       entity_id: 1
       name: Player
+      enabled: true
 - - class_name: Parent
     fields:
-      parent_id: 1
       nested_level: 1
+      parent_id: 1
   - class_name: Translate2d
     fields:
       vec:
         class_name: Vector2d
         fields:
-          x: 0.63
           y: 0.32
+          x: 0.63
   - class_name: Scale2d
     fields:
       vec:
@@ -56,18 +57,19 @@
           y: 0.5
   - class_name: Sprite
     fields:
+      z_index: 1
       material:
         class_name: ResourceReference
         fields:
-          resource_name: assets/material.material
-      z_index: 0
+          resource_name: "./assets/material.material"
+      texture: ~
   - class_name: TestVec
     fields:
       scale:
         class_name: Vector2d
         fields:
-          x: 0.5
           y: 0.5
+          x: 0.5
   - class_name: Transform2d
     fields:
       transform:
@@ -75,8 +77,8 @@
         fields: {}
   - class_name: Entity
     fields:
-      enabled: true
       name: Image 1
+      enabled: true
       entity_id: 3
 - - class_name: Parent
     fields:
@@ -87,22 +89,23 @@
       vec:
         class_name: Vector2d
         fields:
-          y: 0.05
           x: -0.15
+          y: 0.05
   - class_name: Scale2d
     fields:
       vec:
         class_name: Vector2d
         fields:
-          x: 0.5
           y: 0.5
+          x: 0.5
   - class_name: Sprite
     fields:
       material:
         class_name: ResourceReference
         fields:
-          resource_name: assets/material.material
-      z_index: 1
+          resource_name: "./assets/material.material"
+      texture: ~
+      z_index: 2
   - class_name: Transform2d
     fields:
       transform:
@@ -110,16 +113,16 @@
         fields: {}
   - class_name: Entity
     fields:
-      enabled: true
       entity_id: 5
+      enabled: true
       name: Image 2
 - - class_name: Translate2d
     fields:
       vec:
         class_name: Vector2d
         fields:
-          x: 0
           y: 0
+          x: 0
   - class_name: Scale2d
     fields:
       vec:
@@ -129,8 +132,8 @@
           y: 2
   - class_name: Camera
     fields:
-      near: -1
       far: 1
+      near: -1
   - class_name: Transform2d
     fields:
       transform:

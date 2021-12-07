@@ -3,7 +3,6 @@ use crate::hooks::use_global;
 use crate::state::inspector::InspectorState;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
-use fruity_core::serialize::yaml::deserialize_yaml;
 use fruity_core::serialize::yaml::serialize_yaml;
 use fruity_ecs::entity::entity_service::EntityService;
 use fruity_ecs::entity::entity_service::EntityServiceSnapshot;
@@ -74,20 +73,15 @@ impl SceneState {
         let dialog_service = self.resource_container.require::<dyn DialogService>();
         let dialog_service = dialog_service.read();
 
-        if let Some(filepath) = dialog_service.open(&["*.frsc"]) {
-            if let Ok(mut reader) = File::open(&filepath) {
-                if let Some(snapshot) = deserialize_yaml(&mut reader) {
-                    let inspector_state = use_global::<InspectorState>();
-                    let entity_service = self.entity_service.read();
-                    let system_service = self.system_service.read();
+        if let Some(filepath) = dialog_service.open(&["*"]) {
+            let inspector_state = use_global::<InspectorState>();
+            let entity_service = self.entity_service.read();
+            let system_service = self.system_service.read();
 
-                    entity_service.restore(&EntityServiceSnapshot(snapshot));
-                    system_service.set_paused(true);
-                    inspector_state.unselect();
-                    self.current_filepath = Some(filepath);
-                } else {
-                }
-            }
+            entity_service.restore_from_file(&filepath);
+            system_service.set_paused(true);
+            inspector_state.unselect();
+            self.current_filepath = Some(filepath);
         }
     }
 
@@ -111,7 +105,7 @@ impl SceneState {
         let dialog_service = self.resource_container.require::<dyn DialogService>();
         let dialog_service = dialog_service.read();
 
-        if let Some(filepath) = dialog_service.save(&["frsc"]) {
+        if let Some(filepath) = dialog_service.save("scene.frsc", &["frsc"]) {
             if let Ok(mut writer) = File::create(&filepath) {
                 let entity_service = self.entity_service.read();
                 let snapshot = entity_service.snapshot();

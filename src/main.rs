@@ -3,6 +3,7 @@ extern crate pretty_env_logger;
 use fruity_core::settings::read_settings;
 use fruity_core::settings::Settings;
 use fruity_core::world::World;
+use fruity_ecs::entity::entity_service::EntityService;
 use fruity_ecs::initialize as initialize_ecs;
 use fruity_editor::initialize as initialize_editor;
 use fruity_editor_graphic::initialize as initialize_editor_graphic;
@@ -72,6 +73,9 @@ fn main() {
                 .unwrap();
 
             // Load entry scene
+            let entity_service = resource_container.require::<EntityService>();
+            let entity_service = entity_service.read();
+            entity_service.restore_from_file("./assets/scene.frsc");
 
             /*let mut module_manager = ModuleManager::new(resource_container.clone());
             module_manager.load_module("./target/debug", "fruity_graphic");

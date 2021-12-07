@@ -17,6 +17,7 @@ use fruity_core::object_factory_service::ObjectFactoryService;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::serialize::serialized::Serialized;
+use fruity_core::serialize::yaml::deserialize_yaml;
 use fruity_core::serialize::Deserialize;
 use fruity_core::serialize::Serialize;
 use fruity_core::utils::introspect::cast_introspect_ref;
@@ -25,6 +26,7 @@ use rayon::iter::ParallelBridge;
 use rayon::iter::ParallelIterator;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::fs::File;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -287,6 +289,19 @@ impl EntityService {
             .collect::<Vec<_>>();
 
         EntityServiceSnapshot(Serialized::Array(serialized_entities))
+    }
+
+    /// Restore an entity snapshot from a file
+    ///
+    /// # Arguments
+    /// * `filepath` - The file path
+    ///
+    pub fn restore_from_file(&self, filepath: &str) {
+        if let Ok(mut reader) = File::open(&filepath) {
+            if let Some(snapshot) = deserialize_yaml(&mut reader) {
+                self.restore(&EntityServiceSnapshot(snapshot));
+            }
+        }
     }
 
     /// Restore an entity snapshot

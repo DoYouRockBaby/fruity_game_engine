@@ -19,16 +19,17 @@ impl WgpuDialogService {
 }
 
 impl DialogService for WgpuDialogService {
-    fn save(&self, file_types: &[&str]) -> Option<String> {
-        save_file_dialog_with_filter("Save", "scene.frsc", file_types, "Save your file")
+    fn save(&self, default_filename: &str, file_types: &[&str]) -> Option<String> {
+        save_file_dialog_with_filter("Save", default_filename, file_types, "Save your file")
     }
 
     fn open(&self, file_types: &[&str]) -> Option<String> {
-        let filters = file_types
+        let _filters = file_types
             .get(0)
             .map(|first_filter| (file_types, *first_filter));
 
-        open_file_dialog("Save", ".", filters)
+        // TODO: Fix filters
+        open_file_dialog("Save", ".", None)
     }
 }
 
