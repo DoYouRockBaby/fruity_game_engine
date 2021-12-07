@@ -2,6 +2,7 @@ use crate::math::material_reference::WgpuMaterialReference;
 use crate::resources::mesh_resource::WgpuMeshResource;
 use crate::resources::shader_resource::WgpuShaderResource;
 use crate::resources::texture_resource::WgpuTextureResource;
+use crate::wgpu_bridge::Instance;
 use fruity_any::*;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
@@ -12,6 +13,7 @@ use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::signal::Signal;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::material_reference::MaterialReference;
+use fruity_graphic::math::matrix3::Matrix3;
 use fruity_graphic::math::matrix4::Matrix4;
 use fruity_graphic::resources::material_resource::MaterialResource;
 use fruity_graphic::resources::mesh_resource::MeshResource;
@@ -356,7 +358,7 @@ impl GraphicService for WgpuGraphicManager {
         &self.on_after_draw_end
     }
 
-    fn material_reference_from_resource_reference(
+    fn create_material_reference(
         &self,
         resource_reference: ResourceReference<MaterialResource>,
     ) -> Box<dyn MaterialReference> {
@@ -403,6 +405,76 @@ impl GraphicService for WgpuGraphicManager {
         let resource = WgpuTextureResource::from_image(device, queue, &image, Some(&identifier))?;
 
         Ok(Box::new(resource))
+    }
+
+    fn draw_mesh(
+        &self,
+        transform: Matrix3,
+        z_index: usize,
+        mesh: &dyn MeshResource,
+        material: &dyn MaterialReference,
+    ) {
+        let device = self.get_device();
+        let config = self.get_config();
+
+        // Get resources
+        let (material_reference, material) = if let Some(material) = material
+            .as_any_ref()
+            .downcast_ref::<WgpuMaterialReference>(
+        ) {
+            (material, material.read())
+        } else {
+            return;
+        };
+
+        let shader = if let Some(shader) = &material.shader {
+            shader
+        } else {
+            return;
+        };
+
+        let shader_reader = shader.read();
+        let shader_reader = shader_reader.downcast_ref::<WgpuShaderResource>();
+
+        // Create the main render pipeline
+        let mesh = mesh
+            .as_any_ref()
+            .downcast_ref::<WgpuMeshResource>()
+            .unwrap();
+
+        let mut encoder =
+            device.create_render_bundle_encoder(&wgpu::RenderBundleEncoderDescriptor {
+                label: Some("draw_square_bundle"),
+                color_formats: &[config.format],
+                depth_stencil: None,
+                sample_count: 1,
+            });
+
+        // TODO: Don't do it every frame (AKA: implements the instancied rendering)
+        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Instance Buffer"),
+            contents: bytemuck::cast_slice(&[Instance {
+                transform: transform.into(),
+            }]),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
+        encoder.set_pipeline(&shader_reader.render_pipeline);
+        material_reference
+            .binding_groups
+            .iter()
+            .for_each(|(index, bind_group)| {
+                encoder.set_bind_group(*index, &bind_group, &[]);
+            });
+        encoder.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
+        encoder.set_vertex_buffer(1, instance_buffer.slice(..));
+        encoder.set_index_buffer(mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+        encoder.draw_indexed(0..mesh.index_count as u32, 0, 0..1);
+        let bundle = encoder.finish(&wgpu::RenderBundleDescriptor {
+            label: Some("main"),
+        });
+
+        self.push_render_bundle(bundle, z_index);
     }
 }
 

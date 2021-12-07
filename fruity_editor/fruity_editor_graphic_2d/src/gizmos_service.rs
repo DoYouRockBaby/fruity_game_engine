@@ -20,14 +20,14 @@ use std::time::Duration;
 pub struct GizmosService {
     input_service: ResourceReference<InputService>,
     graphic_service: ResourceReference<dyn GraphicService>,
-    graphic_2d_service: ResourceReference<dyn Graphic2dService>,
+    graphic_2d_service: ResourceReference<Graphic2dService>,
 }
 
 impl GizmosService {
     pub fn new(resource_container: Arc<ResourceContainer>) -> GizmosService {
         let input_service = resource_container.require::<InputService>();
         let graphic_service = resource_container.require::<dyn GraphicService>();
-        let graphic_2d_service = resource_container.require::<dyn Graphic2dService>();
+        let graphic_2d_service = resource_container.require::<Graphic2dService>();
 
         GizmosService {
             input_service,
@@ -334,7 +334,7 @@ impl GizmosService {
 pub struct DragAction {
     start_pos: Vector2d,
     input_service: ResourceReference<InputService>,
-    graphic_2d_service: ResourceReference<dyn Graphic2dService>,
+    graphic_2d_service: ResourceReference<Graphic2dService>,
 }
 
 impl DragAction {
@@ -342,7 +342,7 @@ impl DragAction {
         callback: F,
         start_pos: Vector2d,
         input_service: ResourceReference<InputService>,
-        graphic_2d_service: ResourceReference<dyn Graphic2dService>,
+        graphic_2d_service: ResourceReference<Graphic2dService>,
     ) where
         F: Fn(DragAction) + Send + Sync + 'static,
     {

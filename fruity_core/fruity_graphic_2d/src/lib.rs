@@ -26,6 +26,12 @@ pub mod systems;
 
 // #[no_mangle]
 pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
+    let graphic_2d_service = Graphic2dService::new(resource_container.clone());
+
+    resource_container
+        .add::<Graphic2dService>("graphic_2d_service", Box::new(graphic_2d_service))
+        .unwrap();
+
     let object_factory_service = resource_container.require::<ObjectFactoryService>();
     let mut object_factory_service = object_factory_service.write();
 

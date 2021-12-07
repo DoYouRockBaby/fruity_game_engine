@@ -11,7 +11,7 @@ use std::ops::Deref;
 
 pub fn draw_sprite(
     entity_service: Const<EntityService>,
-    graphic_2d_service: Ref<dyn Graphic2dService>,
+    graphic_2d_service: Ref<Graphic2dService>,
 ) {
     entity_service.for_each(
         entity_type!["Transform2d", "Sprite"],

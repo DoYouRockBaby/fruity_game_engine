@@ -1,5 +1,4 @@
 use crate::Camera;
-use crate::Graphic2dService;
 use crate::Transform2d;
 use fruity_core::inject::Const;
 use fruity_core::inject::Ref;
@@ -8,12 +7,13 @@ use fruity_ecs::entity::entity_query::Read;
 use fruity_ecs::entity::entity_service::EntityService;
 use fruity_ecs::entity_type;
 use fruity_ecs::system::system_service::SystemService;
+use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::matrix4::Matrix4;
 use fruity_graphic::math::vector2d::Vector2d;
 
 pub fn draw_camera(
     entity_service: Const<EntityService>,
-    graphic_2d_service: Ref<dyn Graphic2dService>,
+    graphic_service: Ref<dyn GraphicService>,
     system_service: Ref<SystemService>,
 ) {
     entity_service.for_each(
@@ -33,8 +33,9 @@ pub fn draw_camera(
 
             // Start the pass
             {
-                let graphic_2d_service = graphic_2d_service.read();
-                graphic_2d_service.start_pass(view_proj);
+                let mut graphic_service = graphic_service.write();
+                graphic_service.update_camera(view_proj);
+                graphic_service.start_pass();
             }
 
             // Render the draw system pool and avoir the normal system treatment
@@ -46,8 +47,8 @@ pub fn draw_camera(
 
             // End the pass
             {
-                let graphic_2d_service = graphic_2d_service.read();
-                graphic_2d_service.end_pass();
+                let graphic_service = graphic_service.read();
+                graphic_service.end_pass();
             }
         }),
     )

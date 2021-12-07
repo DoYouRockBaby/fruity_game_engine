@@ -26,7 +26,6 @@ fruity_javascript = { path = "fruity_core/fruity_javascript" }
 fruity_windows = { path = "fruity_core/fruity_windows" }
 
 fruity_wgpu_graphic = { path = "fruity_platform/pc_mac/fruity_wgpu_graphic" }
-fruity_wgpu_graphic_2d = { path = "fruity_platform/pc_mac/fruity_wgpu_graphic_2d" }
 fruity_winit_input = { path = "fruity_platform/pc_mac/fruity_winit_input" }
 fruity_winit_windows = { path = "fruity_platform/pc_mac/fruity_winit_windows" }
 fruity_egui_editor = { path = "fruity_platform/pc_mac/fruity_egui_editor" }

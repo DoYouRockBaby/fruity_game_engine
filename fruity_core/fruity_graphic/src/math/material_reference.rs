@@ -23,7 +23,7 @@ impl Clone for Box<dyn MaterialReference> {
         let graphic_service = material.resource_container.require::<dyn GraphicService>();
         let graphic_service = graphic_service.read();
 
-        graphic_service.material_reference_from_resource_reference(material)
+        graphic_service.create_material_reference(material)
     }
 }
 
@@ -47,7 +47,7 @@ impl FruityTryFrom<Serialized> for Box<dyn MaterialReference> {
                     let graphic_service = value.resource_container.require::<dyn GraphicService>();
                     let graphic_service = graphic_service.read();
 
-                    Ok(graphic_service.material_reference_from_resource_reference(*value))
+                    Ok(graphic_service.create_material_reference(*value))
                 } else if let Ok(resource_reference) = value
                     .clone()
                     .as_any_box()
@@ -63,13 +63,13 @@ impl FruityTryFrom<Serialized> for Box<dyn MaterialReference> {
                             .require::<dyn GraphicService>();
                         let graphic_service = graphic_service.read();
 
-                        Ok(graphic_service.material_reference_from_resource_reference(
-                            ResourceReference::new(
+                        Ok(
+                            graphic_service.create_material_reference(ResourceReference::new(
                                 &resource_reference.name,
                                 resource,
                                 resource_reference.resource_container.clone(),
-                            ),
-                        ))
+                            )),
+                        )
                     } else {
                         Err(format!("Couldn't convert a Serialized to native object"))
                     }

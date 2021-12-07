@@ -16,7 +16,6 @@ use fruity_hierarchy_2d::initialize as initialize_hierarchy_2d;
 use fruity_input::initialize as initialize_input;
 use fruity_javascript::initialize as initialize_javascript;
 use fruity_wgpu_graphic::initialize as initialize_wgpu_graphic;
-use fruity_wgpu_graphic_2d::initialize as initialize_wgpu_graphic_2d;
 use fruity_windows::initialize as initialize_window;
 use fruity_winit_input::initialize as initialize_winit_input;
 use fruity_winit_windows::initialize as initialize_winit_window;
@@ -52,7 +51,6 @@ fn main() {
             initialize_winit_input(resource_container.clone(), settings);
             initialize_wgpu_graphic(resource_container.clone(), settings);
             initialize_graphic(resource_container.clone(), settings);
-            initialize_wgpu_graphic_2d(resource_container.clone(), settings);
             initialize_graphic_2d(resource_container.clone(), settings);
             initialize_hierarchy_2d(resource_container.clone(), settings);
             initialize_editor(resource_container.clone(), settings);
