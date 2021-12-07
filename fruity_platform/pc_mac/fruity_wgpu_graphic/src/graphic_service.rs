@@ -1,4 +1,7 @@
 use crate::math::material_reference::WgpuMaterialReference;
+use crate::resources::mesh_resource::WgpuMeshResource;
+use crate::resources::shader_resource::WgpuShaderResource;
+use crate::resources::texture_resource::WgpuTextureResource;
 use fruity_any::*;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
@@ -11,8 +14,15 @@ use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::material_reference::MaterialReference;
 use fruity_graphic::math::matrix4::Matrix4;
 use fruity_graphic::resources::material_resource::MaterialResource;
+use fruity_graphic::resources::mesh_resource::MeshResource;
+use fruity_graphic::resources::mesh_resource::MeshResourceSettings;
+use fruity_graphic::resources::shader_resource::ShaderResource;
+use fruity_graphic::resources::shader_resource::ShaderResourceSettings;
+use fruity_graphic::resources::texture_resource::TextureResource;
+use fruity_graphic::resources::texture_resource::TextureResourceSettings;
 use fruity_windows::window_service::WindowService;
 use fruity_winit_windows::window_service::WinitWindowService;
+use image::load_from_memory;
 use std::fmt::Debug;
 use std::iter;
 use std::ops::Deref;
@@ -351,6 +361,48 @@ impl GraphicService for WgpuGraphicManager {
         resource_reference: ResourceReference<MaterialResource>,
     ) -> Box<dyn MaterialReference> {
         Box::new(WgpuMaterialReference::new(self, resource_reference))
+    }
+
+    fn create_mesh_resource(
+        &self,
+        identifier: &str,
+        params: MeshResourceSettings,
+    ) -> Result<Box<dyn MeshResource>, String> {
+        let device = self.get_device();
+
+        let resource = WgpuMeshResource::new(device, identifier, &params);
+
+        Ok(Box::new(resource))
+    }
+
+    fn create_shader_resource(
+        &self,
+        identifier: &str,
+        contents: String,
+        params: ShaderResourceSettings,
+    ) -> Result<Box<dyn ShaderResource>, String> {
+        let device = self.get_device();
+        let surface_config = self.get_config();
+
+        let resource =
+            WgpuShaderResource::new(device, surface_config, &contents, identifier, &params);
+
+        Ok(Box::new(resource))
+    }
+
+    fn create_texture_resource(
+        &self,
+        identifier: &str,
+        contents: &[u8],
+        _params: TextureResourceSettings,
+    ) -> Result<Box<dyn TextureResource>, String> {
+        let device = self.get_device();
+        let queue = self.get_queue();
+
+        let image = load_from_memory(contents).unwrap();
+        let resource = WgpuTextureResource::from_image(device, queue, &image, Some(&identifier))?;
+
+        Ok(Box::new(resource))
     }
 }
 

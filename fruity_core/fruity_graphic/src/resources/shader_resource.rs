@@ -1,3 +1,4 @@
+use crate::graphic_service::GraphicService;
 use fruity_any::*;
 use fruity_core::convert::FruityInto;
 use fruity_core::convert::FruityTryFrom;
@@ -7,28 +8,29 @@ use fruity_core::serialize::serialized::SerializableObject;
 use fruity_core::serialize::serialized::Serialized;
 use fruity_core::settings::Settings;
 use fruity_ecs::*;
+use std::io::Read;
 use std::sync::Arc;
 
 pub trait ShaderResource: Resource {}
 
 #[derive(Debug, Default, Clone, FruityAny, IntrospectObject, InstantiableObject)]
-pub struct ShaderParams {
+pub struct ShaderResourceSettings {
     pub binding_groups: Vec<ShaderBindingGroup>,
 }
 
-impl SerializableObject for ShaderParams {
+impl SerializableObject for ShaderResourceSettings {
     fn duplicate(&self) -> Box<dyn SerializableObject> {
         Box::new(self.clone())
     }
 }
 
-impl FruityTryFrom<Serialized> for ShaderParams {
+impl FruityTryFrom<Serialized> for ShaderResourceSettings {
     type Error = String;
 
     fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
         match value {
             Serialized::NativeObject(value) => {
-                match value.as_any_box().downcast::<ShaderParams>() {
+                match value.as_any_box().downcast::<ShaderResourceSettings>() {
                     Ok(value) => Ok(*value),
                     Err(_) => Err(format!("Couldn't convert a ShaderParams to native object")),
                 }
@@ -38,7 +40,7 @@ impl FruityTryFrom<Serialized> for ShaderParams {
     }
 }
 
-impl FruityInto<Serialized> for ShaderParams {
+impl FruityInto<Serialized> for ShaderResourceSettings {
     fn fruity_into(self) -> Serialized {
         Serialized::NativeObject(Box::new(self))
     }
@@ -201,10 +203,50 @@ impl FruityInto<Serialized> for ShaderBindingType {
     }
 }
 
-pub fn load_shader_settings(
+pub fn load_shader(
+    identifier: &str,
+    reader: &mut dyn Read,
+    settings: Settings,
+    resource_container: Arc<ResourceContainer>,
+) {
+    // Get the graphic manager state
+    let graphic_service = resource_container.require::<dyn GraphicService>();
+    let graphic_service = graphic_service.read();
+
+    // read the whole file
+    let mut buffer = String::new();
+    if let Err(err) = reader.read_to_string(&mut buffer) {
+        log::error!("{}", err.to_string());
+        return;
+    }
+
+    // Parse settings
+    let settings = read_shader_settings(&settings, resource_container.clone());
+
+    // Build the resource
+    let result = graphic_service.create_shader_resource(identifier, buffer, settings);
+
+    match result {
+        Ok(resource) => {
+            // Store the resource
+            if let Err(_) = resource_container.add::<dyn ShaderResource>(identifier, resource) {
+                log::error!(
+                    "Couldn't add a resource cause the identifier \"{}\" already exists",
+                    identifier
+                );
+                return;
+            }
+        }
+        Err(err) => {
+            log::error!("{}", err);
+        }
+    }
+}
+
+pub fn read_shader_settings(
     settings: &Settings,
     _resource_container: Arc<ResourceContainer>,
-) -> ShaderParams {
+) -> ShaderResourceSettings {
     let binding_groups = settings.get::<Vec<Settings>>("binding_groups", Vec::new());
     let binding_groups = binding_groups
         .iter()
@@ -215,13 +257,13 @@ pub fn load_shader_settings(
                 None
             }
         })
-        .map(|params| load_shader_binding_group_settings(params, _resource_container.clone()))
+        .map(|params| read_shader_binding_group_settings(params, _resource_container.clone()))
         .collect::<Vec<_>>();
 
-    ShaderParams { binding_groups }
+    ShaderResourceSettings { binding_groups }
 }
 
-pub fn load_shader_binding_group_settings(
+pub fn read_shader_binding_group_settings(
     settings: &Vec<Settings>,
     _resource_container: Arc<ResourceContainer>,
 ) -> ShaderBindingGroup {

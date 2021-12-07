@@ -23,8 +23,13 @@ use std::sync::RwLockWriteGuard;
 /// A reference over an any resource that is supposed to be used by components
 #[derive(Debug, Clone, FruityAny)]
 pub struct AnyResourceReference {
+    /// The name of the resource
     pub name: String,
+
+    /// The resource reference
     pub resource: Arc<dyn Resource>,
+
+    /// The resource container reference
     pub resource_container: Arc<ResourceContainer>,
 }
 
@@ -190,8 +195,13 @@ impl FruityInto<Serialized> for AnyResourceReference {
 /// A reference over a resource that is supposed to be used by components
 #[derive(Debug)]
 pub struct ResourceReference<T: Resource + ?Sized> {
+    /// The name of the resource
     pub name: String,
+
+    /// The resource reference
     pub resource: Arc<RwLock<Box<T>>>,
+
+    /// The resource container reference
     pub resource_container: Arc<ResourceContainer>,
 }
 

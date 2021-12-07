@@ -1,7 +1,5 @@
 use crate::wgpu_bridge::INSTANCE_DESC;
 use crate::wgpu_bridge::VERTEX_DESC;
-use crate::GraphicService;
-use crate::WgpuGraphicManager;
 use fruity_any::*;
 use fruity_core::convert::FruityInto;
 use fruity_core::convert::FruityTryFrom;
@@ -10,33 +8,29 @@ use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodInfo;
 use fruity_core::introspect::SetterCaller;
 use fruity_core::resource::resource::Resource;
-use fruity_core::resource::resource_container::ResourceContainer;
-use fruity_core::settings::Settings;
-use fruity_graphic::resources::shader_resource::load_shader_settings;
 use fruity_graphic::resources::shader_resource::ShaderBinding;
 use fruity_graphic::resources::shader_resource::ShaderBindingGroup;
 use fruity_graphic::resources::shader_resource::ShaderBindingType;
 use fruity_graphic::resources::shader_resource::ShaderBindingVisibility;
-use fruity_graphic::resources::shader_resource::ShaderParams;
 use fruity_graphic::resources::shader_resource::ShaderResource;
-use std::io::Read;
+use fruity_graphic::resources::shader_resource::ShaderResourceSettings;
 use std::sync::Arc;
 
 #[derive(Debug, FruityAny)]
 pub struct WgpuShaderResource {
-    pub params: ShaderParams,
+    pub params: ShaderResourceSettings,
     pub shader_module: wgpu::ShaderModule,
     pub render_pipeline: wgpu::RenderPipeline,
     pub binding_groups_layout: Vec<wgpu::BindGroupLayout>,
 }
 
 impl WgpuShaderResource {
-    fn new(
+    pub fn new(
         device: &wgpu::Device,
         surface_config: &wgpu::SurfaceConfiguration,
         buffer: &str,
         label: &str,
-        params: &ShaderParams,
+        params: &ShaderResourceSettings,
     ) -> WgpuShaderResource {
         // Create the shader
         let shader_module = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
@@ -168,44 +162,6 @@ impl ShaderResource for WgpuShaderResource {}
 
 impl Resource for WgpuShaderResource {}
 
-pub fn load_shader(
-    identifier: &str,
-    reader: &mut dyn Read,
-    settings: Settings,
-    resource_container: Arc<ResourceContainer>,
-) {
-    // Get the graphic manager state
-    let graphic_service = resource_container.require::<dyn GraphicService>();
-    let graphic_service = graphic_service.read();
-    let graphic_service = graphic_service.downcast_ref::<WgpuGraphicManager>();
-
-    let device = graphic_service.get_device();
-    let surface_config = graphic_service.get_config();
-
-    // read the whole file
-    let mut buffer = String::new();
-    if let Err(err) = reader.read_to_string(&mut buffer) {
-        log::error!("{}", err.to_string());
-        return;
-    }
-
-    // Parse settings
-    let shader_params = load_shader_settings(&settings, resource_container.clone());
-
-    // Build the resource
-    let resource =
-        WgpuShaderResource::new(device, surface_config, &buffer, identifier, &shader_params);
-
-    // Store the resource
-    if let Err(_) = resource_container.add::<dyn ShaderResource>(identifier, Box::new(resource)) {
-        log::error!(
-            "Couldn't add a resource cause the identifier \"{}\" already exists",
-            identifier
-        );
-        return;
-    }
-}
-
 impl IntrospectObject for WgpuShaderResource {
     fn get_class_name(&self) -> String {
         "ShaderResource".to_string()
@@ -229,7 +185,7 @@ impl IntrospectObject for WgpuShaderResource {
             setter: SetterCaller::Mut(std::sync::Arc::new(|this, value| {
                 let this = this.downcast_mut::<WgpuShaderResource>().unwrap();
 
-                match ShaderParams::fruity_try_from(value) {
+                match ShaderResourceSettings::fruity_try_from(value) {
                     Ok(value) => this.params = value,
                     Err(_) => {
                         log::error!("Expected a ShaderParams for property params");

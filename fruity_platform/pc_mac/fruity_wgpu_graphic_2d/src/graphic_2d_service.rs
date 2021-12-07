@@ -16,6 +16,7 @@ use fruity_graphic::resources::mesh_resource::MeshResource;
 use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
 use fruity_wgpu_graphic::graphic_service::WgpuGraphicManager;
 use fruity_wgpu_graphic::math::material_reference::WgpuMaterialReference;
+use fruity_wgpu_graphic::resources::mesh_resource::WgpuMeshResource;
 use fruity_wgpu_graphic::resources::shader_resource::WgpuShaderResource;
 use fruity_wgpu_graphic::wgpu_bridge::Instance;
 use fruity_windows::window_service::WindowService;
@@ -84,25 +85,10 @@ impl Graphic2dService for WgpuGraphic2dManager {
         // Create the main render pipeline
         let mesh = self
             .resource_container
-            .get::<MeshResource>("Meshes/Squad")
+            .get::<dyn MeshResource>("Meshes/Squad")
             .unwrap();
         let mesh = mesh.read();
-
-        let num_indices = mesh.indices.len() as u32;
-
-        // TODO: Don't do it every frame (AKA: implements the instancied rendering)
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(&mesh.vertices),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-
-        // TODO: Don't do it every frame (AKA: implements the instancied rendering)
-        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Index Buffer"),
-            contents: bytemuck::cast_slice(&mesh.indices),
-            usage: wgpu::BufferUsages::INDEX,
-        });
+        let mesh = mesh.downcast_ref::<WgpuMeshResource>();
 
         let mut encoder =
             device.create_render_bundle_encoder(&wgpu::RenderBundleEncoderDescriptor {
@@ -128,10 +114,10 @@ impl Graphic2dService for WgpuGraphic2dManager {
             .for_each(|(index, bind_group)| {
                 encoder.set_bind_group(*index, &bind_group, &[]);
             });
-        encoder.set_vertex_buffer(0, vertex_buffer.slice(..));
+        encoder.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
         encoder.set_vertex_buffer(1, instance_buffer.slice(..));
-        encoder.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-        encoder.draw_indexed(0..num_indices, 0, 0..1);
+        encoder.set_index_buffer(mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+        encoder.draw_indexed(0..mesh.index_count as u32, 0, 0..1);
         let bundle = encoder.finish(&wgpu::RenderBundleDescriptor {
             label: Some("main"),
         });
