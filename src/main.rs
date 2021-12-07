@@ -16,6 +16,8 @@ use fruity_hierarchy::initialize as initialize_hierarchy;
 use fruity_hierarchy_2d::initialize as initialize_hierarchy_2d;
 use fruity_input::initialize as initialize_input;
 use fruity_javascript::initialize as initialize_javascript;
+use fruity_javascript_watcher::initialize as initialize_javascript_watcher;
+use fruity_javascript_watcher::javascript_watcher_service::JavascriptWatcherService;
 use fruity_wgpu_graphic::initialize as initialize_wgpu_graphic;
 use fruity_windows::initialize as initialize_window;
 use fruity_winit_input::initialize as initialize_winit_input;
@@ -54,8 +56,9 @@ fn main() {
             initialize_graphic(resource_container.clone(), settings);
             initialize_graphic_2d(resource_container.clone(), settings);
             initialize_hierarchy_2d(resource_container.clone(), settings);
-            initialize_editor(resource_container.clone(), settings);
             initialize_javascript(resource_container.clone(), settings);
+            initialize_javascript_watcher(resource_container.clone(), settings);
+            initialize_editor(resource_container.clone(), settings);
             initialize_egui_editor(resource_container.clone(), settings);
             initialize_editor_graphic(resource_container.clone(), settings);
             initialize_editor_graphic_2d(resource_container.clone(), settings);
@@ -68,14 +71,22 @@ fn main() {
                 .load_resources_settings(resource_settings);
 
             // Load js script
-            resource_container
-                .load_resource_file("./assets/index.js", "js")
-                .unwrap();
+            {
+                let javascript_watcher_service =
+                    resource_container.require::<JavascriptWatcherService>();
+                let mut javascript_watcher_service = javascript_watcher_service.write();
+                javascript_watcher_service.watch_module("./assets/index.js", "./assets");
+            }
+            /*resource_container
+            .load_resource_file("./assets/index.js", "js")
+            .unwrap();*/
 
             // Load entry scene
-            let entity_service = resource_container.require::<EntityService>();
-            let entity_service = entity_service.read();
-            entity_service.restore_from_file("./assets/scene.frsc");
+            {
+                let entity_service = resource_container.require::<EntityService>();
+                let entity_service = entity_service.read();
+                entity_service.restore_from_file("./assets/scene.frsc");
+            }
 
             /*let mut module_manager = ModuleManager::new(resource_container.clone());
             module_manager.load_module("./target/debug", "fruity_graphic");

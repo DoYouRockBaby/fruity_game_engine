@@ -10,6 +10,9 @@ use winit::event::MouseButton;
 use winit::event::VirtualKeyCode;
 use winit::event::WindowEvent;
 
+/// The module name
+pub static MODULE_NAME: &str = "fruity_winit_input";
+
 // #[no_mangle]
 pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
     let window_service = resource_container.require::<dyn WindowService>();

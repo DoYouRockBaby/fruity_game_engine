@@ -123,7 +123,7 @@ impl<T: FruityInto<Serialized> + Debug + Clone + 'static> IntrospectObject for S
 
                 this.add_observer(move |arg| {
                     let arg: Serialized = arg.clone().fruity_into();
-                    match arg1(vec![arg]) {
+                    match (arg1.callback)(vec![arg]) {
                         Ok(_) => (),
                         Err(err) => log_introspect_error(&err),
                     };
@@ -276,7 +276,7 @@ impl<T: FruityInto<Serialized> + Send + Sync + Debug + Clone + IntrospectObject>
 
                 this.add_observer(move |arg| {
                     let arg: Serialized = arg.clone().fruity_into();
-                    match arg1(vec![arg]) {
+                    match (arg1.callback)(vec![arg]) {
                         Ok(_) => (),
                         Err(err) => log_introspect_error(&err),
                     };

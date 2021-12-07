@@ -36,16 +36,15 @@ macro_rules! entity_type {
     };
 }
 
+/// The module name
+pub static MODULE_NAME: &str = "fruity_ecs";
+
 /// Initialize this extension
 // #[no_mangle]
 pub fn initialize(resource_container: Arc<ResourceContainer>) {
     let entity_service = EntityService::new(resource_container.clone());
     let system_service = SystemService::new(resource_container.clone());
 
-    resource_container
-        .add::<EntityService>("entity_service", Box::new(entity_service))
-        .unwrap();
-    resource_container
-        .add::<SystemService>("system_service", Box::new(system_service))
-        .unwrap();
+    resource_container.add::<EntityService>("entity_service", Box::new(entity_service));
+    resource_container.add::<SystemService>("system_service", Box::new(system_service));
 }

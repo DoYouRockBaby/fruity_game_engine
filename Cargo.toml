@@ -23,6 +23,7 @@ fruity_hierarchy = { path = "fruity_core/fruity_hierarchy" }
 fruity_hierarchy_2d = { path = "fruity_core/fruity_hierarchy_2d" }
 fruity_input = { path = "fruity_core/fruity_input" }
 fruity_javascript = { path = "fruity_core/fruity_javascript" }
+fruity_javascript_watcher = { path = "fruity_core/fruity_javascript_watcher" }
 fruity_windows = { path = "fruity_core/fruity_windows" }
 
 fruity_wgpu_graphic = { path = "fruity_platform/pc_mac/fruity_wgpu_graphic" }

@@ -2,7 +2,6 @@ use crate::introspect::FieldInfo;
 use crate::introspect::IntrospectObject;
 use crate::introspect::MethodCaller;
 use crate::introspect::MethodInfo;
-use crate::resource::error::AddResourceError;
 use crate::resource::error::LoadResourceError;
 use crate::resource::error::RemoveResourceError;
 use crate::resource::resource::Resource;
@@ -150,28 +149,16 @@ impl ResourceContainer {
     /// * `identifier` - The resource identifier
     /// * `resource` - The resource object
     ///
-    pub fn add<T: Resource + ?Sized>(
-        &self,
-        identifier: &str,
-        resource: Box<T>,
-    ) -> Result<(), AddResourceError> {
+    pub fn add<T: Resource + ?Sized>(&self, identifier: &str, resource: Box<T>) {
         let mut inner = self.inner.write().unwrap();
 
-        if inner.resources.contains_key(identifier) {
-            Err(AddResourceError::ResourceAlreadyExists(
-                identifier.to_string(),
-            ))
-        } else {
-            let shared = Arc::new(RwLock::new(resource));
-            inner
-                .resources
-                .insert(identifier.to_string(), shared.clone());
-            inner
-                .identifier_by_type
-                .insert(TypeId::of::<T>(), identifier.to_string());
-
-            Ok(())
-        }
+        let shared = Arc::new(RwLock::new(resource));
+        inner
+            .resources
+            .insert(identifier.to_string(), shared.clone());
+        inner
+            .identifier_by_type
+            .insert(TypeId::of::<T>(), identifier.to_string());
     }
 
     /// Remove a resource of the collection
@@ -343,12 +330,7 @@ impl IntrospectObject for ResourceContainer {
                     let arg1 = caster.cast_next::<String>()?;
                     let arg2 = caster.next()?;
 
-                    let result = this
-                        .add::<SerializedResource>(&arg1, Box::new(SerializedResource::new(arg2)));
-
-                    if let Err(err) = result {
-                        log::error!("{}", err.to_string());
-                    }
+                    this.add::<SerializedResource>(&arg1, Box::new(SerializedResource::new(arg2)));
 
                     Ok(None)
                 })),

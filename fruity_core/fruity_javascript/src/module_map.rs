@@ -27,6 +27,10 @@ impl ModuleMap {
         self.infos.get(global)
     }
 
+    pub fn clear(&mut self) {
+        self.infos.clear();
+    }
+
     pub fn find_by_filepath(
         &self,
         filepath: &str,

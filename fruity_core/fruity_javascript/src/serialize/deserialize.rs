@@ -1,4 +1,5 @@
 use crate::js_value::object::introspect_object::deserialize_v8_introspect_object;
+use crate::js_value::utils::get_origin;
 use crate::js_value::utils::get_resource_container;
 use crate::js_value::utils::get_stored_callback;
 use crate::js_value::utils::store_callback;
@@ -6,6 +7,7 @@ use crate::serialize::serialize::serialize_v8;
 use crate::thread_scope_stack::top_thread_scope_stack;
 use crate::JavascriptService;
 use fruity_core::introspect::IntrospectError;
+use fruity_core::serialize::serialized::Callback;
 use fruity_core::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 use std::collections::HashMap;
@@ -93,7 +95,10 @@ pub fn deserialize_v8<'a>(
             Ok(None)
         };
 
-        return Some(Serialized::Callback(Arc::new(callback)));
+        return Some(Serialized::Callback(Callback {
+            origin: get_origin(scope),
+            callback: Arc::new(callback),
+        }));
     }
 
     if let Some(introspect_object) = deserialize_v8_introspect_object(scope, v8_value) {

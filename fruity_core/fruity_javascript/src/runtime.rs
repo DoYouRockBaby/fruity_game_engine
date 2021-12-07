@@ -4,6 +4,7 @@ use crate::exception::exception_to_err_result;
 use crate::javascript_service::CallbackIdentifier;
 use crate::js_value::object::JsObject;
 use crate::js_value::utils::get_stored_callback;
+use crate::js_value::utils::set_origin;
 use crate::module_map::ModuleInfos;
 use crate::module_map::ModuleMap;
 use crate::normalize_path::normalize_path;
@@ -97,6 +98,9 @@ impl JsRuntime {
     // Enter the context for compiling and running the script
     let scope = &mut self.handle_scope();
 
+    // Set origin
+    set_origin(scope, "script");
+
     // Push the scope into the scope stack
     push_thread_scope_stack(scope);
 
@@ -129,6 +133,9 @@ impl JsRuntime {
   pub fn run_module(&mut self, filepath: &str) -> Result<(), JsError> {
     // Enter the context for compiling and running the script
     let scope = &mut self.handle_scope();
+
+    // Set origin
+    set_origin(scope, filepath);
 
     // Push the scope into the scope stack
     push_thread_scope_stack(scope);
@@ -185,6 +192,14 @@ impl JsRuntime {
 
       // Clear the scope stack
       clear_thread_scope_stack();
+    }
+  }
+
+  pub fn reset(&self) {
+    if let Some(v8_isolate) = &self.v8_isolate {
+      let module_map_rc = Self::module_map(v8_isolate);
+      let mut module_map = module_map_rc.borrow_mut();
+      module_map.clear();
     }
   }
 

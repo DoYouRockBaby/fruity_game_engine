@@ -9,11 +9,12 @@ pub mod math;
 pub mod resources;
 pub mod wgpu_bridge;
 
+/// The module name
+pub static MODULE_NAME: &str = "fruity_wgpu_graphic";
+
 // #[no_mangle]
 pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
     let graphic_service = WgpuGraphicService::new(resource_container.clone());
 
-    resource_container
-        .add::<dyn GraphicService>("graphic_service", Box::new(graphic_service))
-        .unwrap();
+    resource_container.add::<dyn GraphicService>("graphic_service", Box::new(graphic_service));
 }

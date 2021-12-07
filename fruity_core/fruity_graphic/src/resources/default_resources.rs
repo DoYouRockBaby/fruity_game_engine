@@ -55,7 +55,7 @@ pub fn load_squad_mesh(resource_container: Arc<ResourceContainer>) {
         )
         .unwrap();
 
-    resource_container.add("Meshes/Squad", resource).unwrap();
+    resource_container.add("Meshes/Squad", resource);
 }
 
 pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
@@ -145,9 +145,7 @@ pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
         )
         .unwrap();
 
-    resource_container
-        .add("Shaders/Draw Line", resource)
-        .unwrap();
+    resource_container.add("Shaders/Draw Line", resource);
 }
 
 pub fn load_draw_line_material(resource_container: Arc<ResourceContainer>) {
@@ -167,7 +165,5 @@ pub fn load_draw_line_material(resource_container: Arc<ResourceContainer>) {
         },
     });
 
-    resource_container
-        .add("Materials/Draw Line", resource)
-        .unwrap();
+    resource_container.add("Materials/Draw Line", resource);
 }

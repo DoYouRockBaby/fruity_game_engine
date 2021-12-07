@@ -44,7 +44,9 @@ impl IntrospectObject for SerializedResource {
 
                     MethodInfo {
                         name: key.clone(),
-                        call: MethodCaller::Mut(Arc::new(move |_this, args| callback(args))),
+                        call: MethodCaller::Mut(Arc::new(move |_this, args| {
+                            (callback.callback)(args)
+                        })),
                     }
                 })
                 .collect::<Vec<_>>()

@@ -226,16 +226,10 @@ pub fn load_shader(
     // Build the resource
     let result = graphic_service.create_shader_resource(identifier, buffer, settings);
 
+    // Store the resource
     match result {
         Ok(resource) => {
-            // Store the resource
-            if let Err(_) = resource_container.add::<dyn ShaderResource>(identifier, resource) {
-                log::error!(
-                    "Couldn't add a resource cause the identifier \"{}\" already exists",
-                    identifier
-                );
-                return;
-            }
+            resource_container.add::<dyn ShaderResource>(identifier, resource);
         }
         Err(err) => {
             log::error!("{}", err);

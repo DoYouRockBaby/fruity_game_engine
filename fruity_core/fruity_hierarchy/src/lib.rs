@@ -11,6 +11,9 @@ use std::sync::Arc;
 pub mod components;
 pub mod systems;
 
+/// The module name
+pub static MODULE_NAME: &str = "fruity_hierarchy";
+
 // #[no_mangle]
 pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
     let object_factory_service = resource_container.require::<ObjectFactoryService>();
@@ -21,6 +24,6 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let system_service = resource_container.require::<SystemService>();
     let mut system_service = system_service.write();
 
-    system_service.add_begin_system(Inject1::new(delete_cascade), None);
-    system_service.add_begin_system(Inject1::new(update_nested_level), None);
+    system_service.add_begin_system(MODULE_NAME, Inject1::new(delete_cascade), None);
+    system_service.add_begin_system(MODULE_NAME, Inject1::new(update_nested_level), None);
 }

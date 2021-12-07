@@ -60,6 +60,11 @@ impl JavascriptService {
             runtime.run_stored_callback(identifier, args.clone());
         });
     }
+
+    pub fn reset(&self) {
+        self.single_thread_wrapper
+            .call(move |runtime| runtime.reset());
+    }
 }
 
 impl IntrospectObject for JavascriptService {

@@ -4,12 +4,39 @@ use crate::serialize::serialize::serialize_v8;
 use convert_case::Case;
 use convert_case::Casing;
 use fruity_core::resource::resource_container::ResourceContainer;
-use fruity_core::serialize::serialized::Serialized;
 use fruity_core::serialize::serialized::SerializableObject;
+use fruity_core::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 use std::any::Any;
 use std::convert::TryFrom;
 use std::sync::Arc;
+
+pub fn get_origin(scope: &mut v8::HandleScope) -> String {
+    let context = scope.get_current_context();
+    let global_object = context.global(scope);
+
+    let origin_key = v8::String::new(scope, "__origin").unwrap();
+
+    let origin_value = match global_object.get(scope, origin_key.into()) {
+        Some(origin_value) => match v8::Local::<v8::String>::try_from(origin_value) {
+            Ok(origin_value) => origin_value.to_rust_string_lossy(scope),
+            Err(_) => String::default(),
+        },
+        None => String::default(),
+    };
+
+    origin_value
+}
+
+pub fn set_origin(scope: &mut v8::HandleScope, origin: &str) {
+    let context = scope.get_current_context();
+    let global_object = context.global(scope);
+
+    let origin_key = v8::String::new(scope, "__origin").unwrap();
+    let origin_value = v8::String::new(scope, origin).unwrap();
+
+    global_object.set(scope, origin_key.into(), origin_value.into());
+}
 
 pub fn get_intern_value_from_v8_object<'a, T: Any>(
     scope: &mut v8::HandleScope,

@@ -23,16 +23,22 @@ use std::sync::RwLock;
 
 type SystemCallback = dyn Fn(Arc<ResourceContainer>) + Sync + Send + 'static;
 
+#[derive(Clone)]
 struct BeginSystem {
-    callback: Box<SystemCallback>,
+    origin: String,
+    callback: Arc<SystemCallback>,
 }
 
+#[derive(Clone)]
 struct EndSystem {
-    callback: Box<SystemCallback>,
+    origin: String,
+    callback: Arc<SystemCallback>,
 }
 
+#[derive(Clone)]
 struct FrameSystem {
-    callback: Box<SystemCallback>,
+    origin: String,
+    callback: Arc<SystemCallback>,
     ignore_pause: bool,
 }
 
@@ -88,14 +94,16 @@ impl<'s> SystemService {
     /// Add a system to the collection
     ///
     /// # Arguments
+    /// * `origin` - An identifier for the origin of the system, used for hot reload
     /// * `system` - A function that will compute the world
     /// * `pool_index` - A pool identifier, all the systems of the same pool will be processed together in parallel
     ///
-    pub fn add_system<T: Inject>(&mut self, callback: T, pool_index: Option<usize>) {
+    pub fn add_system<T: Inject>(&mut self, origin: &str, callback: T, pool_index: Option<usize>) {
         let pool_index = pool_index.unwrap_or(50);
 
         let system = FrameSystem {
-            callback: callback.inject(),
+            origin: origin.to_string(),
+            callback: callback.inject().into(),
             ignore_pause: false,
         };
 
@@ -117,18 +125,21 @@ impl<'s> SystemService {
     /// Add a system to the collection
     ///
     /// # Arguments
+    /// * `origin` - An identifier for the origin of the system, used for hot reload
     /// * `system` - A function that will compute the world
     /// * `pool_index` - A pool identifier, all the systems of the same pool will be processed together in parallel
     ///
     pub fn add_system_that_ignore_pause<T: Inject>(
         &mut self,
+        origin: &str,
         callback: T,
         pool_index: Option<usize>,
     ) {
         let pool_index = pool_index.unwrap_or(50);
 
         let system = FrameSystem {
-            callback: callback.inject(),
+            origin: origin.to_string(),
+            callback: callback.inject().into(),
             ignore_pause: true,
         };
 
@@ -150,14 +161,21 @@ impl<'s> SystemService {
     /// Add a begin system to the collection
     ///
     /// # Arguments
+    /// * `origin` - An identifier for the origin of the system, used for hot reload
     /// * `system` - A function that will compute the world
     /// * `pool_index` - A pool identifier, all the systems of the same pool will be processed together in parallel
     ///
-    pub fn add_begin_system<T: Inject>(&mut self, callback: T, pool_index: Option<usize>) {
+    pub fn add_begin_system<T: Inject>(
+        &mut self,
+        origin: &str,
+        callback: T,
+        pool_index: Option<usize>,
+    ) {
         let pool_index = pool_index.unwrap_or(50);
 
         let system = BeginSystem {
-            callback: callback.inject(),
+            origin: origin.to_string(),
+            callback: callback.inject().into(),
         };
 
         if let Some(pool) = self.begin_system_pools.get_mut(&pool_index) {
@@ -178,14 +196,21 @@ impl<'s> SystemService {
     /// Add an end system to the collection
     ///
     /// # Arguments
+    /// * `origin` - An identifier for the origin of the system, used for hot reload
     /// * `system` - A function that will compute the world
     /// * `pool_index` - A pool identifier, all the systems of the same pool will be processed together in parallel
     ///
-    pub fn add_end_system<T: Inject>(&mut self, callback: T, pool_index: Option<usize>) {
+    pub fn add_end_system<T: Inject>(
+        &mut self,
+        origin: &str,
+        callback: T,
+        pool_index: Option<usize>,
+    ) {
         let pool_index = pool_index.unwrap_or(50);
 
         let system = EndSystem {
-            callback: callback.inject(),
+            origin: origin.to_string(),
+            callback: callback.inject().into(),
         };
 
         if let Some(pool) = self.end_system_pools.get_mut(&pool_index) {
@@ -201,6 +226,22 @@ impl<'s> SystemService {
                 },
             );
         };
+    }
+
+    /// Remove all systems with the given origin
+    ///
+    /// # Arguments
+    /// * `origin` - An identifier for the origin of the system, used for hot reload
+    ///
+    pub fn unload_origin(&mut self, origin: &str) {
+        self.system_pools.values_mut().for_each(|pool| {
+            pool.systems = pool
+                .systems
+                .clone()
+                .into_iter()
+                .filter(|system| system.origin != origin)
+                .collect::<Vec<_>>();
+        });
     }
 
     /// Iter over all the systems pools
@@ -378,9 +419,11 @@ impl IntrospectObject for SystemService {
                     let arg1 = caster.cast_next::<Callback>()?;
                     let arg2 = caster.cast_next_optional::<usize>();
 
+                    let callback = arg1.callback;
                     this.add_system(
+                        &arg1.origin,
                         Inject0::new(move || {
-                            match arg1(vec![]) {
+                            match callback(vec![]) {
                                 Ok(_) => (),
                                 Err(err) => log_introspect_error(&err),
                             };
@@ -400,9 +443,11 @@ impl IntrospectObject for SystemService {
                     let arg1 = caster.cast_next::<Callback>()?;
                     let arg2 = caster.cast_next_optional::<usize>();
 
+                    let callback = arg1.callback;
                     this.add_begin_system(
+                        &arg1.origin,
                         Inject0::new(move || {
-                            match arg1(vec![]) {
+                            match callback(vec![]) {
                                 Ok(_) => (),
                                 Err(err) => log_introspect_error(&err),
                             };
@@ -422,31 +467,11 @@ impl IntrospectObject for SystemService {
                     let arg1 = caster.cast_next::<Callback>()?;
                     let arg2 = caster.cast_next_optional::<usize>();
 
+                    let callback = arg1.callback;
                     this.add_end_system(
+                        &arg1.origin,
                         Inject0::new(move || {
-                            match arg1(vec![]) {
-                                Ok(_) => (),
-                                Err(err) => log_introspect_error(&err),
-                            };
-                        }),
-                        arg2,
-                    );
-
-                    Ok(None)
-                })),
-            },
-            MethodInfo {
-                name: "add_end_system".to_string(),
-                call: MethodCaller::Mut(Arc::new(|this, args| {
-                    let this = cast_introspect_mut::<SystemService>(this);
-
-                    let mut caster = ArgumentCaster::new("add_end_system", args);
-                    let arg1 = caster.cast_next::<Callback>()?;
-                    let arg2 = caster.cast_next_optional::<usize>();
-
-                    this.add_end_system(
-                        Inject0::new(move || {
-                            match arg1(vec![]) {
+                            match callback(vec![]) {
                                 Ok(_) => (),
                                 Err(err) => log_introspect_error(&err),
                             };

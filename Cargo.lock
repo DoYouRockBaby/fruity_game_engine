@@ -975,6 +975,7 @@ dependencies = [
  "fruity_hierarchy_2d",
  "fruity_input",
  "fruity_javascript",
+ "fruity_javascript_watcher",
  "fruity_wgpu_graphic",
  "fruity_windows",
  "fruity_winit_input",
@@ -1063,6 +1064,18 @@ dependencies = [
  "pretty_env_logger",
  "rusty_v8",
  "url",
+]
+
+[[package]]
+name = "fruity_javascript_watcher"
+version = "0.1.0"
+dependencies = [
+ "fruity_any",
+ "fruity_core",
+ "fruity_ecs",
+ "fruity_javascript",
+ "fruity_windows",
+ "notify",
 ]
 
 [[package]]

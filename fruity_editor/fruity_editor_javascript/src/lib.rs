@@ -9,6 +9,9 @@ use std::sync::Arc;
 pub mod file_type;
 pub mod resources;
 
+/// The module name
+pub static MODULE_NAME: &str = "fruity_editor_javascript";
+
 // #[no_mangle]
 pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
     let file_explorer_service = resource_container.require::<FileExplorerService>();

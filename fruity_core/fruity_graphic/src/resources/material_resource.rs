@@ -118,13 +118,7 @@ pub fn load_material(
     let resource = build_material(&settings, resource_container.clone());
 
     // Store the resource
-    if let Err(_) = resource_container.add::<MaterialResource>(identifier, Box::new(resource)) {
-        log::error!(
-            "Couldn't add a resource cause the identifier \"{}\" already exists",
-            identifier
-        );
-        return;
-    }
+    resource_container.add::<MaterialResource>(identifier, Box::new(resource));
 }
 
 pub fn build_material(

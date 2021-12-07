@@ -14,6 +14,9 @@ pub mod graphic_service;
 pub mod math;
 pub mod resources;
 
+/// The module name
+pub static MODULE_NAME: &str = "graphic_service";
+
 // #[no_mangle]
 pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
     let object_factory_service = resource_container.require::<ObjectFactoryService>();

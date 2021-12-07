@@ -23,6 +23,9 @@ struct WindowSettings {
     resizable: bool,
 }
 
+/// The module name
+pub static MODULE_NAME: &str = "fruity_winit_windows";
+
 pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
     let window_service = resource_container.require::<dyn WindowService>();
     let window_service = window_service.read();
@@ -83,9 +86,7 @@ pub fn platform(
     let on_event = window_service.on_event.clone();
     let on_events_cleared = window_service.on_events_cleared.clone();
 
-    resource_container
-        .add::<dyn WindowService>("window_service", Box::new(window_service))
-        .unwrap();
+    resource_container.add::<dyn WindowService>("window_service", Box::new(window_service));
 
     // Initialize the engine
     initializer(resource_container.clone(), settings);
@@ -169,8 +170,10 @@ pub fn platform(
         on_start_update.notify(());
 
         // Run the systems
-        let system_service_reader = system_service.read();
-        system_service_reader.run();
+        {
+            let system_service_reader = system_service.read();
+            system_service_reader.run();
+        }
 
         // End the update
         on_end_update.notify(());

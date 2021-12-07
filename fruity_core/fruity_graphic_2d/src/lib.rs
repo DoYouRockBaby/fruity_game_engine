@@ -24,13 +24,14 @@ pub mod components;
 pub mod graphic_2d_service;
 pub mod systems;
 
+/// The module name
+pub static MODULE_NAME: &str = "graphic_2d_service";
+
 // #[no_mangle]
 pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
     let graphic_2d_service = Graphic2dService::new(resource_container.clone());
 
-    resource_container
-        .add::<Graphic2dService>("graphic_2d_service", Box::new(graphic_2d_service))
-        .unwrap();
+    resource_container.add::<Graphic2dService>("graphic_2d_service", Box::new(graphic_2d_service));
 
     let object_factory_service = resource_container.require::<ObjectFactoryService>();
     let mut object_factory_service = object_factory_service.write();
@@ -45,12 +46,16 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let system_service = resource_container.require::<SystemService>();
     let mut system_service = system_service.write();
 
-    system_service.add_system_that_ignore_pause(Inject1::new(reset_transform_2d), Some(93));
-    system_service.add_system_that_ignore_pause(Inject1::new(translate_2d), Some(94));
-    system_service.add_system_that_ignore_pause(Inject1::new(rotate_2d), Some(95));
-    system_service.add_system_that_ignore_pause(Inject1::new(scale_2d), Some(96));
-    system_service.add_system_that_ignore_pause(Inject3::new(draw_camera), Some(98));
-    system_service.add_system_that_ignore_pause(Inject2::new(draw_sprite), Some(99));
+    system_service.add_system_that_ignore_pause(
+        MODULE_NAME,
+        Inject1::new(reset_transform_2d),
+        Some(93),
+    );
+    system_service.add_system_that_ignore_pause(MODULE_NAME, Inject1::new(translate_2d), Some(94));
+    system_service.add_system_that_ignore_pause(MODULE_NAME, Inject1::new(rotate_2d), Some(95));
+    system_service.add_system_that_ignore_pause(MODULE_NAME, Inject1::new(scale_2d), Some(96));
+    system_service.add_system_that_ignore_pause(MODULE_NAME, Inject3::new(draw_camera), Some(98));
+    system_service.add_system_that_ignore_pause(MODULE_NAME, Inject2::new(draw_sprite), Some(99));
 
     std::mem::drop(object_factory_service);
     std::mem::drop(system_service);

@@ -32,24 +32,22 @@ pub mod state;
 pub mod systems;
 pub mod ui_element;
 
+/// The module name
+pub static MODULE_NAME: &str = "fruity_editor";
+
 // #[no_mangle]
 pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
     let inspector_service = InspectorService::new(resource_container.clone());
     let introspect_editor_service = IntrospectEditorService::new(resource_container.clone());
     let file_explorer_service = FileExplorerService::new(resource_container.clone());
 
+    resource_container.add::<InspectorService>("inspector_service", Box::new(inspector_service));
+    resource_container.add::<IntrospectEditorService>(
+        "introspect_editor_service",
+        Box::new(introspect_editor_service),
+    );
     resource_container
-        .add::<InspectorService>("inspector_service", Box::new(inspector_service))
-        .unwrap();
-    resource_container
-        .add::<IntrospectEditorService>(
-            "introspect_editor_service",
-            Box::new(introspect_editor_service),
-        )
-        .unwrap();
-    resource_container
-        .add::<FileExplorerService>("file_explorer_service", Box::new(file_explorer_service))
-        .unwrap();
+        .add::<FileExplorerService>("file_explorer_service", Box::new(file_explorer_service));
 
     declare_global(WorldState::new(resource_container.clone()));
     declare_global(ThemeState::default());
@@ -60,7 +58,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let system_service = resource_container.require::<SystemService>();
     let mut system_service = system_service.write();
 
-    system_service.add_begin_system(Inject1::new(pause_at_startup), None);
+    system_service.add_begin_system(MODULE_NAME, Inject1::new(pause_at_startup), None);
 
     let inspector_service = resource_container.require::<InspectorService>();
     let mut inspector_service = inspector_service.write();

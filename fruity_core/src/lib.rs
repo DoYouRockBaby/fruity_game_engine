@@ -55,14 +55,16 @@ pub mod world;
 /// This will be used by the scripting language to expose object creation, especialy components
 pub mod object_factory_service;
 
+/// The module name
+pub static MODULE_NAME: &str = "fruity_core";
+
 /// Initialize this extension
 pub fn initialize(resource_container: Arc<ResourceContainer>) {
     //let module_manager = ModuleManager::new(resource_container.clone());
     let object_factory_service = ObjectFactoryService::new(resource_container.clone());
 
     resource_container
-        .add::<ObjectFactoryService>("object_factory_service", Box::new(object_factory_service))
-        .unwrap();
+        .add::<ObjectFactoryService>("object_factory_service", Box::new(object_factory_service));
 
     let object_factory_service = resource_container.require::<ObjectFactoryService>();
     let mut object_factory_service = object_factory_service.write();

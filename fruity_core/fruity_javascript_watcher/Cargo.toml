@@ -1,0 +1,16 @@
+[package]
+name = "fruity_javascript_watcher"
+version = "0.1.0"
+edition = "2018"
+resolver = "2"
+
+# [lib]
+# crate-type = ["dylib"]
+
+[dependencies]
+notify = "4.0.0"
+fruity_any = { path = "../fruity_any" }
+fruity_core = { path = ".." }
+fruity_javascript = { path = "../fruity_javascript" }
+fruity_windows = { path = "../fruity_windows" }
+fruity_ecs = { path = "../fruity_ecs" }

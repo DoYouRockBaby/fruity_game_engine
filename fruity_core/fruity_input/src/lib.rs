@@ -5,12 +5,13 @@ use std::sync::Arc;
 
 pub mod input_service;
 
+/// The module name
+pub static MODULE_NAME: &str = "fruity_input";
+
 // #[no_mangle]
 pub fn initialize(resource_container: Arc<ResourceContainer>, settings: &Settings) {
     let mut input_service = InputService::new(resource_container.clone());
     input_service.read_input_settings(settings);
 
-    resource_container
-        .add::<InputService>("input_service", Box::new(input_service))
-        .unwrap();
+    resource_container.add::<InputService>("input_service", Box::new(input_service));
 }

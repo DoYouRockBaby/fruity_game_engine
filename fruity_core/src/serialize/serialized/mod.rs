@@ -24,9 +24,19 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 /// A callback for the serialized type
-pub type Callback = Arc<
-    dyn Fn(Vec<Serialized>) -> Result<Option<Serialized>, IntrospectError> + Sync + Send + 'static,
->;
+#[derive(Clone)]
+pub struct Callback {
+    /// An identifier for the origin of the system, used for hot reload
+    pub origin: String,
+
+    /// The callback
+    pub callback: Arc<
+        dyn Fn(Vec<Serialized>) -> Result<Option<Serialized>, IntrospectError>
+            + Sync
+            + Send
+            + 'static,
+    >,
+}
 
 /// A list of serialized object fields
 pub type ObjectFields = HashMap<String, Serialized>;
@@ -86,14 +96,7 @@ pub enum Serialized {
     Iterator(Arc<RwLock<dyn Iterator<Item = Serialized> + Send + Sync>>),
 
     /// A callback
-    Callback(
-        Arc<
-            dyn Fn(Vec<Serialized>) -> Result<Option<Serialized>, IntrospectError>
-                + Sync
-                + Send
-                + 'static,
-        >,
-    ),
+    Callback(Callback),
 
     /// An object stored as an hashmap, mostly used to grab objects from the scripting runtime
     SerializedObject {

@@ -7,10 +7,17 @@ use std::sync::Arc;
 
 pub mod systems;
 
+/// The module name
+pub static MODULE_NAME: &str = "fruity_hierarchy_2d";
+
 // #[no_mangle]
 pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
     let system_service = resource_container.require::<SystemService>();
     let mut system_service = system_service.write();
 
-    system_service.add_system_that_ignore_pause(Inject1::new(transform_2d_cascade), Some(97));
+    system_service.add_system_that_ignore_pause(
+        MODULE_NAME,
+        Inject1::new(transform_2d_cascade),
+        Some(97),
+    );
 }
