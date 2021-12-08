@@ -1,5 +1,4 @@
 use crate::graphic_service::GraphicService;
-use crate::math::RED;
 use crate::resources::material_resource::MaterialBinding;
 use crate::resources::material_resource::MaterialInstanceAttribute;
 use crate::resources::material_resource::MaterialResource;
@@ -67,11 +66,6 @@ pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
 
     let code = "
         [[block]]
-        struct ColorBuffer {
-            color: vec4<f32>;
-        };
-
-        [[block]]
         struct CameraUniform {
             view_proj: mat4x4<f32>;
         };
@@ -87,16 +81,15 @@ pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
             [[location(6)]] model_matrix_1: vec4<f32>;
             [[location(7)]] model_matrix_2: vec4<f32>;
             [[location(8)]] model_matrix_3: vec4<f32>;
+            [[location(9)]] color: vec4<f32>;
         };
         
         struct VertexOutput {
             [[builtin(position)]] position: vec4<f32>;
+            [[location(0)]] color: vec4<f32>;
         };
 
         [[group(0), binding(0)]]
-        var<uniform> color_buffer: ColorBuffer;
-
-        [[group(1), binding(0)]]
         var<uniform> camera: CameraUniform;
 
         [[stage(vertex)]]
@@ -110,15 +103,16 @@ pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
                 instance.model_matrix_2,
                 instance.model_matrix_3,
             );
-        
+
             var out: VertexOutput;
             out.position = camera.view_proj * model_matrix * vec4<f32>(model.position, 1.0);
+            out.color = instance.color;
             return out;
         }
 
         [[stage(fragment)]]
         fn main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
-            return color_buffer.color;
+            return in.color;
         }"
     .to_string();
 
@@ -127,20 +121,12 @@ pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
             "Shaders/Draw Line",
             code,
             ShaderResourceSettings {
-                binding_groups: vec![
-                    ShaderBindingGroup {
-                        bindings: vec![ShaderBinding {
-                            visibility: ShaderBindingVisibility::Fragment,
-                            ty: ShaderBindingType::Uniform,
-                        }],
-                    },
-                    ShaderBindingGroup {
-                        bindings: vec![ShaderBinding {
-                            visibility: ShaderBindingVisibility::Vertex,
-                            ty: ShaderBindingType::Uniform,
-                        }],
-                    },
-                ],
+                binding_groups: vec![ShaderBindingGroup {
+                    bindings: vec![ShaderBinding {
+                        visibility: ShaderBindingVisibility::Vertex,
+                        ty: ShaderBindingType::Uniform,
+                    }],
+                }],
                 instance_attributes: vec![
                     ShaderInstanceAttribute {
                         location: 5,
@@ -158,6 +144,10 @@ pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
                         location: 8,
                         ty: ShaderInstanceAttributeType::Vector4,
                     },
+                    ShaderInstanceAttribute {
+                        location: 9,
+                        ty: ShaderInstanceAttributeType::Vector4,
+                    },
                 ],
             },
         )
@@ -172,13 +162,8 @@ pub fn load_draw_line_material(resource_container: Arc<ResourceContainer>) {
     let resource = Box::new(MaterialResource {
         shader,
         bindings: hashmap! {
-            "color".to_string() => vec![MaterialBinding::Color {
-                default: RED,
-                bind_group: 0,
-                bind: 0,
-            }],
             "camera".to_string() => vec![MaterialBinding::Camera {
-                bind_group: 1
+                bind_group: 0
             }],
         },
         instance_attributes: hashmap! {
@@ -187,6 +172,9 @@ pub fn load_draw_line_material(resource_container: Arc<ResourceContainer>) {
                 vec1_location: 6,
                 vec2_location: 7,
                 vec3_location: 8,
+            },
+            "color".to_string() => MaterialInstanceAttribute::Vector4 {
+                location: 9,
             },
         },
     });
