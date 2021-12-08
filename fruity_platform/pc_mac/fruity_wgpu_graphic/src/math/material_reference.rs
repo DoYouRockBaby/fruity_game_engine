@@ -10,6 +10,7 @@ use fruity_core::introspect::SetterCaller;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::serialize::serialized::SerializableObject;
 use fruity_core::utils::collection::insert_in_hashmap_vec;
+use fruity_core::utils::slice::encode_into_bytes;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::material_reference::MaterialReference;
 use fruity_graphic::math::matrix4::Matrix4;
@@ -342,16 +343,13 @@ impl MaterialReference for WgpuMaterialReference {
                     WgpuMaterialReferenceField::Instance(field) => match field {
                         InstanceField::Vector4 { location } => {
                             let mut instance_buffer_writer = self.instance_buffer.write().unwrap();
-                            let field_buffer = &mut instance_buffer_writer
-                                [location.offset..(location.offset + location.size)];
-                            let encoded = unsafe {
-                                std::slice::from_raw_parts(
-                                    (&color as *const Color) as *const u8,
-                                    std::mem::size_of::<Self>(),
-                                )
-                            };
 
-                            fruity_core::utils::slice::copy(field_buffer, encoded);
+                            encode_into_bytes(
+                                &mut instance_buffer_writer,
+                                location.offset,
+                                location.size,
+                                color,
+                            );
                         }
                         _ => (),
                     },
@@ -373,31 +371,19 @@ impl MaterialReference for WgpuMaterialReference {
                         } => {
                             let mut instance_buffer_writer = self.instance_buffer.write().unwrap();
 
-                            // Vector 0
-                            let field_buffer = &mut instance_buffer_writer
-                                [vec0_location.offset..(vec0_location.offset + vec0_location.size)];
+                            encode_into_bytes(
+                                &mut instance_buffer_writer,
+                                vec0_location.offset,
+                                vec0_location.size,
+                                [bottom_left.x, bottom_left.y],
+                            );
 
-                            let encoded = unsafe {
-                                std::slice::from_raw_parts(
-                                    (&[bottom_left.x, bottom_left.y] as *const [f32]) as *const u8,
-                                    std::mem::size_of::<Self>(),
-                                )
-                            };
-
-                            fruity_core::utils::slice::copy(field_buffer, encoded);
-
-                            // Vector 1
-                            let field_buffer = &mut instance_buffer_writer
-                                [vec1_location.offset..(vec1_location.offset + vec1_location.size)];
-
-                            let encoded = unsafe {
-                                std::slice::from_raw_parts(
-                                    (&[top_right.x, top_right.y] as *const [f32]) as *const u8,
-                                    std::mem::size_of::<Self>(),
-                                )
-                            };
-
-                            fruity_core::utils::slice::copy(field_buffer, encoded);
+                            encode_into_bytes(
+                                &mut instance_buffer_writer,
+                                vec1_location.offset,
+                                vec1_location.size,
+                                [top_right.x, top_right.y],
+                            );
                         }
                         _ => (),
                     },
@@ -436,57 +422,33 @@ impl MaterialReference for WgpuMaterialReference {
                         } => {
                             let mut instance_buffer_writer = self.instance_buffer.write().unwrap();
 
-                            // Vector 0
-                            let field_buffer = &mut instance_buffer_writer
-                                [vec0_location.offset..(vec0_location.offset + vec0_location.size)];
+                            encode_into_bytes(
+                                &mut instance_buffer_writer,
+                                vec0_location.offset,
+                                vec0_location.size,
+                                matrix.0[0],
+                            );
 
-                            let encoded = unsafe {
-                                std::slice::from_raw_parts(
-                                    (&matrix.0[0] as *const [f32]) as *const u8,
-                                    std::mem::size_of::<Self>(),
-                                )
-                            };
+                            encode_into_bytes(
+                                &mut instance_buffer_writer,
+                                vec1_location.offset,
+                                vec1_location.size,
+                                matrix.0[1],
+                            );
 
-                            fruity_core::utils::slice::copy(field_buffer, encoded);
+                            encode_into_bytes(
+                                &mut instance_buffer_writer,
+                                vec2_location.offset,
+                                vec2_location.size,
+                                matrix.0[2],
+                            );
 
-                            // Vector 1
-                            let field_buffer = &mut instance_buffer_writer
-                                [vec1_location.offset..(vec1_location.offset + vec1_location.size)];
-
-                            let encoded = unsafe {
-                                std::slice::from_raw_parts(
-                                    (&matrix.0[1] as *const [f32]) as *const u8,
-                                    std::mem::size_of::<Self>(),
-                                )
-                            };
-
-                            fruity_core::utils::slice::copy(field_buffer, encoded);
-
-                            // Vector 2
-                            let field_buffer = &mut instance_buffer_writer
-                                [vec2_location.offset..(vec2_location.offset + vec2_location.size)];
-
-                            let encoded = unsafe {
-                                std::slice::from_raw_parts(
-                                    (&matrix.0[2] as *const [f32]) as *const u8,
-                                    std::mem::size_of::<Self>(),
-                                )
-                            };
-
-                            fruity_core::utils::slice::copy(field_buffer, encoded);
-
-                            // Vector 3
-                            let field_buffer = &mut instance_buffer_writer
-                                [vec3_location.offset..(vec3_location.offset + vec3_location.size)];
-
-                            let encoded = unsafe {
-                                std::slice::from_raw_parts(
-                                    (&matrix.0[3] as *const [f32]) as *const u8,
-                                    std::mem::size_of::<Self>(),
-                                )
-                            };
-
-                            fruity_core::utils::slice::copy(field_buffer, encoded);
+                            encode_into_bytes(
+                                &mut instance_buffer_writer,
+                                vec3_location.offset,
+                                vec3_location.size,
+                                matrix.0[3],
+                            );
                         }
                         _ => (),
                     },

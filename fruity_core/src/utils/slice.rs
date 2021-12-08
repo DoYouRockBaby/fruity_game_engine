@@ -131,3 +131,21 @@ fn test_copy() {
     assert_eq!(l, b"hello");
     assert_eq!(r, b"goodbye");
 }
+
+/// Encode an object as bytes into a byte array
+///
+/// # Arguments
+/// * `bytes` - The bytes buffer that will be written
+/// * `offset` - An offset
+/// * `size` - Ths size of the obj that will be written
+/// * `obj` - The object that will be written
+///
+pub fn encode_into_bytes<T>(bytes: &mut [u8], offset: usize, size: usize, obj: T) {
+    let buffer = &mut bytes[offset..(offset + size)];
+
+    let encoded = unsafe {
+        std::slice::from_raw_parts((&obj as *const T) as *const u8, std::mem::size_of::<T>())
+    };
+
+    copy(buffer, encoded);
+}
