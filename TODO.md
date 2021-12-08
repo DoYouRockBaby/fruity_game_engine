@@ -42,7 +42,7 @@
 [X] Sprite vertex/indices should be shared accross all sprites
 [X] Squad transform should be done in shader instead of CPU
 [ ] Proceed instantied rendering
-[ ] Make instances parametrizable in material/shader
+[X] Make instances parametrizable in material/shader
 [ ] Sprites should simply edit a field of material
 [ ] Implement rendering composers
 
@@ -84,7 +84,7 @@
 [X] Dynamic libraries rust
 [X] Hot reload js
 [ ] Hot reload rust
-[X] Implements a profiling tool (https://github.com/EmbarkStudios/puffin)
+[X] Implements a profiling tool
 
 # Code clean
 
