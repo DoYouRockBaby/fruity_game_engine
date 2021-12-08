@@ -21,7 +21,6 @@ pub struct DrawContext<'s> {
 
 impl Application {
     pub fn draw(&mut self, ctx: &mut DrawContext) {
-        puffin_egui::profiler_window(&ctx.platform.context());
         egui::Area::new("root").show(&ctx.platform.context(), |ui| {
             root_component()
                 .into_iter()

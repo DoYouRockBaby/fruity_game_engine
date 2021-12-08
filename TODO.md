@@ -84,7 +84,7 @@
 [X] Dynamic libraries rust
 [X] Hot reload js
 [ ] Hot reload rust
-[ ] Implements a profiling tool (https://github.com/EmbarkStudios/puffin)
+[X] Implements a profiling tool (https://github.com/EmbarkStudios/puffin)
 
 # Code clean
 

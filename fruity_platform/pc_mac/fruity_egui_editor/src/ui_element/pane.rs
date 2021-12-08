@@ -55,12 +55,18 @@ pub fn draw_pane_grid<'a>(elem: PaneGrid, _ui: &mut egui::Ui, ctx: &mut DrawCont
 }
 
 pub fn draw_pane<'a>(panes: Vec<Pane>, ui: &mut egui::Ui, ctx: &mut DrawContext) {
-    // TODO: Add tab system
-    if let Some(first_pane) = panes.get(0) {
-        ui.vertical_centered(|ui| {
-            ui.heading(&first_pane.title);
-        });
+    let current_tab = use_state(|| usize::default());
+    let mut current_tab_value = current_tab.get();
 
-        draw_element((first_pane.render)(), ui, ctx)
+    ui.horizontal(|ui| {
+        panes.iter().enumerate().for_each(|(index, pane)| {
+            ui.selectable_value(&mut current_tab_value, index, &pane.title);
+        });
+    });
+    ui.end_row();
+    current_tab.set(current_tab_value);
+
+    if let Some(current_pane) = panes.get(current_tab.get()) {
+        draw_element((current_pane.render)(), ui, ctx)
     }
 }
