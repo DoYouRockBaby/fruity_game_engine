@@ -33,6 +33,7 @@ pub fn draw_camera(
 
             // Start the pass
             {
+                puffin::profile_scope!("camera_start_pass");
                 let mut graphic_service = graphic_service.write();
                 graphic_service.update_camera(view_proj);
                 graphic_service.start_pass();
@@ -40,6 +41,7 @@ pub fn draw_camera(
 
             // Render the draw system pool and avoir the normal system treatment
             {
+                puffin::profile_scope!("camera_draw");
                 let system_service = system_service.read();
                 system_service.ignore_pool_once(&99);
                 system_service.run_pool(&99);
@@ -47,6 +49,7 @@ pub fn draw_camera(
 
             // End the pass
             {
+                puffin::profile_scope!("camera_end_pass");
                 let graphic_service = graphic_service.read();
                 graphic_service.end_pass();
             }

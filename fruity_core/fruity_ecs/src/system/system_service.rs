@@ -386,9 +386,15 @@ impl<'s> SystemService {
 
             if !pool_ignore {
                 pool.systems.iter().par_bridge().for_each(|system| {
-                    puffin::profile_scope!("system", &system.identifier);
-
                     if !is_paused || system.ignore_pause {
+                        let _profiler_scope = if puffin::are_scopes_on() {
+                            // Safe cause identifier don't need to be static (from the doc)
+                            let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
+                            Some(puffin::ProfilerScope::new(identifier, "system", ""))
+                        } else {
+                            None
+                        };
+
                         (system.callback)(resource_container.clone());
                     }
                 });
@@ -409,7 +415,13 @@ impl<'s> SystemService {
 
             if !pool_ignore {
                 pool.systems.iter().par_bridge().for_each(|system| {
-                    puffin::profile_scope!("system", &system.identifier);
+                    let _profiler_scope = if puffin::are_scopes_on() {
+                        // Safe cause identifier don't need to be static (from the doc)
+                        let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
+                        Some(puffin::ProfilerScope::new(identifier, "system", ""))
+                    } else {
+                        None
+                    };
 
                     (system.callback)(resource_container.clone());
                 });
@@ -430,7 +442,13 @@ impl<'s> SystemService {
 
             if !pool_ignore {
                 pool.systems.iter().par_bridge().for_each(|system| {
-                    puffin::profile_scope!("system", &system.identifier);
+                    let _profiler_scope = if puffin::are_scopes_on() {
+                        // Safe cause identifier don't need to be static (from the doc)
+                        let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
+                        Some(puffin::ProfilerScope::new(identifier, "system", ""))
+                    } else {
+                        None
+                    };
 
                     (system.callback)(resource_container.clone())
                 });

@@ -1039,6 +1039,7 @@ dependencies = [
  "fruity_windows",
  "log",
  "maplit",
+ "puffin 0.12.1",
  "rayon",
 ]
 
