@@ -22,17 +22,25 @@ pub struct Graphic2dService {
     window_service: ResourceReference<dyn WindowService>,
     graphic_service: ResourceReference<dyn GraphicService>,
     resource_container: Arc<ResourceContainer>,
+    draw_line_material: Box<dyn MaterialReference>,
 }
 
 impl Graphic2dService {
     pub fn new(resource_container: Arc<ResourceContainer>) -> Self {
         let window_service = resource_container.require::<dyn WindowService>();
         let graphic_service = resource_container.require::<dyn GraphicService>();
+        let graphic_service_reader = graphic_service.read();
+
+        let draw_line_material = resource_container
+            .get::<MaterialResource>("Materials/Draw Line")
+            .unwrap();
 
         Self {
             window_service,
             graphic_service,
             resource_container,
+            draw_line_material: graphic_service_reader
+                .create_material_reference(draw_line_material),
         }
     }
 
@@ -77,21 +85,13 @@ impl Graphic2dService {
             * Matrix3::rotation(rotate)
             * Matrix3::scaling(scale);
 
-        // Get the material
-
-        let draw_line_material = self
-            .resource_container
-            .get::<MaterialResource>("Materials/Draw Line")
-            .unwrap();
-
         // Update line color
-        let graphic_service = self.graphic_service.read();
-        let draw_line_material = graphic_service.create_material_reference(draw_line_material);
-        draw_line_material.set_matrix4("transform", transform.into());
-        draw_line_material.set_color("color", color);
+        self.draw_line_material
+            .set_matrix4("transform", transform.into());
+        self.draw_line_material.set_color("color", color);
 
         // Draw the line
-        self.draw_square(z_index, draw_line_material.deref());
+        self.draw_square(z_index, self.draw_line_material.deref());
     }
 
     /// Get the cursor position in the 2D world, take in care the camera transform
