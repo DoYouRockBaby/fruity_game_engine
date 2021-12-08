@@ -1,6 +1,6 @@
 use crate::graphic_service::GraphicService;
 use crate::math::RED;
-use crate::resources::material_resource::MaterialField;
+use crate::resources::material_resource::MaterialBinding;
 use crate::resources::material_resource::MaterialResource;
 use crate::resources::mesh_resource::MeshResourceSettings;
 use crate::resources::mesh_resource::Vertex;
@@ -153,13 +153,13 @@ pub fn load_draw_line_material(resource_container: Arc<ResourceContainer>) {
 
     let resource = Box::new(MaterialResource {
         shader,
-        fields: hashmap! {
-            "color".to_string() => vec![MaterialField::Color {
+        bindings: hashmap! {
+            "color".to_string() => vec![MaterialBinding::Color {
                 default: RED,
                 bind_group: 0,
                 bind: 0,
             }],
-            "camera".to_string() => vec![MaterialField::Camera {
+            "camera".to_string() => vec![MaterialBinding::Camera {
                 bind_group: 1
             }],
         },

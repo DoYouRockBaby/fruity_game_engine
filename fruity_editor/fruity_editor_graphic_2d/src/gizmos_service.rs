@@ -5,7 +5,6 @@ use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
-use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
 use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
@@ -19,19 +18,16 @@ use std::time::Duration;
 #[derive(Debug, FruityAny)]
 pub struct GizmosService {
     input_service: ResourceReference<InputService>,
-    graphic_service: ResourceReference<dyn GraphicService>,
     graphic_2d_service: ResourceReference<Graphic2dService>,
 }
 
 impl GizmosService {
     pub fn new(resource_container: Arc<ResourceContainer>) -> GizmosService {
         let input_service = resource_container.require::<InputService>();
-        let graphic_service = resource_container.require::<dyn GraphicService>();
         let graphic_2d_service = resource_container.require::<Graphic2dService>();
 
         GizmosService {
             input_service,
-            graphic_service,
             graphic_2d_service,
         }
     }

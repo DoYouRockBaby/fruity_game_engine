@@ -13,20 +13,22 @@ use fruity_core::utils::collection::insert_in_hashmap_vec;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::material_reference::MaterialReference;
 use fruity_graphic::math::Color;
-use fruity_graphic::resources::material_resource::MaterialField;
+use fruity_graphic::resources::material_resource::MaterialBinding;
 use fruity_graphic::resources::material_resource::MaterialResource;
 use std::collections::HashMap;
 use std::ops::Deref;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
 #[derive(Debug, FruityAny)]
 pub struct WgpuMaterialReference {
     material: ResourceReference<MaterialResource>,
-    binding_names: HashMap<String, Vec<(u32, u32)>>,
     pub binding_groups: HashMap<u32, wgpu::BindGroup>,
     pub binding_entries: HashMap<String, Vec<wgpu::BindGroupEntry<'static>>>,
     pub buffers: HashMap<String, Vec<wgpu::Buffer>>,
+    is_instantiable: AtomicBool,
 }
 
 pub enum NewMaterialReferenceError {
@@ -47,159 +49,111 @@ impl WgpuMaterialReference {
             } else {
                 return Self {
                     material,
-                    binding_names: HashMap::new(),
                     binding_groups: HashMap::new(),
                     binding_entries: HashMap::new(),
                     buffers: HashMap::new(),
+                    is_instantiable: AtomicBool::new(true),
                 };
             };
 
         let shader = shader.downcast_ref::<WgpuShaderResource>();
-        let mut binding_names = HashMap::<String, Vec<(u32, u32)>>::new();
         let mut entries_by_group = HashMap::<u32, Vec<wgpu::BindGroupEntry>>::new();
         let mut entry_names_by_group = HashMap::<u32, Vec<String>>::new();
         let mut buffers = HashMap::<String, Vec<wgpu::Buffer>>::new();
 
         // Build the binding entries from the configuration
-        material_reader.fields.iter().for_each(|(key, fields)| {
-            let bindings = fields
-                .iter()
-                .filter_map(|field| {
-                    match field {
-                        MaterialField::Texture {
-                            default,
-                            bind_group,
-                            bind,
-                        } => {
-                            let default = default.read();
-                            let default = default.downcast_ref::<WgpuTextureResource>();
+        material_reader.bindings.iter().for_each(|(key, bindings)| {
+            bindings.iter().for_each(|field| {
+                match field {
+                    MaterialBinding::Texture {
+                        default,
+                        bind_group,
+                        bind,
+                    } => {
+                        let default = default.read();
+                        let default = default.downcast_ref::<WgpuTextureResource>();
 
-                            // TODO: Find a way to remove it
-                            let default = unsafe {
-                                std::mem::transmute::<&WgpuTextureResource, &WgpuTextureResource>(
-                                    default,
-                                )
-                            };
+                        // TODO: Find a way to remove it
+                        let default = unsafe {
+                            std::mem::transmute::<&WgpuTextureResource, &WgpuTextureResource>(
+                                default,
+                            )
+                        };
 
-                            let bind_group_entry = wgpu::BindGroupEntry {
-                                binding: *bind,
-                                resource: wgpu::BindingResource::TextureView(&default.view),
-                            };
+                        let bind_group_entry = wgpu::BindGroupEntry {
+                            binding: *bind,
+                            resource: wgpu::BindingResource::TextureView(&default.view),
+                        };
 
-                            insert_in_hashmap_vec(
-                                &mut entries_by_group,
-                                *bind_group,
-                                bind_group_entry,
-                            );
+                        insert_in_hashmap_vec(&mut entries_by_group, *bind_group, bind_group_entry);
 
-                            insert_in_hashmap_vec(
-                                &mut entry_names_by_group,
-                                *bind_group,
-                                key.clone(),
-                            );
-
-                            Some((*bind_group, *bind))
-                        }
-                        MaterialField::Sampler {
-                            default,
-                            bind_group,
-                            bind,
-                        } => {
-                            let default = default.read();
-                            let default = default.downcast_ref::<WgpuTextureResource>();
-
-                            // TODO: Find a way to remove it
-                            let default = unsafe {
-                                std::mem::transmute::<&WgpuTextureResource, &WgpuTextureResource>(
-                                    default,
-                                )
-                            };
-
-                            let bind_group_entry = wgpu::BindGroupEntry {
-                                binding: *bind,
-                                resource: wgpu::BindingResource::Sampler(&default.sampler),
-                            };
-
-                            insert_in_hashmap_vec(
-                                &mut entries_by_group,
-                                *bind_group,
-                                bind_group_entry,
-                            );
-
-                            insert_in_hashmap_vec(
-                                &mut entry_names_by_group,
-                                *bind_group,
-                                key.clone(),
-                            );
-
-                            Some((*bind_group, *bind))
-                        }
-                        MaterialField::Camera { bind_group } => {
-                            let bind_group_entry = wgpu::BindGroupEntry {
-                                binding: 0,
-                                resource: graphic_service.get_camera_buffer().as_entire_binding(),
-                            };
-
-                            insert_in_hashmap_vec(
-                                &mut entries_by_group,
-                                *bind_group,
-                                bind_group_entry,
-                            );
-
-                            insert_in_hashmap_vec(
-                                &mut entry_names_by_group,
-                                *bind_group,
-                                key.clone(),
-                            );
-
-                            None
-                        }
-                        MaterialField::Color {
-                            default,
-                            bind_group,
-                            bind,
-                        } => {
-                            let buffer =
-                                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                                    label: Some("Uniform Buffer"),
-                                    contents: bytemuck::cast_slice(&[default.clone()]),
-                                    usage: wgpu::BufferUsages::UNIFORM
-                                        | wgpu::BufferUsages::COPY_DST,
-                                });
-
-                            insert_in_hashmap_vec(&mut buffers, key.clone(), buffer);
-
-                            // TODO: Find a way to remove it
-                            let buffer = unsafe {
-                                std::mem::transmute::<&wgpu::Buffer, &wgpu::Buffer>(
-                                    buffers.get(key).unwrap().last().unwrap(),
-                                )
-                            };
-
-                            let bind_group_entry = wgpu::BindGroupEntry {
-                                binding: 0,
-                                resource: buffer.as_entire_binding(),
-                            };
-
-                            insert_in_hashmap_vec(
-                                &mut entries_by_group,
-                                *bind_group,
-                                bind_group_entry,
-                            );
-
-                            insert_in_hashmap_vec(
-                                &mut entry_names_by_group,
-                                *bind_group,
-                                key.clone(),
-                            );
-
-                            Some((*bind_group, *bind))
-                        }
+                        insert_in_hashmap_vec(&mut entry_names_by_group, *bind_group, key.clone());
                     }
-                })
-                .collect::<Vec<_>>();
+                    MaterialBinding::Sampler {
+                        default,
+                        bind_group,
+                        bind,
+                    } => {
+                        let default = default.read();
+                        let default = default.downcast_ref::<WgpuTextureResource>();
 
-            binding_names.insert(key.clone(), bindings);
+                        // TODO: Find a way to remove it
+                        let default = unsafe {
+                            std::mem::transmute::<&WgpuTextureResource, &WgpuTextureResource>(
+                                default,
+                            )
+                        };
+
+                        let bind_group_entry = wgpu::BindGroupEntry {
+                            binding: *bind,
+                            resource: wgpu::BindingResource::Sampler(&default.sampler),
+                        };
+
+                        insert_in_hashmap_vec(&mut entries_by_group, *bind_group, bind_group_entry);
+
+                        insert_in_hashmap_vec(&mut entry_names_by_group, *bind_group, key.clone());
+                    }
+                    MaterialBinding::Camera { bind_group } => {
+                        let bind_group_entry = wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: graphic_service.get_camera_buffer().as_entire_binding(),
+                        };
+
+                        insert_in_hashmap_vec(&mut entries_by_group, *bind_group, bind_group_entry);
+
+                        insert_in_hashmap_vec(&mut entry_names_by_group, *bind_group, key.clone());
+                    }
+                    MaterialBinding::Color {
+                        default,
+                        bind_group,
+                        bind,
+                    } => {
+                        let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("Uniform Buffer"),
+                            contents: bytemuck::cast_slice(&[default.clone()]),
+                            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                        });
+
+                        insert_in_hashmap_vec(&mut buffers, key.clone(), buffer);
+
+                        // TODO: Find a way to remove it
+                        let buffer = unsafe {
+                            std::mem::transmute::<&wgpu::Buffer, &wgpu::Buffer>(
+                                buffers.get(key).unwrap().last().unwrap(),
+                            )
+                        };
+
+                        let bind_group_entry = wgpu::BindGroupEntry {
+                            binding: *bind,
+                            resource: buffer.as_entire_binding(),
+                        };
+
+                        insert_in_hashmap_vec(&mut entries_by_group, *bind_group, bind_group_entry);
+
+                        insert_in_hashmap_vec(&mut entry_names_by_group, *bind_group, key.clone());
+                    }
+                }
+            });
         });
 
         // Create the bind groups
@@ -235,11 +189,15 @@ impl WgpuMaterialReference {
 
         WgpuMaterialReference {
             material,
-            binding_names,
             binding_groups,
             binding_entries,
             buffers,
+            is_instantiable: AtomicBool::new(true),
         }
+    }
+
+    pub fn is_instantiable(&self) -> bool {
+        self.is_instantiable.load(Ordering::Relaxed)
     }
 }
 
@@ -257,7 +215,9 @@ impl MaterialReference for WgpuMaterialReference {
                 graphic_service
                     .get_queue()
                     .write_buffer(buffer, 0, bytemuck::cast_slice(&[color]));
-            })
+            });
+
+            self.is_instantiable.store(false, Ordering::Relaxed)
         }
     }
 

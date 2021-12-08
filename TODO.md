@@ -32,6 +32,7 @@
 [X] Sprite gizmos
 [X] Run/Pause
 [X] Save/Load
+[ ] Fix resize gizmos
 
 ## Graphics
 
@@ -40,8 +41,9 @@
 [X] Material fields should now be a string identifier
 [X] Sprite vertex/indices should be shared accross all sprites
 [X] Squad transform should be done in shader instead of CPU
-[ ] Sprites should simply edit a field of material
 [ ] Proceed instantied rendering
+[ ] Make instances parametrizable in material/shader
+[ ] Sprites should simply edit a field of material
 [ ] Implement rendering composers
 
 ## Game tools
@@ -73,7 +75,7 @@
 [X] Fix javascript services
 [ ] Make javascript able to import modules via package.json
 [ ] Test and make microjob library compatible with javascript
-[ ] Abstract everything (espescialy javascript and render)
+[X] Abstract everything (espescialy javascript and render)
 [ ] Typescript
 
 ## Others
@@ -82,6 +84,7 @@
 [X] Dynamic libraries rust
 [X] Hot reload js
 [ ] Hot reload rust
+[ ] Implements a profiling tool (https://github.com/EmbarkStudios/puffin)
 
 # Code clean
 

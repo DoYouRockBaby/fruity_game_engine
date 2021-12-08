@@ -14,6 +14,7 @@ use fruity_core::serialize::serialized::SerializableObject;
 use fruity_core::serialize::serialized::Serialized;
 use fruity_core::settings::build_settings_from_yaml;
 use fruity_core::settings::Settings;
+use fruity_core::utils::collection::insert_in_hashmap_vec;
 use fruity_ecs::*;
 use std::collections::HashMap;
 use std::io::Read;
@@ -23,13 +24,13 @@ use yaml_rust::YamlLoader;
 #[derive(Debug, Clone, Default, FruityAny, IntrospectObject)]
 pub struct MaterialResource {
     pub shader: Option<ResourceReference<dyn ShaderResource>>,
-    pub fields: HashMap<String, Vec<MaterialField>>,
+    pub bindings: HashMap<String, Vec<MaterialBinding>>,
 }
 
 impl Resource for MaterialResource {}
 
 #[derive(Debug, Clone, FruityAny)]
-pub enum MaterialField {
+pub enum MaterialBinding {
     Texture {
         default: ResourceReference<dyn TextureResource>,
         bind_group: u32,
@@ -51,9 +52,9 @@ pub enum MaterialField {
 }
 
 // TODO: Complete that
-impl IntrospectObject for MaterialField {
+impl IntrospectObject for MaterialBinding {
     fn get_class_name(&self) -> String {
-        "MaterialField".to_string()
+        "MaterialBinding".to_string()
     }
 
     fn get_method_infos(&self) -> Vec<MethodInfo> {
@@ -65,21 +66,23 @@ impl IntrospectObject for MaterialField {
     }
 }
 
-impl SerializableObject for MaterialField {
+impl SerializableObject for MaterialBinding {
     fn duplicate(&self) -> Box<dyn SerializableObject> {
         Box::new(self.clone())
     }
 }
 
-impl FruityTryFrom<Serialized> for MaterialField {
+impl FruityTryFrom<Serialized> for MaterialBinding {
     type Error = String;
 
     fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
         match value {
             Serialized::NativeObject(value) => {
-                match value.as_any_box().downcast::<MaterialField>() {
+                match value.as_any_box().downcast::<MaterialBinding>() {
                     Ok(value) => Ok(*value),
-                    Err(_) => Err(format!("Couldn't convert a MaterialField to native object")),
+                    Err(_) => Err(format!(
+                        "Couldn't convert a MaterialBinding to native object"
+                    )),
                 }
             }
             _ => Err(format!("Couldn't convert {:?} to native object", value)),
@@ -87,7 +90,7 @@ impl FruityTryFrom<Serialized> for MaterialField {
     }
 }
 
-impl FruityInto<Serialized> for MaterialField {
+impl FruityInto<Serialized> for MaterialBinding {
     fn fruity_into(self) -> Serialized {
         Serialized::NativeObject(Box::new(self))
     }
@@ -128,29 +131,25 @@ pub fn build_material(
     let shader_identifier = settings.get::<String>("shader", String::default());
     let shader = resource_container.get::<dyn ShaderResource>(&shader_identifier);
 
-    let fields_settings = settings.get::<Vec<Settings>>("fields", Vec::new());
-    let mut fields = HashMap::<String, Vec<MaterialField>>::new();
-    fields_settings.iter().for_each(|params| {
+    let bindings_settings = settings.get::<Vec<Settings>>("bindings", Vec::new());
+    let mut bindings = HashMap::<String, Vec<MaterialBinding>>::new();
+    bindings_settings.iter().for_each(|params| {
         let name = params.get::<Option<String>>("name", None);
 
         if let Some(name) = name {
-            if let Some(field) = build_material_field(params, resource_container.clone()) {
-                if let Some(fields) = fields.get_mut(&name) {
-                    fields.push(field);
-                } else {
-                    fields.insert(name, vec![field]);
-                }
+            if let Some(binding) = build_material_binding(params, resource_container.clone()) {
+                insert_in_hashmap_vec(&mut bindings, name, binding);
             }
         }
     });
 
-    MaterialResource { shader, fields }
+    MaterialResource { shader, bindings }
 }
 
-fn build_material_field(
+fn build_material_binding(
     settings: &Settings,
     resource_container: Arc<ResourceContainer>,
-) -> Option<MaterialField> {
+) -> Option<MaterialBinding> {
     match &settings.get::<String>("type", String::default()) as &str {
         "texture" => {
             let default = settings.get::<String>("default", String::default());
@@ -159,7 +158,7 @@ fn build_material_field(
             let bind = settings.get::<u32>("bind", u32::default());
 
             if let Some(default) = default {
-                Some(MaterialField::Texture {
+                Some(MaterialBinding::Texture {
                     default,
                     bind_group,
                     bind,
@@ -175,7 +174,7 @@ fn build_material_field(
             let bind = settings.get::<u32>("bind", u32::default());
 
             if let Some(default) = default {
-                Some(MaterialField::Sampler {
+                Some(MaterialBinding::Sampler {
                     default,
                     bind_group,
                     bind,
@@ -189,7 +188,7 @@ fn build_material_field(
             let bind_group = settings.get::<u32>("bind_group", u32::default());
             let bind = settings.get::<u32>("bind", u32::default());
 
-            Some(MaterialField::Color {
+            Some(MaterialBinding::Color {
                 default,
                 bind_group,
                 bind,
@@ -197,7 +196,7 @@ fn build_material_field(
         }
         "camera" => {
             let bind_group = settings.get::<u32>("bind_group", u32::default());
-            Some(MaterialField::Camera { bind_group })
+            Some(MaterialBinding::Camera { bind_group })
         }
         _ => None,
     }
