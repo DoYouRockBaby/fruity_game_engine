@@ -58,7 +58,12 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let system_service = resource_container.require::<SystemService>();
     let mut system_service = system_service.write();
 
-    system_service.add_begin_system(MODULE_NAME, Inject1::new(pause_at_startup), None);
+    system_service.add_begin_system(
+        "pause_at_startup",
+        MODULE_NAME,
+        Inject1::new(pause_at_startup),
+        None,
+    );
 
     let inspector_service = resource_container.require::<InspectorService>();
     let mut inspector_service = inspector_service.write();

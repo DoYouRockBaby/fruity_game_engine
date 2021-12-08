@@ -2,6 +2,7 @@ use crate::systems::transform_2d_cascade::transform_2d_cascade;
 use fruity_core::inject::Inject1;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
+use fruity_ecs::system::system_service::SystemParams;
 use fruity_ecs::system::system_service::SystemService;
 use std::sync::Arc;
 
@@ -15,9 +16,13 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let system_service = resource_container.require::<SystemService>();
     let mut system_service = system_service.write();
 
-    system_service.add_system_that_ignore_pause(
+    system_service.add_system(
+        "transform_2d_cascade",
         MODULE_NAME,
         Inject1::new(transform_2d_cascade),
-        Some(96),
+        Some(SystemParams {
+            pool_index: 96,
+            ignore_pause: true,
+        }),
     );
 }

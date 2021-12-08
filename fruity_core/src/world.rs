@@ -37,6 +37,8 @@ impl<'s> World {
 
     /// Run the world
     pub fn run(&self, initializer: Initializer, settings: &Settings) {
+        puffin::profile_function!();
+
         if let Some(platform) = self.platform {
             platform(self.resource_container.clone(), initializer, settings);
         }

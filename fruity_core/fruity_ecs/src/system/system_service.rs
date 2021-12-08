@@ -1,6 +1,7 @@
 use crate::ResourceContainer;
 use fruity_any::*;
 use fruity_core::convert::FruityInto;
+use fruity_core::convert::FruityTryFrom;
 use fruity_core::inject::Inject;
 use fruity_core::inject::Inject0;
 use fruity_core::introspect::log_introspect_error;
@@ -10,9 +11,12 @@ use fruity_core::introspect::MethodCaller;
 use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::serialize::serialized::Callback;
+use fruity_core::serialize::serialized::SerializableObject;
+use fruity_core::serialize::serialized::Serialized;
 use fruity_core::utils::introspect::cast_introspect_mut;
 use fruity_core::utils::introspect::cast_introspect_ref;
 use fruity_core::utils::introspect::ArgumentCaster;
+use fruity_ecs_derive::*;
 use rayon::prelude::*;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
@@ -23,20 +27,156 @@ use std::sync::RwLock;
 
 type SystemCallback = dyn Fn(Arc<ResourceContainer>) + Sync + Send + 'static;
 
+/// Params for a system
+#[derive(Debug, Clone, FruityAny, IntrospectObject, InstantiableObject)]
+pub struct SystemParams {
+    /// The pool index
+    pub pool_index: usize,
+
+    /// If true, the system is still running while pause
+    pub ignore_pause: bool,
+}
+
+impl Default for SystemParams {
+    fn default() -> Self {
+        Self {
+            pool_index: 50,
+            ignore_pause: false,
+        }
+    }
+}
+
+impl SerializableObject for SystemParams {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
+    }
+}
+
+impl FruityTryFrom<Serialized> for SystemParams {
+    type Error = String;
+
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::NativeObject(value) => {
+                match value.as_any_box().downcast::<SystemParams>() {
+                    Ok(value) => Ok(*value),
+                    Err(_) => Err(format!("Couldn't convert a SystemParams to native object")),
+                }
+            }
+            _ => Err(format!("Couldn't convert {:?} to native object", value)),
+        }
+    }
+}
+
+impl FruityInto<Serialized> for SystemParams {
+    fn fruity_into(self) -> Serialized {
+        Serialized::NativeObject(Box::new(self))
+    }
+}
+
+/// Params for a system
+#[derive(Debug, Clone, FruityAny, IntrospectObject, InstantiableObject)]
+pub struct BeginSystemParams {
+    /// The pool index
+    pub pool_index: usize,
+}
+
+impl Default for BeginSystemParams {
+    fn default() -> Self {
+        Self { pool_index: 50 }
+    }
+}
+
+impl SerializableObject for BeginSystemParams {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
+    }
+}
+
+impl FruityTryFrom<Serialized> for BeginSystemParams {
+    type Error = String;
+
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::NativeObject(value) => {
+                match value.as_any_box().downcast::<BeginSystemParams>() {
+                    Ok(value) => Ok(*value),
+                    Err(_) => Err(format!(
+                        "Couldn't convert a BeginSystemParams to native object"
+                    )),
+                }
+            }
+            _ => Err(format!("Couldn't convert {:?} to native object", value)),
+        }
+    }
+}
+
+impl FruityInto<Serialized> for BeginSystemParams {
+    fn fruity_into(self) -> Serialized {
+        Serialized::NativeObject(Box::new(self))
+    }
+}
+
+/// Params for a system
+#[derive(Debug, Clone, FruityAny, IntrospectObject, InstantiableObject)]
+pub struct EndSystemParams {
+    /// The pool index
+    pub pool_index: usize,
+}
+
+impl Default for EndSystemParams {
+    fn default() -> Self {
+        Self { pool_index: 50 }
+    }
+}
+
+impl SerializableObject for EndSystemParams {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
+    }
+}
+
+impl FruityTryFrom<Serialized> for EndSystemParams {
+    type Error = String;
+
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::NativeObject(value) => {
+                match value.as_any_box().downcast::<EndSystemParams>() {
+                    Ok(value) => Ok(*value),
+                    Err(_) => Err(format!(
+                        "Couldn't convert a EndSystemParams to native object"
+                    )),
+                }
+            }
+            _ => Err(format!("Couldn't convert {:?} to native object", value)),
+        }
+    }
+}
+
+impl FruityInto<Serialized> for EndSystemParams {
+    fn fruity_into(self) -> Serialized {
+        Serialized::NativeObject(Box::new(self))
+    }
+}
+
 #[derive(Clone)]
 struct BeginSystem {
+    identifier: String,
     origin: String,
     callback: Arc<SystemCallback>,
 }
 
 #[derive(Clone)]
 struct EndSystem {
+    identifier: String,
     origin: String,
     callback: Arc<SystemCallback>,
 }
 
 #[derive(Clone)]
 struct FrameSystem {
+    identifier: String,
     origin: String,
     callback: Arc<SystemCallback>,
     ignore_pause: bool,
@@ -98,58 +238,29 @@ impl<'s> SystemService {
     /// * `system` - A function that will compute the world
     /// * `pool_index` - A pool identifier, all the systems of the same pool will be processed together in parallel
     ///
-    pub fn add_system<T: Inject>(&mut self, origin: &str, callback: T, pool_index: Option<usize>) {
-        let pool_index = pool_index.unwrap_or(50);
-
-        let system = FrameSystem {
-            origin: origin.to_string(),
-            callback: callback.inject().into(),
-            ignore_pause: false,
-        };
-
-        if let Some(pool) = self.system_pools.get_mut(&pool_index) {
-            pool.systems.push(system)
-        } else {
-            // If the pool not exists, we create it
-            let systems = vec![system];
-            self.system_pools.insert(
-                pool_index,
-                SystemPool {
-                    ignore_once: RwLock::new(false),
-                    systems,
-                },
-            );
-        };
-    }
-
-    /// Add a system to the collection
-    ///
-    /// # Arguments
-    /// * `origin` - An identifier for the origin of the system, used for hot reload
-    /// * `system` - A function that will compute the world
-    /// * `pool_index` - A pool identifier, all the systems of the same pool will be processed together in parallel
-    ///
-    pub fn add_system_that_ignore_pause<T: Inject>(
+    pub fn add_system<T: Inject>(
         &mut self,
+        identifier: &str,
         origin: &str,
         callback: T,
-        pool_index: Option<usize>,
+        params: Option<SystemParams>,
     ) {
-        let pool_index = pool_index.unwrap_or(50);
+        let params = params.unwrap_or_default();
 
         let system = FrameSystem {
+            identifier: identifier.to_string(),
             origin: origin.to_string(),
             callback: callback.inject().into(),
-            ignore_pause: true,
+            ignore_pause: params.ignore_pause,
         };
 
-        if let Some(pool) = self.system_pools.get_mut(&pool_index) {
+        if let Some(pool) = self.system_pools.get_mut(&params.pool_index) {
             pool.systems.push(system)
         } else {
             // If the pool not exists, we create it
             let systems = vec![system];
             self.system_pools.insert(
-                pool_index,
+                params.pool_index,
                 SystemPool {
                     ignore_once: RwLock::new(false),
                     systems,
@@ -167,24 +278,26 @@ impl<'s> SystemService {
     ///
     pub fn add_begin_system<T: Inject>(
         &mut self,
+        identifier: &str,
         origin: &str,
         callback: T,
-        pool_index: Option<usize>,
+        params: Option<BeginSystemParams>,
     ) {
-        let pool_index = pool_index.unwrap_or(50);
+        let params = params.unwrap_or_default();
 
         let system = BeginSystem {
+            identifier: identifier.to_string(),
             origin: origin.to_string(),
             callback: callback.inject().into(),
         };
 
-        if let Some(pool) = self.begin_system_pools.get_mut(&pool_index) {
+        if let Some(pool) = self.begin_system_pools.get_mut(&params.pool_index) {
             pool.systems.push(system)
         } else {
             // If the pool not exists, we create it
             let systems = vec![system];
             self.begin_system_pools.insert(
-                pool_index,
+                params.pool_index,
                 SystemPool {
                     ignore_once: RwLock::new(false),
                     systems,
@@ -202,24 +315,26 @@ impl<'s> SystemService {
     ///
     pub fn add_end_system<T: Inject>(
         &mut self,
+        identifier: &str,
         origin: &str,
         callback: T,
-        pool_index: Option<usize>,
+        params: Option<EndSystemParams>,
     ) {
-        let pool_index = pool_index.unwrap_or(50);
+        let params = params.unwrap_or_default();
 
         let system = EndSystem {
+            identifier: identifier.to_string(),
             origin: origin.to_string(),
             callback: callback.inject().into(),
         };
 
-        if let Some(pool) = self.end_system_pools.get_mut(&pool_index) {
+        if let Some(pool) = self.end_system_pools.get_mut(&params.pool_index) {
             pool.systems.push(system)
         } else {
             // If the pool not exists, we create it
             let systems = vec![system];
             self.end_system_pools.insert(
-                pool_index,
+                params.pool_index,
                 SystemPool {
                     ignore_once: RwLock::new(false),
                     systems,
@@ -271,6 +386,8 @@ impl<'s> SystemService {
 
             if !pool_ignore {
                 pool.systems.iter().par_bridge().for_each(|system| {
+                    puffin::profile_scope!("system", &system.identifier);
+
                     if !is_paused || system.ignore_pause {
                         (system.callback)(resource_container.clone());
                     }
@@ -291,10 +408,11 @@ impl<'s> SystemService {
             std::mem::drop(pool_ignore_reader);
 
             if !pool_ignore {
-                pool.systems
-                    .iter()
-                    .par_bridge()
-                    .for_each(|system| (system.callback)(resource_container.clone()));
+                pool.systems.iter().par_bridge().for_each(|system| {
+                    puffin::profile_scope!("system", &system.identifier);
+
+                    (system.callback)(resource_container.clone());
+                });
             } else {
                 let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
                 *pool_ignore_writer = false;
@@ -311,10 +429,11 @@ impl<'s> SystemService {
             std::mem::drop(pool_ignore_reader);
 
             if !pool_ignore {
-                pool.systems
-                    .iter()
-                    .par_bridge()
-                    .for_each(|system| (system.callback)(resource_container.clone()));
+                pool.systems.iter().par_bridge().for_each(|system| {
+                    puffin::profile_scope!("system", &system.identifier);
+
+                    (system.callback)(resource_container.clone())
+                });
             } else {
                 let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
                 *pool_ignore_writer = false;
@@ -416,19 +535,21 @@ impl IntrospectObject for SystemService {
                     let this = cast_introspect_mut::<SystemService>(this);
 
                     let mut caster = ArgumentCaster::new("add_system", args);
-                    let arg1 = caster.cast_next::<Callback>()?;
-                    let arg2 = caster.cast_next_optional::<usize>();
+                    let arg1 = caster.cast_next::<String>()?;
+                    let arg2 = caster.cast_next::<Callback>()?;
+                    let arg3 = caster.cast_next_optional::<SystemParams>();
 
-                    let callback = arg1.callback;
+                    let callback = arg2.callback;
                     this.add_system(
-                        &arg1.origin,
+                        &arg1,
+                        &arg2.origin,
                         Inject0::new(move || {
                             match callback(vec![]) {
                                 Ok(_) => (),
                                 Err(err) => log_introspect_error(&err),
                             };
                         }),
-                        arg2,
+                        arg3,
                     );
 
                     Ok(None)
@@ -440,19 +561,21 @@ impl IntrospectObject for SystemService {
                     let this = cast_introspect_mut::<SystemService>(this);
 
                     let mut caster = ArgumentCaster::new("add_begin_system", args);
-                    let arg1 = caster.cast_next::<Callback>()?;
-                    let arg2 = caster.cast_next_optional::<usize>();
+                    let arg1 = caster.cast_next::<String>()?;
+                    let arg2 = caster.cast_next::<Callback>()?;
+                    let arg3 = caster.cast_next_optional::<BeginSystemParams>();
 
-                    let callback = arg1.callback;
+                    let callback = arg2.callback;
                     this.add_begin_system(
-                        &arg1.origin,
+                        &arg1,
+                        &arg2.origin,
                         Inject0::new(move || {
                             match callback(vec![]) {
                                 Ok(_) => (),
                                 Err(err) => log_introspect_error(&err),
                             };
                         }),
-                        arg2,
+                        arg3,
                     );
 
                     Ok(None)
@@ -464,19 +587,21 @@ impl IntrospectObject for SystemService {
                     let this = cast_introspect_mut::<SystemService>(this);
 
                     let mut caster = ArgumentCaster::new("add_end_system", args);
-                    let arg1 = caster.cast_next::<Callback>()?;
-                    let arg2 = caster.cast_next_optional::<usize>();
+                    let arg1 = caster.cast_next::<String>()?;
+                    let arg2 = caster.cast_next::<Callback>()?;
+                    let arg3 = caster.cast_next_optional::<EndSystemParams>();
 
-                    let callback = arg1.callback;
+                    let callback = arg2.callback;
                     this.add_end_system(
-                        &arg1.origin,
+                        &arg1,
+                        &arg2.origin,
                         Inject0::new(move || {
                             match callback(vec![]) {
                                 Ok(_) => (),
                                 Err(err) => log_introspect_error(&err),
                             };
                         }),
-                        arg2,
+                        arg3,
                     );
 
                     Ok(None)

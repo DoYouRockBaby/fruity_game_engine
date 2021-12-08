@@ -60,6 +60,8 @@ impl EditorService {
         graphic_service_reader
             .on_before_draw_end()
             .add_observer(move |_| {
+                puffin::profile_scope!("draw_editor");
+
                 let editor_service = resource_container_2.require::<EditorService>();
                 let mut editor_service = editor_service.write();
 

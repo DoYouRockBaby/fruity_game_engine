@@ -24,6 +24,16 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let system_service = resource_container.require::<SystemService>();
     let mut system_service = system_service.write();
 
-    system_service.add_begin_system(MODULE_NAME, Inject1::new(delete_cascade), None);
-    system_service.add_begin_system(MODULE_NAME, Inject1::new(update_nested_level), None);
+    system_service.add_begin_system(
+        "delete_cascade",
+        MODULE_NAME,
+        Inject1::new(delete_cascade),
+        None,
+    );
+    system_service.add_begin_system(
+        "update_nested_level",
+        MODULE_NAME,
+        Inject1::new(update_nested_level),
+        None,
+    );
 }

@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 winit = "0.25.0"
+puffin = "0.12.1"
 fruity_any = { path = "../../../fruity_core/fruity_any" }
 fruity_core = { path = "../../../fruity_core" }
 fruity_ecs = { path = "../../../fruity_core/fruity_ecs" }

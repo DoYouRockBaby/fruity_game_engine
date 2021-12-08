@@ -27,3 +27,5 @@ fruity_editor = { path = "../../../fruity_editor" }
 fruity_wgpu_graphic = { path = "../fruity_wgpu_graphic" }
 fruity_winit_windows = { path = "../fruity_winit_windows" }
 log = "0.4.14"
+puffin = "0.11.0"
+puffin_egui = "0.11.0"

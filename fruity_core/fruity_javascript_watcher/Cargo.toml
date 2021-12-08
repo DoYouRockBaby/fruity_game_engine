@@ -7,6 +7,7 @@ edition = "2021"
 # crate-type = ["dylib"]
 
 [dependencies]
+puffin = "0.12.1"
 notify = "4.0.0"
 fruity_any = { path = "../fruity_any" }
 fruity_core = { path = ".." }

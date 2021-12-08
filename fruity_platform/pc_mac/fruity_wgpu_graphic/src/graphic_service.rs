@@ -74,6 +74,8 @@ impl WgpuGraphicService {
         // Subscribe to windows observer to proceed the graphics when it's neededs
         let resource_container_2 = resource_container.clone();
         window_service.on_start_update().add_observer(move |_| {
+            puffin::profile_scope!("start_draw");
+
             let graphic_service = resource_container_2.require::<dyn GraphicService>();
             let mut graphic_service = graphic_service.write();
             let graphic_service = graphic_service.downcast_mut::<WgpuGraphicService>();
@@ -83,6 +85,8 @@ impl WgpuGraphicService {
 
         let resource_container_2 = resource_container.clone();
         window_service.on_end_update().add_observer(move |_| {
+            puffin::profile_scope!("end_draw");
+
             let graphic_service = resource_container_2.require::<dyn GraphicService>();
 
             // Send the event that we will end to draw
@@ -199,6 +203,8 @@ impl WgpuGraphicService {
     }
 
     pub fn push_render_bundle(&self, bundle: RenderBundle, z_index: usize) {
+        puffin::profile_function!();
+
         let mut render_bundle_queue = self.render_bundle_queue.lock().unwrap();
         render_bundle_queue.push(RenderBundleEntry { bundle, z_index });
     }
@@ -284,11 +290,15 @@ impl GraphicService for WgpuGraphicService {
     }
 
     fn start_pass(&self) {
+        puffin::profile_function!();
+
         let mut render_bundle_queue = self.render_bundle_queue.lock().unwrap();
         render_bundle_queue.clear();
     }
 
     fn end_pass(&self) {
+        puffin::profile_function!();
+
         let mut encoder = if let Some(encoder) = self.current_encoder.as_ref() {
             encoder.write().unwrap()
         } else {

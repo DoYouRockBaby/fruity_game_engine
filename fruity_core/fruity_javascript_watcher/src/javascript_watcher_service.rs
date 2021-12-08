@@ -93,6 +93,8 @@ impl JavascriptWatcherService {
     }
 
     pub fn update_watch(&self) {
+        puffin::profile_function!();
+
         self.single_thread_wrappers
             .iter()
             .for_each(|single_thread_wrapper| {

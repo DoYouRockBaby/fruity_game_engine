@@ -18,6 +18,7 @@ use fruity_core::inject::Inject3;
 use fruity_core::object_factory_service::ObjectFactoryService;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
+use fruity_ecs::system::system_service::SystemParams;
 use fruity_ecs::system::system_service::SystemService;
 use std::sync::Arc;
 
@@ -47,21 +48,75 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let system_service = resource_container.require::<SystemService>();
     let mut system_service = system_service.write();
 
-    system_service.add_system_that_ignore_pause(
+    system_service.add_system(
+        "reset_transform_2d",
         MODULE_NAME,
         Inject1::new(reset_transform_2d),
-        Some(92),
+        Some(SystemParams {
+            pool_index: 92,
+            ignore_pause: true,
+        }),
     );
-    system_service.add_system_that_ignore_pause(MODULE_NAME, Inject1::new(translate_2d), Some(93));
-    system_service.add_system_that_ignore_pause(MODULE_NAME, Inject1::new(rotate_2d), Some(94));
-    system_service.add_system_that_ignore_pause(MODULE_NAME, Inject1::new(scale_2d), Some(95));
-    system_service.add_system_that_ignore_pause(
+
+    system_service.add_system(
+        "translate_2d",
+        MODULE_NAME,
+        Inject1::new(translate_2d),
+        Some(SystemParams {
+            pool_index: 93,
+            ignore_pause: true,
+        }),
+    );
+
+    system_service.add_system(
+        "rotate_2d",
+        MODULE_NAME,
+        Inject1::new(rotate_2d),
+        Some(SystemParams {
+            pool_index: 94,
+            ignore_pause: true,
+        }),
+    );
+
+    system_service.add_system(
+        "scale_2d",
+        MODULE_NAME,
+        Inject1::new(scale_2d),
+        Some(SystemParams {
+            pool_index: 95,
+            ignore_pause: true,
+        }),
+    );
+
+    system_service.add_system(
+        "update_material_transform",
         MODULE_NAME,
         Inject1::new(update_material_transform),
-        Some(97),
+        Some(SystemParams {
+            pool_index: 97,
+            ignore_pause: true,
+        }),
     );
-    system_service.add_system_that_ignore_pause(MODULE_NAME, Inject3::new(draw_camera), Some(98));
-    system_service.add_system_that_ignore_pause(MODULE_NAME, Inject2::new(draw_sprite), Some(99));
+
+    system_service.add_system(
+        "draw_camera",
+        MODULE_NAME,
+        Inject3::new(draw_camera),
+        Some(SystemParams {
+            pool_index: 98,
+            ignore_pause: true,
+        }),
+    );
+
+    system_service.add_system(
+        "draw_sprite",
+        MODULE_NAME,
+        Inject2::new(draw_sprite),
+        Some(SystemParams {
+            pool_index: 99,
+            ignore_pause: true,
+        }),
+    );
 
     std::mem::drop(object_factory_service);
     std::mem::drop(system_service);

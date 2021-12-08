@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 log = "0.4.14"
+puffin = "0.12.1"
 rayon = "1.5"
 yaml-rust = "0.4"
 lazy_static = "1.4"

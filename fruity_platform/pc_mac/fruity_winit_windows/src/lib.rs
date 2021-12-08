@@ -44,6 +44,8 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
 
     let resource_container_2 = resource_container.clone();
     window_service.on_start_update.add_observer(move |_| {
+        puffin::profile_scope!("begin_frame");
+
         let frame_service = resource_container_2.require::<FrameService>();
         let mut frame_service = frame_service.write();
 
@@ -103,11 +105,16 @@ pub fn platform(
     window_service_reader.on_enter_loop().notify(());
     std::mem::drop(window_service_reader);
 
+    puffin::set_scopes_on(true);
     event_loop.run(move |event, _, control_flow| {
+        puffin::GlobalProfiler::lock().new_frame();
+        puffin::profile_scope!("main_loop");
         *control_flow = ControlFlow::Wait;
 
         // Handle events
         {
+            puffin::profile_scope!("handle events");
+
             // TODO: Try to find a way to remove this
             let event = &event as *const _ as *const c_void;
             let event = event as *const Event<'static, ()>;
@@ -167,16 +174,24 @@ pub fn platform(
         }
 
         // Start updating
-        on_start_update.notify(());
+        {
+            puffin::profile_scope!("start_update");
+            on_start_update.notify(());
+        }
 
         // Run the systems
         {
+            puffin::profile_scope!("run_systems");
+
             let system_service_reader = system_service.read();
             system_service_reader.run();
         }
 
         // End the update
-        on_end_update.notify(());
+        {
+            puffin::profile_scope!("end_update");
+            on_end_update.notify(());
+        }
     });
 }
 

@@ -36,7 +36,7 @@ const frameService = resourceContainer.get("frame_service");
 
 customService.hello("World");
 
-systemService.addSystem(() => {
+systemService.addSystem("test 1", () => {
     entityService
         .iterComponents(["Translate2d", "Velocity"])
         .forEach(([translate, velocity]) => {
@@ -44,7 +44,7 @@ systemService.addSystem(() => {
         });
 });
 
-systemService.addSystem(() => {
+systemService.addSystem("test 2", () => {
     entityService
         .iterComponents(["Translate2d", "Move"])
         .forEach(([translate, move]) => {
@@ -70,7 +70,7 @@ systemService.addSystem(() => {
         });
 });
 
-systemService.addSystem(() => {
+systemService.addSystem("test 3", () => {
     entityService
         .iterComponents(["Rotate2d", "Move"])
         .forEach(([rotate, move]) => {
