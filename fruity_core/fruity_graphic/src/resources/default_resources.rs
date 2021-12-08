@@ -1,6 +1,7 @@
 use crate::graphic_service::GraphicService;
 use crate::math::RED;
 use crate::resources::material_resource::MaterialBinding;
+use crate::resources::material_resource::MaterialInstanceAttribute;
 use crate::resources::material_resource::MaterialResource;
 use crate::resources::mesh_resource::MeshResourceSettings;
 use crate::resources::mesh_resource::Vertex;
@@ -8,6 +9,8 @@ use crate::resources::shader_resource::ShaderBinding;
 use crate::resources::shader_resource::ShaderBindingGroup;
 use crate::resources::shader_resource::ShaderBindingType;
 use crate::resources::shader_resource::ShaderBindingVisibility;
+use crate::resources::shader_resource::ShaderInstanceAttribute;
+use crate::resources::shader_resource::ShaderInstanceAttributeType;
 use crate::resources::shader_resource::ShaderResource;
 use crate::resources::shader_resource::ShaderResourceSettings;
 use fruity_core::resource::resource_container::ResourceContainer;
@@ -110,9 +113,6 @@ pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
         
             var out: VertexOutput;
             out.position = camera.view_proj * model_matrix * vec4<f32>(model.position, 1.0);
-            // out.position = model_matrix * vec4<f32>(model.position, 1.0);
-            // out.position = camera.view_proj * vec4<f32>(model.position, 1.0);
-            // out.position = vec4<f32>(model.position, 1.0);
             return out;
         }
 
@@ -141,6 +141,24 @@ pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
                         }],
                     },
                 ],
+                instance_attributes: vec![
+                    ShaderInstanceAttribute {
+                        location: 5,
+                        ty: ShaderInstanceAttributeType::Vector4,
+                    },
+                    ShaderInstanceAttribute {
+                        location: 6,
+                        ty: ShaderInstanceAttributeType::Vector4,
+                    },
+                    ShaderInstanceAttribute {
+                        location: 7,
+                        ty: ShaderInstanceAttributeType::Vector4,
+                    },
+                    ShaderInstanceAttribute {
+                        location: 8,
+                        ty: ShaderInstanceAttributeType::Vector4,
+                    },
+                ],
             },
         )
         .unwrap();
@@ -162,6 +180,14 @@ pub fn load_draw_line_material(resource_container: Arc<ResourceContainer>) {
             "camera".to_string() => vec![MaterialBinding::Camera {
                 bind_group: 1
             }],
+        },
+        instance_attributes: hashmap! {
+            "transform".to_string() => MaterialInstanceAttribute::Matrix4 {
+                vec0_location: 5,
+                vec1_location: 6,
+                vec2_location: 7,
+                vec3_location: 8,
+            },
         },
     });
 

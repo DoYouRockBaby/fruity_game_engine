@@ -1,6 +1,8 @@
 use crate::graphic_service::GraphicService;
 use crate::math::Color;
 use crate::resources::material_resource::MaterialResource;
+use crate::Matrix4;
+use crate::Vector2d;
 use fruity_core::convert::FruityInto;
 use fruity_core::convert::FruityTryFrom;
 use fruity_core::introspect::IntrospectObject;
@@ -14,6 +16,8 @@ use std::sync::RwLock;
 
 pub trait MaterialReference: IntrospectObject + SerializableObject + Debug {
     fn set_color(&self, entry_name: &str, color: Color);
+    fn set_rect(&self, entry_name: &str, bottom_left: Vector2d, top_right: Vector2d);
+    fn set_matrix4(&self, entry_name: &str, matrix: Matrix4);
     fn get_material(&self) -> ResourceReference<MaterialResource>;
 }
 

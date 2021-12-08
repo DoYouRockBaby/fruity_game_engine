@@ -36,12 +36,7 @@ impl Graphic2dService {
         }
     }
 
-    pub fn draw_square(
-        &self,
-        transform: Matrix3,
-        z_index: usize,
-        material: &dyn MaterialReference,
-    ) {
+    pub fn draw_square(&self, z_index: usize, material: &dyn MaterialReference) {
         let graphic_service = self.graphic_service.read();
 
         let mesh = self
@@ -50,7 +45,7 @@ impl Graphic2dService {
             .unwrap();
         let mesh = mesh.read();
 
-        graphic_service.draw_mesh(transform, z_index, mesh.deref(), material)
+        graphic_service.draw_mesh(z_index, mesh.deref(), material)
     }
 
     pub fn draw_line(
@@ -92,10 +87,11 @@ impl Graphic2dService {
         // Update line color
         let graphic_service = self.graphic_service.read();
         let draw_line_material = graphic_service.create_material_reference(draw_line_material);
+        draw_line_material.set_matrix4("transform", transform.into());
         draw_line_material.set_color("color", color);
 
         // Draw the line
-        self.draw_square(transform, z_index, draw_line_material.deref());
+        self.draw_square(z_index, draw_line_material.deref());
     }
 
     /// Get the cursor position in the 2D world, take in care the camera transform

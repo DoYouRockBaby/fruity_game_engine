@@ -25,6 +25,7 @@ use yaml_rust::YamlLoader;
 pub struct MaterialResource {
     pub shader: Option<ResourceReference<dyn ShaderResource>>,
     pub bindings: HashMap<String, Vec<MaterialBinding>>,
+    pub instance_attributes: HashMap<String, MaterialInstanceAttribute>,
 }
 
 impl Resource for MaterialResource {}
@@ -96,6 +97,68 @@ impl FruityInto<Serialized> for MaterialBinding {
     }
 }
 
+#[derive(Debug, Clone, FruityAny)]
+pub enum MaterialInstanceAttribute {
+    Matrix4 {
+        vec0_location: u32,
+        vec1_location: u32,
+        vec2_location: u32,
+        vec3_location: u32,
+    },
+    Rect {
+        vec0_location: u32,
+        vec1_location: u32,
+    },
+    Vector4 {
+        location: u32,
+    },
+}
+
+// TODO: Complete that
+impl IntrospectObject for MaterialInstanceAttribute {
+    fn get_class_name(&self) -> String {
+        "MaterialInstanceAttribute".to_string()
+    }
+
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+}
+
+impl SerializableObject for MaterialInstanceAttribute {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
+    }
+}
+
+impl FruityTryFrom<Serialized> for MaterialInstanceAttribute {
+    type Error = String;
+
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::NativeObject(value) => {
+                match value.as_any_box().downcast::<MaterialInstanceAttribute>() {
+                    Ok(value) => Ok(*value),
+                    Err(_) => Err(format!(
+                        "Couldn't convert a MaterialInstanceAttribute to native object"
+                    )),
+                }
+            }
+            _ => Err(format!("Couldn't convert {:?} to native object", value)),
+        }
+    }
+}
+
+impl FruityInto<Serialized> for MaterialInstanceAttribute {
+    fn fruity_into(self) -> Serialized {
+        Serialized::NativeObject(Box::new(self))
+    }
+}
+
 pub fn load_material(
     identifier: &str,
     reader: &mut dyn Read,
@@ -143,7 +206,26 @@ pub fn build_material(
         }
     });
 
-    MaterialResource { shader, bindings }
+    let instance_attributes_settings =
+        settings.get::<Vec<Settings>>("instance_attributes", Vec::new());
+    let mut instance_attributes = HashMap::<String, MaterialInstanceAttribute>::new();
+    instance_attributes_settings.iter().for_each(|params| {
+        let name = params.get::<Option<String>>("name", None);
+
+        if let Some(name) = name {
+            if let Some(instance_attribute) =
+                build_material_instance_attribute(params, resource_container.clone())
+            {
+                instance_attributes.insert(name, instance_attribute);
+            }
+        }
+    });
+
+    MaterialResource {
+        shader,
+        bindings,
+        instance_attributes,
+    }
 }
 
 fn build_material_binding(
@@ -197,6 +279,42 @@ fn build_material_binding(
         "camera" => {
             let bind_group = settings.get::<u32>("bind_group", u32::default());
             Some(MaterialBinding::Camera { bind_group })
+        }
+        _ => None,
+    }
+}
+
+fn build_material_instance_attribute(
+    settings: &Settings,
+    _resource_container: Arc<ResourceContainer>,
+) -> Option<MaterialInstanceAttribute> {
+    match &settings.get::<String>("type", String::default()) as &str {
+        "matrix4" => {
+            let vec0_location = settings.get::<u32>("vec0_location", u32::default());
+            let vec1_location = settings.get::<u32>("vec1_location", u32::default());
+            let vec2_location = settings.get::<u32>("vec2_location", u32::default());
+            let vec3_location = settings.get::<u32>("vec3_location", u32::default());
+
+            Some(MaterialInstanceAttribute::Matrix4 {
+                vec0_location,
+                vec1_location,
+                vec2_location,
+                vec3_location,
+            })
+        }
+        "rect" => {
+            let vec0_location = settings.get::<u32>("vec0_location", u32::default());
+            let vec1_location = settings.get::<u32>("vec1_location", u32::default());
+
+            Some(MaterialInstanceAttribute::Rect {
+                vec0_location,
+                vec1_location,
+            })
+        }
+        "vec4" => {
+            let location = settings.get::<u32>("location", u32::default());
+
+            Some(MaterialInstanceAttribute::Vector4 { location })
         }
         _ => None,
     }

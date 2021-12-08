@@ -18,6 +18,6 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     system_service.add_system_that_ignore_pause(
         MODULE_NAME,
         Inject1::new(transform_2d_cascade),
-        Some(97),
+        Some(96),
     );
 }

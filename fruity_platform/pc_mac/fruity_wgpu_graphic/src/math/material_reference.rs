@@ -12,22 +12,58 @@ use fruity_core::serialize::serialized::SerializableObject;
 use fruity_core::utils::collection::insert_in_hashmap_vec;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::material_reference::MaterialReference;
+use fruity_graphic::math::matrix4::Matrix4;
+use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
 use fruity_graphic::resources::material_resource::MaterialBinding;
+use fruity_graphic::resources::material_resource::MaterialInstanceAttribute;
 use fruity_graphic::resources::material_resource::MaterialResource;
+use fruity_graphic::resources::shader_resource::ShaderInstanceAttributeType;
 use std::collections::HashMap;
+use std::mem::size_of;
 use std::ops::Deref;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::RwLock;
 use wgpu::util::DeviceExt;
+
+#[derive(Debug, Clone)]
+pub struct BufferLocation {
+    offset: usize,
+    size: usize,
+}
+
+#[derive(Debug)]
+pub enum InstanceField {
+    Vector4 {
+        location: BufferLocation,
+    },
+    Rect {
+        vec0_location: BufferLocation,
+        vec1_location: BufferLocation,
+    },
+    Matrix4 {
+        vec0_location: BufferLocation,
+        vec1_location: BufferLocation,
+        vec2_location: BufferLocation,
+        vec3_location: BufferLocation,
+    },
+}
+
+#[derive(Debug)]
+pub enum WgpuMaterialReferenceField {
+    BindingEntry(wgpu::BindGroupEntry<'static>),
+    Buffer(wgpu::Buffer),
+    Instance(InstanceField),
+}
 
 #[derive(Debug, FruityAny)]
 pub struct WgpuMaterialReference {
     material: ResourceReference<MaterialResource>,
     pub binding_groups: HashMap<u32, wgpu::BindGroup>,
-    pub binding_entries: HashMap<String, Vec<wgpu::BindGroupEntry<'static>>>,
-    pub buffers: HashMap<String, Vec<wgpu::Buffer>>,
+    pub instance_buffer: RwLock<Vec<u8>>,
+    pub fields: HashMap<String, Vec<WgpuMaterialReferenceField>>,
     is_instantiable: AtomicBool,
 }
 
@@ -50,8 +86,8 @@ impl WgpuMaterialReference {
                 return Self {
                     material,
                     binding_groups: HashMap::new(),
-                    binding_entries: HashMap::new(),
-                    buffers: HashMap::new(),
+                    fields: HashMap::new(),
+                    instance_buffer: RwLock::new(Vec::new()),
                     is_instantiable: AtomicBool::new(true),
                 };
             };
@@ -59,12 +95,12 @@ impl WgpuMaterialReference {
         let shader = shader.downcast_ref::<WgpuShaderResource>();
         let mut entries_by_group = HashMap::<u32, Vec<wgpu::BindGroupEntry>>::new();
         let mut entry_names_by_group = HashMap::<u32, Vec<String>>::new();
-        let mut buffers = HashMap::<String, Vec<wgpu::Buffer>>::new();
+        let mut fields = HashMap::<String, Vec<WgpuMaterialReferenceField>>::new();
 
         // Build the binding entries from the configuration
         material_reader.bindings.iter().for_each(|(key, bindings)| {
-            bindings.iter().for_each(|field| {
-                match field {
+            bindings.iter().for_each(|binding| {
+                match binding {
                     MaterialBinding::Texture {
                         default,
                         bind_group,
@@ -86,7 +122,6 @@ impl WgpuMaterialReference {
                         };
 
                         insert_in_hashmap_vec(&mut entries_by_group, *bind_group, bind_group_entry);
-
                         insert_in_hashmap_vec(&mut entry_names_by_group, *bind_group, key.clone());
                     }
                     MaterialBinding::Sampler {
@@ -110,7 +145,6 @@ impl WgpuMaterialReference {
                         };
 
                         insert_in_hashmap_vec(&mut entries_by_group, *bind_group, bind_group_entry);
-
                         insert_in_hashmap_vec(&mut entry_names_by_group, *bind_group, key.clone());
                     }
                     MaterialBinding::Camera { bind_group } => {
@@ -120,7 +154,6 @@ impl WgpuMaterialReference {
                         };
 
                         insert_in_hashmap_vec(&mut entries_by_group, *bind_group, bind_group_entry);
-
                         insert_in_hashmap_vec(&mut entry_names_by_group, *bind_group, key.clone());
                     }
                     MaterialBinding::Color {
@@ -134,14 +167,24 @@ impl WgpuMaterialReference {
                             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                         });
 
-                        insert_in_hashmap_vec(&mut buffers, key.clone(), buffer);
+                        insert_in_hashmap_vec(
+                            &mut fields,
+                            key.clone(),
+                            WgpuMaterialReferenceField::Buffer(buffer),
+                        );
 
                         // TODO: Find a way to remove it
-                        let buffer = unsafe {
-                            std::mem::transmute::<&wgpu::Buffer, &wgpu::Buffer>(
-                                buffers.get(key).unwrap().last().unwrap(),
-                            )
-                        };
+                        let buffer = if let Some(WgpuMaterialReferenceField::Buffer(buffer)) =
+                            fields.get(key).unwrap().last()
+                        {
+                            Some(buffer)
+                        } else {
+                            None
+                        }
+                        .unwrap();
+
+                        let buffer =
+                            unsafe { std::mem::transmute::<&wgpu::Buffer, &wgpu::Buffer>(buffer) };
 
                         let bind_group_entry = wgpu::BindGroupEntry {
                             binding: *bind,
@@ -149,7 +192,6 @@ impl WgpuMaterialReference {
                         };
 
                         insert_in_hashmap_vec(&mut entries_by_group, *bind_group, bind_group_entry);
-
                         insert_in_hashmap_vec(&mut entry_names_by_group, *bind_group, key.clone());
                     }
                 }
@@ -187,11 +229,86 @@ impl WgpuMaterialReference {
                 });
             });
 
+        // Build instance buffer
+        let mut instance_buffer = Vec::new();
+        instance_buffer.resize(shader.instance_size, 0);
+
+        // Build an association beween location and the position of datas in the buffer
+        let mut current_offset = 0;
+        let mut fields_by_locations = HashMap::<u32, BufferLocation>::new();
+        shader
+            .params
+            .instance_attributes
+            .iter()
+            .for_each(|instance_attribute| {
+                let size = match instance_attribute.ty {
+                    ShaderInstanceAttributeType::Float => size_of::<f32>(),
+                    ShaderInstanceAttributeType::Vector2 => size_of::<[f32; 2]>(),
+                    ShaderInstanceAttributeType::Vector4 => size_of::<[f32; 4]>(),
+                };
+
+                fields_by_locations.insert(
+                    instance_attribute.location,
+                    BufferLocation {
+                        offset: current_offset,
+                        size: size,
+                    },
+                );
+
+                current_offset += size;
+            });
+
+        // Insert the instance fields
+        material_reader
+            .instance_attributes
+            .iter()
+            .for_each(|instance_attribute| match instance_attribute.1 {
+                MaterialInstanceAttribute::Vector4 { location } => {
+                    insert_in_hashmap_vec(
+                        &mut fields,
+                        instance_attribute.0.clone(),
+                        WgpuMaterialReferenceField::Instance(InstanceField::Vector4 {
+                            location: fields_by_locations.get(location).unwrap().clone(),
+                        }),
+                    );
+                }
+                MaterialInstanceAttribute::Rect {
+                    vec0_location,
+                    vec1_location,
+                } => {
+                    insert_in_hashmap_vec(
+                        &mut fields,
+                        instance_attribute.0.clone(),
+                        WgpuMaterialReferenceField::Instance(InstanceField::Rect {
+                            vec0_location: fields_by_locations.get(vec0_location).unwrap().clone(),
+                            vec1_location: fields_by_locations.get(vec1_location).unwrap().clone(),
+                        }),
+                    );
+                }
+                MaterialInstanceAttribute::Matrix4 {
+                    vec0_location,
+                    vec1_location,
+                    vec2_location,
+                    vec3_location,
+                } => {
+                    insert_in_hashmap_vec(
+                        &mut fields,
+                        instance_attribute.0.clone(),
+                        WgpuMaterialReferenceField::Instance(InstanceField::Matrix4 {
+                            vec0_location: fields_by_locations.get(vec0_location).unwrap().clone(),
+                            vec1_location: fields_by_locations.get(vec1_location).unwrap().clone(),
+                            vec2_location: fields_by_locations.get(vec2_location).unwrap().clone(),
+                            vec3_location: fields_by_locations.get(vec3_location).unwrap().clone(),
+                        }),
+                    );
+                }
+            });
+
         WgpuMaterialReference {
             material,
             binding_groups,
-            binding_entries,
-            buffers,
+            fields,
+            instance_buffer: RwLock::new(instance_buffer),
             is_instantiable: AtomicBool::new(true),
         }
     }
@@ -203,21 +320,179 @@ impl WgpuMaterialReference {
 
 impl MaterialReference for WgpuMaterialReference {
     fn set_color(&self, entry_name: &str, color: Color) {
-        if let Some(buffers) = self.buffers.get(entry_name) {
-            let graphic_service = self
-                .material
-                .resource_container
-                .require::<dyn GraphicService>();
-            let graphic_service = graphic_service.read();
-            let graphic_service = graphic_service.downcast_ref::<WgpuGraphicService>();
+        if let Some(fields) = self.fields.get(entry_name) {
+            fields.iter().for_each(|field| {
+                match field {
+                    WgpuMaterialReferenceField::Buffer(buffer) => {
+                        let graphic_service = self
+                            .material
+                            .resource_container
+                            .require::<dyn GraphicService>();
+                        let graphic_service = graphic_service.read();
+                        let graphic_service = graphic_service.downcast_ref::<WgpuGraphicService>();
 
-            buffers.iter().for_each(|buffer| {
-                graphic_service
-                    .get_queue()
-                    .write_buffer(buffer, 0, bytemuck::cast_slice(&[color]));
+                        graphic_service.get_queue().write_buffer(
+                            buffer,
+                            0,
+                            bytemuck::cast_slice(&[color]),
+                        );
+
+                        self.is_instantiable.store(false, Ordering::Relaxed)
+                    }
+                    WgpuMaterialReferenceField::Instance(field) => match field {
+                        InstanceField::Vector4 { location } => {
+                            let mut instance_buffer_writer = self.instance_buffer.write().unwrap();
+                            let field_buffer = &mut instance_buffer_writer
+                                [location.offset..(location.offset + location.size)];
+                            let encoded = unsafe {
+                                std::slice::from_raw_parts(
+                                    (&color as *const Color) as *const u8,
+                                    std::mem::size_of::<Self>(),
+                                )
+                            };
+
+                            fruity_core::utils::slice::copy(field_buffer, encoded);
+                        }
+                        _ => (),
+                    },
+                    _ => (),
+                };
             });
+        }
+    }
 
-            self.is_instantiable.store(false, Ordering::Relaxed)
+    fn set_rect(&self, entry_name: &str, bottom_left: Vector2d, top_right: Vector2d) {
+        if let Some(fields) = self.fields.get(entry_name) {
+            fields.iter().for_each(|field| {
+                match field {
+                    // TODO: Implements for uniform
+                    WgpuMaterialReferenceField::Instance(field) => match field {
+                        InstanceField::Rect {
+                            vec0_location,
+                            vec1_location,
+                        } => {
+                            let mut instance_buffer_writer = self.instance_buffer.write().unwrap();
+
+                            // Vector 0
+                            let field_buffer = &mut instance_buffer_writer
+                                [vec0_location.offset..(vec0_location.offset + vec0_location.size)];
+
+                            let encoded = unsafe {
+                                std::slice::from_raw_parts(
+                                    (&[bottom_left.x, bottom_left.y] as *const [f32]) as *const u8,
+                                    std::mem::size_of::<Self>(),
+                                )
+                            };
+
+                            fruity_core::utils::slice::copy(field_buffer, encoded);
+
+                            // Vector 1
+                            let field_buffer = &mut instance_buffer_writer
+                                [vec1_location.offset..(vec1_location.offset + vec1_location.size)];
+
+                            let encoded = unsafe {
+                                std::slice::from_raw_parts(
+                                    (&[top_right.x, top_right.y] as *const [f32]) as *const u8,
+                                    std::mem::size_of::<Self>(),
+                                )
+                            };
+
+                            fruity_core::utils::slice::copy(field_buffer, encoded);
+                        }
+                        _ => (),
+                    },
+                    _ => (),
+                };
+            });
+        }
+    }
+
+    fn set_matrix4(&self, entry_name: &str, matrix: Matrix4) {
+        if let Some(fields) = self.fields.get(entry_name) {
+            fields.iter().for_each(|field| {
+                match field {
+                    WgpuMaterialReferenceField::Buffer(buffer) => {
+                        let graphic_service = self
+                            .material
+                            .resource_container
+                            .require::<dyn GraphicService>();
+                        let graphic_service = graphic_service.read();
+                        let graphic_service = graphic_service.downcast_ref::<WgpuGraphicService>();
+
+                        graphic_service.get_queue().write_buffer(
+                            buffer,
+                            0,
+                            bytemuck::cast_slice(&[matrix.0]),
+                        );
+
+                        self.is_instantiable.store(false, Ordering::Relaxed)
+                    }
+                    WgpuMaterialReferenceField::Instance(field) => match field {
+                        InstanceField::Matrix4 {
+                            vec0_location,
+                            vec1_location,
+                            vec2_location,
+                            vec3_location,
+                        } => {
+                            let mut instance_buffer_writer = self.instance_buffer.write().unwrap();
+
+                            // Vector 0
+                            let field_buffer = &mut instance_buffer_writer
+                                [vec0_location.offset..(vec0_location.offset + vec0_location.size)];
+
+                            let encoded = unsafe {
+                                std::slice::from_raw_parts(
+                                    (&matrix.0[0] as *const [f32]) as *const u8,
+                                    std::mem::size_of::<Self>(),
+                                )
+                            };
+
+                            fruity_core::utils::slice::copy(field_buffer, encoded);
+
+                            // Vector 1
+                            let field_buffer = &mut instance_buffer_writer
+                                [vec1_location.offset..(vec1_location.offset + vec1_location.size)];
+
+                            let encoded = unsafe {
+                                std::slice::from_raw_parts(
+                                    (&matrix.0[1] as *const [f32]) as *const u8,
+                                    std::mem::size_of::<Self>(),
+                                )
+                            };
+
+                            fruity_core::utils::slice::copy(field_buffer, encoded);
+
+                            // Vector 2
+                            let field_buffer = &mut instance_buffer_writer
+                                [vec2_location.offset..(vec2_location.offset + vec2_location.size)];
+
+                            let encoded = unsafe {
+                                std::slice::from_raw_parts(
+                                    (&matrix.0[2] as *const [f32]) as *const u8,
+                                    std::mem::size_of::<Self>(),
+                                )
+                            };
+
+                            fruity_core::utils::slice::copy(field_buffer, encoded);
+
+                            // Vector 3
+                            let field_buffer = &mut instance_buffer_writer
+                                [vec3_location.offset..(vec3_location.offset + vec3_location.size)];
+
+                            let encoded = unsafe {
+                                std::slice::from_raw_parts(
+                                    (&matrix.0[3] as *const [f32]) as *const u8,
+                                    std::mem::size_of::<Self>(),
+                                )
+                            };
+
+                            fruity_core::utils::slice::copy(field_buffer, encoded);
+                        }
+                        _ => (),
+                    },
+                    _ => (),
+                };
+            });
         }
     }
 

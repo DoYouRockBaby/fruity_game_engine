@@ -11,6 +11,7 @@ use crate::systems::reset_transform_2d::reset_transform_2d;
 use crate::systems::rotate_2d::rotate_2d;
 use crate::systems::scale_2d::scale_2d;
 use crate::systems::translate_2d::translate_2d;
+use crate::systems::update_material_transform::update_material_transform;
 use fruity_core::inject::Inject1;
 use fruity_core::inject::Inject2;
 use fruity_core::inject::Inject3;
@@ -49,11 +50,16 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     system_service.add_system_that_ignore_pause(
         MODULE_NAME,
         Inject1::new(reset_transform_2d),
-        Some(93),
+        Some(92),
     );
-    system_service.add_system_that_ignore_pause(MODULE_NAME, Inject1::new(translate_2d), Some(94));
-    system_service.add_system_that_ignore_pause(MODULE_NAME, Inject1::new(rotate_2d), Some(95));
-    system_service.add_system_that_ignore_pause(MODULE_NAME, Inject1::new(scale_2d), Some(96));
+    system_service.add_system_that_ignore_pause(MODULE_NAME, Inject1::new(translate_2d), Some(93));
+    system_service.add_system_that_ignore_pause(MODULE_NAME, Inject1::new(rotate_2d), Some(94));
+    system_service.add_system_that_ignore_pause(MODULE_NAME, Inject1::new(scale_2d), Some(95));
+    system_service.add_system_that_ignore_pause(
+        MODULE_NAME,
+        Inject1::new(update_material_transform),
+        Some(97),
+    );
     system_service.add_system_that_ignore_pause(MODULE_NAME, Inject3::new(draw_camera), Some(98));
     system_service.add_system_that_ignore_pause(MODULE_NAME, Inject2::new(draw_sprite), Some(99));
 

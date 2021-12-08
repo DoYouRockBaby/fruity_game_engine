@@ -2,7 +2,6 @@ use crate::math::material_reference::WgpuMaterialReference;
 use crate::resources::mesh_resource::WgpuMeshResource;
 use crate::resources::shader_resource::WgpuShaderResource;
 use crate::resources::texture_resource::WgpuTextureResource;
-use crate::wgpu_bridge::Instance;
 use fruity_any::*;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
@@ -13,7 +12,6 @@ use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::signal::Signal;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::material_reference::MaterialReference;
-use fruity_graphic::math::matrix3::Matrix3;
 use fruity_graphic::math::matrix4::Matrix4;
 use fruity_graphic::resources::material_resource::MaterialResource;
 use fruity_graphic::resources::mesh_resource::MeshResource;
@@ -407,13 +405,7 @@ impl GraphicService for WgpuGraphicService {
         Ok(Box::new(resource))
     }
 
-    fn draw_mesh(
-        &self,
-        transform: Matrix3,
-        z_index: usize,
-        mesh: &dyn MeshResource,
-        material: &dyn MaterialReference,
-    ) {
+    fn draw_mesh(&self, z_index: usize, mesh: &dyn MeshResource, material: &dyn MaterialReference) {
         let device = self.get_device();
         let config = self.get_config();
 
@@ -451,11 +443,10 @@ impl GraphicService for WgpuGraphicService {
             });
 
         // TODO: Don't do it every frame (AKA: implements the instancied rendering)
+        let instance_buffer = material_reference.instance_buffer.read().unwrap();
         let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Instance Buffer"),
-            contents: bytemuck::cast_slice(&[Instance {
-                transform: transform.into(),
-            }]),
+            contents: &instance_buffer,
             usage: wgpu::BufferUsages::VERTEX,
         });
 

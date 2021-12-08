@@ -27,5 +27,18 @@ resources:
       type: sampler
   - - visibility: vertex
       type: uniform
+  instance_attributes:
+  - location: 5
+    type: vec4
+  - location: 6
+    type: vec4
+  - location: 7
+    type: vec4
+  - location: 8
+    type: vec4
+#  - location: 9
+#    type: vec2
+#  - location: 10
+#    type: vec2
 - name: "./assets/material.material"
   path: "./assets/material.material"

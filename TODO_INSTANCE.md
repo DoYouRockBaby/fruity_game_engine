@@ -1,4 +1,4 @@
-[ ] Mettre une fonction is_instantiable dans MaterialReference
+[X] Mettre une fonction is_instantiable dans MaterialReference
 [ ] Rendre parametrable les vertex attributes des instances dans le material/shader
 [ ] Pouvoir parametrer des Matrix4 dans les attributs des instances
 [ ] Faire en sorte que la transformation soit désormais faites par un systeme qui injecte la matrice dans les instance attributes

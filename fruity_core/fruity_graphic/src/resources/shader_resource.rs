@@ -16,6 +16,7 @@ pub trait ShaderResource: Resource {}
 #[derive(Debug, Default, Clone, FruityAny, IntrospectObject, InstantiableObject)]
 pub struct ShaderResourceSettings {
     pub binding_groups: Vec<ShaderBindingGroup>,
+    pub instance_attributes: Vec<ShaderInstanceAttribute>,
 }
 
 impl SerializableObject for ShaderResourceSettings {
@@ -203,6 +204,91 @@ impl FruityInto<Serialized> for ShaderBindingType {
     }
 }
 
+#[derive(Debug, Default, Clone, FruityAny, IntrospectObject, InstantiableObject)]
+pub struct ShaderInstanceAttribute {
+    pub location: u32,
+    pub ty: ShaderInstanceAttributeType,
+}
+
+impl SerializableObject for ShaderInstanceAttribute {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
+    }
+}
+
+impl FruityTryFrom<Serialized> for ShaderInstanceAttribute {
+    type Error = String;
+
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
+        match value {
+            Serialized::NativeObject(value) => {
+                match value.as_any_box().downcast::<ShaderInstanceAttribute>() {
+                    Ok(value) => Ok(*value),
+                    Err(_) => Err(format!(
+                        "Couldn't convert a ShaderInstanceAttribute to native object"
+                    )),
+                }
+            }
+            _ => Err(format!("Couldn't convert {:?} to native object", value)),
+        }
+    }
+}
+
+impl FruityInto<Serialized> for ShaderInstanceAttribute {
+    fn fruity_into(self) -> Serialized {
+        Serialized::NativeObject(Box::new(self))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum ShaderInstanceAttributeType {
+    Float,
+    Vector2,
+    Vector4,
+}
+
+impl Default for ShaderInstanceAttributeType {
+    fn default() -> Self {
+        ShaderInstanceAttributeType::Float
+    }
+}
+
+impl FruityTryFrom<Serialized> for ShaderInstanceAttributeType {
+    type Error = String;
+
+    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
+        if let Serialized::String(value) = &value {
+            match value as &str {
+                "float" => Ok(ShaderInstanceAttributeType::Float),
+                "vec2" => Ok(ShaderInstanceAttributeType::Vector2),
+                "vec4" => Ok(ShaderInstanceAttributeType::Vector4),
+                _ => Err(format!(
+                    "Couldn't convert {:?} to ShaderInstanceAttributeType",
+                    value
+                )),
+            }
+        } else {
+            Err(format!(
+                "Couldn't convert {:?} to ShaderInstanceAttributeType",
+                value
+            ))
+        }
+    }
+}
+
+impl FruityInto<Serialized> for ShaderInstanceAttributeType {
+    fn fruity_into(self) -> Serialized {
+        Serialized::String(
+            match self {
+                ShaderInstanceAttributeType::Float => "float",
+                ShaderInstanceAttributeType::Vector2 => "vec2",
+                ShaderInstanceAttributeType::Vector4 => "vec4",
+            }
+            .to_string(),
+        )
+    }
+}
+
 pub fn load_shader(
     identifier: &str,
     reader: &mut dyn Read,
@@ -239,7 +325,7 @@ pub fn load_shader(
 
 pub fn read_shader_settings(
     settings: &Settings,
-    _resource_container: Arc<ResourceContainer>,
+    resource_container: Arc<ResourceContainer>,
 ) -> ShaderResourceSettings {
     let binding_groups = settings.get::<Vec<Settings>>("binding_groups", Vec::new());
     let binding_groups = binding_groups
@@ -251,10 +337,17 @@ pub fn read_shader_settings(
                 None
             }
         })
-        .map(|params| read_shader_binding_group_settings(params, _resource_container.clone()))
+        .map(|params| read_shader_binding_group_settings(params, resource_container.clone()))
         .collect::<Vec<_>>();
 
-    ShaderResourceSettings { binding_groups }
+    let instance_attributes = settings.get::<Vec<Settings>>("instance_attributes", Vec::new());
+    let instance_attributes =
+        read_shader_instance_attributes_settings(&instance_attributes, resource_container.clone());
+
+    ShaderResourceSettings {
+        binding_groups,
+        instance_attributes,
+    }
 }
 
 pub fn read_shader_binding_group_settings(
@@ -279,4 +372,22 @@ pub fn read_shader_binding_group_settings(
         .collect::<Vec<_>>();
 
     ShaderBindingGroup { bindings }
+}
+
+pub fn read_shader_instance_attributes_settings(
+    settings: &Vec<Settings>,
+    _resource_container: Arc<ResourceContainer>,
+) -> Vec<ShaderInstanceAttribute> {
+    settings
+        .iter()
+        .map(|params| ShaderInstanceAttribute {
+            location: params.get::<u32>("location", u32::default()),
+            ty: match &params.get::<String>("type", String::default()) as &str {
+                "float" => ShaderInstanceAttributeType::Float,
+                "vec2" => ShaderInstanceAttributeType::Vector2,
+                "vec4" => ShaderInstanceAttributeType::Vector4,
+                _ => ShaderInstanceAttributeType::default(),
+            },
+        })
+        .collect::<Vec<_>>()
 }

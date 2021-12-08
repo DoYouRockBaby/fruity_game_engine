@@ -7,7 +7,6 @@ use crate::resources::shader_resource::ShaderResource;
 use crate::resources::shader_resource::ShaderResourceSettings;
 use crate::resources::texture_resource::TextureResource;
 use crate::resources::texture_resource::TextureResourceSettings;
-use crate::Matrix3;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::signal::Signal;
@@ -20,13 +19,7 @@ pub trait GraphicService: Resource {
     fn update_camera(&mut self, view_proj: Matrix4);
     fn get_camera_transform(&self) -> &Matrix4;
     fn resize(&mut self, width: usize, height: usize);
-    fn draw_mesh(
-        &self,
-        transform: Matrix3,
-        z_index: usize,
-        mesh: &dyn MeshResource,
-        material: &dyn MaterialReference,
-    );
+    fn draw_mesh(&self, z_index: usize, mesh: &dyn MeshResource, material: &dyn MaterialReference);
     fn create_mesh_resource(
         &self,
         identifier: &str,

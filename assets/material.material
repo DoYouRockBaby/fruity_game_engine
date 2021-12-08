@@ -13,3 +13,14 @@ bindings:
 - name: camera
   type: camera
   bind_group: 1
+instance_attributes:
+- type: matrix4
+  name: transform
+  vec0_location: 5
+  vec1_location: 6
+  vec2_location: 7
+  vec3_location: 8
+# - type: rect
+#  name: tex_area
+#  vec0_location: 9
+#  vec1_location: 10

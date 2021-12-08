@@ -1,4 +1,5 @@
 use crate::math::vector2d::Vector2d;
+use crate::Matrix4;
 use cgmath::Angle;
 use cgmath::Rad;
 use cgmath::SquareMatrix;
@@ -54,14 +55,14 @@ impl Into<[[f32; 3]; 3]> for Matrix3 {
     }
 }
 
-impl Into<[[f32; 4]; 4]> for Matrix3 {
-    fn into(self) -> [[f32; 4]; 4] {
-        [
+impl Into<Matrix4> for Matrix3 {
+    fn into(self) -> Matrix4 {
+        Matrix4([
             [self.0[0][0], self.0[0][1], 0.0, self.0[0][2]],
             [self.0[1][0], self.0[1][1], 0.0, self.0[1][2]],
             [0.0, 0.0, 1.0, 0.0],
             [self.0[2][0], self.0[2][1], 0.0, self.0[2][2]],
-        ]
+        ])
     }
 }
 

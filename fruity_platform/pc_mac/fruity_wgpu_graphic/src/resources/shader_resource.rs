@@ -1,4 +1,3 @@
-use crate::wgpu_bridge::INSTANCE_DESC;
 use crate::wgpu_bridge::VERTEX_DESC;
 use fruity_any::*;
 use fruity_core::convert::FruityInto;
@@ -12,13 +11,17 @@ use fruity_graphic::resources::shader_resource::ShaderBinding;
 use fruity_graphic::resources::shader_resource::ShaderBindingGroup;
 use fruity_graphic::resources::shader_resource::ShaderBindingType;
 use fruity_graphic::resources::shader_resource::ShaderBindingVisibility;
+use fruity_graphic::resources::shader_resource::ShaderInstanceAttribute;
+use fruity_graphic::resources::shader_resource::ShaderInstanceAttributeType;
 use fruity_graphic::resources::shader_resource::ShaderResource;
 use fruity_graphic::resources::shader_resource::ShaderResourceSettings;
+use std::mem::size_of;
 use std::sync::Arc;
 
 #[derive(Debug, FruityAny)]
 pub struct WgpuShaderResource {
     pub params: ShaderResourceSettings,
+    pub instance_size: usize,
     pub shader_module: wgpu::ShaderModule,
     pub render_pipeline: wgpu::RenderPipeline,
     pub binding_groups_layout: Vec<wgpu::BindGroupLayout>,
@@ -44,8 +47,13 @@ impl WgpuShaderResource {
             .map(|binding_group| Self::build_binding_group_layout(binding_group, label, device))
             .collect::<Vec<_>>();
 
+        let (instance_attributes, instance_size) =
+            Self::build_instance_attributes(&params.instance_attributes);
+
         let render_pipeline = Self::build_render_pipeline(
             &binding_groups_layout,
+            &instance_attributes,
+            instance_size,
             &shader_module,
             label,
             device,
@@ -54,6 +62,7 @@ impl WgpuShaderResource {
 
         WgpuShaderResource {
             params: params.clone(),
+            instance_size,
             shader_module,
             render_pipeline,
             binding_groups_layout,
@@ -62,6 +71,8 @@ impl WgpuShaderResource {
 
     fn build_render_pipeline(
         binding_groups_layout: &[wgpu::BindGroupLayout],
+        instance_buffer_layout: &[wgpu::VertexAttribute],
+        instance_size: usize,
         shader_module: &wgpu::ShaderModule,
         label: &str,
         device: &wgpu::Device,
@@ -80,7 +91,14 @@ impl WgpuShaderResource {
             vertex: wgpu::VertexState {
                 module: &shader_module,
                 entry_point: "main",
-                buffers: &[VERTEX_DESC.clone(), INSTANCE_DESC.clone()],
+                buffers: &[
+                    VERTEX_DESC.clone(),
+                    wgpu::VertexBufferLayout {
+                        array_stride: instance_size as wgpu::BufferAddress,
+                        step_mode: wgpu::VertexStepMode::Instance,
+                        attributes: instance_buffer_layout,
+                    },
+                ],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader_module,
@@ -155,6 +173,40 @@ impl WgpuShaderResource {
             },
             count: None,
         }
+    }
+
+    fn build_instance_attributes(
+        instance_attributes: &[ShaderInstanceAttribute],
+    ) -> (Vec<wgpu::VertexAttribute>, usize) {
+        let mut current_offset = 0;
+        let attributes = instance_attributes
+            .iter()
+            .map(|instance_attribute| {
+                let (format, size) = match instance_attribute.ty {
+                    ShaderInstanceAttributeType::Float => {
+                        (wgpu::VertexFormat::Float32, size_of::<f32>())
+                    }
+                    ShaderInstanceAttributeType::Vector2 => {
+                        (wgpu::VertexFormat::Float32x2, size_of::<[f32; 2]>())
+                    }
+                    ShaderInstanceAttributeType::Vector4 => {
+                        (wgpu::VertexFormat::Float32x4, size_of::<[f32; 4]>())
+                    }
+                };
+
+                let result = wgpu::VertexAttribute {
+                    offset: current_offset as wgpu::BufferAddress,
+                    shader_location: instance_attribute.location,
+                    format: format,
+                };
+
+                current_offset += size;
+
+                result
+            })
+            .collect::<Vec<_>>();
+
+        (attributes, current_offset)
     }
 }
 
