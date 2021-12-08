@@ -2,16 +2,12 @@ use crate::math::Color;
 use crate::resources::shader_resource::ShaderResource;
 use crate::resources::texture_resource::TextureResource;
 use fruity_any::*;
-use fruity_core::convert::FruityInto;
-use fruity_core::convert::FruityTryFrom;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
-use fruity_core::serialize::serialized::SerializableObject;
-use fruity_core::serialize::serialized::Serialized;
 use fruity_core::settings::build_settings_from_yaml;
 use fruity_core::settings::Settings;
 use fruity_core::utils::collection::insert_in_hashmap_vec;
@@ -30,7 +26,7 @@ pub struct MaterialResource {
 
 impl Resource for MaterialResource {}
 
-#[derive(Debug, Clone, FruityAny)]
+#[derive(Debug, Clone, SerializableObject, FruityAny)]
 pub enum MaterialBinding {
     Texture {
         default: ResourceReference<dyn TextureResource>,
@@ -67,37 +63,7 @@ impl IntrospectObject for MaterialBinding {
     }
 }
 
-impl SerializableObject for MaterialBinding {
-    fn duplicate(&self) -> Box<dyn SerializableObject> {
-        Box::new(self.clone())
-    }
-}
-
-impl FruityTryFrom<Serialized> for MaterialBinding {
-    type Error = String;
-
-    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
-        match value {
-            Serialized::NativeObject(value) => {
-                match value.as_any_box().downcast::<MaterialBinding>() {
-                    Ok(value) => Ok(*value),
-                    Err(_) => Err(format!(
-                        "Couldn't convert a MaterialBinding to native object"
-                    )),
-                }
-            }
-            _ => Err(format!("Couldn't convert {:?} to native object", value)),
-        }
-    }
-}
-
-impl FruityInto<Serialized> for MaterialBinding {
-    fn fruity_into(self) -> Serialized {
-        Serialized::NativeObject(Box::new(self))
-    }
-}
-
-#[derive(Debug, Clone, FruityAny)]
+#[derive(Debug, Clone, FruityAny, SerializableObject)]
 pub enum MaterialInstanceAttribute {
     Matrix4 {
         vec0_location: u32,
@@ -126,36 +92,6 @@ impl IntrospectObject for MaterialInstanceAttribute {
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![]
-    }
-}
-
-impl SerializableObject for MaterialInstanceAttribute {
-    fn duplicate(&self) -> Box<dyn SerializableObject> {
-        Box::new(self.clone())
-    }
-}
-
-impl FruityTryFrom<Serialized> for MaterialInstanceAttribute {
-    type Error = String;
-
-    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
-        match value {
-            Serialized::NativeObject(value) => {
-                match value.as_any_box().downcast::<MaterialInstanceAttribute>() {
-                    Ok(value) => Ok(*value),
-                    Err(_) => Err(format!(
-                        "Couldn't convert a MaterialInstanceAttribute to native object"
-                    )),
-                }
-            }
-            _ => Err(format!("Couldn't convert {:?} to native object", value)),
-        }
-    }
-}
-
-impl FruityInto<Serialized> for MaterialInstanceAttribute {
-    fn fruity_into(self) -> Serialized {
-        Serialized::NativeObject(Box::new(self))
     }
 }
 

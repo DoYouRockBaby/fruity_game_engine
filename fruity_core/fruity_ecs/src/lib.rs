@@ -22,6 +22,7 @@ use std::sync::Arc;
 pub use fruity_ecs_derive::Component;
 pub use fruity_ecs_derive::InstantiableObject;
 pub use fruity_ecs_derive::IntrospectObject;
+pub use fruity_ecs_derive::SerializableObject;
 
 /// All related with components
 pub mod component;

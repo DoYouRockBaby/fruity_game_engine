@@ -8,8 +8,6 @@ use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodCaller;
 use fruity_core::introspect::MethodInfo;
 use fruity_core::introspect::SetterCaller;
-use fruity_core::serialize::serialized::SerializableObject;
-use fruity_core::serialize::serialized::Serialized;
 use fruity_core::utils::introspect::cast_introspect_ref;
 use fruity_core::utils::introspect::ArgumentCaster;
 use fruity_ecs::*;
@@ -24,7 +22,9 @@ use std::ops::SubAssign;
 use std::sync::Arc;
 
 /// A vector in 2D dimension
-#[derive(Debug, Clone, Copy, Default, PartialEq, FruityAny, InstantiableObject)]
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, FruityAny, SerializableObject, InstantiableObject,
+)]
 pub struct Vector2d {
     /// Horizontal component
     pub x: f32,
@@ -243,26 +243,6 @@ impl DivAssign<f32> for Vector2d {
     }
 }
 
-impl FruityTryFrom<Serialized> for Vector2d {
-    type Error = String;
-
-    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
-        match value {
-            Serialized::NativeObject(value) => match value.as_any_box().downcast::<Vector2d>() {
-                Ok(value) => Ok(*value),
-                Err(_) => Err(format!("Couldn't convert a Vector2d to native object")),
-            },
-            _ => Err(format!("Couldn't convert {:?} to native object", value)),
-        }
-    }
-}
-
-impl FruityInto<Serialized> for Vector2d {
-    fn fruity_into(self) -> Serialized {
-        Serialized::NativeObject(Box::new(self))
-    }
-}
-
 impl IntrospectObject for Vector2d {
     fn get_class_name(&self) -> String {
         "Vector2d".to_string()
@@ -448,11 +428,5 @@ impl IntrospectObject for Vector2d {
                 })),
             },
         ]
-    }
-}
-
-impl SerializableObject for Vector2d {
-    fn duplicate(&self) -> Box<dyn SerializableObject> {
-        Box::new(self.clone())
     }
 }

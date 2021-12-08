@@ -268,3 +268,43 @@ pub fn derive_instantiable_object_trait(input: TokenStream)  -> TokenStream {
 
     output.into()
 }
+
+#[proc_macro_derive(SerializableObject)]
+pub fn derive_serializable_object(input: TokenStream)  -> TokenStream {
+    let DeriveInput { ident, .. } = parse_macro_input!(input);
+    let ident_as_string = ident.to_string();
+
+    let output = quote! {
+        impl fruity_core::serialize::serialized::SerializableObject for #ident {
+            fn duplicate(&self) -> Box<dyn fruity_core::serialize::serialized::SerializableObject> {
+                Box::new(self.clone())
+            }
+        }
+        
+        impl fruity_core::convert::FruityTryFrom<fruity_core::serialize::serialized::Serialized> for #ident {
+            type Error = String;
+        
+            fn fruity_try_from(value: fruity_core::serialize::serialized::Serialized) -> Result<Self, Self::Error> {
+                match value {
+                    fruity_core::serialize::serialized::Serialized::NativeObject(value) => {
+                        match value.as_any_box().downcast::<#ident>() {
+                            Ok(value) => Ok(*value),
+                            Err(_) => Err(format!(
+                                "Couldn't convert a {} to native object", #ident_as_string
+                            )),
+                        }
+                    }
+                    _ => Err(format!("Couldn't convert {:?} to native object", value)),
+                }
+            }
+        }
+        
+        impl fruity_core::convert::FruityInto<fruity_core::serialize::serialized::Serialized> for #ident {
+            fn fruity_into(self) -> fruity_core::serialize::serialized::Serialized {
+                fruity_core::serialize::serialized::Serialized::NativeObject(Box::new(self))
+            }
+        }
+    };
+
+    output.into()
+}

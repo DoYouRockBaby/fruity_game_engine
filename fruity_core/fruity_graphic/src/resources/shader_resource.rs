@@ -4,7 +4,6 @@ use fruity_core::convert::FruityInto;
 use fruity_core::convert::FruityTryFrom;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
-use fruity_core::serialize::serialized::SerializableObject;
 use fruity_core::serialize::serialized::Serialized;
 use fruity_core::settings::Settings;
 use fruity_ecs::*;
@@ -13,106 +12,27 @@ use std::sync::Arc;
 
 pub trait ShaderResource: Resource {}
 
-#[derive(Debug, Default, Clone, FruityAny, IntrospectObject, InstantiableObject)]
+#[derive(
+    Debug, Default, Clone, FruityAny, SerializableObject, IntrospectObject, InstantiableObject,
+)]
 pub struct ShaderResourceSettings {
     pub binding_groups: Vec<ShaderBindingGroup>,
     pub instance_attributes: Vec<ShaderInstanceAttribute>,
 }
 
-impl SerializableObject for ShaderResourceSettings {
-    fn duplicate(&self) -> Box<dyn SerializableObject> {
-        Box::new(self.clone())
-    }
-}
-
-impl FruityTryFrom<Serialized> for ShaderResourceSettings {
-    type Error = String;
-
-    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
-        match value {
-            Serialized::NativeObject(value) => {
-                match value.as_any_box().downcast::<ShaderResourceSettings>() {
-                    Ok(value) => Ok(*value),
-                    Err(_) => Err(format!("Couldn't convert a ShaderParams to native object")),
-                }
-            }
-            _ => Err(format!("Couldn't convert {:?} to native object", value)),
-        }
-    }
-}
-
-impl FruityInto<Serialized> for ShaderResourceSettings {
-    fn fruity_into(self) -> Serialized {
-        Serialized::NativeObject(Box::new(self))
-    }
-}
-
-#[derive(Debug, Default, Clone, FruityAny, IntrospectObject, InstantiableObject)]
+#[derive(
+    Debug, Default, Clone, FruityAny, SerializableObject, IntrospectObject, InstantiableObject,
+)]
 pub struct ShaderBindingGroup {
     pub bindings: Vec<ShaderBinding>,
 }
 
-impl SerializableObject for ShaderBindingGroup {
-    fn duplicate(&self) -> Box<dyn SerializableObject> {
-        Box::new(self.clone())
-    }
-}
-
-impl FruityTryFrom<Serialized> for ShaderBindingGroup {
-    type Error = String;
-
-    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
-        match value {
-            Serialized::NativeObject(value) => {
-                match value.as_any_box().downcast::<ShaderBindingGroup>() {
-                    Ok(value) => Ok(*value),
-                    Err(_) => Err(format!(
-                        "Couldn't convert a ShaderBindingGroup to native object"
-                    )),
-                }
-            }
-            _ => Err(format!("Couldn't convert {:?} to native object", value)),
-        }
-    }
-}
-
-impl FruityInto<Serialized> for ShaderBindingGroup {
-    fn fruity_into(self) -> Serialized {
-        Serialized::NativeObject(Box::new(self))
-    }
-}
-
-#[derive(Debug, Default, Clone, FruityAny, IntrospectObject, InstantiableObject)]
+#[derive(
+    Debug, Default, Clone, FruityAny, SerializableObject, IntrospectObject, InstantiableObject,
+)]
 pub struct ShaderBinding {
     pub visibility: ShaderBindingVisibility,
     pub ty: ShaderBindingType,
-}
-
-impl SerializableObject for ShaderBinding {
-    fn duplicate(&self) -> Box<dyn SerializableObject> {
-        Box::new(self.clone())
-    }
-}
-
-impl FruityTryFrom<Serialized> for ShaderBinding {
-    type Error = String;
-
-    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
-        match value {
-            Serialized::NativeObject(value) => match value.as_any_box().downcast::<ShaderBinding>()
-            {
-                Ok(value) => Ok(*value),
-                Err(_) => Err(format!("Couldn't convert a ShaderBinding to native object")),
-            },
-            _ => Err(format!("Couldn't convert {:?} to native object", value)),
-        }
-    }
-}
-
-impl FruityInto<Serialized> for ShaderBinding {
-    fn fruity_into(self) -> Serialized {
-        Serialized::NativeObject(Box::new(self))
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -204,40 +124,12 @@ impl FruityInto<Serialized> for ShaderBindingType {
     }
 }
 
-#[derive(Debug, Default, Clone, FruityAny, IntrospectObject, InstantiableObject)]
+#[derive(
+    Debug, Default, Clone, FruityAny, SerializableObject, IntrospectObject, InstantiableObject,
+)]
 pub struct ShaderInstanceAttribute {
     pub location: u32,
     pub ty: ShaderInstanceAttributeType,
-}
-
-impl SerializableObject for ShaderInstanceAttribute {
-    fn duplicate(&self) -> Box<dyn SerializableObject> {
-        Box::new(self.clone())
-    }
-}
-
-impl FruityTryFrom<Serialized> for ShaderInstanceAttribute {
-    type Error = String;
-
-    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
-        match value {
-            Serialized::NativeObject(value) => {
-                match value.as_any_box().downcast::<ShaderInstanceAttribute>() {
-                    Ok(value) => Ok(*value),
-                    Err(_) => Err(format!(
-                        "Couldn't convert a ShaderInstanceAttribute to native object"
-                    )),
-                }
-            }
-            _ => Err(format!("Couldn't convert {:?} to native object", value)),
-        }
-    }
-}
-
-impl FruityInto<Serialized> for ShaderInstanceAttribute {
-    fn fruity_into(self) -> Serialized {
-        Serialized::NativeObject(Box::new(self))
-    }
 }
 
 #[derive(Debug, Clone)]

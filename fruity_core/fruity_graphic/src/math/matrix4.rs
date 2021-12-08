@@ -1,19 +1,16 @@
 use cgmath::SquareMatrix;
 use fruity_any::*;
 use fruity_core::convert::FruityInto;
-use fruity_core::convert::FruityTryFrom;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodCaller;
 use fruity_core::introspect::MethodInfo;
-use fruity_core::serialize::serialized::SerializableObject;
-use fruity_core::serialize::serialized::Serialized;
 use fruity_core::utils::introspect::cast_introspect_ref;
 use fruity_ecs::*;
 use std::ops::Mul;
 use std::sync::Arc;
 
-#[derive(Debug, FruityAny, Clone, Copy, InstantiableObject)]
+#[derive(Debug, FruityAny, SerializableObject, Clone, Copy, InstantiableObject)]
 pub struct Matrix4(pub [[f32; 4]; 4]);
 
 impl Matrix4 {
@@ -55,26 +52,6 @@ impl Mul<Matrix4> for Matrix4 {
     }
 }
 
-impl FruityTryFrom<Serialized> for Matrix4 {
-    type Error = String;
-
-    fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
-        match value {
-            Serialized::NativeObject(value) => match value.as_any_box().downcast::<Matrix4>() {
-                Ok(value) => Ok(*value),
-                Err(_) => Err(format!("Couldn't convert a Matrix4 to native object")),
-            },
-            _ => Err(format!("Couldn't convert {:?} to native object", value)),
-        }
-    }
-}
-
-impl FruityInto<Serialized> for Matrix4 {
-    fn fruity_into(self) -> Serialized {
-        Serialized::NativeObject(Box::new(self))
-    }
-}
-
 impl IntrospectObject for Matrix4 {
     fn get_class_name(&self) -> String {
         "Matrix4".to_string()
@@ -94,11 +71,5 @@ impl IntrospectObject for Matrix4 {
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![]
-    }
-}
-
-impl SerializableObject for Matrix4 {
-    fn duplicate(&self) -> Box<dyn SerializableObject> {
-        Box::new(self.clone())
     }
 }
