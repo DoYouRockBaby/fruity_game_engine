@@ -32,7 +32,7 @@ impl Graphic2dService {
         let graphic_service_reader = graphic_service.read();
 
         let draw_line_material = resource_container
-            .get::<MaterialResource>("Materials/Draw Line")
+            .get::<dyn MaterialResource>("Materials/Draw Line")
             .unwrap();
 
         Self {

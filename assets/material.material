@@ -1,17 +1,9 @@
 shader: "./assets/shader.wgsl"
 bindings:
 - type: texture
-  name: sprite
-  default: "./assets/logo.png"
+  value: "./assets/logo.png"
   bind_group: 0
-  bind: 0
-- type: sampler
-  name: sprite
-  default: "./assets/logo.png"
-  bind_group: 0
-  bind: 1
-- name: camera
-  type: camera
+- type: camera
   bind_group: 1
 instance_attributes:
 - type: matrix4

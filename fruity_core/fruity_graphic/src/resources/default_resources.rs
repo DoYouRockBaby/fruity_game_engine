@@ -1,7 +1,7 @@
 use crate::graphic_service::GraphicService;
-use crate::resources::material_resource::MaterialBinding;
-use crate::resources::material_resource::MaterialInstanceAttribute;
-use crate::resources::material_resource::MaterialResource;
+use crate::resources::material_resource::MaterialResourceSettings;
+use crate::resources::material_resource::MaterialSettingsBinding;
+use crate::resources::material_resource::MaterialSettingsInstanceAttribute;
 use crate::resources::mesh_resource::MeshResourceSettings;
 use crate::resources::mesh_resource::Vertex;
 use crate::resources::shader_resource::ShaderBinding;
@@ -157,27 +157,31 @@ pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
 }
 
 pub fn load_draw_line_material(resource_container: Arc<ResourceContainer>) {
+    let graphic_service = resource_container.require::<dyn GraphicService>();
+    let graphic_service = graphic_service.read();
+
     let shader = resource_container.get::<dyn ShaderResource>("Shaders/Draw Line");
 
-    let resource = Box::new(MaterialResource {
-        shader,
-        bindings: hashmap! {
-            "camera".to_string() => vec![MaterialBinding::Camera {
-                bind_group: 0
-            }],
-        },
-        instance_attributes: hashmap! {
-            "transform".to_string() => MaterialInstanceAttribute::Matrix4 {
-                vec0_location: 5,
-                vec1_location: 6,
-                vec2_location: 7,
-                vec3_location: 8,
+    let resource = graphic_service
+        .create_material_resource(
+            "Materials/Draw Line",
+            MaterialResourceSettings {
+                shader,
+                bindings: vec![MaterialSettingsBinding::Camera { bind_group: 0 }],
+                instance_attributes: hashmap! {
+                    "transform".to_string() => MaterialSettingsInstanceAttribute::Matrix4 {
+                        vec0_location: 5,
+                        vec1_location: 6,
+                        vec2_location: 7,
+                        vec3_location: 8,
+                    },
+                    "color".to_string() => MaterialSettingsInstanceAttribute::Vector4 {
+                        location: 9,
+                    },
+                },
             },
-            "color".to_string() => MaterialInstanceAttribute::Vector4 {
-                location: 9,
-            },
-        },
-    });
+        )
+        .unwrap();
 
     resource_container.add("Materials/Draw Line", resource);
 }

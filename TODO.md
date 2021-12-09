@@ -33,6 +33,7 @@
 [X] Run/Pause
 [X] Save/Load
 [ ] Fix resize gizmos
+[ ] Select an object when clicking on it (set_scissor_rect)
 
 ## Graphics
 

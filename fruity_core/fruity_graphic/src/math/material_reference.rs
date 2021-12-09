@@ -18,7 +18,7 @@ pub trait MaterialReference: IntrospectObject + SerializableObject + Debug {
     fn set_color(&self, entry_name: &str, color: Color);
     fn set_rect(&self, entry_name: &str, bottom_left: Vector2d, top_right: Vector2d);
     fn set_matrix4(&self, entry_name: &str, matrix: Matrix4);
-    fn get_material(&self) -> ResourceReference<MaterialResource>;
+    fn get_material(&self) -> ResourceReference<dyn MaterialResource>;
 }
 
 impl Clone for Box<dyn MaterialReference> {
@@ -46,7 +46,7 @@ impl FruityTryFrom<Serialized> for Box<dyn MaterialReference> {
                 } else if let Ok(value) = value
                     .clone()
                     .as_any_box()
-                    .downcast::<ResourceReference<MaterialResource>>()
+                    .downcast::<ResourceReference<dyn MaterialResource>>()
                 {
                     let graphic_service = value.resource_container.require::<dyn GraphicService>();
                     let graphic_service = graphic_service.read();
@@ -60,7 +60,7 @@ impl FruityTryFrom<Serialized> for Box<dyn MaterialReference> {
                     if let Ok(resource) = resource_reference
                         .resource
                         .as_any_arc()
-                        .downcast::<RwLock<Box<MaterialResource>>>()
+                        .downcast::<RwLock<Box<dyn MaterialResource>>>()
                     {
                         let graphic_service = resource_reference
                             .resource_container

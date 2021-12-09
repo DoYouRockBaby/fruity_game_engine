@@ -1,6 +1,7 @@
 use crate::math::material_reference::MaterialReference;
 use crate::math::matrix4::Matrix4;
 use crate::resources::material_resource::MaterialResource;
+use crate::resources::material_resource::MaterialResourceSettings;
 use crate::resources::mesh_resource::MeshResource;
 use crate::resources::mesh_resource::MeshResourceSettings;
 use crate::resources::shader_resource::ShaderResource;
@@ -37,9 +38,14 @@ pub trait GraphicService: Resource {
         contents: &[u8],
         params: TextureResourceSettings,
     ) -> Result<Box<dyn TextureResource>, String>;
+    fn create_material_resource(
+        &self,
+        identifier: &str,
+        params: MaterialResourceSettings,
+    ) -> Result<Box<dyn MaterialResource>, String>;
     fn create_material_reference(
         &self,
-        resource_reference: ResourceReference<MaterialResource>,
+        resource_reference: ResourceReference<dyn MaterialResource>,
     ) -> Box<dyn MaterialReference>;
     fn on_before_draw_end(&self) -> &Signal<()>;
     fn on_after_draw_end(&self) -> &Signal<()>;
