@@ -18,7 +18,7 @@ pub fn draw_sprite(
             let graphic_2d_service = graphic_2d_service.read();
 
             if let Some(material) = &sprite.material {
-                graphic_2d_service.draw_square(sprite.z_index, material.deref());
+                graphic_2d_service.draw_square(material.deref(), sprite.z_index);
             }
         }),
     )

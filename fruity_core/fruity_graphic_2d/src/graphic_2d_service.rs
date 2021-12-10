@@ -44,16 +44,15 @@ impl Graphic2dService {
         }
     }
 
-    pub fn draw_square(&self, z_index: usize, material: &dyn MaterialReference) {
+    pub fn draw_square(&self, material: &dyn MaterialReference, z_index: usize) {
         let graphic_service = self.graphic_service.read();
 
         let mesh = self
             .resource_container
             .get::<dyn MeshResource>("Meshes/Squad")
             .unwrap();
-        let mesh = mesh.read();
 
-        graphic_service.draw_mesh(z_index, mesh.deref(), material)
+        graphic_service.draw_mesh(mesh.clone(), material, z_index)
     }
 
     pub fn draw_line(
@@ -91,7 +90,7 @@ impl Graphic2dService {
         self.draw_line_material.set_color("color", color);
 
         // Draw the line
-        self.draw_square(z_index, self.draw_line_material.deref());
+        self.draw_square(self.draw_line_material.deref(), z_index);
     }
 
     /// Get the cursor position in the 2D world, take in care the camera transform

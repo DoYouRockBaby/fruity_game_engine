@@ -20,7 +20,12 @@ pub trait GraphicService: Resource {
     fn update_camera(&mut self, view_proj: Matrix4);
     fn get_camera_transform(&self) -> &Matrix4;
     fn resize(&mut self, width: usize, height: usize);
-    fn draw_mesh(&self, z_index: usize, mesh: &dyn MeshResource, material: &dyn MaterialReference);
+    fn draw_mesh(
+        &self,
+        mesh: ResourceReference<dyn MeshResource>,
+        material: &dyn MaterialReference,
+        z_index: usize,
+    );
     fn create_mesh_resource(
         &self,
         identifier: &str,
