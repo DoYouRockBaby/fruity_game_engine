@@ -15,8 +15,8 @@ input:
   "Rotate":
   - "Keyboard/A"
 resources:
-- name: "./assets/logo.png"
-  path: "./assets/logo.png"
+- name: "./assets/ball.png"
+  path: "./assets/ball.png"
   type: texture
 - name: "./assets/shader.wgsl"
   path: "./assets/shader.wgsl"

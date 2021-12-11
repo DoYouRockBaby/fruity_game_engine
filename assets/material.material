@@ -1,7 +1,7 @@
 shader: "./assets/shader.wgsl"
 bindings:
 - type: texture
-  value: "./assets/logo.png"
+  value: "./assets/ball.png"
   bind_group: 0
 - type: camera
   bind_group: 1
