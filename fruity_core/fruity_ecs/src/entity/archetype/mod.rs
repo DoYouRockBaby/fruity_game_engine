@@ -108,10 +108,8 @@ impl Archetype {
     }
 
     /// Get an iterator over all the components of all the entities
-    pub fn iter_all_components(&self) -> impl Iterator<Item = Vec<ComponentReference>> {
-        // TODO: Find a way to remove that
-        let this = unsafe { &*(self as *const _) } as &Archetype;
-        (0..self.len()).map(move |index| this.get_components(index, this.identifier.clone()))
+    pub fn iter_all_components(&self) -> impl Iterator<Item = Vec<ComponentReference>> + '_ {
+        (0..self.len()).map(|index| self.get_components(index, self.identifier.clone()))
     }
 
     /// Get components from an entity by index in the archetype storage

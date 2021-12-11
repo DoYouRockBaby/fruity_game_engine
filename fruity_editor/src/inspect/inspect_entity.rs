@@ -23,6 +23,7 @@ use fruity_ecs::entity::archetype::entity::Entity;
 use std::ops::Deref;
 use std::sync::Arc;
 
+// TODO: Try to remove this struct
 #[derive(Debug, FruityAny, Clone)]
 pub struct SelectEntityWrapper(pub Vec<ComponentReference>);
 
