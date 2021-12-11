@@ -165,7 +165,6 @@ impl MaterialReference for WgpuMaterialReference {
     }
 }
 
-// TODO: Complete that
 impl IntrospectObject for WgpuMaterialReference {
     fn get_class_name(&self) -> String {
         "MaterialReference".to_string()

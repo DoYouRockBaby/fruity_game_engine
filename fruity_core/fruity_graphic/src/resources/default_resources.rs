@@ -1,4 +1,5 @@
 use crate::graphic_service::GraphicService;
+use crate::math::vector3d::Vector3d;
 use crate::resources::material_resource::MaterialResourceSettings;
 use crate::resources::material_resource::MaterialSettingsBinding;
 use crate::resources::material_resource::MaterialSettingsInstanceAttribute;
@@ -12,6 +13,7 @@ use crate::resources::shader_resource::ShaderInstanceAttribute;
 use crate::resources::shader_resource::ShaderInstanceAttributeType;
 use crate::resources::shader_resource::ShaderResource;
 use crate::resources::shader_resource::ShaderResourceSettings;
+use crate::Vector2d;
 use fruity_core::resource::resource_container::ResourceContainer;
 use maplit::hashmap;
 use std::sync::Arc;
@@ -32,24 +34,24 @@ pub fn load_squad_mesh(resource_container: Arc<ResourceContainer>) {
             MeshResourceSettings {
                 vertices: vec![
                     Vertex {
-                        position: [-0.5, -0.5, 0.0],
-                        tex_coords: [0.0, 1.0],
-                        normal: [0.0, 0.0, -1.0],
+                        position: Vector3d::new(-0.5, -0.5, 0.0),
+                        tex_coords: Vector2d::new(0.0, 1.0),
+                        normal: Vector3d::new(0.0, 0.0, -1.0),
                     },
                     Vertex {
-                        position: [0.5, -0.5, 0.0],
-                        tex_coords: [1.0, 1.0],
-                        normal: [0.0, 0.0, -1.0],
+                        position: Vector3d::new(0.5, -0.5, 0.0),
+                        tex_coords: Vector2d::new(1.0, 1.0),
+                        normal: Vector3d::new(0.0, 0.0, -1.0),
                     },
                     Vertex {
-                        position: [0.5, 0.5, 0.0],
-                        tex_coords: [1.0, 0.0],
-                        normal: [0.0, 0.0, -1.0],
+                        position: Vector3d::new(0.5, 0.5, 0.0),
+                        tex_coords: Vector2d::new(1.0, 0.0),
+                        normal: Vector3d::new(0.0, 0.0, -1.0),
                     },
                     Vertex {
-                        position: [-0.5, 0.5, 0.0],
-                        tex_coords: [0.0, 0.0],
-                        normal: [0.0, 0.0, -1.0],
+                        position: Vector3d::new(-0.5, 0.5, 0.0),
+                        tex_coords: Vector2d::new(0.0, 0.0),
+                        normal: Vector3d::new(0.0, 0.0, -1.0),
                     },
                 ],
                 indices: vec![0, 1, 2, 3, 0, 2, /* padding */ 0],

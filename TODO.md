@@ -42,7 +42,7 @@
 [X] Material fields should now be a string identifier
 [X] Sprite vertex/indices should be shared accross all sprites
 [X] Squad transform should be done in shader instead of CPU
-[ ] Proceed instantied rendering
+[X] Proceed instantied rendering
 [X] Make instances parametrizable in material/shader
 [ ] Sprites should simply edit a field of material
 [ ] Implement rendering composers

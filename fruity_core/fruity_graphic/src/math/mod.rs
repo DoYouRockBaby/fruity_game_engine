@@ -8,6 +8,7 @@ pub mod material_reference;
 pub mod matrix3;
 pub mod matrix4;
 pub mod vector2d;
+pub mod vector3d;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Pod, Zeroable)]

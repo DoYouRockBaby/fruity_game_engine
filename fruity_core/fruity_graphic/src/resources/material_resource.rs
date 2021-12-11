@@ -20,26 +20,11 @@ pub trait MaterialResource: Resource {
     fn get_shader(&self) -> Option<ResourceReference<dyn ShaderResource>>;
 }
 
-#[derive(Debug, Clone, FruityAny, SerializableObject)]
+#[derive(Debug, Clone, FruityAny, IntrospectObject, SerializableObject)]
 pub struct MaterialResourceSettings {
     pub shader: Option<ResourceReference<dyn ShaderResource>>,
     pub bindings: Vec<MaterialSettingsBinding>,
     pub instance_attributes: HashMap<String, MaterialSettingsInstanceAttribute>,
-}
-
-// TODO: Complete that
-impl IntrospectObject for MaterialResourceSettings {
-    fn get_class_name(&self) -> String {
-        "MaterialResourceSettings".to_string()
-    }
-
-    fn get_method_infos(&self) -> Vec<MethodInfo> {
-        vec![]
-    }
-
-    fn get_field_infos(&self) -> Vec<FieldInfo> {
-        vec![]
-    }
 }
 
 #[derive(Debug, Clone, SerializableObject, FruityAny)]
