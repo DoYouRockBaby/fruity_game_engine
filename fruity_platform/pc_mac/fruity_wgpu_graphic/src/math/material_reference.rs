@@ -56,7 +56,73 @@ impl WgpuMaterialReference {
 }
 
 impl MaterialReference for WgpuMaterialReference {
-    fn set_color(&self, entry_name: &str, color: Color) {
+    fn set_uint(&self, entry_name: &str, value: u32) {
+        let material = self.material.read();
+        let material = material.downcast_ref::<WgpuMaterialResource>();
+
+        if let Some(fields) = material.fields.get(entry_name) {
+            fields.iter().for_each(|field| {
+                match field {
+                    InstanceField::Float { location } => {
+                        let mut instance_buffer_writer = self.instance_buffer.write().unwrap();
+                        encode_into_bytes(
+                            &mut instance_buffer_writer,
+                            location.offset,
+                            location.size,
+                            value,
+                        );
+                    }
+                    _ => (),
+                };
+            });
+        }
+    }
+
+    fn set_int(&self, entry_name: &str, value: i32) {
+        let material = self.material.read();
+        let material = material.downcast_ref::<WgpuMaterialResource>();
+
+        if let Some(fields) = material.fields.get(entry_name) {
+            fields.iter().for_each(|field| {
+                match field {
+                    InstanceField::Float { location } => {
+                        let mut instance_buffer_writer = self.instance_buffer.write().unwrap();
+                        encode_into_bytes(
+                            &mut instance_buffer_writer,
+                            location.offset,
+                            location.size,
+                            value,
+                        );
+                    }
+                    _ => (),
+                };
+            });
+        }
+    }
+
+    fn set_float(&self, entry_name: &str, value: f32) {
+        let material = self.material.read();
+        let material = material.downcast_ref::<WgpuMaterialResource>();
+
+        if let Some(fields) = material.fields.get(entry_name) {
+            fields.iter().for_each(|field| {
+                match field {
+                    InstanceField::Float { location } => {
+                        let mut instance_buffer_writer = self.instance_buffer.write().unwrap();
+                        encode_into_bytes(
+                            &mut instance_buffer_writer,
+                            location.offset,
+                            location.size,
+                            value,
+                        );
+                    }
+                    _ => (),
+                };
+            });
+        }
+    }
+
+    fn set_color(&self, entry_name: &str, value: Color) {
         let material = self.material.read();
         let material = material.downcast_ref::<WgpuMaterialResource>();
 
@@ -69,7 +135,7 @@ impl MaterialReference for WgpuMaterialReference {
                             &mut instance_buffer_writer,
                             location.offset,
                             location.size,
-                            color,
+                            value,
                         );
                     }
                     _ => (),

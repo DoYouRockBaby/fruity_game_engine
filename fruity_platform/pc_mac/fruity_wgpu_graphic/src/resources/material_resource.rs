@@ -29,6 +29,9 @@ pub struct BufferLocation {
 
 #[derive(Debug)]
 pub enum InstanceField {
+    Float {
+        location: BufferLocation,
+    },
     Vector4 {
         location: BufferLocation,
     },

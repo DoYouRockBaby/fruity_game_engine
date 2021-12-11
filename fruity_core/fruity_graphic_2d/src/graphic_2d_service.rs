@@ -59,22 +59,19 @@ impl Graphic2dService {
         &self,
         pos1: Vector2d,
         pos2: Vector2d,
-        _width: u32,
+        width: u32,
         color: Color,
         z_index: usize,
     ) {
         let window_service = self.window_service.read();
-
-        // TODO: Use width to respect pixel width constraint
+        let windows_size = window_service.get_size();
 
         // Calculate squad transform
         let diff = pos2 - pos1;
-        let scale_factor = window_service.get_scale_factor();
-
         let translate = (pos1 + pos2) / 2.0;
         let rotate = (diff.y / diff.x).atan() + PI / 2.0;
         let scale = Vector2d {
-            x: 1.0 / (scale_factor as f32) / 100.0,
+            x: 2.0 * width as f32 / windows_size.1 as f32,
             y: diff.length(),
         };
 
@@ -88,6 +85,7 @@ impl Graphic2dService {
         self.draw_line_material
             .set_matrix4("transform", transform.into());
         self.draw_line_material.set_color("color", color);
+        self.draw_line_material.set_uint("width", width);
 
         // Draw the line
         self.draw_square(self.draw_line_material.deref(), z_index);
