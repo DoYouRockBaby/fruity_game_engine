@@ -186,7 +186,7 @@ impl FruityInto<Serialized> for AnyResourceReference {
 }
 
 /// A reference over a resource that is supposed to be used by components
-#[derive(Debug)]
+#[derive(Debug, FruityAny)]
 pub struct ResourceReference<T: Resource + ?Sized> {
     /// The name of the resource
     pub name: String,
@@ -350,25 +350,6 @@ impl<T: Resource + ?Sized> IntrospectObject for ResourceReference<T> {
 impl<T: Resource + ?Sized> SerializableObject for ResourceReference<T> {
     fn duplicate(&self) -> Box<dyn SerializableObject> {
         Box::new(self.clone())
-    }
-}
-
-// TODO: Improve the macro to handle the generics
-impl<T: Resource + ?Sized> FruityAny for ResourceReference<T> {
-    fn as_any_ref(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    fn as_any_box(self: Box<Self>) -> Box<dyn std::any::Any> {
-        self
-    }
-
-    fn as_any_arc(self: std::sync::Arc<Self>) -> std::sync::Arc<dyn std::any::Any + Send + Sync> {
-        self
     }
 }
 

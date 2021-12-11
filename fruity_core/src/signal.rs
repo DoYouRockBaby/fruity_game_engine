@@ -40,13 +40,14 @@ lazy_static! {
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ObserverIdentifier(usize);
 
-struct InternSignal<T> {
+#[derive(FruityAny)]
+struct InternSignal<T: 'static> {
     observers: Vec<(ObserverIdentifier, Box<dyn Fn(&T) + Sync + Send>)>,
 }
 
 /// An observer pattern
-#[derive(Clone)]
-pub struct Signal<T> {
+#[derive(Clone, FruityAny)]
+pub struct Signal<T: 'static> {
     intern: Arc<Mutex<InternSignal<T>>>,
 }
 
@@ -145,44 +146,6 @@ impl<T: FruityInto<Serialized> + Debug + Clone + 'static> SerializableObject for
     }
 }
 
-// TODO: Improve the macro to handle the generics
-impl<T: FruityInto<Serialized> + Debug + Clone + 'static> FruityAny for InternSignal<T> {
-    fn as_any_ref(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    fn as_any_box(self: Box<Self>) -> Box<dyn std::any::Any> {
-        self
-    }
-
-    fn as_any_arc(self: std::sync::Arc<Self>) -> std::sync::Arc<dyn std::any::Any + Send + Sync> {
-        self
-    }
-}
-
-// TODO: Improve the macro to handle the generics
-impl<T: FruityInto<Serialized> + Debug + Clone + 'static> FruityAny for Signal<T> {
-    fn as_any_ref(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    fn as_any_box(self: Box<Self>) -> Box<dyn std::any::Any> {
-        self
-    }
-
-    fn as_any_arc(self: std::sync::Arc<Self>) -> std::sync::Arc<dyn std::any::Any + Send + Sync> {
-        self
-    }
-}
-
 impl<T: FruityInto<Serialized> + Debug + Clone + 'static> FruityInto<Serialized> for Signal<T> {
     fn fruity_into(self) -> Serialized {
         Serialized::NativeObject(Box::new(self))
@@ -196,7 +159,7 @@ impl<T> Debug for Signal<T> {
 }
 
 /// A write guard over a signal property, when it's dropped, the update signal is sent
-pub struct SignalWriteGuard<'a, T: Send + Sync + Clone> {
+pub struct SignalWriteGuard<'a, T: Send + Sync + Clone + 'static> {
     target: &'a mut SignalProperty<T>,
 }
 
@@ -221,8 +184,8 @@ impl<'a, T: Send + Sync + Clone> DerefMut for SignalWriteGuard<'a, T> {
 }
 
 /// A variable with a signal that is notified on update
-#[derive(Clone)]
-pub struct SignalProperty<T: Send + Sync + Clone> {
+#[derive(Clone, FruityAny)]
+pub struct SignalProperty<T: Send + Sync + Clone + 'static> {
     value: T,
 
     /// A signal sent when the property is updated
@@ -297,27 +260,6 @@ impl<T: FruityInto<Serialized> + Send + Sync + Debug + Clone + IntrospectObject>
 {
     fn duplicate(&self) -> Box<dyn SerializableObject> {
         Box::new(self.clone())
-    }
-}
-
-// TODO: Improve the macro to handle the generics
-impl<T: FruityInto<Serialized> + Send + Sync + Debug + Clone + 'static> FruityAny
-    for SignalProperty<T>
-{
-    fn as_any_ref(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    fn as_any_box(self: Box<Self>) -> Box<dyn std::any::Any> {
-        self
-    }
-
-    fn as_any_arc(self: std::sync::Arc<Self>) -> std::sync::Arc<dyn std::any::Any + Send + Sync> {
-        self
     }
 }
 

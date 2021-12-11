@@ -4,10 +4,13 @@ use syn::{parse_macro_input, DeriveInput};
 
 #[proc_macro_derive(FruityAny)]
 pub fn derive_fruity_any(input: TokenStream) -> TokenStream {
-    let DeriveInput { ident, .. } = parse_macro_input!(input);
+    let DeriveInput {
+        ident, generics, ..
+    } = parse_macro_input!(input);
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let output = quote! {
-        impl fruity_any::FruityAny for #ident {
+        impl #impl_generics fruity_any::FruityAny for #ident #ty_generics #where_clause {
             fn as_any_ref(&self) -> &dyn std::any::Any {
                 self
             }
