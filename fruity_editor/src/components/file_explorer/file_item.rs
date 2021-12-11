@@ -28,7 +28,8 @@ pub fn file_item_component(path: PathBuf) -> UIElement {
             if !world_state.resource_container.contains(&path_string) {
                 world_state
                     .resource_container
-                    .load_resource_file(&path_string, &extension);
+                    .load_resource_file(&path_string, &extension)
+                    .ok();
             }
 
             let resource = world_state.resource_container.get_untyped(&path_string);
