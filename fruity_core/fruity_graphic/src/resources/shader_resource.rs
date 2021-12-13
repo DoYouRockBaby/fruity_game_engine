@@ -134,6 +134,8 @@ pub struct ShaderInstanceAttribute {
 
 #[derive(Debug, Clone)]
 pub enum ShaderInstanceAttributeType {
+    Int,
+    UInt,
     Float,
     Vector2,
     Vector4,
@@ -151,6 +153,8 @@ impl FruityTryFrom<Serialized> for ShaderInstanceAttributeType {
     fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
         if let Serialized::String(value) = &value {
             match value as &str {
+                "int" => Ok(ShaderInstanceAttributeType::Int),
+                "uint" => Ok(ShaderInstanceAttributeType::UInt),
                 "float" => Ok(ShaderInstanceAttributeType::Float),
                 "vec2" => Ok(ShaderInstanceAttributeType::Vector2),
                 "vec4" => Ok(ShaderInstanceAttributeType::Vector4),
@@ -172,6 +176,8 @@ impl FruityInto<Serialized> for ShaderInstanceAttributeType {
     fn fruity_into(self) -> Serialized {
         Serialized::String(
             match self {
+                ShaderInstanceAttributeType::Int => "int",
+                ShaderInstanceAttributeType::UInt => "uint",
                 ShaderInstanceAttributeType::Float => "float",
                 ShaderInstanceAttributeType::Vector2 => "vec2",
                 ShaderInstanceAttributeType::Vector4 => "vec4",
@@ -275,6 +281,8 @@ pub fn read_shader_instance_attributes_settings(
         .map(|params| ShaderInstanceAttribute {
             location: params.get::<u32>("location", u32::default()),
             ty: match &params.get::<String>("type", String::default()) as &str {
+                "int" => ShaderInstanceAttributeType::Int,
+                "uint" => ShaderInstanceAttributeType::UInt,
                 "float" => ShaderInstanceAttributeType::Float,
                 "vec2" => ShaderInstanceAttributeType::Vector2,
                 "vec4" => ShaderInstanceAttributeType::Vector4,

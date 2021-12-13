@@ -12,3 +12,6 @@ pub mod string;
 
 /// Utility functions related with collections
 pub mod collection;
+
+/// Utility functions related with numbers
+pub mod math;

@@ -55,18 +55,27 @@ impl IntrospectObject for MaterialSettingsBinding {
 
 #[derive(Debug, Clone, FruityAny, SerializableObject)]
 pub enum MaterialSettingsInstanceAttribute {
-    Matrix4 {
-        vec0_location: u32,
-        vec1_location: u32,
-        vec2_location: u32,
-        vec3_location: u32,
+    UInt {
+        location: u32,
+    },
+    Int {
+        location: u32,
+    },
+    Float {
+        location: u32,
+    },
+    Vector4 {
+        location: u32,
     },
     Rect {
         vec0_location: u32,
         vec1_location: u32,
     },
-    Vector4 {
-        location: u32,
+    Matrix4 {
+        vec0_location: u32,
+        vec1_location: u32,
+        vec2_location: u32,
+        vec3_location: u32,
     },
 }
 

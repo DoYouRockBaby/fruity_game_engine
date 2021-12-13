@@ -63,7 +63,7 @@ impl MaterialReference for WgpuMaterialReference {
         if let Some(fields) = material.fields.get(entry_name) {
             fields.iter().for_each(|field| {
                 match field {
-                    InstanceField::Float { location } => {
+                    InstanceField::UInt { location } => {
                         let mut instance_buffer_writer = self.instance_buffer.write().unwrap();
                         encode_into_bytes(
                             &mut instance_buffer_writer,
@@ -85,7 +85,7 @@ impl MaterialReference for WgpuMaterialReference {
         if let Some(fields) = material.fields.get(entry_name) {
             fields.iter().for_each(|field| {
                 match field {
-                    InstanceField::Float { location } => {
+                    InstanceField::Int { location } => {
                         let mut instance_buffer_writer = self.instance_buffer.write().unwrap();
                         encode_into_bytes(
                             &mut instance_buffer_writer,
