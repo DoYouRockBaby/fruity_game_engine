@@ -25,6 +25,7 @@ pub struct Graphic2dService {
     graphic_service: ResourceReference<dyn GraphicService>,
     resource_container: Arc<ResourceContainer>,
     draw_line_material: Box<dyn MaterialReference>,
+    draw_rect_material: Box<dyn MaterialReference>,
     draw_arc_material: Box<dyn MaterialReference>,
 }
 
@@ -38,6 +39,10 @@ impl Graphic2dService {
             .get::<dyn MaterialResource>("Materials/Draw Line")
             .unwrap();
 
+        let draw_rect_material = resource_container
+            .get::<dyn MaterialResource>("Materials/Draw Rect")
+            .unwrap();
+
         let draw_arc_material = resource_container
             .get::<dyn MaterialResource>("Materials/Draw Arc")
             .unwrap();
@@ -48,11 +53,13 @@ impl Graphic2dService {
             resource_container,
             draw_line_material: graphic_service_reader
                 .create_material_reference(draw_line_material),
+            draw_rect_material: graphic_service_reader
+                .create_material_reference(draw_rect_material),
             draw_arc_material: graphic_service_reader.create_material_reference(draw_arc_material),
         }
     }
 
-    pub fn draw_square(&self, material: &dyn MaterialReference, z_index: usize) {
+    pub fn draw_quad(&self, material: &dyn MaterialReference, z_index: usize) {
         let graphic_service = self.graphic_service.read();
 
         let mesh = self
@@ -95,7 +102,46 @@ impl Graphic2dService {
         self.draw_line_material.set_color("color", color);
 
         // Draw the line
-        self.draw_square(self.draw_line_material.deref(), z_index);
+        self.draw_quad(self.draw_line_material.deref(), z_index);
+    }
+
+    pub fn draw_rect(
+        &self,
+        bottom_left: Vector2d,
+        top_right: Vector2d,
+        width: u32,
+        fill_color: Color,
+        border_color: Color,
+        z_index: usize,
+    ) {
+        let window_service = self.window_service.read();
+        let windows_size = window_service.get_size();
+
+        // Calculate squad transform
+        let diff = top_right - bottom_left;
+        let translate = (top_right + bottom_left) / 2.0;
+        let scale = Vector2d {
+            x: diff.x,
+            y: diff.y,
+        };
+        let xwidth = 2.0 * width as f32 / windows_size.0 as f32 / scale.x;
+        let ywidth = 2.0 * width as f32 / windows_size.1 as f32 / scale.y;
+
+        // Calculate transform
+        let transform =
+            Matrix3::identity() * Matrix3::translation(translate) * Matrix3::scaling(scale);
+
+        // Update line color
+        self.draw_rect_material
+            .set_matrix4("transform", transform.into());
+        self.draw_rect_material.set_color("fill_color", fill_color);
+        self.draw_rect_material
+            .set_color("border_color", border_color);
+        self.draw_rect_material.set_float("xwidth", xwidth);
+        self.draw_rect_material.set_float("ywidth", ywidth);
+
+        // Draw the line
+        self.draw_quad(self.draw_rect_material.deref(), z_index);
     }
 
     pub fn draw_arc(
@@ -104,7 +150,8 @@ impl Graphic2dService {
         radius: f32,
         angle_range: Range<f32>,
         width: u32,
-        color: Color,
+        fill_color: Color,
+        border_color: Color,
         z_index: usize,
     ) {
         let window_service = self.window_service.read();
@@ -124,7 +171,9 @@ impl Graphic2dService {
         // Update line color
         self.draw_arc_material
             .set_matrix4("transform", transform.into());
-        self.draw_arc_material.set_color("color", color);
+        self.draw_arc_material.set_color("fill_color", fill_color);
+        self.draw_arc_material
+            .set_color("border_color", border_color);
         self.draw_arc_material.set_float("width", width);
         self.draw_arc_material
             .set_float("angle_start", normalise_angle(angle_range.start));
@@ -132,7 +181,7 @@ impl Graphic2dService {
             .set_float("angle_end", normalise_angle(angle_range.end));
 
         // Draw the line
-        self.draw_square(self.draw_arc_material.deref(), z_index);
+        self.draw_quad(self.draw_arc_material.deref(), z_index);
     }
 
     pub fn draw_circle(
@@ -140,10 +189,19 @@ impl Graphic2dService {
         center: Vector2d,
         radius: f32,
         width: u32,
-        color: Color,
+        fill_color: Color,
+        border_color: Color,
         z_index: usize,
     ) {
-        self.draw_arc(center, radius, 0.0..(2.0 * PI), width, color, z_index);
+        self.draw_arc(
+            center,
+            radius,
+            0.0..(2.0 * PI),
+            width,
+            fill_color,
+            border_color,
+            z_index,
+        );
     }
 
     /// Get the cursor position in the 2D world, take in care the camera transform

@@ -7,6 +7,7 @@ use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
+use fruity_graphic::math::ALPHA;
 use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
 use fruity_input::input_service::InputService;
 use std::fmt::Debug;
@@ -48,17 +49,11 @@ impl GizmosService {
             f32::max(corner1.y, corner2.y),
         );
 
-        let bottom_right = Vector2d::new(top_right.x, bottom_left.y);
-        let top_left = Vector2d::new(bottom_left.x, top_right.y);
-
         let is_hover = self.is_cursor_hover(&bottom_left, &top_right);
         let color = if is_hover { hover_color } else { color };
 
         let graphic_2d_service = self.graphic_2d_service.read();
-        graphic_2d_service.draw_line(bottom_left, bottom_right, 4, color, 1000);
-        graphic_2d_service.draw_line(bottom_right, top_right, 4, color, 1000);
-        graphic_2d_service.draw_line(top_right, top_left, 4, color, 1000);
-        graphic_2d_service.draw_line(top_left, bottom_left, 4, color, 1000);
+        graphic_2d_service.draw_rect(bottom_left, top_right, 3, ALPHA, color, 1000);
 
         is_hover
     }
