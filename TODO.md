@@ -47,13 +47,19 @@
 [ ] Sprites should simply edit a field of material
 [ ] Implement rendering composers
 
+## Physics
+
+[X] Primitive physics collider components (shared accross every physics engine)
+[ ] Mesh physics collider components (shared accross every physics engine)
+[ ] Implements basic Rapier crate features
+[ ] Implements a collision only physic engine
+
 ## Game tools
 
 [X] Inputs
 [X] Time service
 [ ] Animations everywhere (including sprite animations)
 [ ] State manager
-[ ] Basic 2D physics (collision only)
 [ ] Tiles editor (make something like RPG maker, as easy to use as possible)
 [ ] Particles
 
