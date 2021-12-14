@@ -953,6 +953,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "fruity_editor_physic_2d"
+version = "0.1.0"
+dependencies = [
+ "fruity_any",
+ "fruity_core",
+ "fruity_ecs",
+ "fruity_editor",
+ "fruity_editor_graphic_2d",
+ "fruity_graphic",
+ "fruity_graphic_2d",
+ "fruity_input",
+ "fruity_physic_2d",
+ "log",
+ "rayon",
+]
+
+[[package]]
 name = "fruity_egui_editor"
 version = "0.1.0"
 dependencies = [
@@ -991,6 +1008,7 @@ dependencies = [
  "fruity_editor_graphic",
  "fruity_editor_graphic_2d",
  "fruity_editor_javascript",
+ "fruity_editor_physic_2d",
  "fruity_egui_editor",
  "fruity_graphic",
  "fruity_graphic_2d",
@@ -999,6 +1017,7 @@ dependencies = [
  "fruity_input",
  "fruity_javascript",
  "fruity_javascript_watcher",
+ "fruity_physic_2d",
  "fruity_wgpu_graphic",
  "fruity_windows",
  "fruity_winit_input",
@@ -1101,6 +1120,22 @@ dependencies = [
  "fruity_windows",
  "notify",
  "puffin 0.12.1",
+]
+
+[[package]]
+name = "fruity_physic_2d"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "cgmath",
+ "fruity_any",
+ "fruity_core",
+ "fruity_ecs",
+ "fruity_graphic",
+ "log",
+ "maplit",
+ "puffin 0.12.1",
+ "rayon",
 ]
 
 [[package]]

@@ -13,6 +13,10 @@ use fruity_graphic_2d::components::translate_2d::Translate2d;
 pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
     let inspector_state = use_global::<InspectorState>();
 
+    if !inspector_state.is_gizmos_enabled() {
+        return;
+    }
+
     if let Some(selected) = inspector_state.get_selected() {
         let entity =
             if let Some(entity) = selected.as_any_ref().downcast_ref::<SelectEntityWrapper>() {

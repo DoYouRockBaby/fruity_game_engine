@@ -9,6 +9,7 @@ use fruity_editor::initialize as initialize_editor;
 use fruity_editor_graphic::initialize as initialize_editor_graphic;
 use fruity_editor_graphic_2d::initialize as initialize_editor_graphic_2d;
 use fruity_editor_javascript::initialize as initialize_editor_javascript;
+use fruity_editor_physic_2d::initialize as initialize_editor_physic_2d;
 use fruity_egui_editor::initialize as initialize_egui_editor;
 use fruity_graphic::initialize as initialize_graphic;
 use fruity_graphic_2d::initialize as initialize_graphic_2d;
@@ -18,6 +19,7 @@ use fruity_input::initialize as initialize_input;
 use fruity_javascript::initialize as initialize_javascript;
 use fruity_javascript_watcher::initialize as initialize_javascript_watcher;
 use fruity_javascript_watcher::javascript_watcher_service::JavascriptWatcherService;
+use fruity_physic_2d::initialize as initialize_physic_2d;
 use fruity_wgpu_graphic::initialize as initialize_wgpu_graphic;
 use fruity_windows::initialize as initialize_window;
 use fruity_winit_input::initialize as initialize_winit_input;
@@ -55,6 +57,7 @@ fn main() {
             initialize_wgpu_graphic(resource_container.clone(), settings);
             initialize_graphic(resource_container.clone(), settings);
             initialize_graphic_2d(resource_container.clone(), settings);
+            initialize_physic_2d(resource_container.clone(), settings);
             initialize_hierarchy_2d(resource_container.clone(), settings);
             initialize_javascript(resource_container.clone(), settings);
             initialize_javascript_watcher(resource_container.clone(), settings);
@@ -62,6 +65,7 @@ fn main() {
             initialize_egui_editor(resource_container.clone(), settings);
             initialize_editor_graphic(resource_container.clone(), settings);
             initialize_editor_graphic_2d(resource_container.clone(), settings);
+            initialize_editor_physic_2d(resource_container.clone(), settings);
             initialize_editor_javascript(resource_container.clone(), settings);
 
             // Load resources

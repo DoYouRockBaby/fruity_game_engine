@@ -51,6 +51,7 @@ impl FruityTryFrom<Settings> for Color {
 pub static WHITE: Color = Color([1.0, 1.0, 1.0, 1.0]);
 pub static BLACK: Color = Color([0.0, 0.0, 0.0, 1.0]);
 pub static ALPHA: Color = Color([0.0, 0.0, 0.0, 0.0]);
+pub static OVERLAY: Color = Color([0.0, 0.0, 0.0, 0.3]);
 pub static RED: Color = Color([1.0, 0.0, 0.0, 1.0]);
 pub static GREEN: Color = Color([0.0, 1.0, 0.0, 1.0]);
 pub static BLUE: Color = Color([0.0, 0.0, 1.0, 1.0]);

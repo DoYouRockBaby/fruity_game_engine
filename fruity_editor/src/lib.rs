@@ -1,3 +1,4 @@
+use crate::component_inspector_service::ComponentInspectorService;
 use crate::file_explorer_service::FileExplorerService;
 use crate::hooks::declare_global;
 use crate::inspect::inspect_entity::inspect_entity;
@@ -19,6 +20,7 @@ use std::sync::Arc;
 #[macro_use]
 extern crate lazy_static;
 
+pub mod component_inspector_service;
 pub mod components;
 pub mod dialog_service;
 pub mod fields;
@@ -39,6 +41,7 @@ pub static MODULE_NAME: &str = "fruity_editor";
 pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
     let inspector_service = InspectorService::new(resource_container.clone());
     let introspect_editor_service = IntrospectEditorService::new(resource_container.clone());
+    let component_inspector_service = ComponentInspectorService::new(resource_container.clone());
     let file_explorer_service = FileExplorerService::new(resource_container.clone());
 
     resource_container.add::<InspectorService>("inspector_service", Box::new(inspector_service));
@@ -48,6 +51,10 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     );
     resource_container
         .add::<FileExplorerService>("file_explorer_service", Box::new(file_explorer_service));
+    resource_container.add::<ComponentInspectorService>(
+        "component_inspector_service",
+        Box::new(component_inspector_service),
+    );
 
     declare_global(WorldState::new(resource_container.clone()));
     declare_global(ThemeState::default());

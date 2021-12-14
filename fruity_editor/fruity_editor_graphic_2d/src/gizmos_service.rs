@@ -79,6 +79,24 @@ impl GizmosService {
         is_hover
     }
 
+    pub fn draw_circle_helper(
+        &self,
+        center: Vector2d,
+        radius: f32,
+        color: Color,
+        hover_color: Color,
+    ) -> bool {
+        let graphic_2d_service = self.graphic_2d_service.read();
+        let cursor_pos = graphic_2d_service.get_cursor_position();
+
+        let is_hover = cursor_pos.in_circle(&center, &radius);
+        let color = if is_hover { hover_color } else { color };
+
+        graphic_2d_service.draw_circle(center, radius, 0, color, ALPHA, 1000);
+
+        is_hover
+    }
+
     pub fn draw_arrow_helper(
         &self,
         from: Vector2d,
@@ -133,8 +151,6 @@ impl GizmosService {
 
         // Implement the logic
         let input_service = self.input_service.read();
-        let graphic_2d_service = self.graphic_2d_service.read();
-        let cursor_pos = graphic_2d_service.get_cursor_position();
 
         // Handle moving
         let on_move = Arc::new(on_move);
@@ -142,7 +158,6 @@ impl GizmosService {
             let on_move = on_move.clone();
             DragAction::start(
                 move |action| on_move(true, true, action),
-                cursor_pos,
                 self.input_service.clone(),
                 self.graphic_2d_service.clone(),
             );
@@ -152,7 +167,6 @@ impl GizmosService {
             let on_move = on_move.clone();
             DragAction::start(
                 move |action| on_move(true, false, action),
-                cursor_pos,
                 self.input_service.clone(),
                 self.graphic_2d_service.clone(),
             );
@@ -162,7 +176,6 @@ impl GizmosService {
             let on_move = on_move.clone();
             DragAction::start(
                 move |action| on_move(false, true, action),
-                cursor_pos,
                 self.input_service.clone(),
                 self.graphic_2d_service.clone(),
             );
@@ -174,7 +187,6 @@ impl GizmosService {
             let on_move = on_move.clone();
             DragAction::start(
                 move |action| on_move(true, true, action),
-                cursor_pos,
                 self.input_service.clone(),
                 self.graphic_2d_service.clone(),
             );
@@ -184,7 +196,6 @@ impl GizmosService {
             let on_move = on_move.clone();
             DragAction::start(
                 move |action| on_move(true, false, action),
-                cursor_pos,
                 self.input_service.clone(),
                 self.graphic_2d_service.clone(),
             );
@@ -194,7 +205,6 @@ impl GizmosService {
             let on_move = on_move.clone();
             DragAction::start(
                 move |action| on_move(false, true, action),
-                cursor_pos,
                 self.input_service.clone(),
                 self.graphic_2d_service.clone(),
             );
@@ -261,8 +271,6 @@ impl GizmosService {
 
         // Implement the logic
         let input_service = self.input_service.read();
-        let graphic_2d_service = self.graphic_2d_service.read();
-        let cursor_pos = graphic_2d_service.get_cursor_position();
 
         // Handle resize
         let on_resize = Arc::new(on_resize);
@@ -270,7 +278,6 @@ impl GizmosService {
             let on_resize = on_resize.clone();
             DragAction::start(
                 move |action| on_resize(true, true, action),
-                cursor_pos,
                 self.input_service.clone(),
                 self.graphic_2d_service.clone(),
             );
@@ -281,7 +288,6 @@ impl GizmosService {
             let on_resize = on_resize.clone();
             DragAction::start(
                 move |action| on_resize(false, true, action),
-                cursor_pos,
                 self.input_service.clone(),
                 self.graphic_2d_service.clone(),
             );
@@ -293,7 +299,6 @@ impl GizmosService {
             let on_resize = on_resize.clone();
             DragAction::start(
                 move |action| on_resize(true, false, action),
-                cursor_pos,
                 self.input_service.clone(),
                 self.graphic_2d_service.clone(),
             );
@@ -303,7 +308,6 @@ impl GizmosService {
             let on_resize = on_resize.clone();
             DragAction::start(
                 move |action| on_resize(false, false, action),
-                cursor_pos,
                 self.input_service.clone(),
                 self.graphic_2d_service.clone(),
             );
@@ -329,14 +333,16 @@ pub struct DragAction {
 }
 
 impl DragAction {
-    fn start<F>(
+    pub fn start<F>(
         callback: F,
-        start_pos: Vector2d,
         input_service: ResourceReference<InputService>,
         graphic_2d_service: ResourceReference<Graphic2dService>,
     ) where
         F: Fn(DragAction) + Send + Sync + 'static,
     {
+        let graphic_2d_service_reader = graphic_2d_service.read();
+        let start_pos = graphic_2d_service_reader.get_cursor_position();
+
         // Create the darg action structure
         let drag_action = DragAction {
             start_pos,

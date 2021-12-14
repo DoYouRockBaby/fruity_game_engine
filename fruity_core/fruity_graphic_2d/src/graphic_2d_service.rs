@@ -5,7 +5,7 @@ use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
-use fruity_core::utils::math::normalise_angle;
+use fruity_core::utils::math::normalise_angle_range;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::material_reference::MaterialReference;
 use fruity_graphic::math::matrix3::Matrix3;
@@ -167,6 +167,7 @@ impl Graphic2dService {
         // Calculate transform
         let transform =
             Matrix3::identity() * Matrix3::translation(center) * Matrix3::scaling(scale);
+        let angle_range = normalise_angle_range(angle_range);
 
         // Update line color
         self.draw_arc_material
@@ -176,9 +177,9 @@ impl Graphic2dService {
             .set_color("border_color", border_color);
         self.draw_arc_material.set_float("width", width);
         self.draw_arc_material
-            .set_float("angle_start", normalise_angle(angle_range.start));
+            .set_float("angle_start", angle_range.start);
         self.draw_arc_material
-            .set_float("angle_end", normalise_angle(angle_range.end));
+            .set_float("angle_end", angle_range.end);
 
         // Draw the line
         self.draw_quad(self.draw_arc_material.deref(), z_index);

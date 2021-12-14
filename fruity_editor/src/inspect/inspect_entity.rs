@@ -1,4 +1,4 @@
-use crate::components::fields::edit_introspect_fields;
+use crate::hooks::use_global;
 use crate::ui_element::input::Checkbox;
 use crate::ui_element::input::Input;
 use crate::ui_element::layout::Collapsible;
@@ -10,6 +10,7 @@ use crate::ui_element::UIAlign;
 use crate::ui_element::UIElement;
 use crate::ui_element::UISize;
 use crate::ui_element::UIWidget;
+use crate::InspectorState;
 use fruity_any::*;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
@@ -81,6 +82,8 @@ impl SerializableObject for SelectEntityWrapper {
 }
 
 pub fn inspect_entity(entity_wrapper: &mut SelectEntityWrapper) -> UIElement {
+    let inspector_state = use_global::<InspectorState>();
+
     // TODO: Can probably be more consize with a specific Vec func
     let entity = entity_wrapper.read_component::<Entity>().unwrap();
 
@@ -146,7 +149,7 @@ pub fn inspect_entity(entity_wrapper: &mut SelectEntityWrapper) -> UIElement {
                 Collapsible {
                     title: component_reader.get_class_name(),
                     on_click: None,
-                    child: edit_introspect_fields(Box::new(component.clone())),
+                    child: inspector_state.inspect_component(component.clone()),
                 }
                 .elem()
             })

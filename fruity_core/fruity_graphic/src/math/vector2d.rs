@@ -148,6 +148,11 @@ impl Vector2d {
 
         return !(has_neg && has_pos);
     }
+
+    /// Check if the point is in a circle
+    pub fn in_circle(&self, center: &Vector2d, radius: &f32) -> bool {
+        return (*self - *center).length() <= *radius;
+    }
 }
 
 // Ops Implementations

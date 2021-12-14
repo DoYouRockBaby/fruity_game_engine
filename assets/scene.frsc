@@ -37,6 +37,14 @@
       entity_id: 1
       name: Player
       enabled: true
+  - class_name: CircleCollider
+    fields:
+      radius: 0.5
+      center:
+        class_name: Vector2d
+        fields:
+          y: 0.0
+          x: 0.0
 - - class_name: Parent
     fields:
       nested_level: 1
@@ -84,6 +92,18 @@
     fields:
       parent_id: 3
       nested_level: 2
+  - class_name: RectCollider
+    fields:
+      bottom_left:
+        class_name: Vector2d
+        fields:
+          y: -0.5
+          x: -0.5
+      top_right:
+        class_name: Vector2d
+        fields:
+          y: 0.5
+          x: 0.5
   - class_name: Translate2d
     fields:
       vec:
