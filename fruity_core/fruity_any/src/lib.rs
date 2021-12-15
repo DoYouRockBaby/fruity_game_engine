@@ -1,3 +1,5 @@
+#![warn(missing_docs)]
+
 //! Any
 //!
 //! An extended Any trait
