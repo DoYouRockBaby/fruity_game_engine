@@ -1,0 +1,17 @@
+[package]
+name = "fruity_physics_2d_rapier"
+version = "0.1.0"
+edition = "2021"
+
+# [lib]
+# crate-type = ["dylib"]
+
+[dependencies]
+log = "0.4.14"
+puffin = "0.12.1"
+yaml-rust = "0.4"
+rapier2d = { version = "0.9.2", features = [ "simd-stable" ] }
+fruity_any = { path = "../../fruity_core/fruity_any" }
+fruity_core = { path = "../../fruity_core" }
+fruity_ecs = { path = "../../fruity_core/fruity_ecs" }
+fruity_physic_2d = { path = "../../fruity_core/fruity_physic_2d" }

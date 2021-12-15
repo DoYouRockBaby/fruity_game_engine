@@ -4,7 +4,6 @@
 
 [X] Make serialized able to be extended in modules (put it into introspect, make intropect better ...)
 [X] Make the archetype able to store datas in plain array for performances
-[X] Add a "field changed" signal on every entities
 [X] Put a get_constructor function into introspect
 [X] Implements entity deletion
 [X] Resources and services containers should be merged
@@ -84,6 +83,8 @@
 [ ] Test and make microjob library compatible with javascript
 [X] Abstract everything (espescialy javascript and render)
 [ ] Typescript
+[ ] Expose rust-like enums in serialized
+[ ] Create a macro to expose the enums easely to serialized
 
 ## Others
 
