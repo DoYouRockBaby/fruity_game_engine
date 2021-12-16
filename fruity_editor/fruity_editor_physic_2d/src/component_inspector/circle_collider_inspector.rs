@@ -8,7 +8,7 @@ use fruity_editor::ui_element::UIElement;
 use fruity_editor::ui_element::UIWidget;
 use std::sync::Arc;
 
-pub fn inspect_rect_collider(component: ComponentReference) -> UIElement {
+pub fn circle_collider_inspector(component: ComponentReference) -> UIElement {
     Column {
         children: vec![
             edit_introspect_fields(Box::new(component.clone())),

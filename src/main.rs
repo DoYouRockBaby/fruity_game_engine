@@ -8,6 +8,7 @@ use fruity_ecs::initialize as initialize_ecs;
 use fruity_editor::initialize as initialize_editor;
 use fruity_editor_graphic::initialize as initialize_editor_graphic;
 use fruity_editor_graphic_2d::initialize as initialize_editor_graphic_2d;
+use fruity_editor_hierarchy::initialize as initialize_editor_hierarchy;
 use fruity_editor_javascript::initialize as initialize_editor_javascript;
 use fruity_editor_physic_2d::initialize as initialize_editor_physic_2d;
 use fruity_egui_editor::initialize as initialize_egui_editor;
@@ -63,6 +64,7 @@ fn main() {
             initialize_javascript_watcher(resource_container.clone(), settings);
             initialize_editor(resource_container.clone(), settings);
             initialize_egui_editor(resource_container.clone(), settings);
+            initialize_editor_hierarchy(resource_container.clone(), settings);
             initialize_editor_graphic(resource_container.clone(), settings);
             initialize_editor_graphic_2d(resource_container.clone(), settings);
             initialize_editor_physic_2d(resource_container.clone(), settings);

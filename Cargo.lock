@@ -947,6 +947,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "fruity_editor_hierarchy"
+version = "0.1.0"
+dependencies = [
+ "fruity_any",
+ "fruity_core",
+ "fruity_ecs",
+ "fruity_editor",
+ "fruity_graphic",
+ "fruity_graphic_2d",
+ "fruity_input",
+ "log",
+ "rayon",
+]
+
+[[package]]
 name = "fruity_editor_javascript"
 version = "0.1.0"
 dependencies = [
@@ -1016,6 +1031,7 @@ dependencies = [
  "fruity_editor",
  "fruity_editor_graphic",
  "fruity_editor_graphic_2d",
+ "fruity_editor_hierarchy",
  "fruity_editor_javascript",
  "fruity_editor_physic_2d",
  "fruity_egui_editor",

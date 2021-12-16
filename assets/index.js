@@ -12,18 +12,24 @@ class Move {
     constructor(args) {
         Object.assign(this, args);
     }
+
+    velocity = 1.0;
 }
 
 class Velocity {
     constructor(args) {
         Object.assign(this, args);
     }
+
+    velocity = 1.0;
 }
 
 class TestVec {
     constructor(args) {
         Object.assign(this, args);
     }
+
+    scale = new Vector2d({ x: 0, y: 0 });
 }
 
 resourceContainer.add("custom_service", new CustomService());

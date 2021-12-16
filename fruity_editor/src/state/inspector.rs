@@ -2,7 +2,7 @@ use crate::inspector_service::InspectorService;
 use crate::ui_element::layout::Empty;
 use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
-use crate::ComponentInspectorService;
+use crate::ComponentEditorService;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::serialize::serialized::SerializableObject;
@@ -13,7 +13,7 @@ use std::sync::Arc;
 #[derive(Debug)]
 pub struct InspectorState {
     inspect_service: ResourceReference<InspectorService>,
-    inspect_component_service: ResourceReference<ComponentInspectorService>,
+    inspect_component_service: ResourceReference<ComponentEditorService>,
     selected: Option<Box<dyn SerializableObject>>,
     temporary_disable_gizmos: bool,
     pub on_selected: Signal<Box<dyn SerializableObject>>,
@@ -24,7 +24,7 @@ impl InspectorState {
     pub fn new(resource_container: Arc<ResourceContainer>) -> Self {
         Self {
             inspect_service: resource_container.require::<InspectorService>(),
-            inspect_component_service: resource_container.require::<ComponentInspectorService>(),
+            inspect_component_service: resource_container.require::<ComponentEditorService>(),
             selected: None,
             temporary_disable_gizmos: false,
             on_selected: Signal::new(),

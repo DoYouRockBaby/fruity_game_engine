@@ -1,5 +1,5 @@
-use crate::inspect_component::inspect_circle_collider::inspect_circle_collider;
-use crate::inspect_component::inspect_rect_collider::inspect_rect_collider;
+use crate::component_inspector::circle_collider_inspector::circle_collider_inspector;
+use crate::component_inspector::rect_collider_inspector::rect_collider_inspector;
 use crate::state::collider::ColliderState;
 use crate::systems::draw_circle_collider_2d_gizmos::draw_circle_collider_2d_gizmos;
 use crate::systems::draw_rect_collider_2d_gizmos::draw_rectangle_collider_2d_gizmos;
@@ -9,11 +9,12 @@ use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use fruity_ecs::system::system_service::SystemParams;
 use fruity_ecs::system::system_service::SystemService;
-use fruity_editor::component_inspector_service::ComponentInspectorService;
+use fruity_editor::component_editor_service::ComponentEditorService;
+use fruity_editor::component_editor_service::RegisterComponentParams;
 use fruity_editor::hooks::declare_global;
 use std::sync::Arc;
 
-pub mod inspect_component;
+pub mod component_inspector;
 pub mod state;
 pub mod systems;
 
@@ -47,10 +48,21 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
         }),
     );
 
-    let component_inspector_service = resource_container.require::<ComponentInspectorService>();
-    let mut component_inspector_service = component_inspector_service.write();
+    let component_editor_service = resource_container.require::<ComponentEditorService>();
+    let mut component_editor_service = component_editor_service.write();
 
-    component_inspector_service
-        .register_inspect_component("CircleCollider", inspect_circle_collider);
-    component_inspector_service.register_inspect_component("RectCollider", inspect_rect_collider);
+    component_editor_service.register_component(
+        "CircleCollider",
+        RegisterComponentParams {
+            inspector: Arc::new(circle_collider_inspector),
+            ..Default::default()
+        },
+    );
+    component_editor_service.register_component(
+        "RectCollider",
+        RegisterComponentParams {
+            inspector: Arc::new(rect_collider_inspector),
+            ..Default::default()
+        },
+    );
 }

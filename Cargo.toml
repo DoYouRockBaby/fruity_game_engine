@@ -16,6 +16,7 @@ fruity_editor = { path = "fruity_editor" }
 fruity_editor_graphic = { path = "fruity_editor/fruity_editor_graphic" }
 fruity_editor_graphic_2d = { path = "fruity_editor/fruity_editor_graphic_2d" }
 fruity_editor_javascript = { path = "fruity_editor/fruity_editor_javascript" }
+fruity_editor_hierarchy = { path = "fruity_editor/fruity_editor_hierarchy" }
 fruity_editor_physic_2d = { path = "fruity_editor/fruity_editor_physic_2d" }
 fruity_graphic = { path = "fruity_core/fruity_graphic" }
 fruity_graphic_2d = { path = "fruity_core/fruity_graphic_2d" }
