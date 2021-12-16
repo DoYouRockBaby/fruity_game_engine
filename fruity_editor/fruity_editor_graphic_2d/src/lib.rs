@@ -5,8 +5,8 @@ use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use fruity_ecs::system::system_service::SystemParams;
 use fruity_ecs::system::system_service::SystemService;
-use fruity_editor::component_editor_service::ComponentEditorService;
-use fruity_editor::component_editor_service::RegisterComponentParams;
+use fruity_editor::editor_component_service::EditorComponentService;
+use fruity_editor::editor_component_service::RegisterComponentParams;
 use std::sync::Arc;
 
 pub mod gizmos_service;
@@ -34,33 +34,33 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
         }),
     );
 
-    let component_editor_service = resource_container.require::<ComponentEditorService>();
-    let mut component_editor_service = component_editor_service.write();
+    let editor_component_service = resource_container.require::<EditorComponentService>();
+    let mut editor_component_service = editor_component_service.write();
 
-    component_editor_service.register_component("Transform2d", RegisterComponentParams::default());
-    component_editor_service.register_component(
+    editor_component_service.register_component("Transform2d", RegisterComponentParams::default());
+    editor_component_service.register_component(
         "Translate2d",
         RegisterComponentParams {
             dependencies: vec!["Transform2d".to_string()],
             ..Default::default()
         },
     );
-    component_editor_service.register_component(
+    editor_component_service.register_component(
         "Rotate2d",
         RegisterComponentParams {
             dependencies: vec!["Transform2d".to_string()],
             ..Default::default()
         },
     );
-    component_editor_service.register_component(
+    editor_component_service.register_component(
         "Scale2d",
         RegisterComponentParams {
             dependencies: vec!["Transform2d".to_string()],
             ..Default::default()
         },
     );
-    component_editor_service.register_component("Sprite", RegisterComponentParams::default());
-    component_editor_service.register_component(
+    editor_component_service.register_component("Sprite", RegisterComponentParams::default());
+    editor_component_service.register_component(
         "Camera",
         RegisterComponentParams {
             dependencies: vec!["Transform2d".to_string()],

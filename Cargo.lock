@@ -906,7 +906,6 @@ dependencies = [
  "fruity_core",
  "fruity_ecs",
  "fruity_graphic",
- "fruity_hierarchy",
  "fruity_windows",
  "image",
  "lazy_static 1.4.0",
@@ -954,9 +953,7 @@ dependencies = [
  "fruity_core",
  "fruity_ecs",
  "fruity_editor",
- "fruity_graphic",
- "fruity_graphic_2d",
- "fruity_input",
+ "fruity_hierarchy",
  "log",
  "rayon",
 ]

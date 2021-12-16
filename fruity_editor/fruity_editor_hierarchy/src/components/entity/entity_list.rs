@@ -1,16 +1,16 @@
-use crate::hooks::use_global;
-use crate::inspect::inspect_entity::SelectEntityWrapper;
-use crate::state::world::WorldState;
-use crate::ui_element::input::Button;
-use crate::ui_element::layout::Collapsible;
-use crate::ui_element::layout::Column;
-use crate::ui_element::layout::Scroll;
-use crate::ui_element::UIElement;
-use crate::ui_element::UIWidget;
-use crate::InspectorState;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_ecs::entity::archetype::entity::Entity;
 use fruity_ecs::entity::entity_service::EntityService;
+use fruity_editor::hooks::use_global;
+use fruity_editor::inspect::inspect_entity::SelectEntityWrapper;
+use fruity_editor::state::inspector::InspectorState;
+use fruity_editor::state::world::WorldState;
+use fruity_editor::ui_element::input::Button;
+use fruity_editor::ui_element::layout::Collapsible;
+use fruity_editor::ui_element::layout::Column;
+use fruity_editor::ui_element::layout::Scroll;
+use fruity_editor::ui_element::UIElement;
+use fruity_editor::ui_element::UIWidget;
 use fruity_hierarchy::components::parent::Parent;
 use std::sync::Arc;
 

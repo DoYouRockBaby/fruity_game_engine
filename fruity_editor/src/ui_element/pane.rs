@@ -15,7 +15,7 @@ impl UIWidget for PaneGrid {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum UIPaneSide {
     Left,
     Right,

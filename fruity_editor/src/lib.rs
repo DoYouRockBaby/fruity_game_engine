@@ -1,6 +1,11 @@
-use crate::component_editor_service::ComponentEditorService;
+use crate::components::file_explorer::file_explorer_component;
+use crate::components::inspector::inspector_component;
+use crate::editor_component_service::EditorComponentService;
+use crate::editor_menu_service::EditorMenuService;
+use crate::editor_panels_service::EditorPanelsService;
 use crate::file_explorer_service::FileExplorerService;
 use crate::hooks::declare_global;
+use crate::hooks::use_global;
 use crate::inspect::inspect_entity::inspect_entity;
 use crate::inspector_service::InspectorService;
 use crate::introspect_editor_service::IntrospectEditorService;
@@ -11,6 +16,9 @@ use crate::state::scene::SceneState;
 use crate::state::theme::ThemeState;
 use crate::state::world::WorldState;
 use crate::systems::pause_at_startup::pause_at_startup;
+use crate::ui_element::pane::UIPaneSide;
+use crate::ui_element::profiling::Profiling;
+use crate::ui_element::UIWidget;
 use fruity_core::inject::Inject1;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
@@ -20,9 +28,11 @@ use std::sync::Arc;
 #[macro_use]
 extern crate lazy_static;
 
-pub mod component_editor_service;
 pub mod components;
 pub mod dialog_service;
+pub mod editor_component_service;
+pub mod editor_menu_service;
+pub mod editor_panels_service;
 pub mod fields;
 pub mod file_explorer_service;
 pub mod hooks;
@@ -41,7 +51,9 @@ pub static MODULE_NAME: &str = "fruity_editor";
 pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
     let inspector_service = InspectorService::new(resource_container.clone());
     let introspect_editor_service = IntrospectEditorService::new(resource_container.clone());
-    let component_editor_service = ComponentEditorService::new(resource_container.clone());
+    let editor_menu_service = EditorMenuService::new(resource_container.clone());
+    let editor_panels_service = EditorPanelsService::new(resource_container.clone());
+    let editor_component_service = EditorComponentService::new(resource_container.clone());
     let file_explorer_service = FileExplorerService::new(resource_container.clone());
 
     resource_container.add::<InspectorService>("inspector_service", Box::new(inspector_service));
@@ -51,9 +63,13 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     );
     resource_container
         .add::<FileExplorerService>("file_explorer_service", Box::new(file_explorer_service));
-    resource_container.add::<ComponentEditorService>(
-        "component_editor_service",
-        Box::new(component_editor_service),
+    resource_container
+        .add::<EditorMenuService>("editor_menu_service", Box::new(editor_menu_service));
+    resource_container
+        .add::<EditorPanelsService>("editor_panels_service", Box::new(editor_panels_service));
+    resource_container.add::<EditorComponentService>(
+        "editor_component_service",
+        Box::new(editor_component_service),
     );
 
     declare_global(WorldState::new(resource_container.clone()));
@@ -76,5 +92,29 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let mut inspector_service = inspector_service.write();
 
     inspector_service.register_inspect_type(inspect_entity);
+
+    let editor_menu_service = resource_container.require::<EditorMenuService>();
+    let mut editor_menu_service = editor_menu_service.write();
+
+    editor_menu_service.add_menu("Open", "File", move || {
+        let scene_state = use_global::<SceneState>();
+        scene_state.open();
+    });
+    editor_menu_service.add_menu("Save", "File", move || {
+        let scene_state = use_global::<SceneState>();
+        scene_state.save();
+    });
+    editor_menu_service.add_menu("Save as", "File", move || {
+        let scene_state = use_global::<SceneState>();
+        scene_state.save_as();
+    });
+
+    let editor_panels_service = resource_container.require::<EditorPanelsService>();
+    let mut editor_panels_service = editor_panels_service.write();
+
+    editor_panels_service.add_panel("Inspector", UIPaneSide::Right, inspector_component);
+    editor_panels_service.add_panel("Profiling", UIPaneSide::Right, || Profiling {}.elem());
+    editor_panels_service.add_panel("File explorer", UIPaneSide::Bottom, file_explorer_component);
+
     load_default_resources(resource_container);
 }

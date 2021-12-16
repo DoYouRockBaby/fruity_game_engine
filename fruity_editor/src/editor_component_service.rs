@@ -36,12 +36,12 @@ impl Default for RegisterComponentParams {
 }
 
 #[derive(FruityAny)]
-pub struct ComponentEditorService {
+pub struct EditorComponentService {
     components: HashMap<String, RegisterComponentParams>,
     object_factory_service: ResourceReference<ObjectFactoryService>,
 }
 
-impl ComponentEditorService {
+impl EditorComponentService {
     pub fn new(resource_container: Arc<ResourceContainer>) -> Self {
         Self {
             components: HashMap::new(),
@@ -94,7 +94,7 @@ impl ComponentEditorService {
     }
 }
 
-impl Debug for ComponentEditorService {
+impl Debug for EditorComponentService {
     fn fmt(
         &self,
         _formatter: &mut std::fmt::Formatter<'_>,
@@ -103,9 +103,10 @@ impl Debug for ComponentEditorService {
     }
 }
 
-impl IntrospectObject for ComponentEditorService {
+// TODO: Complete that
+impl IntrospectObject for EditorComponentService {
     fn get_class_name(&self) -> String {
-        "ComponentEditorService".to_string()
+        "EditorComponentService".to_string()
     }
 
     fn get_method_infos(&self) -> Vec<MethodInfo> {
@@ -117,4 +118,4 @@ impl IntrospectObject for ComponentEditorService {
     }
 }
 
-impl Resource for ComponentEditorService {}
+impl Resource for EditorComponentService {}
