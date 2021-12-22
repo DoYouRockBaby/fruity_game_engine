@@ -41,7 +41,7 @@ impl ComponentArray {
         let mut new_component_buffer = Vec::<u8>::with_capacity(self.component_cell_size());
         new_component_buffer.resize(self.component_cell_size(), 0);
 
-        self.encode_rwlock_reference(&mut new_component_buffer);
+        Self::encode_rwlock_reference(&mut new_component_buffer);
         component.encode(&mut new_component_buffer[size_of::<RwLock<()>>()..]);
         self.buffer.append(&mut new_component_buffer);
 
@@ -49,7 +49,22 @@ impl ComponentArray {
         std::mem::forget(component);
     }
 
-    fn encode_rwlock_reference(&self, mut buffer: &mut [u8]) {
+    pub(crate) fn replace(&mut self, index: usize, component: AnyComponent) {
+        /*let mut new_component_buffer = Vec::<u8>::with_capacity(self.component_cell_size());
+        new_component_buffer.resize(self.component_cell_size(), 0);*/
+
+        let start_buffer = index * self.component_cell_size();
+        let end_buffer = start_buffer + self.component_cell_size();
+
+        let mut component_buffer = &mut self.buffer[start_buffer..end_buffer];
+        Self::encode_rwlock_reference(&mut component_buffer);
+        component.encode(&mut component_buffer[size_of::<RwLock<()>>()..]);
+
+        // TODO: Release the memory on drain
+        std::mem::forget(component);
+    }
+
+    fn encode_rwlock_reference(mut buffer: &mut [u8]) {
         let rwlock = RwLock::<()>::new(());
         let encoded_rwlock = unsafe {
             std::slice::from_raw_parts(

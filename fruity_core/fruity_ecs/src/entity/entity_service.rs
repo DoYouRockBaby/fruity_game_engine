@@ -166,7 +166,8 @@ impl EntityService {
     /// Returns the newly created entity id
     ///
     /// # Arguments
-    /// * `entity` - The entity that will be added
+    /// * `name` - The name of the entity
+    /// * `components` - The components that will be added
     ///
     pub fn create(&self, name: &str, components: Vec<AnyComponent>) -> EntityId {
         let entity_id = {
@@ -183,7 +184,9 @@ impl EntityService {
     /// Returns the newly created entity id
     ///
     /// # Arguments
-    /// * `entity` - The entity that will be added
+    /// * `entity_id` - The entity id
+    /// * `name` - The name of the entity
+    /// * `components` - The components that will be added
     ///
     pub fn create_with_id(
         &self,
@@ -239,6 +242,77 @@ impl EntityService {
 
             let archetype = inner.archetypes.get(indexes.0).unwrap();
             archetype.remove(indexes.1);
+
+            Ok(())
+        } else {
+            Err(RemoveEntityError::NotFound)
+        }
+    }
+
+    /// Add components to an entity
+    ///
+    /// # Arguments
+    /// * `entity_id` - The entity id
+    /// * `component_index` - The component index, is based on alphabetical number of the component type name
+    ///
+    pub fn add_component(
+        &self,
+        entity_id: EntityId,
+        mut components: Vec<AnyComponent>,
+    ) -> Result<(), RemoveEntityError> {
+        let indexes = {
+            let mut inner = self.inner.write().unwrap();
+            inner.index_map.remove(&entity_id)
+        };
+
+        if let Some(indexes) = indexes {
+            let (old_entity, mut old_components) = {
+                let inner = self.inner.read().unwrap();
+
+                let archetype = inner.archetypes.get(indexes.0).unwrap();
+                archetype.remove(indexes.1)
+            };
+
+            old_components.append(&mut components);
+
+            self.create_with_id(entity_id, &old_entity.name, old_components);
+
+            Ok(())
+        } else {
+            Err(RemoveEntityError::NotFound)
+        }
+    }
+
+    /// Remove a component from an entity
+    ///
+    /// # Arguments
+    /// * `entity_id` - The entity id
+    /// * `component_index` - The component index, is based on alphabetical number of the component type name
+    ///
+    pub fn remove_component(
+        &self,
+        entity_id: EntityId,
+        component_index: usize,
+    ) -> Result<(), RemoveEntityError> {
+        let indexes = {
+            let mut inner = self.inner.write().unwrap();
+            inner.index_map.remove(&entity_id)
+        };
+
+        if let Some(indexes) = indexes {
+            let (old_entity, mut old_components) = {
+                let inner = self.inner.read().unwrap();
+
+                let archetype = inner.archetypes.get(indexes.0).unwrap();
+                archetype.remove(indexes.1)
+            };
+
+            // propagate the deleted signal
+            old_entity.on_deleted.notify(());
+
+            old_components.remove(component_index);
+
+            self.create_with_id(entity_id, &old_entity.name, old_components);
 
             Ok(())
         } else {

@@ -1,3 +1,4 @@
+use crate::ui_element::menu::MenuItem;
 use crate::ui_element::UIAlign;
 use crate::ui_element::UIElement;
 use crate::ui_element::UISize;
@@ -76,7 +77,19 @@ impl UIWidget for Scroll {
 pub struct Collapsible {
     pub title: String,
     pub on_click: Option<Arc<dyn Fn() + Send + Sync>>,
+    pub secondary_actions: Vec<MenuItem>,
     pub child: UIElement,
+}
+
+impl Default for Collapsible {
+    fn default() -> Self {
+        Self {
+            title: String::default(),
+            on_click: None,
+            secondary_actions: Vec::new(),
+            child: Empty {}.elem(),
+        }
+    }
 }
 
 impl UIWidget for Collapsible {

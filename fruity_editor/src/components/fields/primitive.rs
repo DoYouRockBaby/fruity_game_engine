@@ -154,11 +154,11 @@ pub fn draw_editor_string(
             RowItem {
                 size: UISize::Fill,
                 child: Input {
-                    placeholder: "".to_string(),
                     value: value,
                     on_change: Arc::new(move |value: &str| {
                         on_update(value.to_string().fruity_into());
                     }),
+                    ..Default::default()
                 }
                 .elem(),
             },

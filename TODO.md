@@ -16,6 +16,7 @@
 [ ] There should be some memory leak in archetype
 [ ] Test and stabilize ECS
 [ ] Find a way to move the introspect declaration into the associated traits
+[ ] Implements a perfect SOA
 
 ## Editor
 

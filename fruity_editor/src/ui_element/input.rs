@@ -58,6 +58,18 @@ pub struct Input {
     pub value: String,
     pub placeholder: String,
     pub on_change: Arc<dyn Fn(&str) + Send + Sync>,
+    pub on_edit: Arc<dyn Fn(&str) + Send + Sync>,
+}
+
+impl Default for Input {
+    fn default() -> Self {
+        Input {
+            value: String::default(),
+            placeholder: String::default(),
+            on_change: Arc::new(|_| {}),
+            on_edit: Arc::new(|_| {}),
+        }
+    }
 }
 
 impl UIWidget for Input {

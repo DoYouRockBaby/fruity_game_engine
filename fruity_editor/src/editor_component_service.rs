@@ -92,6 +92,17 @@ impl EditorComponentService {
 
         Some(result)
     }
+
+    pub fn search(&self, search: &str) -> Vec<String> {
+        self.components
+            .keys()
+            .filter(|key| {
+                key.to_lowercase()
+                    .contains(&search.to_string().to_lowercase())
+            })
+            .map(|key| key.clone())
+            .collect::<Vec<_>>()
+    }
 }
 
 impl Debug for EditorComponentService {

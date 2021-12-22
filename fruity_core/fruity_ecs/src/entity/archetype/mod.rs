@@ -7,7 +7,7 @@ use crate::entity::archetype::entity::Entity;
 use crate::entity::entity::get_type_identifier_by_any;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::default::Default;
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -25,7 +25,7 @@ pub mod component_array;
 /// Stored as a Struct Of Array
 pub struct Archetype {
     identifier: EntityTypeIdentifier,
-    component_arrays: Arc<HashMap<String, Arc<RwLock<ComponentArray>>>>,
+    component_arrays: Arc<BTreeMap<String, Arc<RwLock<ComponentArray>>>>,
     removed_entities: Mutex<Vec<usize>>,
 }
 
@@ -49,7 +49,7 @@ impl Archetype {
         let identifier = get_type_identifier_by_any(&components);
 
         // Build the archetype
-        let mut component_arrays = HashMap::new();
+        let mut component_arrays = BTreeMap::new();
         for component in components {
             component_arrays.insert(
                 component.get_class_name(),
@@ -152,6 +152,7 @@ impl Archetype {
 
     /// Get entity count
     pub fn len(&self) -> usize {
+        // TODO: Take care of the deleted entities
         let entity_array = self.component_arrays.get("Entity");
         if let Some(entity_array) = entity_array {
             let entity_array = entity_array.read().unwrap();
@@ -169,6 +170,12 @@ impl Archetype {
     /// * `components` - The first entity components
     ///
     pub fn add(&self, entity_id: EntityId, name: &str, mut components: Vec<AnyComponent>) {
+        // Check if there is a remaining cell from a old deleted entity
+        let free_cell = {
+            let mut removed_entities_guard = self.removed_entities.lock().unwrap();
+            removed_entities_guard.pop()
+        };
+
         // Inject the common Entity component
         components.push(AnyComponent::new(Entity {
             entity_id,
@@ -176,15 +183,24 @@ impl Archetype {
             ..Entity::default()
         }));
 
-        for component in components {
-            let component_array = self.component_arrays.get(&component.get_class_name());
-            if let Some(component_array) = component_array {
-                let mut component_array = component_array.write().unwrap();
-                component_array.add(component);
+        // If an remaining space from a deleted entity exists, we use it
+        if let Some(free_cell) = free_cell {
+            for component in components {
+                let component_array = self.component_arrays.get(&component.get_class_name());
+                if let Some(component_array) = component_array {
+                    let mut component_array = component_array.write().unwrap();
+                    component_array.replace(free_cell, component);
+                }
+            }
+        } else {
+            for component in components {
+                let component_array = self.component_arrays.get(&component.get_class_name());
+                if let Some(component_array) = component_array {
+                    let mut component_array = component_array.write().unwrap();
+                    component_array.add(component);
+                }
             }
         }
-
-        // TODO: Use the remaining spaces to fill the new entity if possible
     }
 
     /// Remove an entity based on its id
@@ -192,7 +208,7 @@ impl Archetype {
     /// # Arguments
     /// * `index` - The entity index
     ///
-    pub fn remove(&self, index: usize) {
+    pub fn remove(&self, index: usize) -> (Entity, Vec<AnyComponent>) {
         // Get the entity
         let components = self.get_full_entity(index);
 
@@ -221,20 +237,8 @@ impl Archetype {
             })
             .collect::<Vec<_>>();
 
-        // propagate the deleted signal
-        {
-            let entity = entity.read();
-            let entity = entity
-                .deref()
-                .as_any_ref()
-                .downcast_ref::<Entity>()
-                .unwrap();
-
-            entity.on_deleted.notify(());
-        }
-
         // Update the entity to set it as deleted
-        {
+        let entity = {
             let _components_lock = other_components
                 .iter()
                 .map(|component| component.write())
@@ -248,7 +252,8 @@ impl Archetype {
                 .unwrap();
 
             entity.deleted = true;
-        }
+            entity.clone()
+        };
 
         // Remember that the old entity cell is now free
         // so we will be able to erase it
@@ -258,5 +263,17 @@ impl Archetype {
         };
 
         // TODO: Notify all the shared lock that the referenced entity has been removed
+
+        // Return the deleted components
+        (
+            entity,
+            other_components
+                .iter()
+                .map(|component| {
+                    let component = component.read();
+                    AnyComponent::from_box(component.duplicate())
+                })
+                .collect::<Vec<_>>(),
+        )
     }
 }

@@ -49,6 +49,11 @@ impl AnyComponent {
             component: Box::new(component),
         }
     }
+
+    /// Returns an AnyComponent
+    pub fn from_box(component: Box<dyn Component>) -> AnyComponent {
+        AnyComponent { component }
+    }
 }
 
 impl Deref for AnyComponent {

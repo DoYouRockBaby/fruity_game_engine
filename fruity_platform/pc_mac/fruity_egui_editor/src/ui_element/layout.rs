@@ -1,11 +1,16 @@
 use crate::ui_element::app::DrawContext;
 use crate::ui_element::draw_element;
+use crate::SecondaryActionState;
+use egui::Align;
 use egui::CollapsingHeader;
+use egui::Layout;
 use egui::ScrollArea;
+use fruity_editor::hooks::use_global;
 use fruity_editor::ui_element::layout::Collapsible;
 use fruity_editor::ui_element::layout::Column;
 use fruity_editor::ui_element::layout::Row;
 use fruity_editor::ui_element::layout::Scroll;
+use fruity_editor::ui_element::UIAlign;
 use fruity_editor::ui_element::UISize;
 
 pub fn draw_empty<'a>(_ui: &mut egui::Ui) {}
@@ -79,11 +84,18 @@ pub fn draw_row<'a>(elem: Row, ui: &mut egui::Ui, ctx: &mut DrawContext) {
 }
 
 pub fn draw_column<'a>(elem: Column, ui: &mut egui::Ui, ctx: &mut DrawContext) {
-    ui.vertical(|ui| {
-        elem.children
-            .into_iter()
-            .for_each(|child| draw_element(child, ui, ctx));
-    });
+    ui.with_layout(
+        Layout::top_down(match elem.align {
+            UIAlign::Start => Align::Min,
+            UIAlign::Center => Align::Center,
+            UIAlign::End => Align::Max,
+        }),
+        |ui| {
+            elem.children.into_iter().for_each(|child| {
+                draw_element(child, ui, ctx);
+            });
+        },
+    );
 }
 
 pub fn draw_scroll<'a>(elem: Scroll, ui: &mut egui::Ui, ctx: &mut DrawContext) {
@@ -107,6 +119,17 @@ pub fn draw_collapsible<'a>(elem: Collapsible, ui: &mut egui::Ui, ctx: &mut Draw
     if response.header_response.clicked() {
         if let Some(on_click) = on_click {
             on_click();
+        }
+    }
+
+    if elem.secondary_actions.len() > 0 {
+        if response.header_response.secondary_clicked() {
+            let secondary_action_state = use_global::<SecondaryActionState>();
+            secondary_action_state.display_secondary_actions(
+                ui,
+                response.header_response,
+                elem.secondary_actions.clone(),
+            )
         }
     }
 }

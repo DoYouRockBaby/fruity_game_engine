@@ -103,6 +103,7 @@ pub fn draw_entity_line(
                 ..Default::default()
             }
             .elem(),
+            ..Default::default()
         }
         .elem()
     } else {

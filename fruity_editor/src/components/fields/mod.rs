@@ -141,12 +141,12 @@ pub fn field_editor(
 
             Collapsible {
                 title: name.to_string(),
-                on_click: None,
                 child: Column {
                     children,
                     align: UIAlign::Start,
                 }
                 .elem(),
+                ..Default::default()
             }
         }
         .elem(),
@@ -189,12 +189,12 @@ pub fn field_editor(
 
             Collapsible {
                 title: name.to_string(),
-                on_click: None,
                 child: Column {
                     children,
                     align: UIAlign::Start,
                 }
                 .elem(),
+                ..Default::default()
             }
             .elem()
         }

@@ -1,4 +1,5 @@
 use crate::ui_element::app::DrawContext;
+use crate::ui_element::display::draw_popup;
 use crate::ui_element::display::draw_text;
 use crate::ui_element::input::draw_button;
 use crate::ui_element::input::draw_checkbox;
@@ -17,6 +18,7 @@ use crate::ui_element::menu::draw_menu_section;
 use crate::ui_element::pane::draw_pane_grid;
 use crate::ui_element::profiling::draw_profiling;
 use fruity_editor::hooks::topo;
+use fruity_editor::ui_element::display::Popup;
 use fruity_editor::ui_element::display::Text;
 use fruity_editor::ui_element::input::Button;
 use fruity_editor::ui_element::input::Checkbox;
@@ -79,6 +81,8 @@ pub fn draw_element<'a>(elem: UIElement, ui: &mut egui::Ui, ctx: &mut DrawContex
         draw_menu_bar(*elem.root.downcast::<MenuBar>().unwrap(), ui, ctx)
     } else if type_id == TypeId::of::<MenuSection>() {
         draw_menu_section(*elem.root.downcast::<MenuSection>().unwrap(), ui, ctx)
+    } else if type_id == TypeId::of::<Popup>() {
+        draw_popup(*elem.root.downcast::<Popup>().unwrap(), ui, ctx)
     } else if type_id == TypeId::of::<Profiling>() {
         draw_profiling(ui, ctx)
     } else {

@@ -228,6 +228,7 @@ pub fn draw_input<'a>(elem: Input, ui: &mut egui::Ui, _ctx: &mut DrawContext) {
     }
 
     if response.changed() {
+        (elem.on_edit)(&new_value);
         input_value.set(new_value);
     }
 
@@ -245,6 +246,7 @@ pub fn draw_integer_input<'a>(elem: IntegerInput, ui: &mut egui::Ui, ctx: &mut D
                 (elem.on_change)(value)
             }
         }),
+        ..Default::default()
     };
 
     draw_input(input, ui, ctx)
@@ -259,6 +261,7 @@ pub fn draw_float_input<'a>(elem: FloatInput, ui: &mut egui::Ui, ctx: &mut DrawC
                 (elem.on_change)(value)
             }
         }),
+        ..Default::default()
     };
 
     draw_input(input, ui, ctx)
