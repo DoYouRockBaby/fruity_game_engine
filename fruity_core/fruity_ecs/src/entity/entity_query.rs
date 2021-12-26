@@ -2,6 +2,9 @@ use crate::component::component::Component;
 use crate::component::component_guard::ComponentReadGuard;
 use crate::component::component_guard::ComponentWriteGuard;
 use crate::component::component_reference::ComponentReference;
+use crate::entity::entity::EntityId;
+use crate::entity::entity::EntityTypeIdentifier;
+use crate::entity::entity_reference::EntityReference;
 use std::fmt::Debug;
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -102,17 +105,66 @@ impl<'a, T: Component> Debug for Write<'a, T> {
 /// A trait for types that can be exposed from components references
 pub trait QueryInjectable {
     /// Get the object
-    fn from_component(component: &ComponentReference) -> Self;
+    fn from_components(
+        entity: &EntityReference,
+        request_identifier: &mut EntityTypeIdentifier,
+    ) -> Self;
+}
+
+impl QueryInjectable for EntityReference {
+    fn from_components(
+        entity: &EntityReference,
+        _request_identifier: &mut EntityTypeIdentifier,
+    ) -> Self {
+        entity.clone()
+    }
 }
 
 impl QueryInjectable for ComponentReference {
-    fn from_component(component: &ComponentReference) -> Self {
-        component.clone()
+    fn from_components(
+        entity: &EntityReference,
+        request_identifier: &mut EntityTypeIdentifier,
+    ) -> Self {
+        let identifier = request_identifier.0.remove(0);
+        entity.get_component(&identifier).unwrap()
+    }
+}
+
+impl QueryInjectable for EntityId {
+    fn from_components(
+        entity: &EntityReference,
+        _request_identifier: &mut EntityTypeIdentifier,
+    ) -> Self {
+        entity.get_entity_id()
+    }
+}
+
+impl QueryInjectable for String {
+    fn from_components(
+        entity: &EntityReference,
+        _request_identifier: &mut EntityTypeIdentifier,
+    ) -> Self {
+        entity.get_name()
+    }
+}
+
+impl QueryInjectable for bool {
+    fn from_components(
+        entity: &EntityReference,
+        _request_identifier: &mut EntityTypeIdentifier,
+    ) -> Self {
+        entity.is_enabled()
     }
 }
 
 impl<'a, T: Component> QueryInjectable for Read<'a, T> {
-    fn from_component(component: &ComponentReference) -> Self {
+    fn from_components(
+        entity: &EntityReference,
+        request_identifier: &mut EntityTypeIdentifier,
+    ) -> Self {
+        let identifier = request_identifier.0.remove(0);
+        let component = entity.get_component(&identifier).unwrap();
+
         // TODO: Find a way to remove it
         let reader = unsafe {
             std::mem::transmute::<ComponentReadGuard, ComponentReadGuard>(component.read())
@@ -123,7 +175,13 @@ impl<'a, T: Component> QueryInjectable for Read<'a, T> {
 }
 
 impl<'a, T: Component> QueryInjectable for Write<'a, T> {
-    fn from_component(component: &ComponentReference) -> Self {
+    fn from_components(
+        entity: &EntityReference,
+        request_identifier: &mut EntityTypeIdentifier,
+    ) -> Self {
+        let identifier = request_identifier.0.remove(0);
+        let component = entity.get_component(&identifier).unwrap();
+
         // TODO: Find a way to remove it
         let writer = unsafe {
             std::mem::transmute::<ComponentWriteGuard, ComponentWriteGuard>(component.write())
@@ -139,7 +197,10 @@ pub trait QueryInject: Send + Sync {
     fn duplicate(&self) -> Self;
 
     /// Get a function that proceed the injection
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync>;
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync>;
 }
 
 /// A shortcut for a boxed inject function
@@ -158,7 +219,10 @@ impl QueryInject for Inject0 {
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
+    fn inject(
+        self,
+        _request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         Box::new(move |_| (self.0)())
     }
 }
@@ -179,8 +243,15 @@ impl<T1: QueryInjectable + 'static> QueryInject for Inject1<T1> {
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| (self.0)(T1::from_component(&components[0])))
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
+            (self.0)(T1::from_components(&entity, &mut request_identifier))
+        })
     }
 }
 
@@ -200,11 +271,16 @@ impl<T1: QueryInjectable + 'static, T2: QueryInjectable + 'static> QueryInject f
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
             )
         })
     }
@@ -231,12 +307,17 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
-                T3::from_component(&components[2]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
+                T3::from_components(&entity, &mut request_identifier),
             )
         })
     }
@@ -265,13 +346,18 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
-                T3::from_component(&components[2]),
-                T4::from_component(&components[3]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
+                T3::from_components(&entity, &mut request_identifier),
+                T4::from_components(&entity, &mut request_identifier),
             )
         })
     }
@@ -301,14 +387,19 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
-                T3::from_component(&components[2]),
-                T4::from_component(&components[3]),
-                T5::from_component(&components[4]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
+                T3::from_components(&entity, &mut request_identifier),
+                T4::from_components(&entity, &mut request_identifier),
+                T5::from_components(&entity, &mut request_identifier),
             )
         })
     }
@@ -339,15 +430,20 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
-                T3::from_component(&components[2]),
-                T4::from_component(&components[3]),
-                T5::from_component(&components[4]),
-                T6::from_component(&components[5]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
+                T3::from_components(&entity, &mut request_identifier),
+                T4::from_components(&entity, &mut request_identifier),
+                T5::from_components(&entity, &mut request_identifier),
+                T6::from_components(&entity, &mut request_identifier),
             )
         })
     }
@@ -381,16 +477,21 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
-                T3::from_component(&components[2]),
-                T4::from_component(&components[3]),
-                T5::from_component(&components[4]),
-                T6::from_component(&components[5]),
-                T7::from_component(&components[6]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
+                T3::from_components(&entity, &mut request_identifier),
+                T4::from_components(&entity, &mut request_identifier),
+                T5::from_components(&entity, &mut request_identifier),
+                T6::from_components(&entity, &mut request_identifier),
+                T7::from_components(&entity, &mut request_identifier),
             )
         })
     }
@@ -424,17 +525,22 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
-                T3::from_component(&components[2]),
-                T4::from_component(&components[3]),
-                T5::from_component(&components[4]),
-                T6::from_component(&components[5]),
-                T7::from_component(&components[6]),
-                T8::from_component(&components[7]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
+                T3::from_components(&entity, &mut request_identifier),
+                T4::from_components(&entity, &mut request_identifier),
+                T5::from_components(&entity, &mut request_identifier),
+                T6::from_components(&entity, &mut request_identifier),
+                T7::from_components(&entity, &mut request_identifier),
+                T8::from_components(&entity, &mut request_identifier),
             )
         })
     }
@@ -469,18 +575,23 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
-                T3::from_component(&components[2]),
-                T4::from_component(&components[3]),
-                T5::from_component(&components[4]),
-                T6::from_component(&components[5]),
-                T7::from_component(&components[6]),
-                T8::from_component(&components[7]),
-                T9::from_component(&components[8]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
+                T3::from_components(&entity, &mut request_identifier),
+                T4::from_components(&entity, &mut request_identifier),
+                T5::from_components(&entity, &mut request_identifier),
+                T6::from_components(&entity, &mut request_identifier),
+                T7::from_components(&entity, &mut request_identifier),
+                T8::from_components(&entity, &mut request_identifier),
+                T9::from_components(&entity, &mut request_identifier),
             )
         })
     }
@@ -518,19 +629,24 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
-                T3::from_component(&components[2]),
-                T4::from_component(&components[3]),
-                T5::from_component(&components[4]),
-                T6::from_component(&components[5]),
-                T7::from_component(&components[6]),
-                T8::from_component(&components[7]),
-                T9::from_component(&components[8]),
-                T10::from_component(&components[9]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
+                T3::from_components(&entity, &mut request_identifier),
+                T4::from_components(&entity, &mut request_identifier),
+                T5::from_components(&entity, &mut request_identifier),
+                T6::from_components(&entity, &mut request_identifier),
+                T7::from_components(&entity, &mut request_identifier),
+                T8::from_components(&entity, &mut request_identifier),
+                T9::from_components(&entity, &mut request_identifier),
+                T10::from_components(&entity, &mut request_identifier),
             )
         })
     }
@@ -571,20 +687,25 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
-                T3::from_component(&components[2]),
-                T4::from_component(&components[3]),
-                T5::from_component(&components[4]),
-                T6::from_component(&components[5]),
-                T7::from_component(&components[6]),
-                T8::from_component(&components[7]),
-                T9::from_component(&components[8]),
-                T10::from_component(&components[9]),
-                T11::from_component(&components[10]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
+                T3::from_components(&entity, &mut request_identifier),
+                T4::from_components(&entity, &mut request_identifier),
+                T5::from_components(&entity, &mut request_identifier),
+                T6::from_components(&entity, &mut request_identifier),
+                T7::from_components(&entity, &mut request_identifier),
+                T8::from_components(&entity, &mut request_identifier),
+                T9::from_components(&entity, &mut request_identifier),
+                T10::from_components(&entity, &mut request_identifier),
+                T11::from_components(&entity, &mut request_identifier),
             )
         })
     }
@@ -626,21 +747,26 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
-                T3::from_component(&components[2]),
-                T4::from_component(&components[3]),
-                T5::from_component(&components[4]),
-                T6::from_component(&components[5]),
-                T7::from_component(&components[6]),
-                T8::from_component(&components[7]),
-                T9::from_component(&components[8]),
-                T10::from_component(&components[9]),
-                T11::from_component(&components[10]),
-                T12::from_component(&components[11]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
+                T3::from_components(&entity, &mut request_identifier),
+                T4::from_components(&entity, &mut request_identifier),
+                T5::from_components(&entity, &mut request_identifier),
+                T6::from_components(&entity, &mut request_identifier),
+                T7::from_components(&entity, &mut request_identifier),
+                T8::from_components(&entity, &mut request_identifier),
+                T9::from_components(&entity, &mut request_identifier),
+                T10::from_components(&entity, &mut request_identifier),
+                T11::from_components(&entity, &mut request_identifier),
+                T12::from_components(&entity, &mut request_identifier),
             )
         })
     }
@@ -683,22 +809,27 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
-                T3::from_component(&components[2]),
-                T4::from_component(&components[3]),
-                T5::from_component(&components[4]),
-                T6::from_component(&components[5]),
-                T7::from_component(&components[6]),
-                T8::from_component(&components[7]),
-                T9::from_component(&components[8]),
-                T10::from_component(&components[9]),
-                T11::from_component(&components[10]),
-                T12::from_component(&components[11]),
-                T13::from_component(&components[12]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
+                T3::from_components(&entity, &mut request_identifier),
+                T4::from_components(&entity, &mut request_identifier),
+                T5::from_components(&entity, &mut request_identifier),
+                T6::from_components(&entity, &mut request_identifier),
+                T7::from_components(&entity, &mut request_identifier),
+                T8::from_components(&entity, &mut request_identifier),
+                T9::from_components(&entity, &mut request_identifier),
+                T10::from_components(&entity, &mut request_identifier),
+                T11::from_components(&entity, &mut request_identifier),
+                T12::from_components(&entity, &mut request_identifier),
+                T13::from_components(&entity, &mut request_identifier),
             )
         })
     }
@@ -745,23 +876,28 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
-                T3::from_component(&components[2]),
-                T4::from_component(&components[3]),
-                T5::from_component(&components[4]),
-                T6::from_component(&components[5]),
-                T7::from_component(&components[6]),
-                T8::from_component(&components[7]),
-                T9::from_component(&components[8]),
-                T10::from_component(&components[9]),
-                T11::from_component(&components[10]),
-                T12::from_component(&components[11]),
-                T13::from_component(&components[12]),
-                T14::from_component(&components[13]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
+                T3::from_components(&entity, &mut request_identifier),
+                T4::from_components(&entity, &mut request_identifier),
+                T5::from_components(&entity, &mut request_identifier),
+                T6::from_components(&entity, &mut request_identifier),
+                T7::from_components(&entity, &mut request_identifier),
+                T8::from_components(&entity, &mut request_identifier),
+                T9::from_components(&entity, &mut request_identifier),
+                T10::from_components(&entity, &mut request_identifier),
+                T11::from_components(&entity, &mut request_identifier),
+                T12::from_components(&entity, &mut request_identifier),
+                T13::from_components(&entity, &mut request_identifier),
+                T14::from_components(&entity, &mut request_identifier),
             )
         })
     }
@@ -809,24 +945,29 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
-                T3::from_component(&components[2]),
-                T4::from_component(&components[3]),
-                T5::from_component(&components[4]),
-                T6::from_component(&components[5]),
-                T7::from_component(&components[6]),
-                T8::from_component(&components[7]),
-                T9::from_component(&components[8]),
-                T10::from_component(&components[9]),
-                T11::from_component(&components[10]),
-                T12::from_component(&components[11]),
-                T13::from_component(&components[12]),
-                T14::from_component(&components[13]),
-                T15::from_component(&components[14]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
+                T3::from_components(&entity, &mut request_identifier),
+                T4::from_components(&entity, &mut request_identifier),
+                T5::from_components(&entity, &mut request_identifier),
+                T6::from_components(&entity, &mut request_identifier),
+                T7::from_components(&entity, &mut request_identifier),
+                T8::from_components(&entity, &mut request_identifier),
+                T9::from_components(&entity, &mut request_identifier),
+                T10::from_components(&entity, &mut request_identifier),
+                T11::from_components(&entity, &mut request_identifier),
+                T12::from_components(&entity, &mut request_identifier),
+                T13::from_components(&entity, &mut request_identifier),
+                T14::from_components(&entity, &mut request_identifier),
+                T15::from_components(&entity, &mut request_identifier),
             )
         })
     }
@@ -878,25 +1019,30 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
-                T3::from_component(&components[2]),
-                T4::from_component(&components[3]),
-                T5::from_component(&components[4]),
-                T6::from_component(&components[5]),
-                T7::from_component(&components[6]),
-                T8::from_component(&components[7]),
-                T9::from_component(&components[8]),
-                T10::from_component(&components[9]),
-                T11::from_component(&components[10]),
-                T12::from_component(&components[11]),
-                T13::from_component(&components[12]),
-                T14::from_component(&components[13]),
-                T15::from_component(&components[14]),
-                T16::from_component(&components[15]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
+                T3::from_components(&entity, &mut request_identifier),
+                T4::from_components(&entity, &mut request_identifier),
+                T5::from_components(&entity, &mut request_identifier),
+                T6::from_components(&entity, &mut request_identifier),
+                T7::from_components(&entity, &mut request_identifier),
+                T8::from_components(&entity, &mut request_identifier),
+                T9::from_components(&entity, &mut request_identifier),
+                T10::from_components(&entity, &mut request_identifier),
+                T11::from_components(&entity, &mut request_identifier),
+                T12::from_components(&entity, &mut request_identifier),
+                T13::from_components(&entity, &mut request_identifier),
+                T14::from_components(&entity, &mut request_identifier),
+                T15::from_components(&entity, &mut request_identifier),
+                T16::from_components(&entity, &mut request_identifier),
             )
         })
     }
@@ -951,26 +1097,31 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
-                T3::from_component(&components[2]),
-                T4::from_component(&components[3]),
-                T5::from_component(&components[4]),
-                T6::from_component(&components[5]),
-                T7::from_component(&components[6]),
-                T8::from_component(&components[7]),
-                T9::from_component(&components[8]),
-                T10::from_component(&components[9]),
-                T11::from_component(&components[10]),
-                T12::from_component(&components[11]),
-                T13::from_component(&components[12]),
-                T14::from_component(&components[13]),
-                T15::from_component(&components[14]),
-                T16::from_component(&components[15]),
-                T17::from_component(&components[16]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
+                T3::from_components(&entity, &mut request_identifier),
+                T4::from_components(&entity, &mut request_identifier),
+                T5::from_components(&entity, &mut request_identifier),
+                T6::from_components(&entity, &mut request_identifier),
+                T7::from_components(&entity, &mut request_identifier),
+                T8::from_components(&entity, &mut request_identifier),
+                T9::from_components(&entity, &mut request_identifier),
+                T10::from_components(&entity, &mut request_identifier),
+                T11::from_components(&entity, &mut request_identifier),
+                T12::from_components(&entity, &mut request_identifier),
+                T13::from_components(&entity, &mut request_identifier),
+                T14::from_components(&entity, &mut request_identifier),
+                T15::from_components(&entity, &mut request_identifier),
+                T16::from_components(&entity, &mut request_identifier),
+                T17::from_components(&entity, &mut request_identifier),
             )
         })
     }
@@ -1026,27 +1177,32 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
-                T3::from_component(&components[2]),
-                T4::from_component(&components[3]),
-                T5::from_component(&components[4]),
-                T6::from_component(&components[5]),
-                T7::from_component(&components[6]),
-                T8::from_component(&components[7]),
-                T9::from_component(&components[8]),
-                T10::from_component(&components[9]),
-                T11::from_component(&components[10]),
-                T12::from_component(&components[11]),
-                T13::from_component(&components[12]),
-                T14::from_component(&components[13]),
-                T15::from_component(&components[14]),
-                T16::from_component(&components[15]),
-                T17::from_component(&components[16]),
-                T18::from_component(&components[17]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
+                T3::from_components(&entity, &mut request_identifier),
+                T4::from_components(&entity, &mut request_identifier),
+                T5::from_components(&entity, &mut request_identifier),
+                T6::from_components(&entity, &mut request_identifier),
+                T7::from_components(&entity, &mut request_identifier),
+                T8::from_components(&entity, &mut request_identifier),
+                T9::from_components(&entity, &mut request_identifier),
+                T10::from_components(&entity, &mut request_identifier),
+                T11::from_components(&entity, &mut request_identifier),
+                T12::from_components(&entity, &mut request_identifier),
+                T13::from_components(&entity, &mut request_identifier),
+                T14::from_components(&entity, &mut request_identifier),
+                T15::from_components(&entity, &mut request_identifier),
+                T16::from_components(&entity, &mut request_identifier),
+                T17::from_components(&entity, &mut request_identifier),
+                T18::from_components(&entity, &mut request_identifier),
             )
         })
     }
@@ -1143,28 +1299,33 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
-                T3::from_component(&components[2]),
-                T4::from_component(&components[3]),
-                T5::from_component(&components[4]),
-                T6::from_component(&components[5]),
-                T7::from_component(&components[6]),
-                T8::from_component(&components[7]),
-                T9::from_component(&components[8]),
-                T10::from_component(&components[9]),
-                T11::from_component(&components[10]),
-                T12::from_component(&components[11]),
-                T13::from_component(&components[12]),
-                T14::from_component(&components[13]),
-                T15::from_component(&components[14]),
-                T16::from_component(&components[15]),
-                T17::from_component(&components[16]),
-                T18::from_component(&components[17]),
-                T19::from_component(&components[18]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
+                T3::from_components(&entity, &mut request_identifier),
+                T4::from_components(&entity, &mut request_identifier),
+                T5::from_components(&entity, &mut request_identifier),
+                T6::from_components(&entity, &mut request_identifier),
+                T7::from_components(&entity, &mut request_identifier),
+                T8::from_components(&entity, &mut request_identifier),
+                T9::from_components(&entity, &mut request_identifier),
+                T10::from_components(&entity, &mut request_identifier),
+                T11::from_components(&entity, &mut request_identifier),
+                T12::from_components(&entity, &mut request_identifier),
+                T13::from_components(&entity, &mut request_identifier),
+                T14::from_components(&entity, &mut request_identifier),
+                T15::from_components(&entity, &mut request_identifier),
+                T16::from_components(&entity, &mut request_identifier),
+                T17::from_components(&entity, &mut request_identifier),
+                T18::from_components(&entity, &mut request_identifier),
+                T19::from_components(&entity, &mut request_identifier),
             )
         })
     }
@@ -1325,29 +1486,34 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(Vec<ComponentReference>) + Send + Sync> {
-        Box::new(move |components| {
+    fn inject(
+        self,
+        request_identifier: &EntityTypeIdentifier,
+    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+        let request_identifier = request_identifier.clone();
+        Box::new(move |entity| {
+            let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_component(&components[0]),
-                T2::from_component(&components[1]),
-                T3::from_component(&components[2]),
-                T4::from_component(&components[3]),
-                T5::from_component(&components[4]),
-                T6::from_component(&components[5]),
-                T7::from_component(&components[6]),
-                T8::from_component(&components[7]),
-                T9::from_component(&components[8]),
-                T10::from_component(&components[9]),
-                T11::from_component(&components[10]),
-                T12::from_component(&components[11]),
-                T13::from_component(&components[12]),
-                T14::from_component(&components[13]),
-                T15::from_component(&components[14]),
-                T16::from_component(&components[15]),
-                T17::from_component(&components[16]),
-                T18::from_component(&components[17]),
-                T19::from_component(&components[18]),
-                T20::from_component(&components[19]),
+                T1::from_components(&entity, &mut request_identifier),
+                T2::from_components(&entity, &mut request_identifier),
+                T3::from_components(&entity, &mut request_identifier),
+                T4::from_components(&entity, &mut request_identifier),
+                T5::from_components(&entity, &mut request_identifier),
+                T6::from_components(&entity, &mut request_identifier),
+                T7::from_components(&entity, &mut request_identifier),
+                T8::from_components(&entity, &mut request_identifier),
+                T9::from_components(&entity, &mut request_identifier),
+                T10::from_components(&entity, &mut request_identifier),
+                T11::from_components(&entity, &mut request_identifier),
+                T12::from_components(&entity, &mut request_identifier),
+                T13::from_components(&entity, &mut request_identifier),
+                T14::from_components(&entity, &mut request_identifier),
+                T15::from_components(&entity, &mut request_identifier),
+                T16::from_components(&entity, &mut request_identifier),
+                T17::from_components(&entity, &mut request_identifier),
+                T18::from_components(&entity, &mut request_identifier),
+                T19::from_components(&entity, &mut request_identifier),
+                T20::from_components(&entity, &mut request_identifier),
             )
         })
     }

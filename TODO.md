@@ -12,11 +12,11 @@
 [X] Make native systems easy to use
 [X] Move ECS structure to a struct of array instead an array of struct (more efficient, easier to implement)
 [X] Implement ECS hierarchy
+[X] Remove the "Entity" component to replace it by a more cache friendly solution
 [ ] Add an exception when you try to access a deleted entity, propagate it into js
 [ ] There should be some memory leak in archetype
 [ ] Test and stabilize ECS
 [ ] Find a way to move the introspect declaration into the associated traits
-[ ] Implements a perfect SOA
 
 ## Editor
 
@@ -34,6 +34,8 @@
 [X] Save/Load
 [ ] Fix resize gizmos
 [ ] Select an object when clicking on it (set_scissor_rect)
+[ ] Add componnent from editor
+[ ] Remove component from editor
 
 ## Graphics
 

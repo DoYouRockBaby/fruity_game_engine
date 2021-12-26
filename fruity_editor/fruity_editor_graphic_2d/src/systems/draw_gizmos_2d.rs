@@ -1,7 +1,7 @@
 use crate::gizmos_service::GizmosService;
 use fruity_core::inject::Const;
+use fruity_ecs::entity::entity_reference::EntityReference;
 use fruity_editor::hooks::use_global;
-use fruity_editor::inspect::inspect_entity::SelectEntityWrapper;
 use fruity_editor::state::inspector::InspectorState;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::GREEN;
@@ -18,24 +18,24 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
     }
 
     if let Some(selected) = inspector_state.get_selected() {
-        let entity =
-            if let Some(entity) = selected.as_any_ref().downcast_ref::<SelectEntityWrapper>() {
-                entity
-            } else {
-                return;
-            };
+        let entity = if let Some(entity) = selected.as_any_ref().downcast_ref::<EntityReference>() {
+            entity
+        } else {
+            return;
+        };
 
-        let transform = if let Some(transform) = entity.read_component::<Transform2d>() {
+        let transform = if let Some(transform) = entity.read_component::<Transform2d>("Transform2d")
+        {
             transform
         } else {
             return;
         };
 
-        if let Some(_) = entity.read_component::<Translate2d>() {
+        if let Some(_) = entity.read_component::<Translate2d>("Translate2d") {
             let bottom_left = transform.transform * Vector2d::new(-0.5, -0.5);
             let top_right = transform.transform * Vector2d::new(0.5, 0.5);
 
-            if let Some(_) = entity.read_component::<Scale2d>() {
+            if let Some(_) = entity.read_component::<Scale2d>("Scale2d") {
                 let selected_entity_2 = entity.clone();
                 gizmos_service.draw_resize_helper(
                     bottom_left,
@@ -47,12 +47,13 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
 
                         // Get the translate and the scale origin
                         let translate_origin = {
-                            let translate = entity.read_component::<Translate2d>().unwrap();
+                            let translate =
+                                entity.read_component::<Translate2d>("Translate2d").unwrap();
                             translate.vec
                         };
 
                         let scale_origin = {
-                            let scale = entity.read_component::<Scale2d>().unwrap();
+                            let scale = entity.read_component::<Scale2d>("Scale2d").unwrap();
                             scale.vec
                         };
 
@@ -60,12 +61,15 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
                             let cursor_movement = cursor_position - start_pos;
 
                             // Move the entity with the cursor
-                            let mut translate =
-                                selected_entity.write_component::<Translate2d>().unwrap();
+                            let mut translate = selected_entity
+                                .write_component::<Translate2d>("Translate2d")
+                                .unwrap();
                             translate.vec = translate_origin + cursor_movement / 2.0;
 
                             // Resize the entity with the cursor
-                            let mut scale = selected_entity.write_component::<Scale2d>().unwrap();
+                            let mut scale = selected_entity
+                                .write_component::<Scale2d>("Scale2d")
+                                .unwrap();
 
                             scale.vec.x = if fixed_x {
                                 scale_origin.x + cursor_movement.x
@@ -95,13 +99,15 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
 
                     // Get the translate origin
                     let translate_origin = {
-                        let translate = entity.read_component::<Translate2d>().unwrap();
+                        let translate =
+                            entity.read_component::<Translate2d>("Translate2d").unwrap();
                         translate.vec
                     };
 
                     drag_action.while_dragging(move |cursor_position, start_pos| {
-                        let mut translate =
-                            selected_entity.write_component::<Translate2d>().unwrap();
+                        let mut translate = selected_entity
+                            .write_component::<Translate2d>("Translate2d")
+                            .unwrap();
 
                         // Move the entity with the cursor
                         let cursor_movement = cursor_position - start_pos;

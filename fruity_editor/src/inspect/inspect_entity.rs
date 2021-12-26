@@ -21,79 +21,12 @@ use crate::EditorComponentService;
 use crate::InspectorState;
 use crate::WorldState;
 pub use comp_state::CloneState;
-use fruity_any::*;
-use fruity_core::introspect::FieldInfo;
-use fruity_core::introspect::IntrospectObject;
-use fruity_core::introspect::MethodInfo;
-use fruity_core::serialize::serialized::SerializableObject;
-use fruity_ecs::component::component::Component;
-use fruity_ecs::component::component_guard::TypedComponentReadGuard;
-use fruity_ecs::component::component_guard::TypedComponentWriteGuard;
-use fruity_ecs::component::component_reference::ComponentReference;
-use fruity_ecs::entity::archetype::entity::Entity;
+use fruity_ecs::entity::entity_reference::EntityReference;
 use fruity_ecs::entity::entity_service::EntityService;
-use std::ops::Deref;
 use std::sync::Arc;
 
-#[derive(Debug, FruityAny, Clone)]
-pub struct SelectEntityWrapper(pub Vec<ComponentReference>);
-
-impl SelectEntityWrapper {
-    pub fn read_component<T: Component>(&self) -> Option<TypedComponentReadGuard<T>> {
-        let component = self.0.iter().find_map(|component| {
-            let component_reader = component.read();
-            if let Some(_) = component_reader.deref().as_any_ref().downcast_ref::<T>() {
-                Some(component)
-            } else {
-                None
-            }
-        })?;
-
-        let component = component.read();
-        component.downcast::<T>()
-    }
-
-    pub fn write_component<T: Component>(&self) -> Option<TypedComponentWriteGuard<T>> {
-        let component = self
-            .0
-            .iter()
-            .find_map(|component| {
-                let component_reader = component.read();
-                if let Some(_) = component_reader.deref().as_any_ref().downcast_ref::<T>() {
-                    Some(component)
-                } else {
-                    None
-                }
-            })
-            .unwrap();
-
-        let component = component.write();
-        component.downcast::<T>()
-    }
-}
-
-impl IntrospectObject for SelectEntityWrapper {
-    fn get_class_name(&self) -> String {
-        "SelectEntityWrapper".to_string()
-    }
-
-    fn get_method_infos(&self) -> Vec<MethodInfo> {
-        vec![]
-    }
-
-    fn get_field_infos(&self) -> Vec<FieldInfo> {
-        vec![]
-    }
-}
-
-impl SerializableObject for SelectEntityWrapper {
-    fn duplicate(&self) -> Box<dyn SerializableObject> {
-        Box::new(self.clone())
-    }
-}
-
 #[topo::nested]
-pub fn inspect_entity(entity_wrapper: &mut SelectEntityWrapper) -> UIElement {
+pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
     let inspector_state = use_global::<InspectorState>();
     let component_search_text = use_state(|| "".to_string());
     let display_add_component_popup = use_state(|| false);
@@ -104,29 +37,9 @@ pub fn inspect_entity(entity_wrapper: &mut SelectEntityWrapper) -> UIElement {
         .require::<EditorComponentService>();
     let editor_component_service = editor_component_service.read();
 
-    // TODO: Can probably be more consize with a specific Vec func
-    let entity = entity_wrapper.read_component::<Entity>().unwrap();
-    let entity_id = entity.entity_id;
-
-    let other_components = entity_wrapper
-        .0
-        .iter()
-        .filter_map(|component| {
-            let component_reader = component.read();
-            if let Some(_) = component_reader
-                .deref()
-                .as_any_ref()
-                .downcast_ref::<Entity>()
-            {
-                None
-            } else {
-                Some(component.clone())
-            }
-        })
-        .collect::<Vec<_>>();
-
-    let entity_wrapper_2 = entity_wrapper.clone();
-    let entity_wrapper_3 = entity_wrapper.clone();
+    let entity_id = entity.get_entity_id();
+    let entity_2 = entity.clone();
+    let entity_3 = entity.clone();
     let head = Column {
         children: vec![Row {
             children: vec![
@@ -134,10 +47,9 @@ pub fn inspect_entity(entity_wrapper: &mut SelectEntityWrapper) -> UIElement {
                     size: UISize::Units(50.0),
                     child: Checkbox {
                         label: "".to_string(),
-                        value: entity.enabled,
+                        value: entity.is_enabled(),
                         on_change: Arc::new(move |value| {
-                            let mut entity = entity_wrapper_2.write_component::<Entity>().unwrap();
-                            entity.enabled = value;
+                            entity_2.set_enabled(value);
                         }),
                     }
                     .elem(),
@@ -145,11 +57,10 @@ pub fn inspect_entity(entity_wrapper: &mut SelectEntityWrapper) -> UIElement {
                 RowItem {
                     size: UISize::Fill,
                     child: Input {
-                        value: entity.name.to_string(),
+                        value: entity.get_name(),
                         placeholder: "Name ...".to_string(),
                         on_change: Arc::new(move |value: &str| {
-                            let mut entity = entity_wrapper_3.write_component::<Entity>().unwrap();
-                            entity.name = value.to_string();
+                            entity_3.set_name(value);
                         }),
                         ..Default::default()
                     }
@@ -164,8 +75,8 @@ pub fn inspect_entity(entity_wrapper: &mut SelectEntityWrapper) -> UIElement {
     .elem();
 
     let components = Column {
-        children: other_components
-            .iter()
+        children: entity
+            .iter_all_components()
             .enumerate()
             .map(|(index, component)| {
                 let component_reader = component.read();

@@ -4,6 +4,9 @@ pub mod entity;
 /// Provides a query over entities with given types
 pub mod entity_query;
 
+/// Provides a reference to an entity
+pub mod entity_reference;
+
 /// Provides a collections to store archetypes
 pub mod entity_service;
 

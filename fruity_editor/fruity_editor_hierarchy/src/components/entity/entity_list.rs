@@ -1,8 +1,7 @@
 use fruity_core::resource::resource_reference::ResourceReference;
-use fruity_ecs::entity::archetype::entity::Entity;
+use fruity_ecs::entity::entity_reference::EntityReference;
 use fruity_ecs::entity::entity_service::EntityService;
 use fruity_editor::hooks::use_global;
-use fruity_editor::inspect::inspect_entity::SelectEntityWrapper;
 use fruity_editor::state::inspector::InspectorState;
 use fruity_editor::state::world::WorldState;
 use fruity_editor::ui_element::input::Button;
@@ -23,15 +22,19 @@ pub fn entity_list_component() -> UIElement {
 
     let all_entities = entity_service_reader
         .iter_all_entities()
-        .map(|components| Arc::new(SelectEntityWrapper(components)))
         .collect::<Vec<_>>();
 
     let root_entities = all_entities
         .iter()
         .filter(|entity| {
-            if let Some(parent) = entity.read_component::<Parent>() {
-                if let Some(_) = *parent.parent_id {
-                    false
+            if let Some(parent) = entity.get_component("Parent") {
+                let parent = parent.read();
+                if let Some(parent) = parent.downcast::<Parent>() {
+                    if let Some(_) = *parent.parent_id {
+                        false
+                    } else {
+                        true
+                    }
                 } else {
                     true
                 }
@@ -58,19 +61,23 @@ pub fn entity_list_component() -> UIElement {
 }
 
 pub fn draw_entity_line(
-    entity: Arc<SelectEntityWrapper>,
-    all_entities: &Vec<Arc<SelectEntityWrapper>>,
+    entity: EntityReference,
+    all_entities: &Vec<EntityReference>,
     entity_service: ResourceReference<EntityService>,
 ) -> UIElement {
-    let entity = entity.read_component::<Entity>().unwrap();
-    let entity_id = entity.entity_id;
+    let entity_id = entity.get_entity_id();
 
     let children = all_entities
         .iter()
         .filter(|entity| {
-            if let Some(parent) = entity.read_component::<Parent>() {
-                if let Some(parent_id) = *parent.parent_id {
-                    parent_id == entity_id
+            if let Some(parent) = entity.get_component("Parent") {
+                let parent = parent.read();
+                if let Some(parent) = parent.downcast::<Parent>() {
+                    if let Some(parent_id) = *parent.parent_id {
+                        parent_id == entity_id
+                    } else {
+                        false
+                    }
                 } else {
                     false
                 }
@@ -83,15 +90,10 @@ pub fn draw_entity_line(
     if children.len() > 0 {
         let entity_service_2 = entity_service.clone();
         Collapsible {
-            title: entity.name.clone(),
+            title: entity.get_name(),
             on_click: Some(Arc::new(move || {
                 let inspector_state = use_global::<InspectorState>();
-                let entity_service_reader = entity_service.read();
-                let full_entity = entity_service_reader.get_full_entity(entity_id);
-
-                if let Some(full_entity) = full_entity {
-                    inspector_state.select(Box::new(SelectEntityWrapper(full_entity)));
-                }
+                inspector_state.select(Box::new(entity.clone()));
             })),
             child: Column {
                 children: children
@@ -108,15 +110,10 @@ pub fn draw_entity_line(
         .elem()
     } else {
         Button {
-            label: entity.name.clone(),
+            label: entity.get_name(),
             on_click: Arc::new(move || {
                 let inspector_state = use_global::<InspectorState>();
-                let entity_service_reader = entity_service.read();
-                let full_entity = entity_service_reader.get_full_entity(entity_id);
-
-                if let Some(full_entity) = full_entity {
-                    inspector_state.select(Box::new(SelectEntityWrapper(full_entity)));
-                }
+                inspector_state.select(Box::new(entity.clone()));
             }),
             ..Default::default()
         }

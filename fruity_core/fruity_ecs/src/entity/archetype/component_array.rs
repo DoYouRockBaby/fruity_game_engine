@@ -26,10 +26,13 @@ impl ComponentArray {
     }
 
     pub(crate) fn get(&self, index: &usize) -> ComponentReference {
-        let buffer_index = index * self.component_cell_size();
+        let buffer_start = index * self.component_cell_size();
+        let buffer_end = buffer_start + self.component_cell_size();
+        let component_buffer = &self.buffer[buffer_start..buffer_end];
+
         ComponentReference::new(
-            self.get_rwlock_reference(buffer_index),
-            self.get_component_data_reference(buffer_index),
+            self.get_rwlock_reference(component_buffer),
+            self.get_component_data_reference(component_buffer),
         )
     }
 
@@ -49,19 +52,20 @@ impl ComponentArray {
         std::mem::forget(component);
     }
 
-    pub(crate) fn replace(&mut self, index: usize, component: AnyComponent) {
-        /*let mut new_component_buffer = Vec::<u8>::with_capacity(self.component_cell_size());
-        new_component_buffer.resize(self.component_cell_size(), 0);*/
-
+    pub(crate) fn remove(&mut self, index: usize) -> AnyComponent {
         let start_buffer = index * self.component_cell_size();
         let end_buffer = start_buffer + self.component_cell_size();
 
-        let mut component_buffer = &mut self.buffer[start_buffer..end_buffer];
-        Self::encode_rwlock_reference(&mut component_buffer);
-        component.encode(&mut component_buffer[size_of::<RwLock<()>>()..]);
+        let component_buffer = self
+            .buffer
+            .drain(start_buffer..end_buffer)
+            .collect::<Vec<_>>();
 
-        // TODO: Release the memory on drain
-        std::mem::forget(component);
+        let component = self
+            .get_component_data_reference(&component_buffer)
+            .duplicate();
+
+        AnyComponent::from_box(component)
     }
 
     fn encode_rwlock_reference(mut buffer: &mut [u8]) {
@@ -79,18 +83,17 @@ impl ComponentArray {
         std::mem::forget(rwlock);
     }
 
-    fn get_component_data_reference(&self, buffer_index: usize) -> &dyn Component {
-        let buffer_start = buffer_index + size_of::<RwLock<()>>();
-        let buffer_end = buffer_start + self.component_encode_size;
-        let component_data_buffer = &self.buffer[buffer_start..buffer_end];
-        (self.decoder)(component_data_buffer)
-    }
-
-    fn get_rwlock_reference(&self, buffer_start: usize) -> &RwLock<()> {
-        let buffer_end = buffer_start + size_of::<RwLock<()>>();
-        let rwlock_buffer = &self.buffer[buffer_start..buffer_end];
+    fn get_rwlock_reference<'a>(&self, component_buffer: &'a [u8]) -> &'a RwLock<()> {
+        let buffer_end = size_of::<RwLock<()>>();
+        let rwlock_buffer = &component_buffer[0..buffer_end];
         let (_head, body, _tail) = unsafe { rwlock_buffer.align_to::<RwLock<()>>() };
         &body[0]
+    }
+
+    fn get_component_data_reference<'a>(&self, component_buffer: &'a [u8]) -> &'a dyn Component {
+        let buffer_start = size_of::<RwLock<()>>();
+        let component_data_buffer = &component_buffer[buffer_start..];
+        (self.decoder)(component_data_buffer)
     }
 
     fn component_cell_size(&self) -> usize {

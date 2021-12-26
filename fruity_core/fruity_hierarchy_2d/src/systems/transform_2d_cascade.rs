@@ -32,22 +32,18 @@ pub fn transform_2d_cascade_for_nested_level(
             move |child: Read<Parent>, mut transform: Write<Transform2d>| {
                 if child.nested_level == nested_level {
                     // Get the parent entity reference
-                    let parent_components = if let Some(parent_id) = &child.parent_id.deref() {
+                    let parent_entity = if let Some(parent_id) = &child.parent_id.deref() {
                         let entity_service_reader = entity_service.read();
-                        entity_service_reader.get_entity(*parent_id, entity_type!["Transform2d"])
+                        entity_service_reader.get_entity(*parent_id)
                     } else {
                         None
                     };
 
                     // Apply the parent transform to the child
-                    if let Some(parent_components) = parent_components {
-                        if parent_components.len() == 1 {
-                            let parent_transform = parent_components.get(0).unwrap().read();
-                            let parent_transform = parent_transform
-                                .as_any_ref()
-                                .downcast_ref::<Transform2d>()
-                                .unwrap();
-
+                    if let Some(parent_entity) = parent_entity {
+                        if let Some(parent_transform) =
+                            parent_entity.read_component::<Transform2d>("Transform2d")
+                        {
                             transform.transform = parent_transform.transform * transform.transform;
                             did_transform.store(true, Relaxed);
                         }

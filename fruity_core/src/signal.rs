@@ -16,6 +16,7 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::RwLock;
 
 struct IdGenerator {
     incrementer: usize,
@@ -48,7 +49,7 @@ struct InternSignal<T: 'static> {
 /// An observer pattern
 #[derive(Clone, FruityAny)]
 pub struct Signal<T: 'static> {
-    intern: Arc<Mutex<InternSignal<T>>>,
+    intern: Arc<RwLock<InternSignal<T>>>,
 }
 
 impl<T> Default for Signal<T> {
@@ -61,7 +62,7 @@ impl<T> Signal<T> {
     /// Returns a Signal
     pub fn new() -> Signal<T> {
         Signal {
-            intern: Arc::new(Mutex::new(InternSignal {
+            intern: Arc::new(RwLock::new(InternSignal {
                 observers: Vec::new(),
             })),
         }
@@ -73,7 +74,7 @@ impl<T> Signal<T> {
         &self,
         observer: F,
     ) -> ObserverIdentifier {
-        let mut intern = self.intern.lock().unwrap();
+        let mut intern = self.intern.write().unwrap();
 
         let mut id_generator = ID_GENERATOR.lock().unwrap();
         let identifier = ObserverIdentifier(id_generator.generate_id());
@@ -84,7 +85,7 @@ impl<T> Signal<T> {
 
     /// Remove an observer from the signal
     pub fn remove_observer(&self, observer_id: ObserverIdentifier) {
-        let mut intern = self.intern.lock().unwrap();
+        let mut intern = self.intern.write().unwrap();
         let observer_index = intern
             .observers
             .iter()
@@ -100,7 +101,7 @@ impl<T> Signal<T> {
     /// Notify that the event happened
     /// This will launch all the observers that are registered for this signal
     pub fn notify(&self, event: T) {
-        let intern = self.intern.lock().unwrap();
+        let intern = self.intern.read().unwrap();
         intern
             .observers
             .iter()

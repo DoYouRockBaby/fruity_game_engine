@@ -1,8 +1,8 @@
 use crate::ColliderState;
 use fruity_core::inject::Const;
 use fruity_core::inject::Ref;
+use fruity_ecs::entity::entity_reference::EntityReference;
 use fruity_editor::hooks::use_global;
-use fruity_editor::inspect::inspect_entity::SelectEntityWrapper;
 use fruity_editor::state::inspector::InspectorState;
 use fruity_editor_graphic_2d::gizmos_service::GizmosService;
 use fruity_graphic::math::matrix3::Matrix3;
@@ -25,20 +25,20 @@ pub fn draw_rectangle_collider_2d_gizmos(
     }
 
     if let Some(selected) = inspector_state.get_selected() {
-        let entity =
-            if let Some(entity) = selected.as_any_ref().downcast_ref::<SelectEntityWrapper>() {
-                entity
-            } else {
-                return;
-            };
+        let entity = if let Some(entity) = selected.as_any_ref().downcast_ref::<EntityReference>() {
+            entity
+        } else {
+            return;
+        };
 
-        let transform = if let Some(transform) = entity.read_component::<Transform2d>() {
+        let transform = if let Some(transform) = entity.read_component::<Transform2d>("Transform2d")
+        {
             transform.transform.clone()
         } else {
             Matrix3::default()
         };
 
-        if let Some(rect_collider) = entity.read_component::<RectCollider>() {
+        if let Some(rect_collider) = entity.read_component::<RectCollider>("RectCollider") {
             let bottom_left = transform * rect_collider.bottom_left;
             let top_right = transform * rect_collider.top_right;
 
@@ -66,7 +66,9 @@ pub fn draw_rectangle_collider_2d_gizmos(
 
                     // Get the rect origin
                     let (bottom_left_origin, top_right_origin) = {
-                        let collider = entity.read_component::<RectCollider>().unwrap();
+                        let collider = entity
+                            .read_component::<RectCollider>("RectCollider")
+                            .unwrap();
                         (collider.bottom_left, collider.top_right)
                     };
 
@@ -74,8 +76,9 @@ pub fn draw_rectangle_collider_2d_gizmos(
                         let cursor_movement = cursor_position - start_pos;
 
                         // Move the entity with the cursor
-                        let mut collider =
-                            selected_entity.write_component::<RectCollider>().unwrap();
+                        let mut collider = selected_entity
+                            .write_component::<RectCollider>("RectCollider")
+                            .unwrap();
                         collider.bottom_left = bottom_left_origin + cursor_movement / 2.0;
 
                         // Resize the entity with the cursor

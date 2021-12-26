@@ -20,18 +20,16 @@ pub fn update_nested_level(entity_service: Ref<EntityService>) {
                 .unwrap();
 
             // Get the parent entity reference
-            let parent_components = if let Some(parent_id) = &child_writer.parent_id.deref() {
+            let parent_entity = if let Some(parent_id) = &child_writer.parent_id.deref() {
                 let entity_service_reader = entity_service.read();
-                entity_service_reader.get_entity(*parent_id, entity_type!["Parent"])
+                entity_service_reader.get_entity(*parent_id)
             } else {
                 None
             };
 
             // Set the nested level as the parent one plus one
-            if let Some(parent_components) = parent_components {
-                if let Some(parent) = parent_components.get(0) {
-                    let parent = parent.read();
-                    let parent = parent.as_any_ref().downcast_ref::<Parent>().unwrap();
+            if let Some(parent_entity) = parent_entity {
+                if let Some(parent) = parent_entity.read_component::<Parent>("Parent") {
                     child_writer.nested_level = parent.nested_level + 1;
                 } else {
                     child_writer.nested_level = 1;
@@ -53,18 +51,16 @@ pub fn update_nested_level(entity_service: Ref<EntityService>) {
                         .unwrap();
 
                     // Get the parent entity reference
-                    let parent_components = if let Some(parent_id) = &parent_id {
+                    let parent_entity = if let Some(parent_id) = &parent_id {
                         let entity_service_reader = entity_service.read();
-                        entity_service_reader.get_entity(*parent_id, entity_type!["Entity"])
+                        entity_service_reader.get_entity(*parent_id)
                     } else {
                         None
                     };
 
                     // Set the nested level as the parent one plus one
-                    if let Some(parent_components) = parent_components {
-                        if let Some(parent) = parent_components.get(0) {
-                            let parent = parent.read();
-                            let parent = parent.as_any_ref().downcast_ref::<Parent>().unwrap();
+                    if let Some(parent_entity) = parent_entity {
+                        if let Some(parent) = parent_entity.read_component::<Parent>("Parent") {
                             child_writer.nested_level = parent.nested_level + 1;
                         } else {
                             child_writer.nested_level = 1;
