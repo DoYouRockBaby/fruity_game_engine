@@ -165,7 +165,8 @@ impl Archetype {
         let entity_id = entity_id_array.remove(index);
         let name = name_array.remove(index);
         let enabled = enabled_array.remove(index);
-        lock_array.remove(index);
+        let lock = lock_array.remove(index);
+        let _write_guard = lock.write().unwrap();
 
         // Remove the entity components from the storage
         let components = {

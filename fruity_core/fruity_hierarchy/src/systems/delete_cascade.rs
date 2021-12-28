@@ -1,7 +1,7 @@
 use crate::Parent;
 use fruity_core::inject::Ref;
-use fruity_ecs::entity::entity::EntityId;
-use fruity_ecs::entity::entity_query::Inject2;
+use fruity_ecs::entity::entity_query::Inject1;
+use fruity_ecs::entity::entity_reference::EntityReference;
 use fruity_ecs::entity::entity_service::EntityService;
 use fruity_ecs::entity_type;
 use std::ops::Deref;
@@ -18,8 +18,10 @@ pub fn delete_cascade(entity_service: Ref<EntityService>) {
 
             entity_service_reader.for_each(
                 entity_type!["Parent"],
-                Inject2::new(move |entity_id: EntityId, parent: &Parent| {
+                Inject1::new(move |entity: EntityReference| {
                     let is_child_of_deleted = {
+                        let entity = entity.read();
+                        let parent = entity.read_typed_component::<Parent>("Parent").unwrap();
                         if let Some(entity_parent_id) = parent.parent_id.deref() {
                             *entity_parent_id == parent_id
                         } else {
@@ -27,9 +29,12 @@ pub fn delete_cascade(entity_service: Ref<EntityService>) {
                         }
                     };
 
-                    std::mem::drop(parent);
-
                     if is_child_of_deleted {
+                        let entity_id = {
+                            let entity = entity.read();
+                            entity.get_entity_id()
+                        };
+
                         let entity_service = entity_service.read();
                         entity_service.remove(entity_id).ok();
                     }

@@ -289,9 +289,10 @@ impl<'s> SystemService {
         let is_paused = self.is_paused();
 
         self.iter_system_pools().for_each(|pool| {
-            let pool_ignore_reader = pool.ignore_once.read().unwrap();
-            let pool_ignore = pool_ignore_reader.clone();
-            std::mem::drop(pool_ignore_reader);
+            let pool_ignore = {
+                let pool_ignore_reader = pool.ignore_once.read().unwrap();
+                pool_ignore_reader.clone()
+            };
 
             if !pool_ignore {
                 pool.systems.iter().par_bridge().for_each(|system| {
@@ -318,9 +319,10 @@ impl<'s> SystemService {
     pub fn run_begin(&self) {
         let resource_container = self.resource_container.clone();
         self.iter_begin_system_pools().for_each(|pool| {
-            let pool_ignore_reader = pool.ignore_once.read().unwrap();
-            let pool_ignore = pool_ignore_reader.clone();
-            std::mem::drop(pool_ignore_reader);
+            let pool_ignore = {
+                let pool_ignore_reader = pool.ignore_once.read().unwrap();
+                pool_ignore_reader.clone()
+            };
 
             if !pool_ignore {
                 pool.systems.iter().par_bridge().for_each(|system| {
@@ -345,9 +347,10 @@ impl<'s> SystemService {
     pub fn run_end(&self) {
         let resource_container = self.resource_container.clone();
         self.iter_end_system_pools().for_each(|pool| {
-            let pool_ignore_reader = pool.ignore_once.read().unwrap();
-            let pool_ignore = pool_ignore_reader.clone();
-            std::mem::drop(pool_ignore_reader);
+            let pool_ignore = {
+                let pool_ignore_reader = pool.ignore_once.read().unwrap();
+                pool_ignore_reader.clone()
+            };
 
             if !pool_ignore {
                 pool.systems.iter().par_bridge().for_each(|system| {

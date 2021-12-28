@@ -37,6 +37,8 @@
 [ ] Select an object when clicking on it (set_scissor_rect)
 [ ] Add componnent from editor
 [ ] Remove component from editor
+[ ] Add a cool free camera for 2D view
+[ ] Add a cool grid for 2D view
 
 ## Graphics
 
@@ -66,7 +68,7 @@
 [ ] Tiles editor (make something like RPG maker, as easy to use as possible)
 [ ] Particles
 
-### Nice to have
+## Nice to have
 
 [ ] SplineBrush (something like spriteshape for lines but more easy to use, width should be modifiable, thought to be used with a graphic tablet)
 [ ] ShapeBrush (something like spriteshape but more easy to use, thought to be used with a graphic tablet)
@@ -98,7 +100,7 @@
 [ ] Hot reload rust
 [X] Implements a profiling tool
 
-# Code clean
+## Code clean
 
 [ ] Put an auto-analyser and clean the code
 [ ] Tests everywhere
@@ -106,3 +108,7 @@
 [ ] Remove as many unwrap as possible (ecs and javascript)
 [ ] A lot of unsafe code were created to avoid lifetime issue in ecs, remove as many as possible
 [ ] Use a tool that detect unused dependencies
+
+## For the future
+
+[ ] Unreal released a new version of there engine with something called the Nanites, try to make some research about it (https://youtu.be/TMorJX3Nj6U)
