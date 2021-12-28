@@ -37,7 +37,8 @@ pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
         .require::<EditorComponentService>();
     let editor_component_service = editor_component_service.read();
 
-    let entity_id = entity.get_entity_id();
+    let entity_reader = entity.read();
+    let entity_id = entity_reader.get_entity_id();
     let entity_2 = entity.clone();
     let entity_3 = entity.clone();
     let head = Column {
@@ -47,9 +48,10 @@ pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
                     size: UISize::Units(50.0),
                     child: Checkbox {
                         label: "".to_string(),
-                        value: entity.is_enabled(),
+                        value: entity_reader.is_enabled(),
                         on_change: Arc::new(move |value| {
-                            entity_2.set_enabled(value);
+                            let entity_writer = entity_2.write();
+                            entity_writer.set_enabled(value);
                         }),
                     }
                     .elem(),
@@ -57,10 +59,11 @@ pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
                 RowItem {
                     size: UISize::Fill,
                     child: Input {
-                        value: entity.get_name(),
+                        value: entity_reader.get_name(),
                         placeholder: "Name ...".to_string(),
                         on_change: Arc::new(move |value: &str| {
-                            entity_3.set_name(value);
+                            let entity_writer = entity_3.write();
+                            entity_writer.set_name(value);
                         }),
                         ..Default::default()
                     }
@@ -76,13 +79,13 @@ pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
 
     let components = Column {
         children: entity
-            .iter_all_components()
+            .iter_all_component()
             .enumerate()
             .map(|(index, component)| {
                 let component_reader = component.read();
                 Collapsible {
                     title: component_reader.get_class_name(),
-                    child: inspector_state.inspect_component(component.clone()),
+                    child: inspector_state.inspect_component(component),
                     secondary_actions: vec![MenuItem {
                         label: "Delete".to_string(),
                         on_click: Arc::new(move || {

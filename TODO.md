@@ -13,6 +13,7 @@
 [X] Move ECS structure to a struct of array instead an array of struct (more efficient, easier to implement)
 [X] Implement ECS hierarchy
 [X] Remove the "Entity" component to replace it by a more cache friendly solution
+[ ] Propagate entity/component references changes when a component is added/removed
 [ ] Add an exception when you try to access a deleted entity, propagate it into js
 [ ] There should be some memory leak in archetype
 [ ] Test and stabilize ECS

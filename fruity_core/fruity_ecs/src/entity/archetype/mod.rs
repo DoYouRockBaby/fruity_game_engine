@@ -21,6 +21,7 @@ pub(crate) struct InnerArchetype {
     pub(crate) entity_id_array: RwLock<Vec<EntityId>>,
     pub(crate) name_array: RwLock<Vec<String>>,
     pub(crate) enabled_array: RwLock<Vec<bool>>,
+    pub(crate) lock_array: RwLock<Vec<RwLock<()>>>,
     pub(crate) component_arrays: BTreeMap<String, Arc<RwLock<ComponentArray>>>,
 }
 
@@ -52,6 +53,7 @@ impl Archetype {
         let entity_id_array = RwLock::new(vec![entity_id]);
         let name_array = RwLock::new(vec![name.to_string()]);
         let enabled_array = RwLock::new(vec![enabled]);
+        let lock_array = RwLock::new(vec![RwLock::new(())]);
 
         let mut component_arrays = BTreeMap::new();
         for component in components {
@@ -67,6 +69,7 @@ impl Archetype {
                 entity_id_array,
                 name_array,
                 enabled_array,
+                lock_array,
                 component_arrays,
             }),
         }
@@ -130,10 +133,12 @@ impl Archetype {
         let mut entity_id_array = self.inner.entity_id_array.write().unwrap();
         let mut name_array = self.inner.name_array.write().unwrap();
         let mut enabled_array = self.inner.enabled_array.write().unwrap();
+        let mut lock_array = self.inner.lock_array.write().unwrap();
 
         entity_id_array.push(entity_id);
         name_array.push(name.to_string());
         enabled_array.push(enabled);
+        lock_array.push(RwLock::new(()));
 
         // Store all the components
         for component in components {
@@ -155,10 +160,12 @@ impl Archetype {
         let mut entity_id_array = self.inner.entity_id_array.write().unwrap();
         let mut name_array = self.inner.name_array.write().unwrap();
         let mut enabled_array = self.inner.enabled_array.write().unwrap();
+        let mut lock_array = self.inner.lock_array.write().unwrap();
 
         let entity_id = entity_id_array.remove(index);
         let name = name_array.remove(index);
         let enabled = enabled_array.remove(index);
+        lock_array.remove(index);
 
         // Remove the entity components from the storage
         let components = {

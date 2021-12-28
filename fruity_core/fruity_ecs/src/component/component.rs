@@ -10,6 +10,7 @@ use fruity_core::object_factory_service::ObjectFactoryService;
 use fruity_core::serialize::serialized::SerializableObject;
 use fruity_core::serialize::serialized::Serialized;
 use fruity_core::serialize::Deserialize;
+use fruity_core::serialize::Serialize;
 use std::fmt::Debug;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -34,6 +35,15 @@ pub trait Component: IntrospectObject + Debug {
 
     /// Create a new component that is a clone of self
     fn duplicate(&self) -> Box<dyn Component>;
+}
+
+impl Serialize for &dyn Component {
+    fn serialize(&self) -> Option<Serialized> {
+        let native_serialized =
+            Serialized::NativeObject(Box::new(AnyComponent::from_box(self.duplicate())));
+        let serialized = native_serialized.serialize_native_objects();
+        Some(serialized)
+    }
 }
 
 /// An container for a component without knowing the instancied type
@@ -86,7 +96,7 @@ impl FruityTryFrom<Serialized> for AnyComponent {
 
 impl IntrospectObject for AnyComponent {
     fn get_class_name(&self) -> String {
-        "AnyComponent".to_string()
+        self.component.get_class_name()
     }
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
@@ -167,5 +177,154 @@ impl SerializableObject for AnyComponent {
     fn duplicate(&self) -> Box<dyn SerializableObject> {
         let component = self.component.duplicate();
         Box::new(AnyComponent { component })
+    }
+}
+
+/// An container for a component read reference to inject it into the scripting language
+#[derive(FruityAny, Clone, Debug)]
+pub struct ReadComponent {
+    component: &'static dyn Component,
+}
+
+impl ReadComponent {
+    /// Returns a ReadComponent
+    pub fn new(component: &dyn Component) -> Self {
+        // TODO: Try to find a way to remove that
+        let component = unsafe { std::mem::transmute::<&dyn Component, &dyn Component>(component) };
+
+        Self { component }
+    }
+}
+
+impl IntrospectObject for ReadComponent {
+    fn get_class_name(&self) -> String {
+        "ReadComponent".to_string()
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        self.component
+            .get_field_infos()
+            .into_iter()
+            .map(|field_info| FieldInfo {
+                name: field_info.name,
+                serializable: field_info.serializable,
+                getter: Arc::new(move |this| {
+                    let this = this.downcast_ref::<ReadComponent>().unwrap();
+                    (field_info.getter)(this.component.as_any_ref())
+                }),
+                setter: match field_info.setter {
+                    SetterCaller::Const(call) => {
+                        SetterCaller::Const(Arc::new(move |this, args| {
+                            let this = this.downcast_ref::<ReadComponent>().unwrap();
+                            call(this.component.as_any_ref(), args)
+                        }))
+                    }
+                    SetterCaller::Mut(_) => SetterCaller::None,
+                    SetterCaller::None => SetterCaller::None,
+                },
+            })
+            .collect::<Vec<_>>()
+    }
+
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        self.component
+            .get_method_infos()
+            .into_iter()
+            .filter_map(|method_info| match method_info.call {
+                MethodCaller::Const(call) => Some(MethodInfo {
+                    name: method_info.name,
+                    call: MethodCaller::Const(Arc::new(move |this, args| {
+                        let this = this.downcast_ref::<ReadComponent>().unwrap();
+                        call(this.component.as_any_ref(), args)
+                    })),
+                }),
+                MethodCaller::Mut(_) => None,
+            })
+            .collect::<Vec<_>>()
+    }
+}
+
+impl SerializableObject for ReadComponent {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
+    }
+}
+
+/// An container for a component read reference to inject it into the scripting language
+#[derive(FruityAny, Debug)]
+pub struct WriteComponent {
+    component: &'static mut dyn Component,
+}
+
+impl WriteComponent {
+    /// Returns a WriteComponent
+    pub fn new(component: &mut dyn Component) -> Self {
+        // TODO: Try to find a way to remove that
+        let component =
+            unsafe { std::mem::transmute::<&mut dyn Component, &mut dyn Component>(component) };
+
+        Self { component }
+    }
+}
+
+impl IntrospectObject for WriteComponent {
+    fn get_class_name(&self) -> String {
+        "WriteComponent".to_string()
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        self.component
+            .get_field_infos()
+            .into_iter()
+            .map(|field_info| FieldInfo {
+                name: field_info.name,
+                serializable: field_info.serializable,
+                getter: Arc::new(move |this| {
+                    let this = this.downcast_ref::<WriteComponent>().unwrap();
+                    (field_info.getter)(this.component.as_any_ref())
+                }),
+                setter: match field_info.setter {
+                    SetterCaller::Const(call) => {
+                        SetterCaller::Const(Arc::new(move |this, args| {
+                            let this = this.downcast_ref::<WriteComponent>().unwrap();
+                            call(this.component.as_any_ref(), args)
+                        }))
+                    }
+                    SetterCaller::Mut(call) => SetterCaller::Mut(Arc::new(move |this, args| {
+                        let this = this.downcast_mut::<WriteComponent>().unwrap();
+                        call(this.component.as_any_mut(), args)
+                    })),
+                    SetterCaller::None => SetterCaller::None,
+                },
+            })
+            .collect::<Vec<_>>()
+    }
+
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        self.component
+            .get_method_infos()
+            .into_iter()
+            .map(|method_info| MethodInfo {
+                name: method_info.name,
+                call: match method_info.call {
+                    MethodCaller::Const(call) => {
+                        MethodCaller::Const(Arc::new(move |this, args| {
+                            let this = this.downcast_ref::<WriteComponent>().unwrap();
+                            call(this.component.as_any_ref(), args)
+                        }))
+                    }
+                    MethodCaller::Mut(call) => MethodCaller::Mut(Arc::new(move |this, args| {
+                        let this = this.downcast_mut::<WriteComponent>().unwrap();
+                        call(this.component.as_any_mut(), args)
+                    })),
+                },
+            })
+            .collect::<Vec<_>>()
+    }
+}
+
+impl SerializableObject for WriteComponent {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        panic!()
     }
 }

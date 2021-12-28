@@ -76,7 +76,7 @@ pub fn deserialize_v8<'a>(
                 if let Some(callback) = callback {
                     // Instantiate parameters and return handle
                     let args = args
-                        .iter()
+                        .into_iter()
                         .filter_map(|arg| serialize_v8(scope, arg))
                         .collect::<Vec<_>>();
                     let global = context.global(scope);

@@ -1,5 +1,5 @@
 use crate::ColliderState;
-use fruity_ecs::component::component_reference::ComponentReference;
+use fruity_ecs::entity::entity_reference::ComponentReference;
 use fruity_editor::components::fields::edit_introspect_fields;
 use fruity_editor::hooks::use_global;
 use fruity_editor::ui_element::input::Button;

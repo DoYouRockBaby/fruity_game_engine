@@ -156,7 +156,7 @@ pub trait IntrospectObject: Debug + FruityAny {
 
 impl<T: IntrospectObject + ?Sized> IntrospectObject for Box<T> {
     fn get_class_name(&self) -> String {
-        format!("Box<{}>", self.as_ref().get_class_name())
+        self.as_ref().get_class_name()
     }
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {

@@ -20,11 +20,11 @@ impl JsObject {
         scope: &mut v8::HandleScope,
         introspect_object: Box<dyn SerializableObject>,
     ) -> JsObject {
-        let mut object =
-            JsObject::from_intern_value(scope, "SerializableObject", introspect_object.clone());
-
         let method_infos = introspect_object.get_method_infos();
         let field_infos = introspect_object.get_field_infos();
+
+        let mut object =
+            JsObject::from_intern_value(scope, "SerializableObject", introspect_object);
 
         for method_info in method_infos {
             let function_name = format_function_name_from_rust_to_js(&method_info.name);
@@ -105,7 +105,7 @@ fn method_callback(
         pop_thread_scope_stack();
 
         // Return the result
-        inject_option_serialized_into_v8_return_value(scope, &result, &mut return_value);
+        inject_option_serialized_into_v8_return_value(scope, result, &mut return_value);
     }
 }
 
@@ -142,7 +142,7 @@ fn getter_callback(
         pop_thread_scope_stack();
 
         // Return the result
-        inject_serialized_into_v8_return_value(scope, &result, &mut return_value);
+        inject_serialized_into_v8_return_value(scope, result, &mut return_value);
     }
 }
 

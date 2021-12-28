@@ -38,7 +38,7 @@ fn iterator_next_callback(
         // Return the result
         //let serialized = serialize_v8(scope, &serialized);
         let result = match result {
-            Some(value) => serialize_v8(scope, &value),
+            Some(value) => serialize_v8(scope, value),
             None => None,
         };
 

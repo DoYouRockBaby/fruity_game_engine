@@ -3,7 +3,6 @@ use crate::Transform2d;
 use fruity_core::inject::Const;
 use fruity_core::inject::Ref;
 use fruity_ecs::entity::entity_query::Inject2;
-use fruity_ecs::entity::entity_query::Read;
 use fruity_ecs::entity::entity_service::EntityService;
 use fruity_ecs::entity_type;
 use fruity_ecs::system::system_service::SystemService;
@@ -18,7 +17,7 @@ pub fn draw_camera(
 ) {
     entity_service.for_each(
         entity_type!["Transform2d", "Camera"],
-        Inject2::new(move |transform: Read<Transform2d>, camera: Read<Camera>| {
+        Inject2::new(move |transform: &Transform2d, camera: &Camera| {
             let bottom_left = transform.transform * Vector2d::new(-0.5, -0.5);
             let top_right = transform.transform * Vector2d::new(0.5, 0.5);
 

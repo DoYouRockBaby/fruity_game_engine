@@ -32,12 +32,10 @@ impl<T: IntrospectObject + ?Sized> FruityTryFrom<Serialized> for Arc<T> {
 
     fn fruity_try_from(value: Serialized) -> Result<Self, Self::Error> {
         match value {
-            Serialized::NativeObject(value) => {
-                match value.clone().as_any_box().downcast::<Arc<T>>() {
-                    Ok(value) => Ok(*value),
-                    _ => Err(format!("Couldn't convert a Serialized to native object")),
-                }
-            }
+            Serialized::NativeObject(value) => match value.as_any_box().downcast::<Arc<T>>() {
+                Ok(value) => Ok(*value),
+                _ => Err(format!("Couldn't convert a Serialized to native object")),
+            },
             _ => Err(format!("Couldn't convert {:?} to native object", value)),
         }
     }

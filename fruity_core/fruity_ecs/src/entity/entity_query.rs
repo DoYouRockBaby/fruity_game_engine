@@ -1,193 +1,175 @@
 use crate::component::component::Component;
-use crate::component::component_guard::ComponentReadGuard;
-use crate::component::component_guard::ComponentWriteGuard;
-use crate::component::component_reference::ComponentReference;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
+use crate::entity::entity_guard::EntityReadGuard;
+use crate::entity::entity_guard::EntityWriteGuard;
 use crate::entity::entity_reference::EntityReference;
-use std::fmt::Debug;
-use std::ops::Deref;
-use std::ops::DerefMut;
 use std::sync::Arc;
-use std::sync::RwLockReadGuard;
-use std::sync::RwLockWriteGuard;
 
-/// RAII structure used to release the shared read access of a lock when dropped.
-///
-/// This structure is created by the [`read`] methods on [`ComponentRwLock`].
-///
-/// [`read`]: ComponentRwLock::read
-///
-pub struct Read<'a, T: Component> {
-    guard: RwLockReadGuard<'a, ()>,
-    component: &'a T,
-}
-
-impl<'a, T: Component> Read<'a, T> {
-    /// Returns an RwLockReadGuard which is unlocked.
-    ///
-    /// # Arguments
-    /// * `inner_guard` - The typed [`RwLockReadGuard`]
-    ///
-    pub(crate) fn new(guard: ComponentReadGuard<'a>) -> Self {
-        Self {
-            guard: guard.guard,
-            component: guard.component.as_any_ref().downcast_ref::<T>().unwrap(),
-        }
-    }
-}
-
-impl<'a, T: Component> Deref for Read<'a, T> {
-    type Target = T;
-
-    fn deref(&self) -> &<Self as Deref>::Target {
-        self.component
-    }
-}
-
-impl<'a, T: Component> Debug for Read<'a, T> {
-    fn fmt(
-        &self,
-        formatter: &mut std::fmt::Formatter<'_>,
-    ) -> std::result::Result<(), std::fmt::Error> {
-        self.guard.fmt(formatter)
-    }
-}
-
-/// RAII structure used to release the exclusive write access of a lock when dropped.
-///
-/// This structure is created by the [`write`] methods on [`ComponentRwLock`].
-///
-/// [`write`]: ComponentRwLock::write
-///
-pub struct Write<'a, T: Component> {
-    guard: RwLockWriteGuard<'a, ()>,
-    component: &'a mut T,
-}
-
-impl<'a, T: Component> Write<'a, T> {
-    /// Returns an ComponentWriteGuard which is unlocked.
-    ///
-    /// # Arguments
-    /// * `inner_guard` - The typed [`RwLockWriteGuard`]
-    ///
-    pub(crate) fn new(guard: ComponentWriteGuard<'a>) -> Self {
-        Self {
-            guard: guard.guard,
-            component: guard.component.as_any_mut().downcast_mut::<T>().unwrap(),
-        }
-    }
-}
-
-impl<'a, T: Component> Deref for Write<'a, T> {
-    type Target = T;
-
-    fn deref(&self) -> &<Self as Deref>::Target {
-        self.component
-    }
-}
-
-impl<'a, T: Component> DerefMut for Write<'a, T> {
-    fn deref_mut(&mut self) -> &mut <Self as Deref>::Target {
-        self.component
-    }
-}
-
-impl<'a, T: Component> Debug for Write<'a, T> {
-    fn fmt(
-        &self,
-        formatter: &mut std::fmt::Formatter<'_>,
-    ) -> std::result::Result<(), std::fmt::Error> {
-        self.guard.fmt(formatter)
-    }
+/// An enum to pass a guard into the [’QueryInjectable’]
+pub enum RequestedEntityGuard<'a> {
+    /// No guard required
+    None,
+    /// Read guard required
+    Read(EntityReadGuard<'a>),
+    /// Write guard required
+    Write(EntityWriteGuard<'a>),
 }
 
 /// A trait for types that can be exposed from components references
 pub trait QueryInjectable {
+    /// Does this require a read guard over the reference
+    fn require_read() -> bool;
+
+    /// Does this require a write guard over the reference
+    fn require_write() -> bool;
+
     /// Get the object
     fn from_components(
         entity: &EntityReference,
+        entity_guard: &mut RequestedEntityGuard,
         request_identifier: &mut EntityTypeIdentifier,
     ) -> Self;
 }
 
 impl QueryInjectable for EntityReference {
+    fn require_read() -> bool {
+        false
+    }
+
+    fn require_write() -> bool {
+        false
+    }
+
     fn from_components(
         entity: &EntityReference,
+        _entity_guard: &mut RequestedEntityGuard,
         _request_identifier: &mut EntityTypeIdentifier,
     ) -> Self {
         entity.clone()
     }
 }
 
-impl QueryInjectable for ComponentReference {
-    fn from_components(
-        entity: &EntityReference,
-        request_identifier: &mut EntityTypeIdentifier,
-    ) -> Self {
-        let identifier = request_identifier.0.remove(0);
-        entity.get_component(&identifier).unwrap()
-    }
-}
-
 impl QueryInjectable for EntityId {
+    fn require_read() -> bool {
+        true
+    }
+
+    fn require_write() -> bool {
+        false
+    }
+
     fn from_components(
-        entity: &EntityReference,
+        _entity: &EntityReference,
+        entity_guard: &mut RequestedEntityGuard,
         _request_identifier: &mut EntityTypeIdentifier,
     ) -> Self {
-        entity.get_entity_id()
+        match entity_guard {
+            RequestedEntityGuard::Read(guard) => guard.get_entity_id(),
+            RequestedEntityGuard::Write(guard) => guard.get_entity_id(),
+            RequestedEntityGuard::None => panic!(),
+        }
     }
 }
 
 impl QueryInjectable for String {
+    fn require_read() -> bool {
+        true
+    }
+
+    fn require_write() -> bool {
+        false
+    }
+
     fn from_components(
-        entity: &EntityReference,
+        _entity: &EntityReference,
+        entity_guard: &mut RequestedEntityGuard,
         _request_identifier: &mut EntityTypeIdentifier,
     ) -> Self {
-        entity.get_name()
+        match entity_guard {
+            RequestedEntityGuard::Read(guard) => guard.get_name(),
+            RequestedEntityGuard::Write(guard) => guard.get_name(),
+            RequestedEntityGuard::None => panic!(),
+        }
     }
 }
 
 impl QueryInjectable for bool {
+    fn require_read() -> bool {
+        true
+    }
+
+    fn require_write() -> bool {
+        false
+    }
+
     fn from_components(
-        entity: &EntityReference,
+        _entity: &EntityReference,
+        entity_guard: &mut RequestedEntityGuard,
         _request_identifier: &mut EntityTypeIdentifier,
     ) -> Self {
-        entity.is_enabled()
+        match entity_guard {
+            RequestedEntityGuard::Read(guard) => guard.is_enabled(),
+            RequestedEntityGuard::Write(guard) => guard.is_enabled(),
+            RequestedEntityGuard::None => panic!(),
+        }
     }
 }
 
-impl<'a, T: Component> QueryInjectable for Read<'a, T> {
+impl<'a, T: Component> QueryInjectable for &T {
+    fn require_read() -> bool {
+        true
+    }
+
+    fn require_write() -> bool {
+        false
+    }
+
     fn from_components(
-        entity: &EntityReference,
+        _entity: &EntityReference,
+        entity_guard: &mut RequestedEntityGuard,
         request_identifier: &mut EntityTypeIdentifier,
     ) -> Self {
         let identifier = request_identifier.0.remove(0);
-        let component = entity.get_component(&identifier).unwrap();
-
-        // TODO: Find a way to remove it
-        let reader = unsafe {
-            std::mem::transmute::<ComponentReadGuard, ComponentReadGuard>(component.read())
+        let component = match entity_guard {
+            RequestedEntityGuard::Read(guard) => guard.read_component(&identifier).unwrap(),
+            RequestedEntityGuard::Write(guard) => guard.read_component(&identifier).unwrap(),
+            RequestedEntityGuard::None => panic!(),
         };
 
-        Read::new(reader)
+        // TODO: Find a way to remove it
+        let component = unsafe { std::mem::transmute::<&dyn Component, &dyn Component>(component) };
+
+        component.as_any_ref().downcast_ref::<T>().unwrap()
     }
 }
 
-impl<'a, T: Component> QueryInjectable for Write<'a, T> {
+impl<'a, T: Component> QueryInjectable for &mut T {
+    fn require_read() -> bool {
+        false
+    }
+
+    fn require_write() -> bool {
+        true
+    }
+
     fn from_components(
-        entity: &EntityReference,
+        _entity: &EntityReference,
+        entity_guard: &mut RequestedEntityGuard,
         request_identifier: &mut EntityTypeIdentifier,
     ) -> Self {
         let identifier = request_identifier.0.remove(0);
-        let component = entity.get_component(&identifier).unwrap();
-
-        // TODO: Find a way to remove it
-        let writer = unsafe {
-            std::mem::transmute::<ComponentWriteGuard, ComponentWriteGuard>(component.write())
+        let component = match entity_guard {
+            RequestedEntityGuard::Read(_) => panic!(),
+            RequestedEntityGuard::Write(guard) => guard.write_component(&identifier).unwrap(),
+            RequestedEntityGuard::None => panic!(),
         };
 
-        Write::new(writer)
+        // TODO: Find a way to remove it
+        let component =
+            unsafe { std::mem::transmute::<&mut dyn Component, &mut dyn Component>(component) };
+
+        component.as_any_mut().downcast_mut::<T>().unwrap()
     }
 }
 
@@ -249,8 +231,23 @@ impl<T1: QueryInjectable + 'static> QueryInject for Inject1<T1> {
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read();
+            let require_write = T1::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
-            (self.0)(T1::from_components(&entity, &mut request_identifier))
+            (self.0)(T1::from_components(
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+            ))
         })
     }
 }
@@ -277,10 +274,29 @@ impl<T1: QueryInjectable + 'static, T2: QueryInjectable + 'static> QueryInject f
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read() || T2::require_read();
+            let require_write = T1::require_write() || T2::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }
@@ -313,11 +329,34 @@ impl<
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read() || T2::require_read() || T3::require_read();
+            let require_write = T1::require_write() || T2::require_write() || T3::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
-                T3::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T3::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }
@@ -352,12 +391,45 @@ impl<
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read()
+                || T2::require_read()
+                || T3::require_read()
+                || T4::require_read();
+            let require_write = T1::require_write()
+                || T2::require_write()
+                || T3::require_write()
+                || T4::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
-                T3::from_components(&entity, &mut request_identifier),
-                T4::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T3::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T4::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }
@@ -393,13 +465,52 @@ impl<
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read()
+                || T2::require_read()
+                || T3::require_read()
+                || T4::require_read()
+                || T5::require_read();
+            let require_write = T1::require_write()
+                || T2::require_write()
+                || T3::require_write()
+                || T4::require_write()
+                || T5::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
-                T3::from_components(&entity, &mut request_identifier),
-                T4::from_components(&entity, &mut request_identifier),
-                T5::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T3::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T4::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T5::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }
@@ -436,14 +547,59 @@ impl<
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read()
+                || T2::require_read()
+                || T3::require_read()
+                || T4::require_read()
+                || T5::require_read()
+                || T6::require_read();
+            let require_write = T1::require_write()
+                || T2::require_write()
+                || T3::require_write()
+                || T4::require_write()
+                || T5::require_write()
+                || T6::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
-                T3::from_components(&entity, &mut request_identifier),
-                T4::from_components(&entity, &mut request_identifier),
-                T5::from_components(&entity, &mut request_identifier),
-                T6::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T3::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T4::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T5::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T6::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }
@@ -483,15 +639,66 @@ impl<
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read()
+                || T2::require_read()
+                || T3::require_read()
+                || T4::require_read()
+                || T5::require_read()
+                || T6::require_read()
+                || T7::require_read();
+            let require_write = T1::require_write()
+                || T2::require_write()
+                || T3::require_write()
+                || T4::require_write()
+                || T5::require_write()
+                || T6::require_write()
+                || T7::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
-                T3::from_components(&entity, &mut request_identifier),
-                T4::from_components(&entity, &mut request_identifier),
-                T5::from_components(&entity, &mut request_identifier),
-                T6::from_components(&entity, &mut request_identifier),
-                T7::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T3::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T4::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T5::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T6::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T7::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }
@@ -531,16 +738,73 @@ impl<
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read()
+                || T2::require_read()
+                || T3::require_read()
+                || T4::require_read()
+                || T5::require_read()
+                || T6::require_read()
+                || T7::require_read()
+                || T8::require_read();
+            let require_write = T1::require_write()
+                || T2::require_write()
+                || T3::require_write()
+                || T4::require_write()
+                || T5::require_write()
+                || T6::require_write()
+                || T7::require_write()
+                || T8::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
-                T3::from_components(&entity, &mut request_identifier),
-                T4::from_components(&entity, &mut request_identifier),
-                T5::from_components(&entity, &mut request_identifier),
-                T6::from_components(&entity, &mut request_identifier),
-                T7::from_components(&entity, &mut request_identifier),
-                T8::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T3::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T4::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T5::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T6::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T7::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T8::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }
@@ -581,17 +845,80 @@ impl<
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read()
+                || T2::require_read()
+                || T3::require_read()
+                || T4::require_read()
+                || T5::require_read()
+                || T6::require_read()
+                || T7::require_read()
+                || T8::require_read()
+                || T9::require_read();
+            let require_write = T1::require_write()
+                || T2::require_write()
+                || T3::require_write()
+                || T4::require_write()
+                || T5::require_write()
+                || T6::require_write()
+                || T7::require_write()
+                || T8::require_write()
+                || T9::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
-                T3::from_components(&entity, &mut request_identifier),
-                T4::from_components(&entity, &mut request_identifier),
-                T5::from_components(&entity, &mut request_identifier),
-                T6::from_components(&entity, &mut request_identifier),
-                T7::from_components(&entity, &mut request_identifier),
-                T8::from_components(&entity, &mut request_identifier),
-                T9::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T3::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T4::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T5::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T6::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T7::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T8::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T9::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }
@@ -635,18 +962,87 @@ impl<
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read()
+                || T2::require_read()
+                || T3::require_read()
+                || T4::require_read()
+                || T5::require_read()
+                || T6::require_read()
+                || T7::require_read()
+                || T8::require_read()
+                || T9::require_read()
+                || T10::require_read();
+            let require_write = T1::require_write()
+                || T2::require_write()
+                || T3::require_write()
+                || T4::require_write()
+                || T5::require_write()
+                || T6::require_write()
+                || T7::require_write()
+                || T8::require_write()
+                || T9::require_write()
+                || T10::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
-                T3::from_components(&entity, &mut request_identifier),
-                T4::from_components(&entity, &mut request_identifier),
-                T5::from_components(&entity, &mut request_identifier),
-                T6::from_components(&entity, &mut request_identifier),
-                T7::from_components(&entity, &mut request_identifier),
-                T8::from_components(&entity, &mut request_identifier),
-                T9::from_components(&entity, &mut request_identifier),
-                T10::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T3::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T4::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T5::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T6::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T7::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T8::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T9::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T10::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }
@@ -693,19 +1089,94 @@ impl<
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read()
+                || T2::require_read()
+                || T3::require_read()
+                || T4::require_read()
+                || T5::require_read()
+                || T6::require_read()
+                || T7::require_read()
+                || T8::require_read()
+                || T9::require_read()
+                || T10::require_read()
+                || T11::require_read();
+            let require_write = T1::require_write()
+                || T2::require_write()
+                || T3::require_write()
+                || T4::require_write()
+                || T5::require_write()
+                || T6::require_write()
+                || T7::require_write()
+                || T8::require_write()
+                || T9::require_write()
+                || T10::require_write()
+                || T11::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
-                T3::from_components(&entity, &mut request_identifier),
-                T4::from_components(&entity, &mut request_identifier),
-                T5::from_components(&entity, &mut request_identifier),
-                T6::from_components(&entity, &mut request_identifier),
-                T7::from_components(&entity, &mut request_identifier),
-                T8::from_components(&entity, &mut request_identifier),
-                T9::from_components(&entity, &mut request_identifier),
-                T10::from_components(&entity, &mut request_identifier),
-                T11::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T3::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T4::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T5::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T6::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T7::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T8::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T9::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T10::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T11::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }
@@ -753,20 +1224,101 @@ impl<
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read()
+                || T2::require_read()
+                || T3::require_read()
+                || T4::require_read()
+                || T5::require_read()
+                || T6::require_read()
+                || T7::require_read()
+                || T8::require_read()
+                || T9::require_read()
+                || T10::require_read()
+                || T11::require_read()
+                || T12::require_read();
+            let require_write = T1::require_write()
+                || T2::require_write()
+                || T3::require_write()
+                || T4::require_write()
+                || T5::require_write()
+                || T6::require_write()
+                || T7::require_write()
+                || T8::require_write()
+                || T9::require_write()
+                || T10::require_write()
+                || T11::require_write()
+                || T12::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
-                T3::from_components(&entity, &mut request_identifier),
-                T4::from_components(&entity, &mut request_identifier),
-                T5::from_components(&entity, &mut request_identifier),
-                T6::from_components(&entity, &mut request_identifier),
-                T7::from_components(&entity, &mut request_identifier),
-                T8::from_components(&entity, &mut request_identifier),
-                T9::from_components(&entity, &mut request_identifier),
-                T10::from_components(&entity, &mut request_identifier),
-                T11::from_components(&entity, &mut request_identifier),
-                T12::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T3::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T4::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T5::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T6::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T7::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T8::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T9::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T10::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T11::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T12::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }
@@ -815,21 +1367,108 @@ impl<
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read()
+                || T2::require_read()
+                || T3::require_read()
+                || T4::require_read()
+                || T5::require_read()
+                || T6::require_read()
+                || T7::require_read()
+                || T8::require_read()
+                || T9::require_read()
+                || T10::require_read()
+                || T11::require_read()
+                || T12::require_read()
+                || T13::require_read();
+            let require_write = T1::require_write()
+                || T2::require_write()
+                || T3::require_write()
+                || T4::require_write()
+                || T5::require_write()
+                || T6::require_write()
+                || T7::require_write()
+                || T8::require_write()
+                || T9::require_write()
+                || T10::require_write()
+                || T11::require_write()
+                || T12::require_write()
+                || T13::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
-                T3::from_components(&entity, &mut request_identifier),
-                T4::from_components(&entity, &mut request_identifier),
-                T5::from_components(&entity, &mut request_identifier),
-                T6::from_components(&entity, &mut request_identifier),
-                T7::from_components(&entity, &mut request_identifier),
-                T8::from_components(&entity, &mut request_identifier),
-                T9::from_components(&entity, &mut request_identifier),
-                T10::from_components(&entity, &mut request_identifier),
-                T11::from_components(&entity, &mut request_identifier),
-                T12::from_components(&entity, &mut request_identifier),
-                T13::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T3::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T4::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T5::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T6::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T7::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T8::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T9::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T10::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T11::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T12::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T13::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }
@@ -882,22 +1521,115 @@ impl<
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read()
+                || T2::require_read()
+                || T3::require_read()
+                || T4::require_read()
+                || T5::require_read()
+                || T6::require_read()
+                || T7::require_read()
+                || T8::require_read()
+                || T9::require_read()
+                || T10::require_read()
+                || T11::require_read()
+                || T12::require_read()
+                || T13::require_read()
+                || T14::require_read();
+            let require_write = T1::require_write()
+                || T2::require_write()
+                || T3::require_write()
+                || T4::require_write()
+                || T5::require_write()
+                || T6::require_write()
+                || T7::require_write()
+                || T8::require_write()
+                || T9::require_write()
+                || T10::require_write()
+                || T11::require_write()
+                || T12::require_write()
+                || T13::require_write()
+                || T14::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
-                T3::from_components(&entity, &mut request_identifier),
-                T4::from_components(&entity, &mut request_identifier),
-                T5::from_components(&entity, &mut request_identifier),
-                T6::from_components(&entity, &mut request_identifier),
-                T7::from_components(&entity, &mut request_identifier),
-                T8::from_components(&entity, &mut request_identifier),
-                T9::from_components(&entity, &mut request_identifier),
-                T10::from_components(&entity, &mut request_identifier),
-                T11::from_components(&entity, &mut request_identifier),
-                T12::from_components(&entity, &mut request_identifier),
-                T13::from_components(&entity, &mut request_identifier),
-                T14::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T3::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T4::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T5::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T6::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T7::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T8::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T9::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T10::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T11::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T12::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T13::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T14::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }
@@ -951,23 +1683,122 @@ impl<
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read()
+                || T2::require_read()
+                || T3::require_read()
+                || T4::require_read()
+                || T5::require_read()
+                || T6::require_read()
+                || T7::require_read()
+                || T8::require_read()
+                || T9::require_read()
+                || T10::require_read()
+                || T11::require_read()
+                || T12::require_read()
+                || T13::require_read()
+                || T14::require_read()
+                || T15::require_read();
+            let require_write = T1::require_write()
+                || T2::require_write()
+                || T3::require_write()
+                || T4::require_write()
+                || T5::require_write()
+                || T6::require_write()
+                || T7::require_write()
+                || T8::require_write()
+                || T9::require_write()
+                || T10::require_write()
+                || T11::require_write()
+                || T12::require_write()
+                || T13::require_write()
+                || T14::require_write()
+                || T15::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
-                T3::from_components(&entity, &mut request_identifier),
-                T4::from_components(&entity, &mut request_identifier),
-                T5::from_components(&entity, &mut request_identifier),
-                T6::from_components(&entity, &mut request_identifier),
-                T7::from_components(&entity, &mut request_identifier),
-                T8::from_components(&entity, &mut request_identifier),
-                T9::from_components(&entity, &mut request_identifier),
-                T10::from_components(&entity, &mut request_identifier),
-                T11::from_components(&entity, &mut request_identifier),
-                T12::from_components(&entity, &mut request_identifier),
-                T13::from_components(&entity, &mut request_identifier),
-                T14::from_components(&entity, &mut request_identifier),
-                T15::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T3::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T4::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T5::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T6::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T7::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T8::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T9::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T10::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T11::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T12::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T13::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T14::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T15::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }
@@ -1025,24 +1856,129 @@ impl<
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read()
+                || T2::require_read()
+                || T3::require_read()
+                || T4::require_read()
+                || T5::require_read()
+                || T6::require_read()
+                || T7::require_read()
+                || T8::require_read()
+                || T9::require_read()
+                || T10::require_read()
+                || T11::require_read()
+                || T12::require_read()
+                || T13::require_read()
+                || T14::require_read()
+                || T15::require_read()
+                || T16::require_read();
+            let require_write = T1::require_write()
+                || T2::require_write()
+                || T3::require_write()
+                || T4::require_write()
+                || T5::require_write()
+                || T6::require_write()
+                || T7::require_write()
+                || T8::require_write()
+                || T9::require_write()
+                || T10::require_write()
+                || T11::require_write()
+                || T12::require_write()
+                || T13::require_write()
+                || T14::require_write()
+                || T15::require_write()
+                || T16::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
-                T3::from_components(&entity, &mut request_identifier),
-                T4::from_components(&entity, &mut request_identifier),
-                T5::from_components(&entity, &mut request_identifier),
-                T6::from_components(&entity, &mut request_identifier),
-                T7::from_components(&entity, &mut request_identifier),
-                T8::from_components(&entity, &mut request_identifier),
-                T9::from_components(&entity, &mut request_identifier),
-                T10::from_components(&entity, &mut request_identifier),
-                T11::from_components(&entity, &mut request_identifier),
-                T12::from_components(&entity, &mut request_identifier),
-                T13::from_components(&entity, &mut request_identifier),
-                T14::from_components(&entity, &mut request_identifier),
-                T15::from_components(&entity, &mut request_identifier),
-                T16::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T3::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T4::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T5::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T6::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T7::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T8::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T9::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T10::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T11::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T12::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T13::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T14::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T15::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T16::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }
@@ -1103,25 +2039,136 @@ impl<
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read()
+                || T2::require_read()
+                || T3::require_read()
+                || T4::require_read()
+                || T5::require_read()
+                || T6::require_read()
+                || T7::require_read()
+                || T8::require_read()
+                || T9::require_read()
+                || T10::require_read()
+                || T11::require_read()
+                || T12::require_read()
+                || T13::require_read()
+                || T14::require_read()
+                || T15::require_read()
+                || T16::require_read()
+                || T17::require_read();
+            let require_write = T1::require_write()
+                || T2::require_write()
+                || T3::require_write()
+                || T4::require_write()
+                || T5::require_write()
+                || T6::require_write()
+                || T7::require_write()
+                || T8::require_write()
+                || T9::require_write()
+                || T10::require_write()
+                || T11::require_write()
+                || T12::require_write()
+                || T13::require_write()
+                || T14::require_write()
+                || T15::require_write()
+                || T16::require_write()
+                || T17::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
-                T3::from_components(&entity, &mut request_identifier),
-                T4::from_components(&entity, &mut request_identifier),
-                T5::from_components(&entity, &mut request_identifier),
-                T6::from_components(&entity, &mut request_identifier),
-                T7::from_components(&entity, &mut request_identifier),
-                T8::from_components(&entity, &mut request_identifier),
-                T9::from_components(&entity, &mut request_identifier),
-                T10::from_components(&entity, &mut request_identifier),
-                T11::from_components(&entity, &mut request_identifier),
-                T12::from_components(&entity, &mut request_identifier),
-                T13::from_components(&entity, &mut request_identifier),
-                T14::from_components(&entity, &mut request_identifier),
-                T15::from_components(&entity, &mut request_identifier),
-                T16::from_components(&entity, &mut request_identifier),
-                T17::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T3::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T4::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T5::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T6::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T7::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T8::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T9::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T10::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T11::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T12::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T13::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T14::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T15::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T16::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T17::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }
@@ -1183,26 +2230,143 @@ impl<
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read()
+                || T2::require_read()
+                || T3::require_read()
+                || T4::require_read()
+                || T5::require_read()
+                || T6::require_read()
+                || T7::require_read()
+                || T8::require_read()
+                || T9::require_read()
+                || T10::require_read()
+                || T11::require_read()
+                || T12::require_read()
+                || T13::require_read()
+                || T14::require_read()
+                || T15::require_read()
+                || T16::require_read()
+                || T17::require_read()
+                || T18::require_read();
+            let require_write = T1::require_write()
+                || T2::require_write()
+                || T3::require_write()
+                || T4::require_write()
+                || T5::require_write()
+                || T6::require_write()
+                || T7::require_write()
+                || T8::require_write()
+                || T9::require_write()
+                || T10::require_write()
+                || T11::require_write()
+                || T12::require_write()
+                || T13::require_write()
+                || T14::require_write()
+                || T15::require_write()
+                || T16::require_write()
+                || T17::require_write()
+                || T18::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
-                T3::from_components(&entity, &mut request_identifier),
-                T4::from_components(&entity, &mut request_identifier),
-                T5::from_components(&entity, &mut request_identifier),
-                T6::from_components(&entity, &mut request_identifier),
-                T7::from_components(&entity, &mut request_identifier),
-                T8::from_components(&entity, &mut request_identifier),
-                T9::from_components(&entity, &mut request_identifier),
-                T10::from_components(&entity, &mut request_identifier),
-                T11::from_components(&entity, &mut request_identifier),
-                T12::from_components(&entity, &mut request_identifier),
-                T13::from_components(&entity, &mut request_identifier),
-                T14::from_components(&entity, &mut request_identifier),
-                T15::from_components(&entity, &mut request_identifier),
-                T16::from_components(&entity, &mut request_identifier),
-                T17::from_components(&entity, &mut request_identifier),
-                T18::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T3::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T4::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T5::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T6::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T7::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T8::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T9::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T10::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T11::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T12::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T13::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T14::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T15::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T16::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T17::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T18::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }
@@ -1305,27 +2469,150 @@ impl<
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read()
+                || T2::require_read()
+                || T3::require_read()
+                || T4::require_read()
+                || T5::require_read()
+                || T6::require_read()
+                || T7::require_read()
+                || T8::require_read()
+                || T9::require_read()
+                || T10::require_read()
+                || T11::require_read()
+                || T12::require_read()
+                || T13::require_read()
+                || T14::require_read()
+                || T15::require_read()
+                || T16::require_read()
+                || T17::require_read()
+                || T18::require_read()
+                || T19::require_read();
+            let require_write = T1::require_write()
+                || T2::require_write()
+                || T3::require_write()
+                || T4::require_write()
+                || T5::require_write()
+                || T6::require_write()
+                || T7::require_write()
+                || T8::require_write()
+                || T9::require_write()
+                || T10::require_write()
+                || T11::require_write()
+                || T12::require_write()
+                || T13::require_write()
+                || T14::require_write()
+                || T15::require_write()
+                || T16::require_write()
+                || T17::require_write()
+                || T18::require_write()
+                || T19::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
-                T3::from_components(&entity, &mut request_identifier),
-                T4::from_components(&entity, &mut request_identifier),
-                T5::from_components(&entity, &mut request_identifier),
-                T6::from_components(&entity, &mut request_identifier),
-                T7::from_components(&entity, &mut request_identifier),
-                T8::from_components(&entity, &mut request_identifier),
-                T9::from_components(&entity, &mut request_identifier),
-                T10::from_components(&entity, &mut request_identifier),
-                T11::from_components(&entity, &mut request_identifier),
-                T12::from_components(&entity, &mut request_identifier),
-                T13::from_components(&entity, &mut request_identifier),
-                T14::from_components(&entity, &mut request_identifier),
-                T15::from_components(&entity, &mut request_identifier),
-                T16::from_components(&entity, &mut request_identifier),
-                T17::from_components(&entity, &mut request_identifier),
-                T18::from_components(&entity, &mut request_identifier),
-                T19::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T3::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T4::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T5::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T6::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T7::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T8::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T9::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T10::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T11::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T12::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T13::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T14::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T15::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T16::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T17::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T18::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T19::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }
@@ -1492,28 +2779,157 @@ impl<
     ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
         let request_identifier = request_identifier.clone();
         Box::new(move |entity| {
+            let require_read = T1::require_read()
+                || T2::require_read()
+                || T3::require_read()
+                || T4::require_read()
+                || T5::require_read()
+                || T6::require_read()
+                || T7::require_read()
+                || T8::require_read()
+                || T9::require_read()
+                || T10::require_read()
+                || T11::require_read()
+                || T12::require_read()
+                || T13::require_read()
+                || T14::require_read()
+                || T15::require_read()
+                || T16::require_read()
+                || T17::require_read()
+                || T18::require_read()
+                || T19::require_read()
+                || T20::require_read();
+            let require_write = T1::require_write()
+                || T2::require_write()
+                || T3::require_write()
+                || T4::require_write()
+                || T5::require_write()
+                || T6::require_write()
+                || T7::require_write()
+                || T8::require_write()
+                || T9::require_write()
+                || T10::require_write()
+                || T11::require_write()
+                || T12::require_write()
+                || T13::require_write()
+                || T14::require_write()
+                || T15::require_write()
+                || T16::require_write()
+                || T17::require_write()
+                || T18::require_write()
+                || T19::require_write()
+                || T20::require_write();
+
+            let mut requested_entity_guard = if require_write {
+                RequestedEntityGuard::Write(entity.write())
+            } else if require_read {
+                RequestedEntityGuard::Read(entity.read())
+            } else {
+                RequestedEntityGuard::None
+            };
+
             let mut request_identifier = request_identifier.clone();
             (self.0)(
-                T1::from_components(&entity, &mut request_identifier),
-                T2::from_components(&entity, &mut request_identifier),
-                T3::from_components(&entity, &mut request_identifier),
-                T4::from_components(&entity, &mut request_identifier),
-                T5::from_components(&entity, &mut request_identifier),
-                T6::from_components(&entity, &mut request_identifier),
-                T7::from_components(&entity, &mut request_identifier),
-                T8::from_components(&entity, &mut request_identifier),
-                T9::from_components(&entity, &mut request_identifier),
-                T10::from_components(&entity, &mut request_identifier),
-                T11::from_components(&entity, &mut request_identifier),
-                T12::from_components(&entity, &mut request_identifier),
-                T13::from_components(&entity, &mut request_identifier),
-                T14::from_components(&entity, &mut request_identifier),
-                T15::from_components(&entity, &mut request_identifier),
-                T16::from_components(&entity, &mut request_identifier),
-                T17::from_components(&entity, &mut request_identifier),
-                T18::from_components(&entity, &mut request_identifier),
-                T19::from_components(&entity, &mut request_identifier),
-                T20::from_components(&entity, &mut request_identifier),
+                T1::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T2::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T3::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T4::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T5::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T6::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T7::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T8::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T9::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T10::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T11::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T12::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T13::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T14::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T15::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T16::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T17::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T18::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T19::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
+                T20::from_components(
+                    &entity,
+                    &mut requested_entity_guard,
+                    &mut request_identifier,
+                ),
             )
         })
     }

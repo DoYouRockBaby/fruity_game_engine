@@ -27,14 +27,10 @@ pub fn entity_list_component() -> UIElement {
     let root_entities = all_entities
         .iter()
         .filter(|entity| {
-            if let Some(parent) = entity.get_component("Parent") {
-                let parent = parent.read();
-                if let Some(parent) = parent.downcast::<Parent>() {
-                    if let Some(_) = *parent.parent_id {
-                        false
-                    } else {
-                        true
-                    }
+            let entity_reader = entity.read();
+            if let Some(parent) = entity_reader.read_typed_component::<Parent>("Parent") {
+                if let Some(_) = *parent.parent_id {
+                    false
                 } else {
                     true
                 }
@@ -65,19 +61,18 @@ pub fn draw_entity_line(
     all_entities: &Vec<EntityReference>,
     entity_service: ResourceReference<EntityService>,
 ) -> UIElement {
-    let entity_id = entity.get_entity_id();
+    let entity_2 = entity.clone();
+    let entity_3 = entity.clone();
+    let entity_reader = entity.read();
+    let entity_id = entity_reader.get_entity_id();
 
     let children = all_entities
         .iter()
         .filter(|entity| {
-            if let Some(parent) = entity.get_component("Parent") {
-                let parent = parent.read();
-                if let Some(parent) = parent.downcast::<Parent>() {
-                    if let Some(parent_id) = *parent.parent_id {
-                        parent_id == entity_id
-                    } else {
-                        false
-                    }
+            let entity_reader = entity.read();
+            if let Some(parent) = entity_reader.read_typed_component::<Parent>("Parent") {
+                if let Some(parent_id) = *parent.parent_id {
+                    parent_id == entity_id
                 } else {
                     false
                 }
@@ -90,10 +85,10 @@ pub fn draw_entity_line(
     if children.len() > 0 {
         let entity_service_2 = entity_service.clone();
         Collapsible {
-            title: entity.get_name(),
+            title: entity_reader.get_name(),
             on_click: Some(Arc::new(move || {
                 let inspector_state = use_global::<InspectorState>();
-                inspector_state.select(Box::new(entity.clone()));
+                inspector_state.select(Box::new(entity_2.clone()));
             })),
             child: Column {
                 children: children
@@ -110,10 +105,10 @@ pub fn draw_entity_line(
         .elem()
     } else {
         Button {
-            label: entity.get_name(),
+            label: entity_reader.get_name(),
             on_click: Arc::new(move || {
                 let inspector_state = use_global::<InspectorState>();
-                inspector_state.select(Box::new(entity.clone()));
+                inspector_state.select(Box::new(entity_3.clone()));
             }),
             ..Default::default()
         }

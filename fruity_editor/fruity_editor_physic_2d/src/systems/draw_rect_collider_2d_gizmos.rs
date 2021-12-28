@@ -30,15 +30,19 @@ pub fn draw_rectangle_collider_2d_gizmos(
         } else {
             return;
         };
+        let entity_reader = entity.read();
 
-        let transform = if let Some(transform) = entity.read_component::<Transform2d>("Transform2d")
+        let transform = if let Some(transform) =
+            entity_reader.read_typed_component::<Transform2d>("Transform2d")
         {
             transform.transform.clone()
         } else {
             Matrix3::default()
         };
 
-        if let Some(rect_collider) = entity.read_component::<RectCollider>("RectCollider") {
+        if let Some(rect_collider) =
+            entity_reader.read_typed_component::<RectCollider>("RectCollider")
+        {
             let bottom_left = transform * rect_collider.bottom_left;
             let top_right = transform * rect_collider.top_right;
 
@@ -63,21 +67,23 @@ pub fn draw_rectangle_collider_2d_gizmos(
                 RED,
                 move |fixed_x, fixed_y, drag_action| {
                     let selected_entity = entity.clone();
+                    let entity_reader = selected_entity.read();
 
                     // Get the rect origin
                     let (bottom_left_origin, top_right_origin) = {
-                        let collider = entity
-                            .read_component::<RectCollider>("RectCollider")
+                        let collider = entity_reader
+                            .read_typed_component::<RectCollider>("RectCollider")
                             .unwrap();
                         (collider.bottom_left, collider.top_right)
                     };
 
                     drag_action.while_dragging(move |cursor_position, start_pos| {
+                        let entity_writer = entity.write();
                         let cursor_movement = cursor_position - start_pos;
 
                         // Move the entity with the cursor
-                        let mut collider = selected_entity
-                            .write_component::<RectCollider>("RectCollider")
+                        let mut collider = entity_writer
+                            .write_typed_component::<RectCollider>("RectCollider")
                             .unwrap();
                         collider.bottom_left = bottom_left_origin + cursor_movement / 2.0;
 

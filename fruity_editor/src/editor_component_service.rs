@@ -10,14 +10,14 @@ use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::serialize::serialized::Serialized;
 use fruity_ecs::component::component::AnyComponent;
-use fruity_ecs::component::component_reference::ComponentReference;
+use fruity_ecs::entity::entity_reference::ComponentReference;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
 
 lazy_static! {
     pub static ref DEFAULT_INSPECTOR: Arc<dyn Fn(ComponentReference) -> UIElement + Send + Sync> =
-        Arc::new(|component| edit_introspect_fields(Box::new(component.clone())));
+        Arc::new(|component| edit_introspect_fields(Box::new(component)));
 }
 
 #[derive(FruityAny)]
@@ -59,14 +59,11 @@ impl EditorComponentService {
     }
 
     pub fn inspect(&self, component: ComponentReference) -> UIElement {
-        let component_identifier = {
-            let reader = component.read();
-            reader.get_class_name()
-        };
+        let component_identifier = component.get_class_name();
 
         match self.components.get(&component_identifier) {
             Some(params) => (params.inspector)(component),
-            None => edit_introspect_fields(Box::new(component.clone())),
+            None => edit_introspect_fields(Box::new(component)),
         }
     }
 

@@ -18,7 +18,7 @@ impl JsFunction {
         let mut builder = v8::Function::builder(callback);
 
         if let Some(data) = data {
-            if let Some(data) = serialize_v8(scope, &data) {
+            if let Some(data) = serialize_v8(scope, data) {
                 builder = builder.data(data);
             }
         }

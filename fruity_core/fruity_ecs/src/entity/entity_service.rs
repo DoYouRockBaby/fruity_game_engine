@@ -1,4 +1,6 @@
 use crate::component::component::AnyComponent;
+use crate::component::component::ReadComponent;
+use crate::component::component::WriteComponent;
 use crate::entity::archetype::Archetype;
 use crate::entity::entity::get_type_identifier_by_any;
 use crate::entity::entity::EntityId;
@@ -355,6 +357,7 @@ impl EntityService {
         let serialized_entities = self
             .iter_all_entities()
             .filter_map(|entity| {
+                let entity = entity.read();
                 let serialized_components = Serialized::Array(
                     entity
                         .iter_all_components()
@@ -476,12 +479,39 @@ impl IntrospectObject for EntityService {
                     let iterator = this
                         .iter_components(&EntityTypeIdentifier(arg1.clone()))
                         .map(move |entity| {
+                            let entity = entity.read();
                             Serialized::Array(
                                 arg1.iter()
                                     .map(|component_identifier| {
-                                        Serialized::NativeObject(Box::new(
-                                            entity.get_component(component_identifier),
-                                        ))
+                                        Serialized::NativeObject(Box::new(ReadComponent::new(
+                                            entity.read_component(component_identifier).unwrap(),
+                                        )))
+                                    })
+                                    .collect::<Vec<_>>(),
+                            )
+                        });
+
+                    Ok(Some(Serialized::Iterator(Arc::new(RwLock::new(iterator)))))
+                })),
+            },
+            MethodInfo {
+                name: "iter_components_mut".to_string(),
+                call: MethodCaller::Const(Arc::new(move |this, args| {
+                    let this = cast_introspect_ref::<EntityService>(this);
+
+                    let mut caster = ArgumentCaster::new("iter_components", args);
+                    let arg1 = caster.cast_next::<Vec<String>>()?;
+
+                    let iterator = this
+                        .iter_components(&EntityTypeIdentifier(arg1.clone()))
+                        .map(move |entity| {
+                            let entity = entity.write();
+                            Serialized::Array(
+                                arg1.iter()
+                                    .map(|component_identifier| {
+                                        Serialized::NativeObject(Box::new(WriteComponent::new(
+                                            entity.write_component(component_identifier).unwrap(),
+                                        )))
                                     })
                                     .collect::<Vec<_>>(),
                             )

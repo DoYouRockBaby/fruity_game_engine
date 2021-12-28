@@ -181,7 +181,7 @@ impl JsRuntime {
     if let Some(callback) = callback {
       // Instantiate parameters and return handle
       let args = args
-        .iter()
+        .into_iter()
         .filter_map(|arg| serialize_v8(scope, arg))
         .collect::<Vec<_>>();
 

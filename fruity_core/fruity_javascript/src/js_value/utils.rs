@@ -60,10 +60,10 @@ pub fn get_intern_value_from_v8_object_mut<'a, T: Any>(
 
 pub fn inject_serialized_into_v8_return_value<'a>(
     scope: &mut v8::HandleScope,
-    serialized: &Serialized,
+    serialized: Serialized,
     return_value: &mut v8::ReturnValue,
 ) {
-    let serialized = serialize_v8(scope, &serialized);
+    let serialized = serialize_v8(scope, serialized);
 
     if let Some(serialized) = serialized {
         return_value.set(serialized.into());
@@ -72,7 +72,7 @@ pub fn inject_serialized_into_v8_return_value<'a>(
 
 pub fn inject_option_serialized_into_v8_return_value<'a>(
     scope: &mut v8::HandleScope,
-    serialized: &Option<Serialized>,
+    serialized: Option<Serialized>,
     return_value: &mut v8::ReturnValue,
 ) {
     if let Some(serialized) = serialized {
