@@ -1,5 +1,6 @@
 use crate::ui_element::app::DrawContext;
 use crate::ui_element::topo::CallId;
+use crate::SecondaryActionState;
 use comp_state::CloneState;
 use egui::epaint;
 use egui::CursorIcon;
@@ -11,6 +12,7 @@ use egui::Sense;
 use egui::Shape;
 use egui::Ui;
 use fruity_editor::hooks::topo;
+use fruity_editor::hooks::use_global;
 use fruity_editor::hooks::use_state;
 use fruity_editor::ui_element::input::Button;
 use fruity_editor::ui_element::input::Checkbox;
@@ -34,6 +36,17 @@ pub fn draw_button<'a>(elem: Button, ui: &mut egui::Ui, _ctx: &mut DrawContext) 
 
     if response.clicked() {
         (elem.on_click)()
+    }
+
+    if elem.secondary_actions.len() > 0 {
+        if response.secondary_clicked() {
+            let secondary_action_state = use_global::<SecondaryActionState>();
+            secondary_action_state.display_secondary_actions(
+                ui,
+                response.clone(),
+                elem.secondary_actions.clone(),
+            )
+        }
     }
 
     // Handle drag & drop

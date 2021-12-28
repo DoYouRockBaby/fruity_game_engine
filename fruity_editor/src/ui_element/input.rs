@@ -1,3 +1,4 @@
+use crate::ui_element::menu::MenuItem;
 use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
 use fruity_core::resource::resource_reference::ResourceReference;
@@ -9,6 +10,7 @@ pub struct Button {
     pub label: String,
     pub enabled: bool,
     pub on_click: Arc<dyn Fn() + Send + Sync>,
+    pub secondary_actions: Vec<MenuItem>,
     pub drag_item: Option<Arc<dyn Any + Send + Sync>>,
     pub accept_drag: Option<Arc<dyn Fn(&dyn Any) -> bool>>,
     pub on_drag: Option<Arc<dyn Fn(&dyn Any)>>,
@@ -20,6 +22,7 @@ impl Default for Button {
             label: Default::default(),
             enabled: true,
             on_click: Arc::new(|| {}),
+            secondary_actions: Vec::new(),
             drag_item: None,
             accept_drag: None,
             on_drag: None,

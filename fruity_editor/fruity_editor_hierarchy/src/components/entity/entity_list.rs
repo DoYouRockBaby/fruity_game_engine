@@ -8,6 +8,7 @@ use fruity_editor::ui_element::input::Button;
 use fruity_editor::ui_element::layout::Collapsible;
 use fruity_editor::ui_element::layout::Column;
 use fruity_editor::ui_element::layout::Scroll;
+use fruity_editor::ui_element::menu::MenuItem;
 use fruity_editor::ui_element::UIElement;
 use fruity_editor::ui_element::UIWidget;
 use fruity_hierarchy::components::parent::Parent;
@@ -100,6 +101,15 @@ pub fn draw_entity_line(
                 ..Default::default()
             }
             .elem(),
+            secondary_actions: vec![MenuItem {
+                label: "Delete".to_string(),
+                on_click: Arc::new(move || {
+                    let world_state = use_global::<WorldState>();
+                    let entity_service = world_state.resource_container.require::<EntityService>();
+                    let entity_service = entity_service.read();
+                    entity_service.remove(entity_id).ok();
+                }),
+            }],
             ..Default::default()
         }
         .elem()
@@ -110,6 +120,15 @@ pub fn draw_entity_line(
                 let inspector_state = use_global::<InspectorState>();
                 inspector_state.select(Box::new(entity_3.clone()));
             }),
+            secondary_actions: vec![MenuItem {
+                label: "Delete".to_string(),
+                on_click: Arc::new(move || {
+                    let world_state = use_global::<WorldState>();
+                    let entity_service = world_state.resource_container.require::<EntityService>();
+                    let entity_service = entity_service.read();
+                    entity_service.remove(entity_id).ok();
+                }),
+            }],
             ..Default::default()
         }
         .elem()

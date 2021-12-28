@@ -127,7 +127,7 @@ pub fn draw_collapsible<'a>(elem: Collapsible, ui: &mut egui::Ui, ctx: &mut Draw
             let secondary_action_state = use_global::<SecondaryActionState>();
             secondary_action_state.display_secondary_actions(
                 ui,
-                response.header_response,
+                response.header_response.clone(),
                 elem.secondary_actions.clone(),
             )
         }
