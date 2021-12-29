@@ -59,7 +59,7 @@ impl Graphic2dService {
         }
     }
 
-    pub fn draw_quad(&self, material: &dyn MaterialReference, z_index: usize) {
+    pub fn draw_quad(&self, identifier: u64, material: &dyn MaterialReference, z_index: usize) {
         let graphic_service = self.graphic_service.read();
 
         let mesh = self
@@ -67,7 +67,7 @@ impl Graphic2dService {
             .get::<dyn MeshResource>("Meshes/Squad")
             .unwrap();
 
-        graphic_service.draw_mesh(mesh.clone(), material, z_index)
+        graphic_service.draw_mesh(identifier, mesh.clone(), material, z_index)
     }
 
     pub fn draw_line(
@@ -102,7 +102,7 @@ impl Graphic2dService {
         self.draw_line_material.set_color("color", color);
 
         // Draw the line
-        self.draw_quad(self.draw_line_material.deref(), z_index);
+        self.draw_quad(0, self.draw_line_material.deref(), z_index);
     }
 
     pub fn draw_rect(
@@ -141,7 +141,7 @@ impl Graphic2dService {
         self.draw_rect_material.set_float("ywidth", ywidth);
 
         // Draw the line
-        self.draw_quad(self.draw_rect_material.deref(), z_index);
+        self.draw_quad(0, self.draw_rect_material.deref(), z_index);
     }
 
     pub fn draw_arc(
@@ -182,7 +182,7 @@ impl Graphic2dService {
             .set_float("angle_end", angle_range.end);
 
         // Draw the line
-        self.draw_quad(self.draw_arc_material.deref(), z_index);
+        self.draw_quad(0, self.draw_arc_material.deref(), z_index);
     }
 
     pub fn draw_circle(

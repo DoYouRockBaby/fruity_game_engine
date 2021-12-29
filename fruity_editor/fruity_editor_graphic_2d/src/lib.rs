@@ -29,7 +29,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
         MODULE_NAME,
         Inject1::new(draw_gizmos_2d),
         Some(SystemParams {
-            pool_index: 99,
+            pool_index: 98,
             ignore_pause: true,
         }),
     );

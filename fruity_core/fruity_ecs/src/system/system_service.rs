@@ -20,7 +20,6 @@ use std::fmt::Debug;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 type SystemCallback = dyn Fn(Arc<ResourceContainer>) + Sync + Send + 'static;
 
@@ -93,9 +92,6 @@ struct FrameSystem {
 
 /// A system pool, see [‘SystemService‘] for more informations
 pub struct SystemPool<T> {
-    /// Is the pool ignored, if it's not, it will not be launched when calling [‘SystemService‘]::run
-    ignore_once: RwLock<bool>,
-
     /// Systems of the pool
     systems: Vec<T>,
 }
@@ -110,8 +106,8 @@ pub struct SystemPool<T> {
 /// There is a pool system, when you add a system, you can provide a pool, every systems of the same pool will be executed in parallel
 /// Try to use it realy rarely, cause parallel execution is realy usefull
 /// Pools from 0 to 10 and from 90 to 100 are reservec by the engine, you should avoid to create pool outside this range
-/// Pool 98 is for camera
-/// Pool 99 is for drawing
+/// Pool 98 is for drawing
+/// Pool 99 is for camera
 ///
 #[derive(FruityAny)]
 pub struct SystemService {
@@ -168,13 +164,8 @@ impl<'s> SystemService {
         } else {
             // If the pool not exists, we create it
             let systems = vec![system];
-            self.system_pools.insert(
-                params.pool_index,
-                SystemPool {
-                    ignore_once: RwLock::new(false),
-                    systems,
-                },
-            );
+            self.system_pools
+                .insert(params.pool_index, SystemPool { systems });
         };
     }
 
@@ -205,13 +196,8 @@ impl<'s> SystemService {
         } else {
             // If the pool not exists, we create it
             let systems = vec![system];
-            self.begin_system_pools.insert(
-                params.pool_index,
-                SystemPool {
-                    ignore_once: RwLock::new(false),
-                    systems,
-                },
-            );
+            self.begin_system_pools
+                .insert(params.pool_index, SystemPool { systems });
         };
     }
 
@@ -242,13 +228,8 @@ impl<'s> SystemService {
         } else {
             // If the pool not exists, we create it
             let systems = vec![system];
-            self.end_system_pools.insert(
-                params.pool_index,
-                SystemPool {
-                    ignore_once: RwLock::new(false),
-                    systems,
-                },
-            );
+            self.end_system_pools
+                .insert(params.pool_index, SystemPool { systems });
         };
     }
 
@@ -289,43 +270,8 @@ impl<'s> SystemService {
         let is_paused = self.is_paused();
 
         self.iter_system_pools().for_each(|pool| {
-            let pool_ignore = {
-                let pool_ignore_reader = pool.ignore_once.read().unwrap();
-                pool_ignore_reader.clone()
-            };
-
-            if !pool_ignore {
-                pool.systems.iter().par_bridge().for_each(|system| {
-                    if !is_paused || system.ignore_pause {
-                        let _profiler_scope = if puffin::are_scopes_on() {
-                            // Safe cause identifier don't need to be static (from the doc)
-                            let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
-                            Some(puffin::ProfilerScope::new(identifier, "system", ""))
-                        } else {
-                            None
-                        };
-
-                        (system.callback)(resource_container.clone());
-                    }
-                });
-            } else {
-                let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
-                *pool_ignore_writer = false;
-            }
-        });
-    }
-
-    /// Run all the stored begin systems
-    pub fn run_begin(&self) {
-        let resource_container = self.resource_container.clone();
-        self.iter_begin_system_pools().for_each(|pool| {
-            let pool_ignore = {
-                let pool_ignore_reader = pool.ignore_once.read().unwrap();
-                pool_ignore_reader.clone()
-            };
-
-            if !pool_ignore {
-                pool.systems.iter().par_bridge().for_each(|system| {
+            pool.systems.iter().par_bridge().for_each(|system| {
+                if !is_paused || system.ignore_pause {
                     let _profiler_scope = if puffin::are_scopes_on() {
                         // Safe cause identifier don't need to be static (from the doc)
                         let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
@@ -335,11 +281,26 @@ impl<'s> SystemService {
                     };
 
                     (system.callback)(resource_container.clone());
-                });
-            } else {
-                let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
-                *pool_ignore_writer = false;
-            }
+                }
+            });
+        });
+    }
+
+    /// Run all the stored begin systems
+    pub fn run_begin(&self) {
+        let resource_container = self.resource_container.clone();
+        self.iter_begin_system_pools().for_each(|pool| {
+            pool.systems.iter().par_bridge().for_each(|system| {
+                let _profiler_scope = if puffin::are_scopes_on() {
+                    // Safe cause identifier don't need to be static (from the doc)
+                    let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
+                    Some(puffin::ProfilerScope::new(identifier, "system", ""))
+                } else {
+                    None
+                };
+
+                (system.callback)(resource_container.clone());
+            });
         });
     }
 
@@ -347,27 +308,17 @@ impl<'s> SystemService {
     pub fn run_end(&self) {
         let resource_container = self.resource_container.clone();
         self.iter_end_system_pools().for_each(|pool| {
-            let pool_ignore = {
-                let pool_ignore_reader = pool.ignore_once.read().unwrap();
-                pool_ignore_reader.clone()
-            };
+            pool.systems.iter().par_bridge().for_each(|system| {
+                let _profiler_scope = if puffin::are_scopes_on() {
+                    // Safe cause identifier don't need to be static (from the doc)
+                    let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
+                    Some(puffin::ProfilerScope::new(identifier, "system", ""))
+                } else {
+                    None
+                };
 
-            if !pool_ignore {
-                pool.systems.iter().par_bridge().for_each(|system| {
-                    let _profiler_scope = if puffin::are_scopes_on() {
-                        // Safe cause identifier don't need to be static (from the doc)
-                        let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
-                        Some(puffin::ProfilerScope::new(identifier, "system", ""))
-                    } else {
-                        None
-                    };
-
-                    (system.callback)(resource_container.clone())
-                });
-            } else {
-                let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
-                *pool_ignore_writer = false;
-            }
+                (system.callback)(resource_container.clone())
+            });
         });
     }
 
@@ -398,42 +349,6 @@ impl<'s> SystemService {
                 .iter()
                 .par_bridge()
                 .for_each(|system| (system.callback)(self.resource_container.clone()));
-        }
-    }
-
-    /// Ignore a pool once
-    ///
-    /// # Arguments
-    /// * `index` - The pool index
-    ///
-    pub fn ignore_pool_once(&self, index: &usize) {
-        if let Some(pool) = self.system_pools.get(index) {
-            let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
-            *pool_ignore_writer = true;
-        }
-    }
-
-    /// Ignore a begin pool once
-    ///
-    /// # Arguments
-    /// * `index` - The pool index
-    ///
-    pub fn ignore_begin_pool_once(&self, index: &usize) {
-        if let Some(pool) = self.begin_system_pools.get(index) {
-            let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
-            *pool_ignore_writer = true;
-        }
-    }
-
-    /// Ignore an end pool once
-    ///
-    /// # Arguments
-    /// * `index` - The pool index
-    ///
-    pub fn ignore_end_pool_once(&self, index: &usize) {
-        if let Some(pool) = self.end_system_pools.get(index) {
-            let mut pool_ignore_writer = pool.ignore_once.write().unwrap();
-            *pool_ignore_writer = true;
         }
     }
 

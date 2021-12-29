@@ -14,7 +14,6 @@ use crate::systems::translate_2d::translate_2d;
 use crate::systems::update_material_transform::update_material_transform;
 use fruity_core::inject::Inject1;
 use fruity_core::inject::Inject2;
-use fruity_core::inject::Inject3;
 use fruity_core::object_factory_service::ObjectFactoryService;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
@@ -99,9 +98,9 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     );
 
     system_service.add_system(
-        "draw_camera",
+        "draw_sprite",
         MODULE_NAME,
-        Inject3::new(draw_camera),
+        Inject2::new(draw_sprite),
         Some(SystemParams {
             pool_index: 98,
             ignore_pause: true,
@@ -109,9 +108,9 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     );
 
     system_service.add_system(
-        "draw_sprite",
+        "draw_camera",
         MODULE_NAME,
-        Inject2::new(draw_sprite),
+        Inject2::new(draw_camera),
         Some(SystemParams {
             pool_index: 99,
             ignore_pause: true,

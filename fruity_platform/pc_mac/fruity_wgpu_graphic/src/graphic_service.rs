@@ -25,12 +25,11 @@ use fruity_graphic::resources::texture_resource::TextureResourceSettings;
 use fruity_windows::window_service::WindowService;
 use fruity_winit_windows::window_service::WinitWindowService;
 use image::load_from_memory;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::iter;
 use std::ops::Deref;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::sync::RwLock;
 use tokio::runtime::Builder;
 use wgpu::util::DeviceExt;
@@ -39,6 +38,21 @@ use winit::window::Window;
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct CameraUniform(pub [[f32; 4]; 4]);
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct DrawIndexedIndirectArgs {
+    /// The number of indices to draw.
+    pub index_count: u32,
+    /// The number of instances to draw.
+    pub instance_count: u32,
+    /// Offset into the index buffer, in indices, begin drawing from.
+    pub first_index: u32,
+    /// Added to each index value before indexing into the vertex buffers.
+    pub base_vertex: i32,
+    /// First instance to draw.
+    pub first_instance: u32,
+}
 
 #[derive(Debug)]
 pub struct State {
@@ -52,7 +66,7 @@ pub struct State {
     pub camera_bind_group: Arc<wgpu::BindGroup>,
 }
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 struct RenderInstanceIdentifier {
     mesh_identifier: String,
     material_identifier: String,
@@ -61,8 +75,8 @@ struct RenderInstanceIdentifier {
 
 #[derive(Debug)]
 struct RenderInstance {
-    instance_buffer: Vec<u8>,
     instance_count: usize,
+    instance_buffers: BTreeMap<u64, Vec<u8>>,
     mesh: ResourceReference<dyn MeshResource>,
     material: ResourceReference<dyn MaterialResource>,
 }
@@ -71,7 +85,8 @@ struct RenderInstance {
 pub struct WgpuGraphicService {
     state: State,
     current_output: Option<wgpu::SurfaceTexture>,
-    render_instances: Mutex<HashMap<RenderInstanceIdentifier, RenderInstance>>,
+    render_instances: RwLock<BTreeMap<RenderInstanceIdentifier, RenderInstance>>,
+    render_bundles: RwLock<Vec<wgpu::RenderBundle>>,
     current_encoder: Option<RwLock<wgpu::CommandEncoder>>,
     pub on_before_draw_end: Signal<()>,
     pub on_after_draw_end: Signal<()>,
@@ -139,7 +154,8 @@ impl WgpuGraphicService {
         WgpuGraphicService {
             state,
             current_output: None,
-            render_instances: Mutex::new(HashMap::new()),
+            render_instances: RwLock::new(BTreeMap::new()),
+            render_bundles: RwLock::new(Vec::new()),
             current_encoder: None,
             on_before_draw_end: Signal::new(),
             on_after_draw_end: Signal::new(),
@@ -217,6 +233,7 @@ impl WgpuGraphicService {
 
     pub fn push_render_instance(
         &self,
+        instance_identifier: u64,
         mut instance_buffer: Vec<u8>,
         mesh: ResourceReference<dyn MeshResource>,
         material: ResourceReference<dyn MaterialResource>,
@@ -224,26 +241,159 @@ impl WgpuGraphicService {
     ) {
         puffin::profile_function!();
 
-        let mut render_instances = self.render_instances.lock().unwrap();
-
         let identifier = RenderInstanceIdentifier {
             mesh_identifier: mesh.get_name(),
             material_identifier: material.get_name(),
             z_index,
         };
+
+        let mut render_instances = self.render_instances.write().unwrap();
         if let Some(render_instance) = render_instances.get_mut(&identifier) {
-            render_instance.instance_buffer.append(&mut instance_buffer);
             render_instance.instance_count += 1;
+
+            if let Some(existing_instance_buffer) = render_instance
+                .instance_buffers
+                .get_mut(&instance_identifier)
+            {
+                existing_instance_buffer.append(&mut instance_buffer);
+            } else {
+                render_instance
+                    .instance_buffers
+                    .insert(instance_identifier, instance_buffer);
+            }
         } else {
+            let mut instance_buffers = BTreeMap::new();
+            instance_buffers.insert(instance_identifier, instance_buffer);
+
             render_instances.insert(
                 identifier,
                 RenderInstance {
-                    instance_buffer,
                     instance_count: 1,
+                    instance_buffers,
                     mesh,
                     material,
                 },
             );
+        }
+    }
+
+    pub fn update_render_bundles(&self) {
+        let render_instances_reader = self.render_instances.read().unwrap();
+        if render_instances_reader.len() > 0 {
+            let mut render_bundles = self.render_bundles.write().unwrap();
+
+            *render_bundles = render_instances_reader
+                .iter()
+                .filter_map(|(_test, render_instance)| {
+                    let device = self.get_device();
+                    let config = self.get_config();
+
+                    // Get resources
+                    let material = render_instance.material.read();
+                    let material = material.downcast_ref::<WgpuMaterialResource>();
+
+                    let shader = if let Some(shader) = material.get_shader() {
+                        shader
+                    } else {
+                        return None;
+                    };
+
+                    let shader = shader.read();
+                    let shader = shader.downcast_ref::<WgpuShaderResource>();
+
+                    let mesh = render_instance.mesh.read();
+                    let mesh = mesh.downcast_ref::<WgpuMeshResource>();
+
+                    // Create the instance buffer
+                    // TODO: Don't do it every frame by implementing a cache system
+                    let instance_buffer = render_instance
+                        .instance_buffers
+                        .values()
+                        .flatten()
+                        .map(|elem| *elem)
+                        .collect::<Vec<_>>();
+
+                    let instance_buffer =
+                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("Instance Buffer"),
+                            contents: &instance_buffer,
+                            usage: wgpu::BufferUsages::VERTEX,
+                        });
+                    let instance_count = render_instance.instance_count as u32;
+
+                    // --------------------------------------------------------------------
+                    let indirect_buffer =
+                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("Instance Buffer"),
+                            contents: bytemuck::cast_slice(&[DrawIndexedIndirectArgs {
+                                index_count: mesh.index_count as u32,
+                                instance_count,
+                                first_index: 0,
+                                base_vertex: 0,
+                                first_instance: 0,
+                            }]),
+                            usage: wgpu::BufferUsages::INDIRECT | wgpu::BufferUsages::COPY_DST,
+                        });
+
+                    // Render the instances
+                    let mut encoder =
+                        device.create_render_bundle_encoder(&wgpu::RenderBundleEncoderDescriptor {
+                            label: Some("draw_mesh"),
+                            color_formats: &[config.format],
+                            depth_stencil: None,
+                            sample_count: 1,
+                        });
+                    encoder.set_pipeline(&shader.render_pipeline);
+                    material
+                        .binding_groups
+                        .iter()
+                        .for_each(|(index, bind_group)| {
+                            encoder.set_bind_group(*index, &bind_group, &[]);
+                        });
+                    encoder.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
+                    encoder.set_vertex_buffer(1, instance_buffer.slice(..));
+                    encoder
+                        .set_index_buffer(mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+                    encoder.draw_indexed_indirect(&indirect_buffer, 0);
+
+                    let bundle = encoder.finish(&wgpu::RenderBundleDescriptor {
+                        label: Some("main"),
+                    });
+                    // --------------------------------------------------------------------
+
+                    // Render the instances
+                    /*let mut encoder =
+                        device.create_render_bundle_encoder(&wgpu::RenderBundleEncoderDescriptor {
+                            label: Some("draw_mesh"),
+                            color_formats: &[config.format],
+                            depth_stencil: None,
+                            sample_count: 1,
+                        });
+                    encoder.set_pipeline(&shader.render_pipeline);
+                    material
+                        .binding_groups
+                        .iter()
+                        .for_each(|(index, bind_group)| {
+                            encoder.set_bind_group(*index, &bind_group, &[]);
+                        });
+                    encoder.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
+                    encoder.set_vertex_buffer(1, instance_buffer.slice(..));
+                    encoder
+                        .set_index_buffer(mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+                    encoder.draw_indexed(0..mesh.index_count as u32, 0, 0..instance_count);
+
+                    let bundle = encoder.finish(&wgpu::RenderBundleDescriptor {
+                        label: Some("main"),
+                    });*/
+
+                    Some(bundle)
+                })
+                .collect::<Vec<wgpu::RenderBundle>>();
+            std::mem::drop(render_instances_reader);
+
+            let mut render_instances = self.render_instances.write().unwrap();
+            render_instances.clear();
+        } else {
         }
     }
 
@@ -346,13 +496,16 @@ impl GraphicService for WgpuGraphicService {
 
         self.get_queue().submit(std::iter::once(encoder.finish()));
         output.present();
+
+        let mut render_instances = self.render_instances.write().unwrap();
+        render_instances.clear();
+
+        let mut render_bundles = self.render_bundles.write().unwrap();
+        render_bundles.clear();
     }
 
     fn start_pass(&self) {
         puffin::profile_function!();
-
-        let mut render_instances = self.render_instances.lock().unwrap();
-        render_instances.clear();
     }
 
     fn end_pass(&self) {
@@ -384,79 +537,11 @@ impl GraphicService for WgpuGraphicService {
             })
         };
 
-        let render_instances = self.render_instances.lock().unwrap();
+        // Render the instances bundles
+        self.update_render_bundles();
 
-        // TODO: Store bundles into RenderInstance
-        let mut bundles = render_instances
-            .iter()
-            .filter_map(move |(key, render_instance)| {
-                let device = self.get_device();
-                let config = self.get_config();
-
-                // Get resources
-                let material = render_instance.material.read();
-                let material = material.downcast_ref::<WgpuMaterialResource>();
-
-                let shader = if let Some(shader) = material.get_shader() {
-                    shader
-                } else {
-                    return None;
-                };
-
-                let shader = shader.read();
-                let shader = shader.downcast_ref::<WgpuShaderResource>();
-
-                let mesh = render_instance.mesh.read();
-                let mesh = mesh.downcast_ref::<WgpuMeshResource>();
-
-                // Create the instance buffer
-                // TODO: Don't do it every frame by implementing a cache system
-                let instance_buffer =
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Instance Buffer"),
-                        contents: &render_instance.instance_buffer,
-                        usage: wgpu::BufferUsages::VERTEX,
-                    });
-                let instance_count = render_instance.instance_count as u32;
-
-                // Render the instances
-                let mut encoder =
-                    device.create_render_bundle_encoder(&wgpu::RenderBundleEncoderDescriptor {
-                        label: Some("draw_mesh"),
-                        color_formats: &[config.format],
-                        depth_stencil: None,
-                        sample_count: 1,
-                    });
-                encoder.set_pipeline(&shader.render_pipeline);
-                material
-                    .binding_groups
-                    .iter()
-                    .for_each(|(index, bind_group)| {
-                        encoder.set_bind_group(*index, &bind_group, &[]);
-                    });
-                encoder.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
-                encoder.set_vertex_buffer(1, instance_buffer.slice(..));
-                encoder.set_index_buffer(mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-                encoder.draw_indexed(0..mesh.index_count as u32, 0, 0..instance_count);
-
-                Some((
-                    key.z_index,
-                    encoder.finish(&wgpu::RenderBundleDescriptor {
-                        label: Some("main"),
-                    }),
-                ))
-            })
-            .collect::<Vec<_>>();
-
-        // TODO: There is probably a way to optimize that with an ordered list
-        bundles.sort_by(|a, b| a.0.cmp(&b.0));
-
-        bundles.iter().for_each(move |bundle| {
-            // TODO: Find a way to remove it
-            let bundle = unsafe {
-                std::mem::transmute::<&wgpu::RenderBundle, &wgpu::RenderBundle>(&bundle.1)
-            };
-
+        let render_bundles = self.render_bundles.read().unwrap();
+        render_bundles.iter().for_each(move |bundle| {
             render_pass.execute_bundles(iter::once(bundle));
         });
     }
@@ -494,6 +579,7 @@ impl GraphicService for WgpuGraphicService {
 
     fn draw_mesh(
         &self,
+        identifier: u64,
         mesh: ResourceReference<dyn MeshResource>,
         material: &dyn MaterialReference,
         z_index: usize,
@@ -510,6 +596,7 @@ impl GraphicService for WgpuGraphicService {
         let instance_buffer = material.instance_buffer.read().unwrap();
 
         self.push_render_instance(
+            identifier,
             instance_buffer.clone(),
             mesh,
             material.get_material(),

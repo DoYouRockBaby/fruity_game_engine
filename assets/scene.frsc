@@ -141,6 +141,55 @@
           fields: {}
 - class_name: Entity
   fields:
+    entity_id: 8
+    name: Image 3
+    enabled: true
+    components:
+    - class_name: Parent
+      fields:
+        parent_id: 3
+        nested_level: 2
+    - class_name: RectCollider
+      fields:
+        bottom_left:
+          class_name: Vector2d
+          fields:
+            y: -0.5
+            x: -0.5
+        top_right:
+          class_name: Vector2d
+          fields:
+            y: 0.5
+            x: 0.5
+    - class_name: Translate2d
+      fields:
+        vec:
+          class_name: Vector2d
+          fields:
+            x: 0.15
+            y: 0.05
+    - class_name: Scale2d
+      fields:
+        vec:
+          class_name: Vector2d
+          fields:
+            y: 0.5
+            x: 0.5
+    - class_name: Sprite
+      fields:
+        material:
+          class_name: ResourceReference
+          fields:
+            resource_name: "./assets/material.material"
+        texture: ~
+        z_index: 2
+    - class_name: Transform2d
+      fields:
+        transform:
+          class_name: Matrix3
+          fields: {}
+- class_name: Entity
+  fields:
     entity_id: 7
     name: Camera
     enabled: true

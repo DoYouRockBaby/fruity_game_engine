@@ -5,16 +5,11 @@ use fruity_core::inject::Ref;
 use fruity_ecs::entity::entity_query::Inject2;
 use fruity_ecs::entity::entity_service::EntityService;
 use fruity_ecs::entity_type;
-use fruity_ecs::system::system_service::SystemService;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::matrix4::Matrix4;
 use fruity_graphic::math::vector2d::Vector2d;
 
-pub fn draw_camera(
-    entity_service: Const<EntityService>,
-    graphic_service: Ref<dyn GraphicService>,
-    system_service: Ref<SystemService>,
-) {
+pub fn draw_camera(entity_service: Const<EntityService>, graphic_service: Ref<dyn GraphicService>) {
     entity_service.for_each(
         entity_type!["Transform2d", "Camera"],
         Inject2::new(move |transform: &Transform2d, camera: &Camera| {
@@ -36,14 +31,6 @@ pub fn draw_camera(
                 let mut graphic_service = graphic_service.write();
                 graphic_service.update_camera(view_proj);
                 graphic_service.start_pass();
-            }
-
-            // Render the draw system pool and avoir the normal system treatment
-            {
-                puffin::profile_scope!("camera_draw");
-                let system_service = system_service.read();
-                system_service.ignore_pool_once(&99);
-                system_service.run_pool(&99);
             }
 
             // End the pass

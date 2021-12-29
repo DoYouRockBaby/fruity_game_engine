@@ -33,7 +33,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
         MODULE_NAME,
         Inject3::new(draw_circle_collider_2d_gizmos),
         Some(SystemParams {
-            pool_index: 99,
+            pool_index: 98,
             ignore_pause: true,
         }),
     );
@@ -43,7 +43,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
         MODULE_NAME,
         Inject2::new(draw_rectangle_collider_2d_gizmos),
         Some(SystemParams {
-            pool_index: 99,
+            pool_index: 98,
             ignore_pause: true,
         }),
     );

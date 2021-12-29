@@ -22,6 +22,7 @@ pub trait GraphicService: Resource {
     fn resize(&mut self, width: usize, height: usize);
     fn draw_mesh(
         &self,
+        identifier: u64,
         mesh: ResourceReference<dyn MeshResource>,
         material: &dyn MaterialReference,
         z_index: usize,
