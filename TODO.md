@@ -13,7 +13,6 @@
 [X] Move ECS structure to a struct of array instead an array of struct (more efficient, easier to implement)
 [X] Implement ECS hierarchy
 [X] Remove the "Entity" component to replace it by a more cache friendly solution
-[ ] Propagate entity/component references changes when a component is added/removed
 [ ] Add an exception when you try to access a deleted entity, propagate it into js
 [ ] There should be some memory leak in archetype
 [ ] Test and stabilize ECS
@@ -25,18 +24,18 @@
 [X] Implement a basic hook system
 [X] Create a pseudo DOM to abstract the interface creation
 [X] Wrap the DOM system with iced
-[ ] Expose the GUI API to javascript to create custom component editor
 [X] Components visualization
 [X] Entity hierarchy visualisation
 [X] Resources browser
-[ ] Resources visualisation, take the material as an example and try to make it easy to edit in sprite component
 [X] Sprite gizmos
 [X] Run/Pause
 [X] Save/Load
+[X] Add componnent from editor
+[X] Remove component from editor
+[ ] Expose the GUI API to javascript to create custom component editor
+[ ] Resources visualisation, take the material as an example and try to make it easy to edit in sprite component
 [ ] Fix resize gizmos
 [ ] Select an object when clicking on it (set_scissor_rect)
-[ ] Add componnent from editor
-[ ] Remove component from editor
 [ ] Add a cool free camera for 2D view
 [ ] Add a cool grid for 2D view
 
@@ -50,9 +49,19 @@
 [X] Proceed instantied rendering
 [X] Make instances parametrizable in material/shader
 [ ] Sprites should simply edit a field of material
+[ ] Implements spritesheet
 [ ] Implement rendering composers
 
-## Physics
+## Animation
+
+[ ] Add an optional way to interpolate between serialized values
+[ ] Add an animation system with keyframes
+[ ] Create an editor for keyframes
+[ ] Create a state system
+[ ] Create interpolation between two states
+[ ] Create an editor for states
+
+## Physics 2D
 
 [X] Primitive physics collider components (shared accross every physics engine)
 [ ] Mesh physics collider components (shared accross every physics engine)
@@ -63,8 +72,6 @@
 
 [X] Inputs
 [X] Time service
-[ ] Animations everywhere (including sprite animations)
-[ ] State manager
 [ ] Tiles editor (make something like RPG maker, as easy to use as possible)
 [ ] Particles
 
