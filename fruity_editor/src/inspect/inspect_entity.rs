@@ -89,11 +89,19 @@ pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
                     secondary_actions: vec![MenuItem {
                         label: "Delete".to_string(),
                         on_click: Arc::new(move || {
+                            // Get what we need
                             let world_state = use_global::<WorldState>();
+                            let inspector_state = use_global::<InspectorState>();
                             let entity_service =
                                 world_state.resource_container.require::<EntityService>();
                             let entity_service = entity_service.read();
+
+                            // Remove the component
                             entity_service.remove_component(entity_id, index).ok();
+
+                            // Update the selected entity reference
+                            inspector_state
+                                .select(Box::new(entity_service.get_entity(entity_id).unwrap()));
                         }),
                     }],
                     ..Default::default()
@@ -152,11 +160,37 @@ pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
                         child: Column {
                             children: editor_component_service
                                 .search(&component_search_text.get())
-                                .iter()
                                 .map(|component| {
                                     Button {
                                         label: component.clone(),
-                                        on_click: Arc::new(move || {}),
+                                        on_click: Arc::new(move || {
+                                            // Get what we need
+                                            let world_state = use_global::<WorldState>();
+                                            let inspector_state = use_global::<InspectorState>();
+                                            let entity_service = world_state
+                                                .resource_container
+                                                .require::<EntityService>();
+                                            let entity_service = entity_service.read();
+                                            let editor_component_service = world_state
+                                                .resource_container
+                                                .require::<EditorComponentService>();
+                                            let editor_component_service =
+                                                editor_component_service.read();
+
+                                            // Add the component
+                                            if let Some(components) =
+                                                editor_component_service.instantiate(&component)
+                                            {
+                                                entity_service
+                                                    .add_component(entity_id, components)
+                                                    .ok();
+                                            }
+
+                                            // Update the selected entity reference
+                                            inspector_state.select(Box::new(
+                                                entity_service.get_entity(entity_id).unwrap(),
+                                            ));
+                                        }),
                                         ..Default::default()
                                     }
                                     .elem()

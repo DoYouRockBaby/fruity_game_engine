@@ -90,15 +90,12 @@ impl EditorComponentService {
         Some(result)
     }
 
-    pub fn search(&self, search: &str) -> Vec<String> {
+    pub fn search(&self, search: &str) -> impl Iterator<Item = String> + '_ {
+        let search = search.to_string();
         self.components
             .keys()
-            .filter(|key| {
-                key.to_lowercase()
-                    .contains(&search.to_string().to_lowercase())
-            })
+            .filter(move |key| key.to_lowercase().contains(&search.to_lowercase()))
             .map(|key| key.clone())
-            .collect::<Vec<_>>()
     }
 }
 
