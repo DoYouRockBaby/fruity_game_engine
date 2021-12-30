@@ -17,6 +17,7 @@ use crate::ui_element::menu::draw_menu_bar;
 use crate::ui_element::menu::draw_menu_section;
 use crate::ui_element::pane::draw_pane_grid;
 use crate::ui_element::profiling::draw_profiling;
+use crate::ui_element::scene::draw_scene;
 use fruity_editor::hooks::topo;
 use fruity_editor::ui_element::display::Popup;
 use fruity_editor::ui_element::display::Text;
@@ -35,6 +36,7 @@ use fruity_editor::ui_element::menu::MenuBar;
 use fruity_editor::ui_element::menu::MenuSection;
 use fruity_editor::ui_element::pane::PaneGrid;
 use fruity_editor::ui_element::profiling::Profiling;
+use fruity_editor::ui_element::scene::Scene;
 use fruity_editor::ui_element::UIElement;
 use std::any::TypeId;
 
@@ -46,6 +48,7 @@ pub mod list;
 pub mod menu;
 pub mod pane;
 pub mod profiling;
+pub mod scene;
 
 #[topo::nested]
 pub fn draw_element<'a>(elem: UIElement, ui: &mut egui::Ui, ctx: &mut DrawContext) {
@@ -85,6 +88,8 @@ pub fn draw_element<'a>(elem: UIElement, ui: &mut egui::Ui, ctx: &mut DrawContex
         draw_popup(*elem.root.downcast::<Popup>().unwrap(), ui, ctx)
     } else if type_id == TypeId::of::<Profiling>() {
         draw_profiling(ui, ctx)
+    } else if type_id == TypeId::of::<Scene>() {
+        draw_scene(ui, ctx)
     } else {
         draw_empty(ui)
     }

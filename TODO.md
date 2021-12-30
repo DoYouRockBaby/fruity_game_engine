@@ -86,7 +86,7 @@
 ## Scripting
 
 [ ] Find a better way to store SerializedComponent, to have something more effective on read
-[ ] Allow to handle size variations of SerializedComponent
+[ ] Allow to handle size variations of SerializedComponent
 [ ] There should be some memory leak when a js object is released
 [X] Javascript module is highly unsafe cause i force to put a one thread runtime into a multi thread host
 [ ] Implement web workers in js

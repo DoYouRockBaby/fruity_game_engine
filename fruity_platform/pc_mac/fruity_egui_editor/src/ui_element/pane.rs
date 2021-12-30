@@ -9,6 +9,14 @@ use fruity_editor::ui_element::pane::UIPaneSide;
 pub fn draw_pane_grid<'a>(elem: PaneGrid, _ui: &mut egui::Ui, ctx: &mut DrawContext) {
     // Initialize the pane grid state
     let panes = elem.panes.clone();
+    let center_panes = use_state(|| {
+        panes
+            .into_iter()
+            .filter(|pane| pane.default_side == UIPaneSide::Center)
+            .collect::<Vec<_>>()
+    });
+
+    let panes = elem.panes.clone();
     let left_panes = use_state(|| {
         panes
             .into_iter()
@@ -30,6 +38,10 @@ pub fn draw_pane_grid<'a>(elem: PaneGrid, _ui: &mut egui::Ui, ctx: &mut DrawCont
             .into_iter()
             .filter(|pane| pane.default_side == UIPaneSide::Bottom)
             .collect::<Vec<_>>()
+    });
+
+    egui::CentralPanel::default().show(&ctx.platform.context(), |ui| {
+        draw_pane(center_panes.get(), ui, ctx);
     });
 
     egui::SidePanel::left("left_panel")

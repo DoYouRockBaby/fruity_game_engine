@@ -1,5 +1,6 @@
 use crate::components::file_explorer::file_explorer_component;
 use crate::components::inspector::inspector_component;
+use crate::components::scene::scene_component;
 use crate::editor_component_service::EditorComponentService;
 use crate::editor_menu_service::EditorMenuService;
 use crate::editor_panels_service::EditorPanelsService;
@@ -112,6 +113,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let editor_panels_service = resource_container.require::<EditorPanelsService>();
     let mut editor_panels_service = editor_panels_service.write();
 
+    editor_panels_service.add_panel("Scene", UIPaneSide::Center, scene_component);
     editor_panels_service.add_panel("Inspector", UIPaneSide::Right, inspector_component);
     editor_panels_service.add_panel("Profiling", UIPaneSide::Right, || Profiling {}.elem());
     editor_panels_service.add_panel("File explorer", UIPaneSide::Bottom, file_explorer_component);

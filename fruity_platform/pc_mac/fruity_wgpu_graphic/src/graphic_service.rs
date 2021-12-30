@@ -61,6 +61,7 @@ pub struct State {
     pub queue: wgpu::Queue,
     pub config: wgpu::SurfaceConfiguration,
     pub rendering_view: wgpu::TextureView,
+    pub default_camera_rendering_texture: RwLock<Option<ResourceReference<dyn TextureResource>>>,
     pub camera_transform: Matrix4,
     pub camera_buffer: wgpu::Buffer,
     pub camera_bind_group: Arc<wgpu::BindGroup>,
@@ -218,6 +219,7 @@ impl WgpuGraphicService {
                 queue,
                 config,
                 rendering_view,
+                default_camera_rendering_texture: RwLock::new(None),
                 camera_transform: Matrix4::identity(),
                 camera_buffer,
                 camera_bind_group,
@@ -278,6 +280,7 @@ impl WgpuGraphicService {
     }
 
     pub fn update_render_bundles(&self) {
+        // We update the bundles only once per frame and not per camera per frame
         let render_instances_reader = self.render_instances.read().unwrap();
         if render_instances_reader.len() > 0 {
             let mut render_bundles = self.render_bundles.write().unwrap();
@@ -321,48 +324,8 @@ impl WgpuGraphicService {
                         });
                     let instance_count = render_instance.instance_count as u32;
 
-                    // --------------------------------------------------------------------
-                    let indirect_buffer =
-                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                            label: Some("Instance Buffer"),
-                            contents: bytemuck::cast_slice(&[DrawIndexedIndirectArgs {
-                                index_count: mesh.index_count as u32,
-                                instance_count,
-                                first_index: 0,
-                                base_vertex: 0,
-                                first_instance: 0,
-                            }]),
-                            usage: wgpu::BufferUsages::INDIRECT | wgpu::BufferUsages::COPY_DST,
-                        });
-
                     // Render the instances
                     let mut encoder =
-                        device.create_render_bundle_encoder(&wgpu::RenderBundleEncoderDescriptor {
-                            label: Some("draw_mesh"),
-                            color_formats: &[config.format],
-                            depth_stencil: None,
-                            sample_count: 1,
-                        });
-                    encoder.set_pipeline(&shader.render_pipeline);
-                    material
-                        .binding_groups
-                        .iter()
-                        .for_each(|(index, bind_group)| {
-                            encoder.set_bind_group(*index, &bind_group, &[]);
-                        });
-                    encoder.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
-                    encoder.set_vertex_buffer(1, instance_buffer.slice(..));
-                    encoder
-                        .set_index_buffer(mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-                    encoder.draw_indexed_indirect(&indirect_buffer, 0);
-
-                    let bundle = encoder.finish(&wgpu::RenderBundleDescriptor {
-                        label: Some("main"),
-                    });
-                    // --------------------------------------------------------------------
-
-                    // Render the instances
-                    /*let mut encoder =
                         device.create_render_bundle_encoder(&wgpu::RenderBundleEncoderDescriptor {
                             label: Some("draw_mesh"),
                             color_formats: &[config.format],
@@ -384,7 +347,7 @@ impl WgpuGraphicService {
 
                     let bundle = encoder.finish(&wgpu::RenderBundleDescriptor {
                         label: Some("main"),
-                    });*/
+                    });
 
                     Some(bundle)
                 })
@@ -423,6 +386,15 @@ impl WgpuGraphicService {
 
     pub fn get_encoder(&self) -> Option<&RwLock<wgpu::CommandEncoder>> {
         self.current_encoder.as_ref()
+    }
+
+    pub fn set_default_camera_rendering_texture(
+        &self,
+        texture: ResourceReference<dyn TextureResource>,
+    ) {
+        let mut default_camera_rendering_texture =
+            self.state.default_camera_rendering_texture.write().unwrap();
+        *default_camera_rendering_texture = Some(texture);
     }
 
     fn initialize_camera(device: &wgpu::Device) -> (wgpu::Buffer, Arc<wgpu::BindGroup>) {
@@ -517,11 +489,28 @@ impl GraphicService for WgpuGraphicService {
             return;
         };
 
+        let default_camera_rendering_texture =
+            self.state.default_camera_rendering_texture.read().unwrap();
+        let rendering_view = default_camera_rendering_texture
+            .as_ref()
+            .map(|texture| {
+                let texture = texture.read();
+                let texture = texture.downcast_ref::<WgpuTextureResource>();
+
+                // TODO: Try to find a way to remove that
+                let value = unsafe {
+                    std::mem::transmute::<&wgpu::TextureView, &wgpu::TextureView>(&texture.view)
+                };
+
+                value
+            })
+            .unwrap_or(&self.state.rendering_view);
+
         let mut render_pass = {
             encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
                 color_attachments: &[wgpu::RenderPassColorAttachment {
-                    view: &self.state.rendering_view,
+                    view: rendering_view,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {

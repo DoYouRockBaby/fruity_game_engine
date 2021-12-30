@@ -8,6 +8,7 @@ pub mod list;
 pub mod menu;
 pub mod pane;
 pub mod profiling;
+pub mod scene;
 
 #[derive(Debug, Clone)]
 pub enum UIAlign {

@@ -26,3 +26,17 @@ pub fn use_global<'a, T: Send + Sync + 'static>() -> &'a mut T {
     // TODO: Try to find a way to remove that
     unsafe { std::mem::transmute::<&mut T, &mut T>(result) }
 }
+
+pub fn use_memo<T: Clone + 'static, U: Clone + Eq + 'static>(
+    data_fn: impl Fn(U) -> T,
+    dependency: U,
+) -> T {
+    let value_state = use_state(|| data_fn(dependency.clone()));
+    let dependency_state = use_state(|| dependency.clone());
+
+    if dependency != dependency_state.get() {
+        value_state.set(data_fn(dependency.clone()));
+    }
+
+    value_state.get()
+}
