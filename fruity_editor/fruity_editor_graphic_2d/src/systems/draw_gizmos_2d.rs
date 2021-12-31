@@ -4,8 +4,7 @@ use fruity_ecs::entity::entity_reference::EntityReference;
 use fruity_editor::hooks::use_global;
 use fruity_editor::state::inspector::InspectorState;
 use fruity_graphic::math::vector2d::Vector2d;
-use fruity_graphic::math::GREEN;
-use fruity_graphic::math::RED;
+use fruity_graphic::math::Color;
 use fruity_graphic_2d::components::scale_2d::Scale2d;
 use fruity_graphic_2d::components::transform_2d::Transform2d;
 use fruity_graphic_2d::components::translate_2d::Translate2d;
@@ -42,8 +41,8 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
                 gizmos_service.draw_resize_helper(
                     bottom_left,
                     top_right,
-                    GREEN,
-                    RED,
+                    Color::green(),
+                    Color::red(),
                     move |fixed_x, fixed_y, drag_action| {
                         let selected_entity = selected_entity_2.clone();
                         let entity_reader = selected_entity.read();
@@ -99,8 +98,8 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
             gizmos_service.draw_move_helper(
                 center,
                 size,
-                GREEN,
-                RED,
+                Color::green(),
+                Color::red(),
                 move |move_x, move_y, drag_action| {
                     let selected_entity = entity.clone();
                     let entity_reader = selected_entity.read();

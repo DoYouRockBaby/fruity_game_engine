@@ -9,14 +9,6 @@ use fruity_editor::ui_element::pane::UIPaneSide;
 pub fn draw_pane_grid<'a>(elem: PaneGrid, _ui: &mut egui::Ui, ctx: &mut DrawContext) {
     // Initialize the pane grid state
     let panes = elem.panes.clone();
-    let center_panes = use_state(|| {
-        panes
-            .into_iter()
-            .filter(|pane| pane.default_side == UIPaneSide::Center)
-            .collect::<Vec<_>>()
-    });
-
-    let panes = elem.panes.clone();
     let left_panes = use_state(|| {
         panes
             .into_iter()
@@ -40,8 +32,12 @@ pub fn draw_pane_grid<'a>(elem: PaneGrid, _ui: &mut egui::Ui, ctx: &mut DrawCont
             .collect::<Vec<_>>()
     });
 
-    egui::CentralPanel::default().show(&ctx.platform.context(), |ui| {
-        draw_pane(center_panes.get(), ui, ctx);
+    let panes = elem.panes.clone();
+    let center_panes = use_state(|| {
+        panes
+            .into_iter()
+            .filter(|pane| pane.default_side == UIPaneSide::Center)
+            .collect::<Vec<_>>()
     });
 
     egui::SidePanel::left("left_panel")
@@ -64,6 +60,10 @@ pub fn draw_pane_grid<'a>(elem: PaneGrid, _ui: &mut egui::Ui, ctx: &mut DrawCont
         .show(&ctx.platform.context(), |ui| {
             draw_pane(bottom_panes.get(), ui, ctx);
         });
+
+    egui::CentralPanel::default().show(&ctx.platform.context(), |ui| {
+        draw_pane(center_panes.get(), ui, ctx);
+    });
 }
 
 pub fn draw_pane<'a>(panes: Vec<Pane>, ui: &mut egui::Ui, ctx: &mut DrawContext) {

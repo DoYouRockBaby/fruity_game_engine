@@ -14,6 +14,7 @@ use fruity_core::signal::Signal;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::material_reference::MaterialReference;
 use fruity_graphic::math::matrix4::Matrix4;
+use fruity_graphic::math::Color;
 use fruity_graphic::resources::material_resource::MaterialResource;
 use fruity_graphic::resources::material_resource::MaterialResourceSettings;
 use fruity_graphic::resources::mesh_resource::MeshResource;
@@ -61,8 +62,7 @@ pub struct State {
     pub queue: wgpu::Queue,
     pub config: wgpu::SurfaceConfiguration,
     pub rendering_view: wgpu::TextureView,
-    pub default_camera_rendering_texture: RwLock<Option<ResourceReference<dyn TextureResource>>>,
-    pub camera_transform: Matrix4,
+    pub camera_transform: RwLock<Matrix4>,
     pub camera_buffer: wgpu::Buffer,
     pub camera_bind_group: Arc<wgpu::BindGroup>,
 }
@@ -219,8 +219,7 @@ impl WgpuGraphicService {
                 queue,
                 config,
                 rendering_view,
-                default_camera_rendering_texture: RwLock::new(None),
-                camera_transform: Matrix4::identity(),
+                camera_transform: RwLock::new(Matrix4::identity()),
                 camera_buffer,
                 camera_bind_group,
             }
@@ -360,6 +359,17 @@ impl WgpuGraphicService {
         }
     }
 
+    fn update_camera(&self, view_proj: Matrix4) {
+        let mut camera_transform = self.state.camera_transform.write().unwrap();
+        *camera_transform = view_proj.clone();
+        let camera_uniform = CameraUniform(view_proj.into());
+        self.state.queue.write_buffer(
+            &self.state.camera_buffer,
+            0,
+            bytemuck::cast_slice(&[camera_uniform]),
+        );
+    }
+
     pub fn get_device(&self) -> &wgpu::Device {
         &self.state.device
     }
@@ -386,15 +396,6 @@ impl WgpuGraphicService {
 
     pub fn get_encoder(&self) -> Option<&RwLock<wgpu::CommandEncoder>> {
         self.current_encoder.as_ref()
-    }
-
-    pub fn set_default_camera_rendering_texture(
-        &self,
-        texture: ResourceReference<dyn TextureResource>,
-    ) {
-        let mut default_camera_rendering_texture =
-            self.state.default_camera_rendering_texture.write().unwrap();
-        *default_camera_rendering_texture = Some(texture);
     }
 
     fn initialize_camera(device: &wgpu::Device) -> (wgpu::Buffer, Arc<wgpu::BindGroup>) {
@@ -476,12 +477,15 @@ impl GraphicService for WgpuGraphicService {
         render_bundles.clear();
     }
 
-    fn start_pass(&self) {
+    fn render_scene(
+        &self,
+        view_proj: Matrix4,
+        background_color: Color,
+        target: Option<ResourceReference<dyn TextureResource>>,
+    ) {
         puffin::profile_function!();
-    }
 
-    fn end_pass(&self) {
-        puffin::profile_function!();
+        self.update_camera(view_proj);
 
         let mut encoder = if let Some(encoder) = self.current_encoder.as_ref() {
             encoder.write().unwrap()
@@ -489,9 +493,7 @@ impl GraphicService for WgpuGraphicService {
             return;
         };
 
-        let default_camera_rendering_texture =
-            self.state.default_camera_rendering_texture.read().unwrap();
-        let rendering_view = default_camera_rendering_texture
+        let rendering_view = target
             .as_ref()
             .map(|texture| {
                 let texture = texture.read();
@@ -514,10 +516,10 @@ impl GraphicService for WgpuGraphicService {
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
+                            r: background_color.r as f64,
+                            g: background_color.g as f64,
+                            b: background_color.b as f64,
+                            a: background_color.a as f64,
                         }),
                         store: true,
                     },
@@ -535,18 +537,9 @@ impl GraphicService for WgpuGraphicService {
         });
     }
 
-    fn update_camera(&mut self, view_proj: Matrix4) {
-        self.state.camera_transform = view_proj.clone();
-        let camera_uniform = CameraUniform(view_proj.into());
-        self.state.queue.write_buffer(
-            &self.state.camera_buffer,
-            0,
-            bytemuck::cast_slice(&[camera_uniform]),
-        );
-    }
-
-    fn get_camera_transform(&self) -> &Matrix4 {
-        &self.state.camera_transform
+    fn get_camera_transform(&self) -> Matrix4 {
+        let camera_transform = self.state.camera_transform.read().unwrap();
+        camera_transform.clone()
     }
 
     fn resize(&mut self, width: usize, height: usize) {

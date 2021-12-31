@@ -1,5 +1,6 @@
 use crate::math::material_reference::MaterialReference;
 use crate::math::matrix4::Matrix4;
+use crate::math::Color;
 use crate::resources::material_resource::MaterialResource;
 use crate::resources::material_resource::MaterialResourceSettings;
 use crate::resources::mesh_resource::MeshResource;
@@ -15,10 +16,13 @@ use fruity_core::signal::Signal;
 pub trait GraphicService: Resource {
     fn start_draw(&mut self);
     fn end_draw(&mut self);
-    fn start_pass(&self);
-    fn end_pass(&self);
-    fn update_camera(&mut self, view_proj: Matrix4);
-    fn get_camera_transform(&self) -> &Matrix4;
+    fn render_scene(
+        &self,
+        view_proj: Matrix4,
+        background_color: Color,
+        target: Option<ResourceReference<dyn TextureResource>>,
+    );
+    fn get_camera_transform(&self) -> Matrix4;
     fn resize(&mut self, width: usize, height: usize);
     fn draw_mesh(
         &self,

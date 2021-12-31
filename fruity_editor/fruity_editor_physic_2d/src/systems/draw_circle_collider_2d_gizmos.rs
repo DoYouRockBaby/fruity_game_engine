@@ -8,9 +8,7 @@ use fruity_editor_graphic_2d::gizmos_service::DragAction;
 use fruity_editor_graphic_2d::gizmos_service::GizmosService;
 use fruity_graphic::math::matrix3::Matrix3;
 use fruity_graphic::math::vector2d::Vector2d;
-use fruity_graphic::math::GREEN;
-use fruity_graphic::math::OVERLAY;
-use fruity_graphic::math::RED;
+use fruity_graphic::math::Color;
 use fruity_graphic_2d::components::transform_2d::Transform2d;
 use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
 use fruity_input::input_service::InputService;
@@ -57,15 +55,22 @@ pub fn draw_circle_collider_2d_gizmos(
             // Draw the collider
             {
                 let graphic_2d_service_reader = graphic_2d_service.read();
-                graphic_2d_service_reader.draw_circle(center, radius, 4, OVERLAY, GREEN, 1000);
+                graphic_2d_service_reader.draw_circle(
+                    center,
+                    radius,
+                    4,
+                    Color::overlay(),
+                    Color::green(),
+                    1000,
+                );
             }
 
             // Draw the gizmos to move the center of the collider
             gizmos_service.draw_move_helper(
                 center,
                 size,
-                GREEN,
-                RED,
+                Color::green(),
+                Color::red(),
                 move |move_x, move_y, drag_action| {
                     let selected_entity = entity.clone();
                     let entity_reader = selected_entity.read();
@@ -99,7 +104,7 @@ pub fn draw_circle_collider_2d_gizmos(
             );
 
             // Draw the gizmos to resize the radius of the collider
-            if gizmos_service.draw_circle_helper(bottom, 0.012, GREEN, RED) {
+            if gizmos_service.draw_circle_helper(bottom, 0.012, Color::green(), Color::red()) {
                 DragAction::start(
                     move |drag_action| {
                         let selected_entity = entity.clone();

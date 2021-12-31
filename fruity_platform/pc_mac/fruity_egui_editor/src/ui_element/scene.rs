@@ -5,6 +5,8 @@ use fruity_editor::hooks::use_global;
 use fruity_editor::hooks::use_memo;
 use fruity_editor::state::world::WorldState;
 use fruity_graphic::graphic_service::GraphicService;
+use fruity_graphic::math::matrix4::Matrix4;
+use fruity_graphic::math::Color;
 use fruity_graphic::resources::texture_resource::TextureResource;
 use fruity_wgpu_graphic::graphic_service::WgpuGraphicService;
 use fruity_wgpu_graphic::resources::texture_resource::WgpuTextureResource;
@@ -13,11 +15,12 @@ use std::sync::RwLock;
 
 #[topo::nested]
 pub fn draw_scene(ui: &mut egui::Ui, ctx: &mut DrawContext) {
-    let width = (ui.available_width() / ui.input().physical_pixel_size()) as u32;
-    let height = (ui.available_height() / ui.input().physical_pixel_size()) as u32;
+    let rect = ui.available_rect_before_wrap();
+    let width = (rect.width() / ui.input().physical_pixel_size()) as u32;
+    let height = (rect.height() / ui.input().physical_pixel_size()) as u32;
 
     // Build the rendering texture
-    let rendering_texture = use_memo(
+    let (resource, rendering_texture_id) = use_memo(
         |(width, height)| {
             // Get all what we need to initialize
             let world_state = use_global::<WorldState>();
@@ -44,23 +47,43 @@ pub fn draw_scene(ui: &mut egui::Ui, ctx: &mut DrawContext) {
             );
 
             // Use the texture as the rendering texture
-            graphic_service.set_default_camera_rendering_texture(resource.clone());
+            let image = resource.read();
+            let image = image.downcast_ref::<WgpuTextureResource>();
 
-            resource
+            // Get the egui identifier for the texture
+            (
+                resource,
+                ctx.egui_rpass.egui_texture_from_wgpu_texture(
+                    ctx.device,
+                    &image.texture,
+                    wgpu::FilterMode::Linear,
+                ),
+            )
         },
         (width, height),
     );
 
-    // Get the egui identifier for the texture
-    let image = rendering_texture.read();
-    let image = image.downcast_ref::<WgpuTextureResource>();
+    // Get all what we need to draw
+    let world_state = use_global::<WorldState>();
+    let graphic_service = world_state
+        .resource_container
+        .require::<dyn GraphicService>();
+    let graphic_service = graphic_service.read();
+    let view_proj = Matrix4::from_rect(-1.5, 1.5, -1.0, 1.0, -1.0, 1.0);
 
-    let egui_texture_id = ctx.egui_rpass.egui_texture_from_wgpu_texture(
-        ctx.device,
-        &image.texture,
-        wgpu::FilterMode::Nearest,
+    // Draw the scene on the texture
+    let background_color = ui.style().visuals.faint_bg_color;
+    let background_color = Color::new(
+        background_color.r() as f32 / 255.0,
+        background_color.g() as f32 / 255.0,
+        background_color.b() as f32 / 255.0,
+        background_color.a() as f32 / 255.0,
     );
+    graphic_service.render_scene(view_proj, background_color, Some(resource.clone()));
 
     // Display the scene
-    ui.image(egui_texture_id, ui.available_size());
+    ui.add_sized(
+        rect.size(),
+        egui::Image::new(rendering_texture_id, rect.size()),
+    );
 }

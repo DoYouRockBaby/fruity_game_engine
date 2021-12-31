@@ -6,9 +6,7 @@ use fruity_editor::hooks::use_global;
 use fruity_editor::state::inspector::InspectorState;
 use fruity_editor_graphic_2d::gizmos_service::GizmosService;
 use fruity_graphic::math::matrix3::Matrix3;
-use fruity_graphic::math::GREEN;
-use fruity_graphic::math::OVERLAY;
-use fruity_graphic::math::RED;
+use fruity_graphic::math::Color;
 use fruity_graphic_2d::components::transform_2d::Transform2d;
 use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
 use fruity_physic_2d::components::rect_collider::RectCollider;
@@ -53,8 +51,8 @@ pub fn draw_rectangle_collider_2d_gizmos(
                     bottom_left,
                     top_right,
                     4,
-                    OVERLAY,
-                    GREEN,
+                    Color::overlay(),
+                    Color::green(),
                     1000,
                 );
             }
@@ -63,8 +61,8 @@ pub fn draw_rectangle_collider_2d_gizmos(
             gizmos_service.draw_resize_helper(
                 bottom_left,
                 top_right,
-                GREEN,
-                RED,
+                Color::green(),
+                Color::red(),
                 move |fixed_x, fixed_y, drag_action| {
                     let selected_entity = entity.clone();
                     let entity_reader = selected_entity.read();

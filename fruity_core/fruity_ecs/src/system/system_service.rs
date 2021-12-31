@@ -94,6 +94,9 @@ struct FrameSystem {
 pub struct SystemPool<T> {
     /// Systems of the pool
     systems: Vec<T>,
+
+    /// Is the pool enabled
+    enabled: bool,
 }
 
 /// A systems collection
@@ -164,8 +167,13 @@ impl<'s> SystemService {
         } else {
             // If the pool not exists, we create it
             let systems = vec![system];
-            self.system_pools
-                .insert(params.pool_index, SystemPool { systems });
+            self.system_pools.insert(
+                params.pool_index,
+                SystemPool {
+                    systems,
+                    enabled: true,
+                },
+            );
         };
     }
 
@@ -196,8 +204,13 @@ impl<'s> SystemService {
         } else {
             // If the pool not exists, we create it
             let systems = vec![system];
-            self.begin_system_pools
-                .insert(params.pool_index, SystemPool { systems });
+            self.begin_system_pools.insert(
+                params.pool_index,
+                SystemPool {
+                    systems,
+                    enabled: true,
+                },
+            );
         };
     }
 
@@ -228,8 +241,13 @@ impl<'s> SystemService {
         } else {
             // If the pool not exists, we create it
             let systems = vec![system];
-            self.end_system_pools
-                .insert(params.pool_index, SystemPool { systems });
+            self.end_system_pools.insert(
+                params.pool_index,
+                SystemPool {
+                    systems,
+                    enabled: true,
+                },
+            );
         };
     }
 
@@ -270,8 +288,29 @@ impl<'s> SystemService {
         let is_paused = self.is_paused();
 
         self.iter_system_pools().for_each(|pool| {
-            pool.systems.iter().par_bridge().for_each(|system| {
-                if !is_paused || system.ignore_pause {
+            if pool.enabled {
+                pool.systems.iter().par_bridge().for_each(|system| {
+                    if !is_paused || system.ignore_pause {
+                        let _profiler_scope = if puffin::are_scopes_on() {
+                            // Safe cause identifier don't need to be static (from the doc)
+                            let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
+                            Some(puffin::ProfilerScope::new(identifier, "system", ""))
+                        } else {
+                            None
+                        };
+                        (system.callback)(resource_container.clone());
+                    }
+                });
+            }
+        });
+    }
+
+    /// Run all the stored begin systems
+    pub fn run_begin(&self) {
+        let resource_container = self.resource_container.clone();
+        self.iter_begin_system_pools().for_each(|pool| {
+            if pool.enabled {
+                pool.systems.iter().par_bridge().for_each(|system| {
                     let _profiler_scope = if puffin::are_scopes_on() {
                         // Safe cause identifier don't need to be static (from the doc)
                         let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
@@ -281,26 +320,8 @@ impl<'s> SystemService {
                     };
 
                     (system.callback)(resource_container.clone());
-                }
-            });
-        });
-    }
-
-    /// Run all the stored begin systems
-    pub fn run_begin(&self) {
-        let resource_container = self.resource_container.clone();
-        self.iter_begin_system_pools().for_each(|pool| {
-            pool.systems.iter().par_bridge().for_each(|system| {
-                let _profiler_scope = if puffin::are_scopes_on() {
-                    // Safe cause identifier don't need to be static (from the doc)
-                    let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
-                    Some(puffin::ProfilerScope::new(identifier, "system", ""))
-                } else {
-                    None
-                };
-
-                (system.callback)(resource_container.clone());
-            });
+                });
+            }
         });
     }
 
@@ -308,17 +329,19 @@ impl<'s> SystemService {
     pub fn run_end(&self) {
         let resource_container = self.resource_container.clone();
         self.iter_end_system_pools().for_each(|pool| {
-            pool.systems.iter().par_bridge().for_each(|system| {
-                let _profiler_scope = if puffin::are_scopes_on() {
-                    // Safe cause identifier don't need to be static (from the doc)
-                    let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
-                    Some(puffin::ProfilerScope::new(identifier, "system", ""))
-                } else {
-                    None
-                };
+            if pool.enabled {
+                pool.systems.iter().par_bridge().for_each(|system| {
+                    let _profiler_scope = if puffin::are_scopes_on() {
+                        // Safe cause identifier don't need to be static (from the doc)
+                        let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
+                        Some(puffin::ProfilerScope::new(identifier, "system", ""))
+                    } else {
+                        None
+                    };
 
-                (system.callback)(resource_container.clone())
-            });
+                    (system.callback)(resource_container.clone())
+                });
+            }
         });
     }
 
@@ -349,6 +372,20 @@ impl<'s> SystemService {
                 .iter()
                 .par_bridge()
                 .for_each(|system| (system.callback)(self.resource_container.clone()));
+        }
+    }
+
+    /// Enable a pool
+    pub fn enable_pool(&mut self, index: &usize) {
+        if let Some(pool) = self.system_pools.get_mut(index) {
+            pool.enabled = true;
+        }
+    }
+
+    /// Disable a pool
+    pub fn disable_pool(&mut self, index: &usize) {
+        if let Some(pool) = self.system_pools.get_mut(index) {
+            pool.enabled = false;
         }
     }
 

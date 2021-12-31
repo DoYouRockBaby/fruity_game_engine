@@ -25,19 +25,15 @@ pub fn draw_camera(entity_service: Const<EntityService>, graphic_service: Ref<dy
                 camera.far,
             );
 
-            // Start the pass
+            // Render the scene
             {
-                puffin::profile_scope!("camera_start_pass");
-                let mut graphic_service = graphic_service.write();
-                graphic_service.update_camera(view_proj);
-                graphic_service.start_pass();
-            }
-
-            // End the pass
-            {
-                puffin::profile_scope!("camera_end_pass");
+                puffin::profile_scope!("render_scene");
                 let graphic_service = graphic_service.read();
-                graphic_service.end_pass();
+                graphic_service.render_scene(
+                    view_proj,
+                    camera.background_color,
+                    camera.target.clone(),
+                );
             }
         }),
     )

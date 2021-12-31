@@ -28,7 +28,7 @@ pub fn use_global<'a, T: Send + Sync + 'static>() -> &'a mut T {
 }
 
 pub fn use_memo<T: Clone + 'static, U: Clone + Eq + 'static>(
-    data_fn: impl Fn(U) -> T,
+    mut data_fn: impl FnMut(U) -> T,
     dependency: U,
 ) -> T {
     let value_state = use_state(|| data_fn(dependency.clone()));

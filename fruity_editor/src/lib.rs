@@ -88,6 +88,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
         Inject1::new(pause_at_startup),
         None,
     );
+    system_service.disable_pool(&99);
 
     let inspector_service = resource_container.require::<InspectorService>();
     let mut inspector_service = inspector_service.write();

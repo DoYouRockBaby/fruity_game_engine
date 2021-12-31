@@ -7,7 +7,6 @@ use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
-use fruity_graphic::math::ALPHA;
 use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
 use fruity_input::input_service::InputService;
 use std::fmt::Debug;
@@ -53,7 +52,7 @@ impl GizmosService {
         let color = if is_hover { hover_color } else { color };
 
         let graphic_2d_service = self.graphic_2d_service.read();
-        graphic_2d_service.draw_rect(bottom_left, top_right, 3, ALPHA, color, 1000);
+        graphic_2d_service.draw_rect(bottom_left, top_right, 3, Color::alpha(), color, 1000);
 
         is_hover
     }
@@ -92,7 +91,7 @@ impl GizmosService {
         let is_hover = cursor_pos.in_circle(&center, &radius);
         let color = if is_hover { hover_color } else { color };
 
-        graphic_2d_service.draw_circle(center, radius, 0, color, ALPHA, 1000);
+        graphic_2d_service.draw_circle(center, radius, 0, color, Color::alpha(), 1000);
 
         is_hover
     }

@@ -52,8 +52,8 @@ impl SceneState {
     pub fn stop(&mut self) {
         let inspector_state = use_global::<InspectorState>();
         let entity_service = self.entity_service.read();
-        let system_service = self.system_service.read();
 
+        let system_service = self.system_service.read();
         entity_service.restore(self.snapshot.as_ref().unwrap());
         inspector_state.unselect();
         system_service.set_paused(true);
