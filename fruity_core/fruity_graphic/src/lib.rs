@@ -1,6 +1,7 @@
 use crate::math::matrix3::Matrix3;
 use crate::math::matrix4::Matrix4;
 use crate::math::vector2d::Vector2d;
+use crate::math::Color;
 use crate::resources::default_resources::load_default_resources;
 use crate::resources::material_resource::load_material;
 use crate::resources::shader_resource::load_shader;
@@ -22,6 +23,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let object_factory_service = resource_container.require::<ObjectFactoryService>();
     let mut object_factory_service = object_factory_service.write();
 
+    object_factory_service.register::<Color>("Color");
     object_factory_service.register::<Vector2d>("Vector2d");
     object_factory_service.register::<Matrix3>("Matrix3");
     object_factory_service.register::<Matrix4>("Matrix4");
