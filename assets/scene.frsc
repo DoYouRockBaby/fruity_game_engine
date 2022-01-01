@@ -10,8 +10,8 @@
         vec:
           class_name: Vector2d
           fields:
-            y: 0.25
-            x: -0.25
+            y: 2
+            x: -2
     - class_name: Rotate2d
       fields:
         angle: 0
@@ -20,8 +20,8 @@
         vec:
           class_name: Vector2d
           fields:
-            y: 0.3
-            x: 0.3
+            y: 2.5
+            x: 2.5
     - class_name: Sprite
       fields:
         z_index: 0
@@ -32,7 +32,7 @@
             resource_name: "./assets/material.material"
     - class_name: Move
       fields:
-        velocity: 0.2
+        velocity: 1.6
     - class_name: Transform2d
       fields:
         transform:

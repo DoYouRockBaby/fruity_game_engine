@@ -27,6 +27,7 @@ pub fn use_global<'a, T: Send + Sync + 'static>() -> &'a mut T {
     unsafe { std::mem::transmute::<&mut T, &mut T>(result) }
 }
 
+#[topo::nested]
 pub fn use_memo<T: Clone + 'static, U: Clone + Eq + 'static>(
     mut data_fn: impl FnMut(U) -> T,
     dependency: U,
@@ -34,8 +35,10 @@ pub fn use_memo<T: Clone + 'static, U: Clone + Eq + 'static>(
     let value_state = use_state(|| data_fn(dependency.clone()));
     let dependency_state = use_state(|| dependency.clone());
 
+    // We update the value if dependency changed
     if dependency != dependency_state.get() {
         value_state.set(data_fn(dependency.clone()));
+        dependency_state.set(dependency);
     }
 
     value_state.get()

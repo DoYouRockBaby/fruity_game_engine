@@ -1,11 +1,14 @@
 use crate::ui_element::DrawContext;
+use comp_state::CloneState;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_editor::hooks::topo;
 use fruity_editor::hooks::use_global;
 use fruity_editor::hooks::use_memo;
+use fruity_editor::hooks::use_state;
 use fruity_editor::state::world::WorldState;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::matrix4::Matrix4;
+use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
 use fruity_graphic::resources::texture_resource::TextureResource;
 use fruity_wgpu_graphic::graphic_service::WgpuGraphicService;
@@ -15,9 +18,30 @@ use std::sync::RwLock;
 
 #[topo::nested]
 pub fn draw_scene(ui: &mut egui::Ui, ctx: &mut DrawContext) {
+    // Get available dimensions
     let rect = ui.available_rect_before_wrap();
-    let width = (rect.width() / ui.input().physical_pixel_size()) as u32;
-    let height = (rect.height() / ui.input().physical_pixel_size()) as u32;
+    let width = (ui.available_width() / ui.input().physical_pixel_size()) as u32;
+    let height = (ui.available_height() / ui.input().physical_pixel_size()) as u32;
+    let ratio = ui.available_width() / ui.available_height();
+
+    // Update camera if needed
+    let center_state = use_state(|| Vector2d::default());
+    let zoom_state = use_state(|| 4.0 as f32);
+    if ui.input().scroll_delta.y != 0.0 {
+        zoom_state.set(zoom_state.get() + ui.input().scroll_delta.y * 0.001);
+    }
+
+    // Calculate the camera view transform
+    let center = center_state.get();
+    let zoom = f32::powf(2.0, zoom_state.get() as f32);
+    let view_proj = Matrix4::from_rect(
+        center.x - zoom,
+        center.x + zoom,
+        center.y - (zoom / ratio),
+        center.y + (zoom / ratio),
+        -1.0,
+        1.0,
+    );
 
     // Build the rendering texture
     let (resource, rendering_texture_id) = use_memo(
@@ -69,7 +93,6 @@ pub fn draw_scene(ui: &mut egui::Ui, ctx: &mut DrawContext) {
         .resource_container
         .require::<dyn GraphicService>();
     let graphic_service = graphic_service.read();
-    let view_proj = Matrix4::from_rect(-1.5, 1.5, -1.0, 1.0, -1.0, 1.0);
 
     // Draw the scene on the texture
     let background_color = ui.style().visuals.faint_bg_color;
