@@ -36,6 +36,12 @@ pub enum MaterialSettingsBinding {
     Camera {
         bind_group: u32,
     },
+    ViewportSize {
+        bind_group: u32,
+    },
+    RenderSurfaceSize {
+        bind_group: u32,
+    },
 }
 
 // TODO: Complete that
@@ -62,6 +68,9 @@ pub enum MaterialSettingsInstanceAttribute {
         location: u32,
     },
     Float {
+        location: u32,
+    },
+    Vector2 {
         location: u32,
     },
     Vector4 {
@@ -191,6 +200,14 @@ fn build_material_binding(
             let bind_group = settings.get::<u32>("bind_group", u32::default());
             Some(MaterialSettingsBinding::Camera { bind_group })
         }
+        "viewport_size" => {
+            let bind_group = settings.get::<u32>("bind_group", u32::default());
+            Some(MaterialSettingsBinding::ViewportSize { bind_group })
+        }
+        "render_surface_size" => {
+            let bind_group = settings.get::<u32>("bind_group", u32::default());
+            Some(MaterialSettingsBinding::RenderSurfaceSize { bind_group })
+        }
         _ => None,
     }
 }
@@ -221,6 +238,11 @@ fn build_material_instance_attribute(
                 vec0_location,
                 vec1_location,
             })
+        }
+        "vec2" => {
+            let location = settings.get::<u32>("location", u32::default());
+
+            Some(MaterialSettingsInstanceAttribute::Vector2 { location })
         }
         "vec4" => {
             let location = settings.get::<u32>("location", u32::default());

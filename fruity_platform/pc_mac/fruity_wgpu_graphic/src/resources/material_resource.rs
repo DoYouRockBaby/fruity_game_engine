@@ -38,6 +38,9 @@ pub enum InstanceField {
     Float {
         location: BufferLocation,
     },
+    Vector2 {
+        location: BufferLocation,
+    },
     Vector4 {
         location: BufferLocation,
     },
@@ -87,6 +90,13 @@ impl WgpuMaterialResource {
                 MaterialSettingsBinding::Camera { bind_group } => {
                     (*bind_group, graphic_service.get_camera_bind_group())
                 }
+                MaterialSettingsBinding::ViewportSize { bind_group } => {
+                    (*bind_group, graphic_service.get_viewport_size_bind_group())
+                }
+                MaterialSettingsBinding::RenderSurfaceSize { bind_group } => (
+                    *bind_group,
+                    graphic_service.get_render_surface_size_bind_group(),
+                ),
             })
             .collect::<Vec<_>>();
 
@@ -146,6 +156,15 @@ impl WgpuMaterialResource {
                         &mut fields,
                         instance_attribute.0.clone(),
                         InstanceField::Float {
+                            location: fields_by_locations.get(location).unwrap().clone(),
+                        },
+                    );
+                }
+                MaterialSettingsInstanceAttribute::Vector2 { location } => {
+                    insert_in_hashmap_vec(
+                        &mut fields,
+                        instance_attribute.0.clone(),
+                        InstanceField::Vector2 {
                             location: fields_by_locations.get(location).unwrap().clone(),
                         },
                     );

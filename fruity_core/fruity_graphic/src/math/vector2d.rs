@@ -78,6 +78,11 @@ impl Vector2d {
         }
     }
 
+    /// Get the absolute value of the vector
+    pub fn abs(self) -> Vector2d {
+        Vector2d::new(self.x.abs(), self.y.abs())
+    }
+
     /// Returns a vector perpendicular to the current one.
     ///
     /// # Example
@@ -288,6 +293,15 @@ impl IntrospectObject for Vector2d {
                 call: MethodCaller::Const(Arc::new(|this, _args| {
                     let this = cast_introspect_ref::<Vector2d>(this);
                     let result = this.normal();
+
+                    Ok(Some(result.fruity_into()))
+                })),
+            },
+            MethodInfo {
+                name: "abs".to_string(),
+                call: MethodCaller::Const(Arc::new(|this, _args| {
+                    let this = cast_introspect_ref::<Vector2d>(this);
+                    let result = this.abs();
 
                     Ok(Some(result.fruity_into()))
                 })),

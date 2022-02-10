@@ -7,13 +7,16 @@ use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::utils::math::normalise_angle_range;
 use fruity_graphic::graphic_service::GraphicService;
+use fruity_graphic::graphic_service::MaterialParam;
 use fruity_graphic::math::material_reference::MaterialReference;
 use fruity_graphic::math::matrix3::Matrix3;
+use fruity_graphic::math::matrix4::Matrix4;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
 use fruity_graphic::resources::material_resource::MaterialResource;
 use fruity_graphic::resources::mesh_resource::MeshResource;
 use fruity_windows::window_service::WindowService;
+use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::ops::Deref;
 use std::ops::Range;
@@ -59,7 +62,13 @@ impl Graphic2dService {
         }
     }
 
-    pub fn draw_quad(&self, identifier: u64, material: &dyn MaterialReference, z_index: usize) {
+    pub fn draw_quad(
+        &self,
+        identifier: u64,
+        material: &dyn MaterialReference,
+        params: HashMap<String, MaterialParam>,
+        z_index: i32,
+    ) {
         let graphic_service = self.graphic_service.read();
 
         let mesh = self
@@ -67,7 +76,7 @@ impl Graphic2dService {
             .get::<dyn MeshResource>("Meshes/Squad")
             .unwrap();
 
-        graphic_service.draw_mesh(identifier, mesh.clone(), material, z_index)
+        graphic_service.draw_mesh(identifier, mesh.clone(), material, params, z_index)
     }
 
     pub fn draw_line(
@@ -76,29 +85,12 @@ impl Graphic2dService {
         pos2: Vector2d,
         width: u32,
         color: Color,
-        z_index: usize,
+        z_index: i32,
     ) {
-        let window_service = self.window_service.read();
-        let windows_size = window_service.get_size();
-
-        // Calculate squad transform
-        let diff = pos2 - pos1;
-        let translate = (pos1 + pos2) / 2.0;
-        let rotate = (diff.y / diff.x).atan() + PI / 2.0;
-        let scale = Vector2d {
-            x: 2.0 * width as f32 / windows_size.0 as f32,
-            y: diff.length(),
-        };
-
-        // Calculate transform
-        let transform = Matrix3::identity()
-            * Matrix3::translation(translate)
-            * Matrix3::rotation(rotate)
-            * Matrix3::scaling(scale);
-
-        // Update line color
-        self.draw_line_material
-            .set_matrix4("transform", transform.into());
+        // Update line instance fields
+        self.draw_line_material.set_vector2d("pos1", pos1);
+        self.draw_line_material.set_vector2d("pos2", pos2);
+        self.draw_line_material.set_uint("width", width);
         self.draw_line_material.set_color("color", color);
 
         // Draw the line
@@ -112,33 +104,16 @@ impl Graphic2dService {
         width: u32,
         fill_color: Color,
         border_color: Color,
-        z_index: usize,
+        z_index: i32,
     ) {
-        let window_service = self.window_service.read();
-        let windows_size = window_service.get_size();
-
-        // Calculate squad transform
-        let diff = top_right - bottom_left;
-        let translate = (top_right + bottom_left) / 2.0;
-        let scale = Vector2d {
-            x: diff.x,
-            y: diff.y,
-        };
-        let xwidth = 2.0 * width as f32 / windows_size.0 as f32 / scale.x;
-        let ywidth = 2.0 * width as f32 / windows_size.1 as f32 / scale.y;
-
-        // Calculate transform
-        let transform =
-            Matrix3::identity() * Matrix3::translation(translate) * Matrix3::scaling(scale);
-
-        // Update line color
+        // Update line instance fields
         self.draw_rect_material
-            .set_matrix4("transform", transform.into());
+            .set_vector2d("bottom_left", bottom_left);
+        self.draw_rect_material.set_vector2d("top_right", top_right);
+        self.draw_rect_material.set_uint("width", width);
         self.draw_rect_material.set_color("fill_color", fill_color);
         self.draw_rect_material
             .set_color("border_color", border_color);
-        self.draw_rect_material.set_float("xwidth", xwidth);
-        self.draw_rect_material.set_float("ywidth", ywidth);
 
         // Draw the line
         self.draw_quad(0, self.draw_rect_material.deref(), z_index);
@@ -152,7 +127,7 @@ impl Graphic2dService {
         width: u32,
         fill_color: Color,
         border_color: Color,
-        z_index: usize,
+        z_index: i32,
     ) {
         let window_service = self.window_service.read();
         let windows_size = window_service.get_size();
@@ -192,7 +167,7 @@ impl Graphic2dService {
         width: u32,
         fill_color: Color,
         border_color: Color,
-        z_index: usize,
+        z_index: i32,
     ) {
         self.draw_arc(
             center,

@@ -7,7 +7,9 @@ use std::sync::Arc;
 
 pub struct TextureResourceSettings {}
 
-pub trait TextureResource: Resource {}
+pub trait TextureResource: Resource {
+    fn get_size(&self) -> (u32, u32);
+}
 
 pub fn load_texture(
     identifier: &str,

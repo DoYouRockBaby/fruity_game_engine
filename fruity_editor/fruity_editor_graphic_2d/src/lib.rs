@@ -1,6 +1,8 @@
 use crate::gizmos_service::GizmosService;
+use crate::systems::display_grid::display_grid;
 use crate::systems::draw_gizmos_2d::draw_gizmos_2d;
 use fruity_core::inject::Inject1;
+use fruity_core::inject::Inject3;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use fruity_ecs::system::system_service::SystemParams;
@@ -28,6 +30,16 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
         "draw_gizmos_2d",
         MODULE_NAME,
         Inject1::new(draw_gizmos_2d),
+        Some(SystemParams {
+            pool_index: 98,
+            ignore_pause: true,
+        }),
+    );
+
+    system_service.add_system(
+        "display_grid",
+        MODULE_NAME,
+        Inject3::new(display_grid),
         Some(SystemParams {
             pool_index: 98,
             ignore_pause: true,

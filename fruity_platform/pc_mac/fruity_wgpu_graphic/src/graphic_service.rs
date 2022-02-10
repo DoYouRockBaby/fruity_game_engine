@@ -12,8 +12,10 @@ use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::signal::Signal;
 use fruity_graphic::graphic_service::GraphicService;
+use fruity_graphic::graphic_service::MaterialParam;
 use fruity_graphic::math::material_reference::MaterialReference;
 use fruity_graphic::math::matrix4::Matrix4;
+use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
 use fruity_graphic::resources::material_resource::MaterialResource;
 use fruity_graphic::resources::material_resource::MaterialResourceSettings;
@@ -27,6 +29,7 @@ use fruity_windows::window_service::WindowService;
 use fruity_winit_windows::window_service::WinitWindowService;
 use image::load_from_memory;
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::iter;
 use std::ops::Deref;
@@ -39,6 +42,14 @@ use winit::window::Window;
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct CameraUniform(pub [[f32; 4]; 4]);
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct ViewportSizeUniform(pub [f32; 2]);
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct RenderSurfaceSizeUniform(pub [f32; 2]);
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -65,13 +76,17 @@ pub struct State {
     pub camera_transform: RwLock<Matrix4>,
     pub camera_buffer: wgpu::Buffer,
     pub camera_bind_group: Arc<wgpu::BindGroup>,
+    pub viewport_size_buffer: wgpu::Buffer,
+    pub viewport_size_bind_group: Arc<wgpu::BindGroup>,
+    pub render_surface_size_buffer: wgpu::Buffer,
+    pub render_surface_size_bind_group: Arc<wgpu::BindGroup>,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 struct RenderInstanceIdentifier {
     mesh_identifier: String,
     material_identifier: String,
-    z_index: usize,
+    z_index: i32,
 }
 
 #[derive(Debug)]
@@ -89,6 +104,7 @@ pub struct WgpuGraphicService {
     render_instances: RwLock<BTreeMap<RenderInstanceIdentifier, RenderInstance>>,
     render_bundles: RwLock<Vec<wgpu::RenderBundle>>,
     current_encoder: Option<RwLock<wgpu::CommandEncoder>>,
+    window_service: ResourceReference<dyn WindowService>,
     pub on_before_draw_end: Signal<()>,
     pub on_after_draw_end: Signal<()>,
 }
@@ -96,57 +112,50 @@ pub struct WgpuGraphicService {
 impl WgpuGraphicService {
     pub fn new(resource_container: Arc<ResourceContainer>) -> WgpuGraphicService {
         let window_service = resource_container.require::<dyn WindowService>();
-        let window_service = window_service.read();
-        let window_service = window_service.downcast_ref::<WinitWindowService>();
 
-        // Subscribe to windows observer to proceed the graphics when it's neededs
-        let resource_container_2 = resource_container.clone();
-        window_service.on_start_update().add_observer(move |_| {
-            puffin::profile_scope!("start_draw");
-
-            let graphic_service = resource_container_2.require::<dyn GraphicService>();
-            let mut graphic_service = graphic_service.write();
-            let graphic_service = graphic_service.downcast_mut::<WgpuGraphicService>();
-
-            graphic_service.start_draw();
-        });
-
-        let resource_container_2 = resource_container.clone();
-        window_service.on_end_update().add_observer(move |_| {
-            puffin::profile_scope!("end_draw");
-
-            let graphic_service = resource_container_2.require::<dyn GraphicService>();
-
-            // Send the event that we will end to draw
-            {
-                let graphic_service = graphic_service.read();
-                graphic_service.on_before_draw_end().notify(());
-            }
-
-            // End the drawing
-            {
-                let mut graphic_service = graphic_service.write();
-                graphic_service.end_draw();
-            }
-
-            // Send the event that we finish to draw
-            {
-                let graphic_service = graphic_service.read();
-                graphic_service.on_after_draw_end().notify(());
-            }
-        });
-
-        let resource_container_2 = resource_container.clone();
-        window_service
-            .on_resize()
-            .add_observer(move |(width, height)| {
+        let state = {
+            let window_service = window_service.read();
+            let window_service = window_service.downcast_ref::<WinitWindowService>();
+            // Subscribe to windows observer to proceed the graphics when it's neededs
+            let resource_container_2 = resource_container.clone();
+            window_service.on_start_update().add_observer(move |_| {
+                puffin::profile_scope!("start_draw");
                 let graphic_service = resource_container_2.require::<dyn GraphicService>();
                 let mut graphic_service = graphic_service.write();
-                graphic_service.resize(*width, *height);
+                let graphic_service = graphic_service.downcast_mut::<WgpuGraphicService>();
+                graphic_service.start_draw();
             });
-
-        // Initialize the graphics
-        let state = WgpuGraphicService::initialize(window_service.get_window());
+            let resource_container_2 = resource_container.clone();
+            window_service.on_end_update().add_observer(move |_| {
+                puffin::profile_scope!("end_draw");
+                let graphic_service = resource_container_2.require::<dyn GraphicService>();
+                // Send the event that we will end to draw
+                {
+                    let graphic_service = graphic_service.read();
+                    graphic_service.on_before_draw_end().notify(());
+                }
+                // End the drawing
+                {
+                    let mut graphic_service = graphic_service.write();
+                    graphic_service.end_draw();
+                }
+                // Send the event that we finish to draw
+                {
+                    let graphic_service = graphic_service.read();
+                    graphic_service.on_after_draw_end().notify(());
+                }
+            });
+            let resource_container_2 = resource_container.clone();
+            window_service
+                .on_resize()
+                .add_observer(move |(width, height)| {
+                    let graphic_service = resource_container_2.require::<dyn GraphicService>();
+                    let mut graphic_service = graphic_service.write();
+                    graphic_service.resize(*width, *height);
+                });
+            // Initialize the graphics
+            WgpuGraphicService::initialize(window_service.get_window())
+        };
 
         // Dispatch initialized event
         let on_initialized = Signal::new();
@@ -158,6 +167,7 @@ impl WgpuGraphicService {
             render_instances: RwLock::new(BTreeMap::new()),
             render_bundles: RwLock::new(Vec::new()),
             current_encoder: None,
+            window_service,
             on_before_draw_end: Signal::new(),
             on_after_draw_end: Signal::new(),
         }
@@ -186,7 +196,7 @@ impl WgpuGraphicService {
                         limits: wgpu::Limits::default(),
                         label: None,
                     },
-                    None, // Trace path
+                    None,
                 )
                 .await
                 .unwrap();
@@ -212,6 +222,14 @@ impl WgpuGraphicService {
             // Create camera bind group
             let (camera_buffer, camera_bind_group) = Self::initialize_camera(&device);
 
+            // Create camera bind group
+            let (viewport_size_buffer, viewport_size_bind_group) =
+                Self::initialize_viewport_size(&device);
+
+            // Create camera bind group
+            let (render_surface_size_buffer, render_surface_size_bind_group) =
+                Self::initialize_render_surface_size(&device);
+
             // Update state
             State {
                 surface,
@@ -222,6 +240,10 @@ impl WgpuGraphicService {
                 camera_transform: RwLock::new(Matrix4::identity()),
                 camera_buffer,
                 camera_bind_group,
+                viewport_size_buffer,
+                viewport_size_bind_group,
+                render_surface_size_buffer,
+                render_surface_size_bind_group,
             }
         };
 
@@ -238,7 +260,7 @@ impl WgpuGraphicService {
         mut instance_buffer: Vec<u8>,
         mesh: ResourceReference<dyn MeshResource>,
         material: ResourceReference<dyn MaterialResource>,
-        z_index: usize,
+        z_index: i32,
     ) {
         puffin::profile_function!();
 
@@ -360,6 +382,7 @@ impl WgpuGraphicService {
     }
 
     fn update_camera(&self, view_proj: Matrix4) {
+        // Update camera viewproj bind group
         let mut camera_transform = self.state.camera_transform.write().unwrap();
         *camera_transform = view_proj.clone();
         let camera_uniform = CameraUniform(view_proj.into());
@@ -367,6 +390,17 @@ impl WgpuGraphicService {
             &self.state.camera_buffer,
             0,
             bytemuck::cast_slice(&[camera_uniform]),
+        );
+
+        // Update viewport size bind group
+        let screen_bottom_left = view_proj * Vector2d::new(-1.0, -1.0);
+        let screen_top_right = view_proj * Vector2d::new(1.0, 1.0);
+        let viewport_size = (screen_bottom_left - screen_top_right).abs();
+        let viewport_size_uniform = ViewportSizeUniform([viewport_size.x, viewport_size.y]);
+        self.state.queue.write_buffer(
+            &self.state.viewport_size_buffer,
+            0,
+            bytemuck::cast_slice(&[viewport_size_uniform]),
         );
     }
 
@@ -392,6 +426,14 @@ impl WgpuGraphicService {
 
     pub fn get_camera_bind_group(&self) -> Arc<wgpu::BindGroup> {
         self.state.camera_bind_group.clone()
+    }
+
+    pub fn get_viewport_size_bind_group(&self) -> Arc<wgpu::BindGroup> {
+        self.state.viewport_size_bind_group.clone()
+    }
+
+    pub fn get_render_surface_size_bind_group(&self) -> Arc<wgpu::BindGroup> {
+        self.state.render_surface_size_bind_group.clone()
     }
 
     pub fn get_encoder(&self) -> Option<&RwLock<wgpu::CommandEncoder>> {
@@ -429,6 +471,78 @@ impl WgpuGraphicService {
         });
 
         (camera_buffer, Arc::new(camera_bind_group))
+    }
+
+    fn initialize_viewport_size(device: &wgpu::Device) -> (wgpu::Buffer, Arc<wgpu::BindGroup>) {
+        let viewport_size = Vector2d::default();
+
+        let viewport_size_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Viewport Size Buffer"),
+            contents: bytemuck::cast_slice(&[viewport_size]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let viewport_size_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+                label: Some("Viewport Size Buffer"),
+            }),
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: viewport_size_buffer.as_entire_binding(),
+            }],
+            label: Some("Viewport Size Buffer"),
+        });
+
+        (viewport_size_buffer, Arc::new(viewport_size_bind_group))
+    }
+
+    fn initialize_render_surface_size(
+        device: &wgpu::Device,
+    ) -> (wgpu::Buffer, Arc<wgpu::BindGroup>) {
+        let render_surface_size = (u32::default(), u32::default());
+
+        let render_surface_size_buffer =
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Render Surface Size Buffer"),
+                contents: bytemuck::cast_slice(&[render_surface_size.0, render_surface_size.1]),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            });
+
+        let render_surface_size_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+                label: Some("Render Surface Size Buffer"),
+            }),
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: render_surface_size_buffer.as_entire_binding(),
+            }],
+            label: Some("Render Surface Size Buffer"),
+        });
+
+        (
+            render_surface_size_buffer,
+            Arc::new(render_surface_size_bind_group),
+        )
     }
 }
 
@@ -493,7 +607,7 @@ impl GraphicService for WgpuGraphicService {
             return;
         };
 
-        let rendering_view = target
+        let (rendering_view, render_surface_size) = target
             .as_ref()
             .map(|texture| {
                 let texture = texture.read();
@@ -504,9 +618,21 @@ impl GraphicService for WgpuGraphicService {
                     std::mem::transmute::<&wgpu::TextureView, &wgpu::TextureView>(&texture.view)
                 };
 
-                value
+                (value, texture.get_size())
             })
-            .unwrap_or(&self.state.rendering_view);
+            .unwrap_or_else(|| {
+                let window_service = self.window_service.read();
+                (&self.state.rendering_view, window_service.get_size())
+            });
+
+        // Update viewport size bind group
+        let render_surface_size_uniform =
+            RenderSurfaceSizeUniform([render_surface_size.0 as f32, render_surface_size.1 as f32]);
+        self.state.queue.write_buffer(
+            &self.state.render_surface_size_buffer,
+            0,
+            bytemuck::cast_slice(&[render_surface_size_uniform]),
+        );
 
         let mut render_pass = {
             encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -542,9 +668,9 @@ impl GraphicService for WgpuGraphicService {
         camera_transform.clone()
     }
 
-    fn resize(&mut self, width: usize, height: usize) {
-        self.state.config.width = width as u32;
-        self.state.config.height = height as u32;
+    fn resize(&mut self, width: u32, height: u32) {
+        self.state.config.width = width;
+        self.state.config.height = height;
 
         self.state
             .surface
@@ -564,7 +690,8 @@ impl GraphicService for WgpuGraphicService {
         identifier: u64,
         mesh: ResourceReference<dyn MeshResource>,
         material: &dyn MaterialReference,
-        z_index: usize,
+        params: HashMap<String, MaterialParam>,
+        z_index: i32,
     ) {
         let material = if let Some(material) = material
             .as_any_ref()

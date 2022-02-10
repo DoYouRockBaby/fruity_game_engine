@@ -140,7 +140,7 @@ pub fn platform(
                 event: WindowEvent::Resized(physical_size),
                 ..
             } => {
-                on_resize.notify((physical_size.width as usize, physical_size.height as usize));
+                on_resize.notify((physical_size.width, physical_size.height));
             }
             // Check if the user has moved the cursor
             Event::WindowEvent {
@@ -153,19 +153,16 @@ pub fn platform(
                     .downcast_mut::<WinitWindowService>()
                     .unwrap();
 
-                window_service.cursor_position = (position.x as usize, position.y as usize);
+                window_service.cursor_position = (position.x as u32, position.y as u32);
                 std::mem::drop(window_service);
 
-                on_cursor_moved.notify((position.x as usize, position.y as usize));
+                on_cursor_moved.notify((position.x as u32, position.y as u32));
             }
             Event::WindowEvent {
                 event: WindowEvent::ScaleFactorChanged { new_inner_size, .. },
                 ..
             } => {
-                on_resize.notify((
-                    new_inner_size.width as usize,
-                    new_inner_size.height as usize,
-                ));
+                on_resize.notify((new_inner_size.width, new_inner_size.height));
             }
             Event::MainEventsCleared => {
                 on_events_cleared.notify(());

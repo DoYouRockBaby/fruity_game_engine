@@ -8,5 +8,5 @@ use fruity_graphic::resources::texture_resource::TextureResource;
 pub struct Sprite {
     pub material: Option<Box<dyn MaterialReference>>,
     pub texture: Option<ResourceReference<dyn TextureResource>>,
-    pub z_index: usize,
+    pub z_index: i32,
 }

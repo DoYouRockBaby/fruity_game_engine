@@ -15,12 +15,6 @@ use std::ops::Deref;
 use std::sync::RwLock;
 
 pub trait MaterialReference: IntrospectObject + SerializableObject + Debug {
-    fn set_uint(&self, entry_name: &str, value: u32);
-    fn set_int(&self, entry_name: &str, value: i32);
-    fn set_float(&self, entry_name: &str, value: f32);
-    fn set_color(&self, entry_name: &str, value: Color);
-    fn set_rect(&self, entry_name: &str, bottom_left: Vector2d, top_right: Vector2d);
-    fn set_matrix4(&self, entry_name: &str, matrix: Matrix4);
     fn get_material(&self) -> ResourceReference<dyn MaterialResource>;
 }
 

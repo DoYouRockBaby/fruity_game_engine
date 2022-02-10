@@ -76,6 +76,11 @@ pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
             view_proj: mat4x4<f32>;
         };
         
+        [[block]]
+        struct RenderSurfaceSizeUniform {
+            value: vec2<f32>;
+        };
+        
         struct VertexInput {
             [[location(0)]] position: vec3<f32>;
             [[location(1)]] tex_coords: vec2<f32>;
@@ -83,11 +88,10 @@ pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
         };
         
         struct InstanceInput {
-            [[location(5)]] model_matrix_0: vec4<f32>;
-            [[location(6)]] model_matrix_1: vec4<f32>;
-            [[location(7)]] model_matrix_2: vec4<f32>;
-            [[location(8)]] model_matrix_3: vec4<f32>;
-            [[location(9)]] color: vec4<f32>;
+            [[location(5)]] pos1: vec2<f32>;
+            [[location(6)]] pos2: vec2<f32>;
+            [[location(7)]] width: u32;
+            [[location(8)]] color: vec4<f32>;
         };
         
         struct VertexOutput {
@@ -98,21 +102,35 @@ pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
         [[group(0), binding(0)]]
         var<uniform> camera: CameraUniform;
 
+        [[group(1), binding(0)]]
+        var<uniform> render_surface_size: RenderSurfaceSizeUniform;
+
         [[stage(vertex)]]
         fn main(
             model: VertexInput,
             instance: InstanceInput,
         ) -> VertexOutput {
-            let model_matrix = mat4x4<f32>(
-                instance.model_matrix_0,
-                instance.model_matrix_1,
-                instance.model_matrix_2,
-                instance.model_matrix_3,
-            );
+            let diff = instance.pos2 - instance.pos1;
+            let x_scale = f32(instance.width) / render_surface_size.value.x;
+            let y_scale = f32(instance.width) / render_surface_size.value.y;
+            let normal = normalize(vec2<f32>(-diff.y, diff.x));
+            let scaled_normal = vec2<f32>(normal.x * x_scale, normal.y * y_scale);
 
             var out: VertexOutput;
-            out.position = camera.view_proj * model_matrix * vec4<f32>(model.position, 1.0);
             out.color = instance.color;
+
+            if (model.position.x == -0.5 && model.position.y == -0.5) {
+                out.position = camera.view_proj * vec4<f32>(instance.pos1, 0.0, 1.0) + vec4<f32>(scaled_normal, 0.0, 0.0);
+            } elseif (model.position.x == 0.5 && model.position.y == -0.5) {
+                out.position = camera.view_proj * vec4<f32>(instance.pos1, 0.0, 1.0) - vec4<f32>(scaled_normal, 0.0, 0.0);
+            } elseif (model.position.x == 0.5 && model.position.y == 0.5) {
+                out.position = camera.view_proj * vec4<f32>(instance.pos2, 0.0, 1.0) - vec4<f32>(scaled_normal, 0.0, 0.0);
+            } elseif (model.position.x == -0.5 && model.position.y == 0.5) {
+                out.position = camera.view_proj * vec4<f32>(instance.pos2, 0.0, 1.0) + vec4<f32>(scaled_normal, 0.0, 0.0);
+            } else {
+                out.position = camera.view_proj * vec4<f32>(model.position, 1.0);
+            }
+
             return out;
         }
 
@@ -127,31 +145,35 @@ pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
             "Shaders/Draw Line",
             code,
             ShaderResourceSettings {
-                binding_groups: vec![ShaderBindingGroup {
-                    bindings: vec![ShaderBinding {
-                        visibility: ShaderBindingVisibility::Vertex,
-                        ty: ShaderBindingType::Uniform,
-                    }],
-                }],
+                binding_groups: vec![
+                    ShaderBindingGroup {
+                        bindings: vec![ShaderBinding {
+                            visibility: ShaderBindingVisibility::Vertex,
+                            ty: ShaderBindingType::Uniform,
+                        }],
+                    },
+                    ShaderBindingGroup {
+                        bindings: vec![ShaderBinding {
+                            visibility: ShaderBindingVisibility::Vertex,
+                            ty: ShaderBindingType::Uniform,
+                        }],
+                    },
+                ],
                 instance_attributes: vec![
                     ShaderInstanceAttribute {
                         location: 5,
-                        ty: ShaderInstanceAttributeType::Vector4,
+                        ty: ShaderInstanceAttributeType::Vector2,
                     },
                     ShaderInstanceAttribute {
                         location: 6,
-                        ty: ShaderInstanceAttributeType::Vector4,
+                        ty: ShaderInstanceAttributeType::Vector2,
                     },
                     ShaderInstanceAttribute {
                         location: 7,
-                        ty: ShaderInstanceAttributeType::Vector4,
+                        ty: ShaderInstanceAttributeType::UInt,
                     },
                     ShaderInstanceAttribute {
                         location: 8,
-                        ty: ShaderInstanceAttributeType::Vector4,
-                    },
-                    ShaderInstanceAttribute {
-                        location: 9,
                         ty: ShaderInstanceAttributeType::Vector4,
                     },
                 ],
@@ -173,16 +195,22 @@ pub fn load_draw_line_material(resource_container: Arc<ResourceContainer>) {
             "Materials/Draw Line",
             MaterialResourceSettings {
                 shader,
-                bindings: vec![MaterialSettingsBinding::Camera { bind_group: 0 }],
+                bindings: vec![
+                    MaterialSettingsBinding::Camera { bind_group: 0 },
+                    MaterialSettingsBinding::RenderSurfaceSize { bind_group: 1 },
+                ],
                 instance_attributes: hashmap! {
-                    "transform".to_string() => MaterialSettingsInstanceAttribute::Matrix4 {
-                        vec0_location: 5,
-                        vec1_location: 6,
-                        vec2_location: 7,
-                        vec3_location: 8,
+                    "pos1".to_string() => MaterialSettingsInstanceAttribute::Vector2 {
+                        location: 5,
+                    },
+                    "pos2".to_string() => MaterialSettingsInstanceAttribute::Vector2 {
+                        location: 6,
+                    },
+                    "width".to_string() => MaterialSettingsInstanceAttribute::UInt {
+                        location: 7,
                     },
                     "color".to_string() => MaterialSettingsInstanceAttribute::Vector4 {
-                        location: 9,
+                        location: 8,
                     },
                 },
             },
@@ -202,6 +230,16 @@ pub fn load_draw_rect_shader(resource_container: Arc<ResourceContainer>) {
             view_proj: mat4x4<f32>;
         };
         
+        [[block]]
+        struct RenderSurfaceSizeUniform {
+            value: vec2<f32>;
+        };
+        
+        [[block]]
+        struct ViewportSizeUniform {
+            value: vec2<f32>;
+        };
+        
         struct VertexInput {
             [[location(0)]] position: vec3<f32>;
             [[location(1)]] tex_coords: vec2<f32>;
@@ -209,14 +247,11 @@ pub fn load_draw_rect_shader(resource_container: Arc<ResourceContainer>) {
         };
         
         struct InstanceInput {
-            [[location(5)]] model_matrix_0: vec4<f32>;
-            [[location(6)]] model_matrix_1: vec4<f32>;
-            [[location(7)]] model_matrix_2: vec4<f32>;
-            [[location(8)]] model_matrix_3: vec4<f32>;
-            [[location(9)]] fill_color: vec4<f32>;
-            [[location(10)]] border_color: vec4<f32>;
-            [[location(11)]] xwidth: f32;
-            [[location(12)]] ywidth: f32;
+            [[location(5)]] bottom_left: vec2<f32>;
+            [[location(6)]] top_right: vec2<f32>;
+            [[location(7)]] width: u32;
+            [[location(8)]] fill_color: vec4<f32>;
+            [[location(9)]] border_color: vec4<f32>;
         };
         
         struct VertexOutput {
@@ -231,35 +266,48 @@ pub fn load_draw_rect_shader(resource_container: Arc<ResourceContainer>) {
         [[group(0), binding(0)]]
         var<uniform> camera: CameraUniform;
 
+        [[group(1), binding(0)]]
+        var<uniform> render_surface_size: RenderSurfaceSizeUniform;
+
         [[stage(vertex)]]
         fn main(
             model: VertexInput,
             instance: InstanceInput,
         ) -> VertexOutput {
-            let model_matrix = mat4x4<f32>(
-                instance.model_matrix_0,
-                instance.model_matrix_1,
-                instance.model_matrix_2,
-                instance.model_matrix_3,
-            );
-
             var out: VertexOutput;
-            out.position = camera.view_proj * model_matrix * vec4<f32>(model.position, 1.0);
             out.fill_color = instance.fill_color;
             out.border_color = instance.border_color;
             out.tex_coords = model.tex_coords;
-            out.xwidth = instance.xwidth;
-            out.ywidth = instance.ywidth;
+            var diff = camera.view_proj * (vec4<f32>(instance.top_right, 0.0, 1.0) - vec4<f32>(instance.bottom_left, 0.0, 0.0));
+            var screen_to_texture_coords = vec2<f32>(
+                1.0 / diff.x / render_surface_size.value.x,
+                1.0 / diff.y / render_surface_size.value.y);
+
+            out.xwidth = f32(instance.width) * screen_to_texture_coords.x;
+            out.ywidth = f32(instance.width) * screen_to_texture_coords.y;
+
+            if (model.position.x == -0.5 && model.position.y == -0.5) {
+                out.position = camera.view_proj * vec4<f32>(instance.bottom_left.x, instance.bottom_left.y, 0.0, 1.0);
+            } elseif (model.position.x == 0.5 && model.position.y == -0.5) {
+                out.position = camera.view_proj * vec4<f32>(instance.top_right.x, instance.bottom_left.y, 0.0, 1.0);
+            } elseif (model.position.x == 0.5 && model.position.y == 0.5) {
+                out.position = camera.view_proj * vec4<f32>(instance.top_right.x, instance.top_right.y, 0.0, 1.0);
+            } elseif (model.position.x == -0.5 && model.position.y == 0.5) {
+                out.position = camera.view_proj * vec4<f32>(instance.bottom_left.x, instance.top_right.y, 0.0, 1.0);
+            } else {
+                out.position = camera.view_proj * vec4<f32>(model.position, 1.0);
+            }
+
             return out;
         }
 
         [[stage(fragment)]]
         fn main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
             if(
-                in.tex_coords.x <= in.xwidth ||
-                in.tex_coords.x >= (1.0 - in.xwidth) ||
-                in.tex_coords.y <= in.ywidth ||
-                in.tex_coords.y >= (1.0 - in.ywidth)
+                in.tex_coords.x < in.xwidth ||
+                in.tex_coords.x > (1.0 - in.xwidth) ||
+                in.tex_coords.y < in.ywidth ||
+                in.tex_coords.y > (1.0 - in.ywidth)
             ) {
                 return in.border_color;
             } else {
@@ -273,24 +321,32 @@ pub fn load_draw_rect_shader(resource_container: Arc<ResourceContainer>) {
             "Shaders/Draw Rect",
             code,
             ShaderResourceSettings {
-                binding_groups: vec![ShaderBindingGroup {
-                    bindings: vec![ShaderBinding {
-                        visibility: ShaderBindingVisibility::Vertex,
-                        ty: ShaderBindingType::Uniform,
-                    }],
-                }],
+                binding_groups: vec![
+                    ShaderBindingGroup {
+                        bindings: vec![ShaderBinding {
+                            visibility: ShaderBindingVisibility::Vertex,
+                            ty: ShaderBindingType::Uniform,
+                        }],
+                    },
+                    ShaderBindingGroup {
+                        bindings: vec![ShaderBinding {
+                            visibility: ShaderBindingVisibility::Vertex,
+                            ty: ShaderBindingType::Uniform,
+                        }],
+                    },
+                ],
                 instance_attributes: vec![
                     ShaderInstanceAttribute {
                         location: 5,
-                        ty: ShaderInstanceAttributeType::Vector4,
+                        ty: ShaderInstanceAttributeType::Vector2,
                     },
                     ShaderInstanceAttribute {
                         location: 6,
-                        ty: ShaderInstanceAttributeType::Vector4,
+                        ty: ShaderInstanceAttributeType::Vector2,
                     },
                     ShaderInstanceAttribute {
                         location: 7,
-                        ty: ShaderInstanceAttributeType::Vector4,
+                        ty: ShaderInstanceAttributeType::UInt,
                     },
                     ShaderInstanceAttribute {
                         location: 8,
@@ -299,18 +355,6 @@ pub fn load_draw_rect_shader(resource_container: Arc<ResourceContainer>) {
                     ShaderInstanceAttribute {
                         location: 9,
                         ty: ShaderInstanceAttributeType::Vector4,
-                    },
-                    ShaderInstanceAttribute {
-                        location: 10,
-                        ty: ShaderInstanceAttributeType::Vector4,
-                    },
-                    ShaderInstanceAttribute {
-                        location: 11,
-                        ty: ShaderInstanceAttributeType::Float,
-                    },
-                    ShaderInstanceAttribute {
-                        location: 12,
-                        ty: ShaderInstanceAttributeType::Float,
                     },
                 ],
             },
@@ -331,25 +375,25 @@ pub fn load_draw_rect_material(resource_container: Arc<ResourceContainer>) {
             "Materials/Draw Rect",
             MaterialResourceSettings {
                 shader,
-                bindings: vec![MaterialSettingsBinding::Camera { bind_group: 0 }],
+                bindings: vec![
+                    MaterialSettingsBinding::Camera { bind_group: 0 },
+                    MaterialSettingsBinding::RenderSurfaceSize { bind_group: 1 },
+                ],
                 instance_attributes: hashmap! {
-                    "transform".to_string() => MaterialSettingsInstanceAttribute::Matrix4 {
-                        vec0_location: 5,
-                        vec1_location: 6,
-                        vec2_location: 7,
-                        vec3_location: 8,
+                    "bottom_left".to_string() => MaterialSettingsInstanceAttribute::Vector2 {
+                        location: 5,
+                    },
+                    "top_right".to_string() => MaterialSettingsInstanceAttribute::Vector2 {
+                        location: 6,
+                    },
+                    "width".to_string() => MaterialSettingsInstanceAttribute::UInt {
+                        location: 7,
                     },
                     "fill_color".to_string() => MaterialSettingsInstanceAttribute::Vector4 {
-                        location: 9,
+                        location: 8,
                     },
                     "border_color".to_string() => MaterialSettingsInstanceAttribute::Vector4 {
-                        location: 10,
-                    },
-                    "xwidth".to_string() => MaterialSettingsInstanceAttribute::Float {
-                        location: 11,
-                    },
-                    "ywidth".to_string() => MaterialSettingsInstanceAttribute::Float {
-                        location: 12,
+                        location: 9,
                     },
                 },
             },

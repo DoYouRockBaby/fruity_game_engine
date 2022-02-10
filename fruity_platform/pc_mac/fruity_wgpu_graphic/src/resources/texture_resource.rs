@@ -14,9 +14,14 @@ pub struct WgpuTextureResource {
     pub view: wgpu::TextureView,
     pub sampler: wgpu::Sampler,
     pub bind_group: Arc<wgpu::BindGroup>,
+    pub size: (u32, u32),
 }
 
-impl TextureResource for WgpuTextureResource {}
+impl TextureResource for WgpuTextureResource {
+    fn get_size(&self) -> (u32, u32) {
+        self.size
+    }
+}
 
 impl WgpuTextureResource {
     pub fn from_image(
@@ -114,6 +119,7 @@ impl WgpuTextureResource {
             view,
             sampler,
             bind_group: Arc::new(bind_group),
+            size: dimensions,
         })
     }
 
@@ -199,6 +205,7 @@ impl WgpuTextureResource {
             view,
             sampler,
             bind_group: Arc::new(bind_group),
+            size: (width, height),
         }
     }
 
@@ -282,6 +289,7 @@ impl WgpuTextureResource {
             view,
             sampler,
             bind_group: Arc::new(bind_group),
+            size: (config.width, config.height),
         }
     }
 }

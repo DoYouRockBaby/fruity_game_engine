@@ -9,9 +9,24 @@ use crate::resources::shader_resource::ShaderResource;
 use crate::resources::shader_resource::ShaderResourceSettings;
 use crate::resources::texture_resource::TextureResource;
 use crate::resources::texture_resource::TextureResourceSettings;
+use crate::Vector2d;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::signal::Signal;
+use std::collections::HashMap;
+
+pub enum MaterialParam {
+    UInt(u32),
+    Int(i32),
+    Float(f32),
+    Vector2(Vector2d),
+    Color(Color),
+    Rect {
+        bottom_left: Vector2d,
+        top_right: Vector2d,
+    },
+    Matrix4(Matrix4),
+}
 
 pub trait GraphicService: Resource {
     fn start_draw(&mut self);
@@ -23,13 +38,14 @@ pub trait GraphicService: Resource {
         target: Option<ResourceReference<dyn TextureResource>>,
     );
     fn get_camera_transform(&self) -> Matrix4;
-    fn resize(&mut self, width: usize, height: usize);
+    fn resize(&mut self, width: u32, height: u32);
     fn draw_mesh(
         &self,
         identifier: u64,
         mesh: ResourceReference<dyn MeshResource>,
         material: &dyn MaterialReference,
-        z_index: usize,
+        params: HashMap<String, MaterialParam>,
+        z_index: i32,
     );
     fn create_mesh_resource(
         &self,

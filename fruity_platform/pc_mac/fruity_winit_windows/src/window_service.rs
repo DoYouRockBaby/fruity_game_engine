@@ -6,8 +6,8 @@ use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::serialize::serialized::Serialized;
 use fruity_core::signal::Signal;
-use fruity_core::utils::introspect::ArgumentCaster;
 use fruity_core::utils::introspect::cast_introspect_ref;
+use fruity_core::utils::introspect::ArgumentCaster;
 use fruity_windows::window_service::WindowService;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -18,12 +18,12 @@ use winit::window::Window;
 #[derive(FruityAny)]
 pub struct WinitWindowService {
     window: Window,
-    pub(crate) cursor_position: (usize, usize),
+    pub(crate) cursor_position: (u32, u32),
     pub on_enter_loop: Signal<()>,
     pub on_start_update: Signal<()>,
     pub on_end_update: Signal<()>,
-    pub on_resize: Signal<(usize, usize)>,
-    pub on_cursor_moved: Signal<(usize, usize)>,
+    pub on_resize: Signal<(u32, u32)>,
+    pub on_cursor_moved: Signal<(u32, u32)>,
     pub on_event: Signal<Event<'static, ()>>,
     pub on_events_cleared: Signal<()>,
 }
@@ -64,10 +64,10 @@ impl WindowService for WinitWindowService {
         self.window.set_resizable(resizable);
     }
 
-    fn get_size(&self) -> (usize, usize) {
+    fn get_size(&self) -> (u32, u32) {
         (
-            self.window.inner_size().width as usize,
-            self.window.inner_size().height as usize,
+            self.window.inner_size().width,
+            self.window.inner_size().height,
         )
     }
 
@@ -75,11 +75,11 @@ impl WindowService for WinitWindowService {
         self.window.scale_factor()
     }
 
-    fn get_cursor_position(&self) -> (usize, usize) {
+    fn get_cursor_position(&self) -> (u32, u32) {
         self.cursor_position.clone()
     }
 
-    fn set_size(&self, width: usize, height: usize) {
+    fn set_size(&self, width: u32, height: u32) {
         self.window
             .set_inner_size(LogicalSize::new(width as i32, height as i32));
         self.on_resize.notify((width, height))
@@ -101,11 +101,11 @@ impl WindowService for WinitWindowService {
         &self.on_end_update
     }
 
-    fn on_resize(&self) -> &Signal<(usize, usize)> {
+    fn on_resize(&self) -> &Signal<(u32, u32)> {
         &self.on_resize
     }
 
-    fn on_cursor_moved(&self) -> &Signal<(usize, usize)> {
+    fn on_cursor_moved(&self) -> &Signal<(u32, u32)> {
         &self.on_cursor_moved
     }
 }
@@ -144,8 +144,8 @@ impl IntrospectObject for WinitWindowService {
                     let result = this.get_size();
 
                     Ok(Some(Serialized::Array(vec![
-                        Serialized::USize(result.0),
-                        Serialized::USize(result.1),
+                        Serialized::U32(result.0),
+                        Serialized::U32(result.1),
                     ])))
                 })),
             },
@@ -156,8 +156,8 @@ impl IntrospectObject for WinitWindowService {
                     let result = this.get_cursor_position();
 
                     Ok(Some(Serialized::Array(vec![
-                        Serialized::USize(result.0),
-                        Serialized::USize(result.1),
+                        Serialized::U32(result.0),
+                        Serialized::U32(result.1),
                     ])))
                 })),
             },
@@ -167,8 +167,8 @@ impl IntrospectObject for WinitWindowService {
                     let this = cast_introspect_ref::<WinitWindowService>(this);
 
                     let mut caster = ArgumentCaster::new("set_size", args);
-                    let arg1 = caster.cast_next::<usize>()?;
-                    let arg2 = caster.cast_next::<usize>()?;
+                    let arg1 = caster.cast_next::<u32>()?;
+                    let arg2 = caster.cast_next::<u32>()?;
 
                     this.set_size(arg1, arg2);
                     Ok(None)

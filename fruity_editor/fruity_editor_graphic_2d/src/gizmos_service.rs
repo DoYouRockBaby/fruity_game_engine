@@ -5,6 +5,7 @@ use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
+use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
 use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
@@ -18,16 +19,19 @@ use std::time::Duration;
 #[derive(Debug, FruityAny)]
 pub struct GizmosService {
     input_service: ResourceReference<InputService>,
+    graphic_service: ResourceReference<dyn GraphicService>,
     graphic_2d_service: ResourceReference<Graphic2dService>,
 }
 
 impl GizmosService {
     pub fn new(resource_container: Arc<ResourceContainer>) -> GizmosService {
         let input_service = resource_container.require::<InputService>();
+        let graphic_service = resource_container.require::<dyn GraphicService>();
         let graphic_2d_service = resource_container.require::<Graphic2dService>();
 
         GizmosService {
             input_service,
+            graphic_service,
             graphic_2d_service,
         }
     }
@@ -107,16 +111,29 @@ impl GizmosService {
         let normalise = (to - from).normalise();
         let normal = normalise.normal();
 
+        // Get camera transform
+        let camera_transform = {
+            let graphic_service = self.graphic_service.read();
+            graphic_service.get_camera_transform()
+        };
+        let camera_invert = camera_transform.invert();
+
         let is_hover = self.draw_triangle_helper(
-            to - normal * 0.025 - normalise * 0.05,
-            to + normal * 0.025 - normalise * 0.05,
+            to - camera_invert * (normal * 0.025) - camera_invert * (normalise * 0.05),
+            to + camera_invert * (normal * 0.025) - camera_invert * (normalise * 0.05),
             to,
             color,
             hover_color,
         );
 
         let color = if is_hover { hover_color } else { color };
-        graphic_2d_service.draw_line(from, to - normalise * 0.05, 4, color, 1000);
+        graphic_2d_service.draw_line(
+            from,
+            to - camera_invert * (normalise * 0.05),
+            4,
+            color,
+            1000,
+        );
 
         is_hover
     }
@@ -131,6 +148,13 @@ impl GizmosService {
     ) where
         FMove: Fn(bool, bool, DragAction) + Send + Sync + 'static,
     {
+        // Get camera transform
+        let camera_transform = {
+            let graphic_service = self.graphic_service.read();
+            graphic_service.get_camera_transform()
+        };
+        let camera_invert = camera_transform.invert();
+
         let move_handle_size = Vector2d::new(0.05, 0.05);
         let top_right = Vector2d::new(center.x + size.x / 2.0, center.y + size.y / 2.0);
 
@@ -140,12 +164,12 @@ impl GizmosService {
 
         // Draw the X arrow
         let from = (center + Vector2d::new(top_right.x, center.y)) / 2.0;
-        let to = Vector2d::new(top_right.x + 0.1, center.y);
+        let to = Vector2d::new(top_right.x, center.y) + camera_invert * Vector2d::new(0.1, 0.0);
         let is_hover_x_arrow = self.draw_arrow_helper(from, to, color, hover_color);
 
         // Draw the Y arrow
         let from = (center + Vector2d::new(center.x, top_right.y)) / 2.0;
-        let to = Vector2d::new(center.x, top_right.y + 0.1);
+        let to = Vector2d::new(center.x, top_right.y) + camera_invert * Vector2d::new(0.0, 0.1);
         let is_hover_y_arrow = self.draw_arrow_helper(from, to, color, hover_color);
 
         // Implement the logic
