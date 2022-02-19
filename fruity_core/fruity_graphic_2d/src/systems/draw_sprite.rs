@@ -9,7 +9,6 @@ use fruity_ecs::entity::entity_service::EntityService;
 use fruity_ecs::entity_type;
 use fruity_graphic::graphic_service::MaterialParam;
 use maplit::hashmap;
-use std::ops::Deref;
 
 pub fn draw_sprite(
     entity_service: Const<EntityService>,
@@ -22,7 +21,7 @@ pub fn draw_sprite(
                 let graphic_2d_service = graphic_2d_service.read();
 
                 if let Some(material) = &sprite.material {
-                    graphic_2d_service.draw_quad(entity_id, material.deref(),
+                    graphic_2d_service.draw_quad(entity_id, material.clone(),
                     hashmap! {
                         "transform".to_string() => MaterialParam::Matrix4(transform.transform.into()),
                     }, sprite.z_index);

@@ -8,7 +8,6 @@ use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::utils::math::normalise_angle_range;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::graphic_service::MaterialParam;
-use fruity_graphic::math::material_reference::MaterialReference;
 use fruity_graphic::math::matrix3::Matrix3;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
@@ -18,7 +17,6 @@ use fruity_windows::window_service::WindowService;
 use maplit::hashmap;
 use std::collections::HashMap;
 use std::f32::consts::PI;
-use std::ops::Deref;
 use std::ops::Range;
 use std::sync::Arc;
 
@@ -27,16 +25,15 @@ pub struct Graphic2dService {
     window_service: ResourceReference<dyn WindowService>,
     graphic_service: ResourceReference<dyn GraphicService>,
     resource_container: Arc<ResourceContainer>,
-    draw_line_material: Box<dyn MaterialReference>,
-    draw_rect_material: Box<dyn MaterialReference>,
-    draw_arc_material: Box<dyn MaterialReference>,
+    draw_line_material: ResourceReference<dyn MaterialResource>,
+    draw_rect_material: ResourceReference<dyn MaterialResource>,
+    draw_arc_material: ResourceReference<dyn MaterialResource>,
 }
 
 impl Graphic2dService {
     pub fn new(resource_container: Arc<ResourceContainer>) -> Self {
         let window_service = resource_container.require::<dyn WindowService>();
         let graphic_service = resource_container.require::<dyn GraphicService>();
-        let graphic_service_reader = graphic_service.read();
 
         let draw_line_material = resource_container
             .get::<dyn MaterialResource>("Materials/Draw Line")
@@ -54,18 +51,16 @@ impl Graphic2dService {
             window_service,
             graphic_service,
             resource_container,
-            draw_line_material: graphic_service_reader
-                .create_material_reference(draw_line_material),
-            draw_rect_material: graphic_service_reader
-                .create_material_reference(draw_rect_material),
-            draw_arc_material: graphic_service_reader.create_material_reference(draw_arc_material),
+            draw_line_material,
+            draw_rect_material,
+            draw_arc_material,
         }
     }
 
     pub fn draw_quad(
         &self,
         identifier: u64,
-        material: &dyn MaterialReference,
+        material: ResourceReference<dyn MaterialResource>,
         params: HashMap<String, MaterialParam>,
         z_index: i32,
     ) {
@@ -89,7 +84,7 @@ impl Graphic2dService {
     ) {
         self.draw_quad(
             0,
-            self.draw_line_material.deref(),
+            self.draw_line_material.clone(),
             hashmap! {
                 "pos1".to_string() => MaterialParam::Vector2(pos1),
                 "pos2".to_string() => MaterialParam::Vector2(pos2),
@@ -111,7 +106,7 @@ impl Graphic2dService {
     ) {
         self.draw_quad(
             0,
-            self.draw_rect_material.deref(),
+            self.draw_rect_material.clone(),
             hashmap! {
                 "bottom_left".to_string() => MaterialParam::Vector2(bottom_left),
                 "top_right".to_string() => MaterialParam::Vector2(top_right),
@@ -151,7 +146,7 @@ impl Graphic2dService {
         // Draw the arc
         self.draw_quad(
             0,
-            self.draw_arc_material.deref(),
+            self.draw_arc_material.clone(),
             hashmap! {
                 "transform".to_string() => MaterialParam::Matrix4(transform.into()),
                 "fill_color".to_string() => MaterialParam::Color(fill_color),

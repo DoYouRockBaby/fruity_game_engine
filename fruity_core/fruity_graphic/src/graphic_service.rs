@@ -1,4 +1,3 @@
-use crate::math::material_reference::MaterialReference;
 use crate::math::matrix4::Matrix4;
 use crate::math::Color;
 use crate::resources::material_resource::MaterialResource;
@@ -43,7 +42,7 @@ pub trait GraphicService: Resource {
         &self,
         identifier: u64,
         mesh: ResourceReference<dyn MeshResource>,
-        material: &dyn MaterialReference,
+        material: ResourceReference<dyn MaterialResource>,
         params: HashMap<String, MaterialParam>,
         z_index: i32,
     );
@@ -69,10 +68,6 @@ pub trait GraphicService: Resource {
         identifier: &str,
         params: MaterialResourceSettings,
     ) -> Result<Box<dyn MaterialResource>, String>;
-    fn create_material_reference(
-        &self,
-        resource_reference: ResourceReference<dyn MaterialResource>,
-    ) -> Box<dyn MaterialReference>;
     fn on_before_draw_end(&self) -> &Signal<()>;
     fn on_after_draw_end(&self) -> &Signal<()>;
 }

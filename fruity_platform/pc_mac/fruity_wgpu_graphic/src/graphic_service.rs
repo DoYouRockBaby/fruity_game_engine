@@ -1,4 +1,3 @@
-use crate::math::material_reference::WgpuMaterialReference;
 use crate::resources::material_resource::InstanceField;
 use crate::resources::material_resource::WgpuMaterialResource;
 use crate::resources::mesh_resource::WgpuMeshResource;
@@ -15,7 +14,6 @@ use fruity_core::signal::Signal;
 use fruity_core::utils::slice::encode_into_bytes;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::graphic_service::MaterialParam;
-use fruity_graphic::math::material_reference::MaterialReference;
 use fruity_graphic::math::matrix4::Matrix4;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
@@ -548,11 +546,11 @@ impl WgpuGraphicService {
     }
 
     fn build_instance_buffer(
-        material: &dyn MaterialReference,
+        material: &ResourceReference<dyn MaterialResource>,
         params: HashMap<String, MaterialParam>,
     ) -> Vec<u8> {
         // Get references
-        let material = material.get_material().read();
+        let material = material.read();
         let material = material.downcast_ref::<WgpuMaterialResource>();
 
         // Allocate instance buffer
@@ -827,28 +825,12 @@ impl GraphicService for WgpuGraphicService {
         &self,
         identifier: u64,
         mesh: ResourceReference<dyn MeshResource>,
-        material: &dyn MaterialReference,
+        material: ResourceReference<dyn MaterialResource>,
         params: HashMap<String, MaterialParam>,
         z_index: i32,
     ) {
-        let material = if let Some(material) = material
-            .as_any_ref()
-            .downcast_ref::<WgpuMaterialReference>()
-        {
-            material
-        } else {
-            return;
-        };
-
-        let instance_buffer = Self::build_instance_buffer(material, params);
-
-        self.push_render_instance(
-            identifier,
-            instance_buffer,
-            mesh,
-            material.get_material(),
-            z_index,
-        )
+        let instance_buffer = Self::build_instance_buffer(&material, params);
+        self.push_render_instance(identifier, instance_buffer, mesh, material, z_index)
     }
 
     fn create_mesh_resource(
@@ -901,13 +883,6 @@ impl GraphicService for WgpuGraphicService {
         let resource = WgpuMaterialResource::new(self, &params);
 
         Ok(Box::new(resource))
-    }
-
-    fn create_material_reference(
-        &self,
-        resource_reference: ResourceReference<dyn MaterialResource>,
-    ) -> Box<dyn MaterialReference> {
-        Box::new(WgpuMaterialReference::new(resource_reference))
     }
 }
 

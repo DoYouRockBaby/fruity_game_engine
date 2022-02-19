@@ -12,7 +12,6 @@ use fruity_ecs::*;
 use std::str::FromStr;
 use std::sync::Arc;
 
-pub mod material_reference;
 pub mod matrix3;
 pub mod matrix4;
 pub mod vector2d;
