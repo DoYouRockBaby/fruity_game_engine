@@ -1,8 +1,5 @@
 use crate::graphic_service::GraphicService;
-use crate::math::Color;
 use crate::resources::material_resource::MaterialResource;
-use crate::Matrix4;
-use crate::Vector2d;
 use fruity_core::convert::FruityInto;
 use fruity_core::convert::FruityTryFrom;
 use fruity_core::introspect::IntrospectObject;

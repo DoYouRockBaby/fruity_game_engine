@@ -413,6 +413,11 @@ pub fn load_draw_arc_shader(resource_container: Arc<ResourceContainer>) {
             view_proj: mat4x4<f32>;
         };
         
+        [[block]]
+        struct RenderSurfaceSizeUniform {
+            value: vec2<f32>;
+        };
+        
         struct VertexInput {
             [[location(0)]] position: vec3<f32>;
             [[location(1)]] tex_coords: vec2<f32>;
@@ -426,7 +431,7 @@ pub fn load_draw_arc_shader(resource_container: Arc<ResourceContainer>) {
             [[location(8)]] model_matrix_3: vec4<f32>;
             [[location(9)]] fill_color: vec4<f32>;
             [[location(10)]] border_color: vec4<f32>;
-            [[location(11)]] width: f32;
+            [[location(11)]] width: u32;
             [[location(12)]] angle_start: f32;
             [[location(13)]] angle_end: f32;
         };
@@ -436,13 +441,17 @@ pub fn load_draw_arc_shader(resource_container: Arc<ResourceContainer>) {
             [[location(0)]] border_color: vec4<f32>;
             [[location(1)]] fill_color: vec4<f32>;
             [[location(2)]] tex_coords: vec2<f32>;
-            [[location(3)]] width: f32;
-            [[location(4)]] angle_start: f32;
-            [[location(5)]] angle_end: f32;
+            [[location(3)]] xwidth: f32;
+            [[location(4)]] ywidth: f32;
+            [[location(5)]] angle_start: f32;
+            [[location(6)]] angle_end: f32;
         };
 
         [[group(0), binding(0)]]
         var<uniform> camera: CameraUniform;
+
+        [[group(1), binding(0)]]
+        var<uniform> render_surface_size: RenderSurfaceSizeUniform;
 
         [[stage(vertex)]]
         fn main(
@@ -461,9 +470,11 @@ pub fn load_draw_arc_shader(resource_container: Arc<ResourceContainer>) {
             out.fill_color = instance.fill_color;
             out.border_color = instance.border_color;
             out.tex_coords = model.tex_coords;
-            out.width = instance.width;
+            out.xwidth = f32(instance.width) / render_surface_size.value.x;
+            out.ywidth = f32(instance.width) / render_surface_size.value.y;
             out.angle_start = instance.angle_start;
             out.angle_end = instance.angle_end;
+
             return out;
         }
 
@@ -471,14 +482,14 @@ pub fn load_draw_arc_shader(resource_container: Arc<ResourceContainer>) {
         fn main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
             let circle_coords = 2.0 * (in.tex_coords - vec2<f32>(0.5, 0.5));
             let angle = atan2(-circle_coords.y, circle_coords.x);
-            let border_radius = 1.0 - in.width;
+            let border_radius = 1.0 - (circle_coords.x * in.xwidth + circle_coords.y * in.ywidth) / 2.0;
 
             if(
                 length(circle_coords) <= 1.0 &&
                 angle <= in.angle_end &&
                 angle >= in.angle_start
             ) {
-                if(length(circle_coords) < border_radius) {
+                if(length(circle_coords) <= border_radius) {
                     return in.fill_color;
                 } else {
                     return in.border_color;
@@ -494,12 +505,20 @@ pub fn load_draw_arc_shader(resource_container: Arc<ResourceContainer>) {
             "Shaders/Draw Arc",
             code,
             ShaderResourceSettings {
-                binding_groups: vec![ShaderBindingGroup {
-                    bindings: vec![ShaderBinding {
-                        visibility: ShaderBindingVisibility::Vertex,
-                        ty: ShaderBindingType::Uniform,
-                    }],
-                }],
+                binding_groups: vec![
+                    ShaderBindingGroup {
+                        bindings: vec![ShaderBinding {
+                            visibility: ShaderBindingVisibility::Vertex,
+                            ty: ShaderBindingType::Uniform,
+                        }],
+                    },
+                    ShaderBindingGroup {
+                        bindings: vec![ShaderBinding {
+                            visibility: ShaderBindingVisibility::Vertex,
+                            ty: ShaderBindingType::Uniform,
+                        }],
+                    },
+                ],
                 instance_attributes: vec![
                     ShaderInstanceAttribute {
                         location: 5,
@@ -527,7 +546,7 @@ pub fn load_draw_arc_shader(resource_container: Arc<ResourceContainer>) {
                     },
                     ShaderInstanceAttribute {
                         location: 11,
-                        ty: ShaderInstanceAttributeType::Float,
+                        ty: ShaderInstanceAttributeType::UInt,
                     },
                     ShaderInstanceAttribute {
                         location: 12,
@@ -556,7 +575,10 @@ pub fn load_draw_arc_material(resource_container: Arc<ResourceContainer>) {
             "Materials/Draw Arc",
             MaterialResourceSettings {
                 shader,
-                bindings: vec![MaterialSettingsBinding::Camera { bind_group: 0 }],
+                bindings: vec![
+                    MaterialSettingsBinding::Camera { bind_group: 0 },
+                    MaterialSettingsBinding::RenderSurfaceSize { bind_group: 1 },
+                ],
                 instance_attributes: hashmap! {
                     "transform".to_string() => MaterialSettingsInstanceAttribute::Matrix4 {
                         vec0_location: 5,
@@ -570,7 +592,7 @@ pub fn load_draw_arc_material(resource_container: Arc<ResourceContainer>) {
                     "border_color".to_string() => MaterialSettingsInstanceAttribute::Vector4 {
                         location: 10,
                     },
-                    "width".to_string() => MaterialSettingsInstanceAttribute::Float {
+                    "width".to_string() => MaterialSettingsInstanceAttribute::UInt {
                         location: 11,
                     },
                     "angle_start".to_string() => MaterialSettingsInstanceAttribute::Float {

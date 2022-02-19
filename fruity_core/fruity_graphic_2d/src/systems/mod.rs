@@ -4,4 +4,3 @@ pub mod reset_transform_2d;
 pub mod rotate_2d;
 pub mod scale_2d;
 pub mod translate_2d;
-pub mod update_material_transform;

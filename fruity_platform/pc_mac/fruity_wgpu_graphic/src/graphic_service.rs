@@ -1,4 +1,5 @@
 use crate::math::material_reference::WgpuMaterialReference;
+use crate::resources::material_resource::InstanceField;
 use crate::resources::material_resource::WgpuMaterialResource;
 use crate::resources::mesh_resource::WgpuMeshResource;
 use crate::resources::shader_resource::WgpuShaderResource;
@@ -11,6 +12,7 @@ use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::signal::Signal;
+use fruity_core::utils::slice::encode_into_bytes;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::graphic_service::MaterialParam;
 use fruity_graphic::math::material_reference::MaterialReference;
@@ -544,6 +546,142 @@ impl WgpuGraphicService {
             Arc::new(render_surface_size_bind_group),
         )
     }
+
+    fn build_instance_buffer(
+        material: &dyn MaterialReference,
+        params: HashMap<String, MaterialParam>,
+    ) -> Vec<u8> {
+        // Get references
+        let material = material.get_material().read();
+        let material = material.downcast_ref::<WgpuMaterialResource>();
+
+        // Allocate instance buffer
+        let mut instance_buffer = Vec::with_capacity(material.instance_size);
+        instance_buffer.resize(material.instance_size, 0);
+
+        // Inject the values into the instance buffer
+        params.into_iter().for_each(|(param_name, param)| {
+            let material_fields = if let Some(material_fields) = material.fields.get(&param_name) {
+                material_fields
+            } else {
+                return;
+            };
+
+            material_fields
+                .iter()
+                .for_each(|material_field| match param {
+                    MaterialParam::UInt(value) => {
+                        if let InstanceField::UInt { location } = material_field {
+                            encode_into_bytes(
+                                &mut instance_buffer,
+                                location.offset,
+                                location.size,
+                                value,
+                            );
+                        }
+                    }
+                    MaterialParam::Int(value) => {
+                        if let InstanceField::Int { location } = material_field {
+                            encode_into_bytes(
+                                &mut instance_buffer,
+                                location.offset,
+                                location.size,
+                                value,
+                            );
+                        }
+                    }
+                    MaterialParam::Float(value) => {
+                        if let InstanceField::Float { location } = material_field {
+                            encode_into_bytes(
+                                &mut instance_buffer,
+                                location.offset,
+                                location.size,
+                                value,
+                            );
+                        }
+                    }
+                    MaterialParam::Vector2(value) => {
+                        if let InstanceField::Vector2 { location } = material_field {
+                            encode_into_bytes(
+                                &mut instance_buffer,
+                                location.offset,
+                                location.size,
+                                value,
+                            );
+                        }
+                    }
+                    MaterialParam::Color(value) => {
+                        if let InstanceField::Vector4 { location } = material_field {
+                            encode_into_bytes(
+                                &mut instance_buffer,
+                                location.offset,
+                                location.size,
+                                value,
+                            );
+                        }
+                    }
+                    MaterialParam::Rect {
+                        bottom_left,
+                        top_right,
+                    } => {
+                        if let InstanceField::Rect {
+                            vec0_location,
+                            vec1_location,
+                        } = material_field
+                        {
+                            encode_into_bytes(
+                                &mut instance_buffer,
+                                vec0_location.offset,
+                                vec0_location.size,
+                                bottom_left,
+                            );
+                            encode_into_bytes(
+                                &mut instance_buffer,
+                                vec1_location.offset,
+                                vec1_location.size,
+                                top_right,
+                            );
+                        }
+                    }
+                    MaterialParam::Matrix4(value) => {
+                        if let InstanceField::Matrix4 {
+                            vec0_location,
+                            vec1_location,
+                            vec2_location,
+                            vec3_location,
+                        } = material_field
+                        {
+                            encode_into_bytes(
+                                &mut instance_buffer,
+                                vec0_location.offset,
+                                vec0_location.size,
+                                value.0[0],
+                            );
+                            encode_into_bytes(
+                                &mut instance_buffer,
+                                vec1_location.offset,
+                                vec1_location.size,
+                                value.0[1],
+                            );
+                            encode_into_bytes(
+                                &mut instance_buffer,
+                                vec2_location.offset,
+                                vec2_location.size,
+                                value.0[2],
+                            );
+                            encode_into_bytes(
+                                &mut instance_buffer,
+                                vec3_location.offset,
+                                vec3_location.size,
+                                value.0[3],
+                            );
+                        }
+                    }
+                });
+        });
+
+        instance_buffer
+    }
 }
 
 impl GraphicService for WgpuGraphicService {
@@ -702,11 +840,11 @@ impl GraphicService for WgpuGraphicService {
             return;
         };
 
-        let instance_buffer = material.instance_buffer.read().unwrap();
+        let instance_buffer = Self::build_instance_buffer(material, params);
 
         self.push_render_instance(
             identifier,
-            instance_buffer.clone(),
+            instance_buffer,
             mesh,
             material.get_material(),
             z_index,

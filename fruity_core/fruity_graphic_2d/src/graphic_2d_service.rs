@@ -10,12 +10,12 @@ use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::graphic_service::MaterialParam;
 use fruity_graphic::math::material_reference::MaterialReference;
 use fruity_graphic::math::matrix3::Matrix3;
-use fruity_graphic::math::matrix4::Matrix4;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
 use fruity_graphic::resources::material_resource::MaterialResource;
 use fruity_graphic::resources::mesh_resource::MeshResource;
 use fruity_windows::window_service::WindowService;
+use maplit::hashmap;
 use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::ops::Deref;
@@ -87,14 +87,17 @@ impl Graphic2dService {
         color: Color,
         z_index: i32,
     ) {
-        // Update line instance fields
-        self.draw_line_material.set_vector2d("pos1", pos1);
-        self.draw_line_material.set_vector2d("pos2", pos2);
-        self.draw_line_material.set_uint("width", width);
-        self.draw_line_material.set_color("color", color);
-
-        // Draw the line
-        self.draw_quad(0, self.draw_line_material.deref(), z_index);
+        self.draw_quad(
+            0,
+            self.draw_line_material.deref(),
+            hashmap! {
+                "pos1".to_string() => MaterialParam::Vector2(pos1),
+                "pos2".to_string() => MaterialParam::Vector2(pos2),
+                "width".to_string() => MaterialParam::UInt(width),
+                "color".to_string() => MaterialParam::Color(color),
+            },
+            z_index,
+        );
     }
 
     pub fn draw_rect(
@@ -106,17 +109,18 @@ impl Graphic2dService {
         border_color: Color,
         z_index: i32,
     ) {
-        // Update line instance fields
-        self.draw_rect_material
-            .set_vector2d("bottom_left", bottom_left);
-        self.draw_rect_material.set_vector2d("top_right", top_right);
-        self.draw_rect_material.set_uint("width", width);
-        self.draw_rect_material.set_color("fill_color", fill_color);
-        self.draw_rect_material
-            .set_color("border_color", border_color);
-
-        // Draw the line
-        self.draw_quad(0, self.draw_rect_material.deref(), z_index);
+        self.draw_quad(
+            0,
+            self.draw_rect_material.deref(),
+            hashmap! {
+                "bottom_left".to_string() => MaterialParam::Vector2(bottom_left),
+                "top_right".to_string() => MaterialParam::Vector2(top_right),
+                "width".to_string() => MaterialParam::UInt(width),
+                "fill_color".to_string() => MaterialParam::Color(fill_color),
+                "border_color".to_string() => MaterialParam::Color(border_color),
+            },
+            z_index,
+        );
     }
 
     pub fn draw_arc(
@@ -144,20 +148,20 @@ impl Graphic2dService {
             Matrix3::identity() * Matrix3::translation(center) * Matrix3::scaling(scale);
         let angle_range = normalise_angle_range(angle_range);
 
-        // Update line color
-        self.draw_arc_material
-            .set_matrix4("transform", transform.into());
-        self.draw_arc_material.set_color("fill_color", fill_color);
-        self.draw_arc_material
-            .set_color("border_color", border_color);
-        self.draw_arc_material.set_float("width", width);
-        self.draw_arc_material
-            .set_float("angle_start", angle_range.start);
-        self.draw_arc_material
-            .set_float("angle_end", angle_range.end);
-
-        // Draw the line
-        self.draw_quad(0, self.draw_arc_material.deref(), z_index);
+        // Draw the arc
+        self.draw_quad(
+            0,
+            self.draw_arc_material.deref(),
+            hashmap! {
+                "transform".to_string() => MaterialParam::Matrix4(transform.into()),
+                "fill_color".to_string() => MaterialParam::Color(fill_color),
+                "border_color".to_string() => MaterialParam::Color(border_color),
+                "width".to_string() => MaterialParam::Float(width),
+                "angle_start".to_string() => MaterialParam::Float(angle_range.start),
+                "angle_end".to_string() => MaterialParam::Float(angle_range.end),
+            },
+            z_index,
+        );
     }
 
     pub fn draw_circle(

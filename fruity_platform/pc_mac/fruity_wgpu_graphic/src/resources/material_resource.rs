@@ -61,6 +61,7 @@ pub struct WgpuMaterialResource {
     pub params: MaterialResourceSettings,
     pub binding_groups: Vec<(u32, Arc<wgpu::BindGroup>)>,
     pub fields: HashMap<String, Vec<InstanceField>>,
+    pub instance_size: usize,
 }
 
 impl WgpuMaterialResource {
@@ -72,6 +73,7 @@ impl WgpuMaterialResource {
                 params: params.clone(),
                 binding_groups: Vec::new(),
                 fields: HashMap::new(),
+                instance_size: 0,
             };
         };
 
@@ -214,6 +216,7 @@ impl WgpuMaterialResource {
             params: params.clone(),
             binding_groups,
             fields,
+            instance_size: current_offset,
         }
     }
 }

@@ -75,9 +75,9 @@ impl GizmosService {
         let is_hover = cursor_pos.in_triangle(&p1, &p2, &p3);
         let color = if is_hover { hover_color } else { color };
 
-        graphic_2d_service.draw_line(p1, p2, 4, color, 1000);
-        graphic_2d_service.draw_line(p2, p3, 4, color, 1000);
-        graphic_2d_service.draw_line(p3, p1, 4, color, 1000);
+        graphic_2d_service.draw_line(p1, p2, 3, color, 1000);
+        graphic_2d_service.draw_line(p2, p3, 3, color, 1000);
+        graphic_2d_service.draw_line(p3, p1, 3, color, 1000);
 
         is_hover
     }
@@ -95,7 +95,7 @@ impl GizmosService {
         let is_hover = cursor_pos.in_circle(&center, &radius);
         let color = if is_hover { hover_color } else { color };
 
-        graphic_2d_service.draw_circle(center, radius, 0, color, Color::alpha(), 1000);
+        graphic_2d_service.draw_circle(center, radius, 3, color, Color::alpha(), 1000);
 
         is_hover
     }
@@ -130,7 +130,7 @@ impl GizmosService {
         graphic_2d_service.draw_line(
             from,
             to - camera_invert * (normalise * 0.05),
-            4,
+            3,
             color,
             1000,
         );

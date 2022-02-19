@@ -11,7 +11,6 @@ use crate::systems::reset_transform_2d::reset_transform_2d;
 use crate::systems::rotate_2d::rotate_2d;
 use crate::systems::scale_2d::scale_2d;
 use crate::systems::translate_2d::translate_2d;
-use crate::systems::update_material_transform::update_material_transform;
 use fruity_core::inject::Inject1;
 use fruity_core::inject::Inject2;
 use fruity_core::object_factory_service::ObjectFactoryService;
@@ -83,16 +82,6 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
         Inject1::new(scale_2d),
         Some(SystemParams {
             pool_index: 95,
-            ignore_pause: true,
-        }),
-    );
-
-    system_service.add_system(
-        "update_material_transform",
-        MODULE_NAME,
-        Inject1::new(update_material_transform),
-        Some(SystemParams {
-            pool_index: 97,
             ignore_pause: true,
         }),
     );
