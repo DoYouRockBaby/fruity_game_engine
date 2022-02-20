@@ -110,7 +110,7 @@ pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
             model: VertexInput,
             instance: InstanceInput,
         ) -> VertexOutput {
-            let diff = instance.pos2 - instance.pos1;
+            var diff = camera.view_proj * (vec4<f32>(instance.pos2, 0.0, 1.0) - vec4<f32>(instance.pos1, 0.0, 0.0));
             let x_scale = f32(instance.width) / render_surface_size.value.x;
             let y_scale = f32(instance.width) / render_surface_size.value.y;
             let normal = normalize(vec2<f32>(-diff.y, diff.x));
@@ -274,17 +274,14 @@ pub fn load_draw_rect_shader(resource_container: Arc<ResourceContainer>) {
             model: VertexInput,
             instance: InstanceInput,
         ) -> VertexOutput {
+            var diff = camera.view_proj * (vec4<f32>(instance.top_right, 0.0, 1.0) - vec4<f32>(instance.bottom_left, 0.0, 0.0));
+
             var out: VertexOutput;
             out.fill_color = instance.fill_color;
             out.border_color = instance.border_color;
             out.tex_coords = model.tex_coords;
-            var diff = camera.view_proj * (vec4<f32>(instance.top_right, 0.0, 1.0) - vec4<f32>(instance.bottom_left, 0.0, 0.0));
-            var screen_to_texture_coords = vec2<f32>(
-                1.0 / diff.x / render_surface_size.value.x,
-                1.0 / diff.y / render_surface_size.value.y);
-
-            out.xwidth = f32(instance.width) * screen_to_texture_coords.x;
-            out.ywidth = f32(instance.width) * screen_to_texture_coords.y;
+            out.xwidth = f32(instance.width) / diff.x / render_surface_size.value.x;
+            out.ywidth = f32(instance.width) / diff.y / render_surface_size.value.y;
 
             if (model.position.x == -0.5 && model.position.y == -0.5) {
                 out.position = camera.view_proj * vec4<f32>(instance.bottom_left.x, instance.bottom_left.y, 0.0, 1.0);
@@ -425,15 +422,13 @@ pub fn load_draw_arc_shader(resource_container: Arc<ResourceContainer>) {
         };
         
         struct InstanceInput {
-            [[location(5)]] model_matrix_0: vec4<f32>;
-            [[location(6)]] model_matrix_1: vec4<f32>;
-            [[location(7)]] model_matrix_2: vec4<f32>;
-            [[location(8)]] model_matrix_3: vec4<f32>;
-            [[location(9)]] fill_color: vec4<f32>;
-            [[location(10)]] border_color: vec4<f32>;
-            [[location(11)]] width: u32;
-            [[location(12)]] angle_start: f32;
-            [[location(13)]] angle_end: f32;
+            [[location(5)]] center: vec2<f32>;
+            [[location(6)]] radius: f32;
+            [[location(7)]] fill_color: vec4<f32>;
+            [[location(8)]] border_color: vec4<f32>;
+            [[location(9)]] width: u32;
+            [[location(10)]] angle_start: f32;
+            [[location(11)]] angle_end: f32;
         };
         
         struct VertexOutput {
@@ -458,22 +453,30 @@ pub fn load_draw_arc_shader(resource_container: Arc<ResourceContainer>) {
             model: VertexInput,
             instance: InstanceInput,
         ) -> VertexOutput {
-            let model_matrix = mat4x4<f32>(
-                instance.model_matrix_0,
-                instance.model_matrix_1,
-                instance.model_matrix_2,
-                instance.model_matrix_3,
-            );
+            var bottom_left = instance.center - vec2<f32>(instance.radius, instance.radius);
+            var top_right = instance.center + vec2<f32>(instance.radius, instance.radius);
+            var diff = camera.view_proj * (vec4<f32>(top_right, 0.0, 1.0) - vec4<f32>(bottom_left, 0.0, 0.0));
 
             var out: VertexOutput;
-            out.position = camera.view_proj * model_matrix * vec4<f32>(model.position, 1.0);
             out.fill_color = instance.fill_color;
             out.border_color = instance.border_color;
             out.tex_coords = model.tex_coords;
-            out.xwidth = f32(instance.width) / render_surface_size.value.x;
-            out.ywidth = f32(instance.width) / render_surface_size.value.y;
+            out.xwidth = f32(instance.width) / diff.x / render_surface_size.value.x;
+            out.ywidth = f32(instance.width) / diff.y / render_surface_size.value.y;
             out.angle_start = instance.angle_start;
             out.angle_end = instance.angle_end;
+
+            if (model.position.x == -0.5 && model.position.y == -0.5) {
+                out.position = camera.view_proj * vec4<f32>(bottom_left.x, bottom_left.y, 0.0, 1.0);
+            } elseif (model.position.x == 0.5 && model.position.y == -0.5) {
+                out.position = camera.view_proj * vec4<f32>(top_right.x, bottom_left.y, 0.0, 1.0);
+            } elseif (model.position.x == 0.5 && model.position.y == 0.5) {
+                out.position = camera.view_proj * vec4<f32>(top_right.x, top_right.y, 0.0, 1.0);
+            } elseif (model.position.x == -0.5 && model.position.y == 0.5) {
+                out.position = camera.view_proj * vec4<f32>(bottom_left.x, top_right.y, 0.0, 1.0);
+            } else {
+                out.position = camera.view_proj * vec4<f32>(model.position, 1.0);
+            }
 
             return out;
         }
@@ -482,7 +485,7 @@ pub fn load_draw_arc_shader(resource_container: Arc<ResourceContainer>) {
         fn main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
             let circle_coords = 2.0 * (in.tex_coords - vec2<f32>(0.5, 0.5));
             let angle = atan2(-circle_coords.y, circle_coords.x);
-            let border_radius = 1.0 - (circle_coords.x * in.xwidth + circle_coords.y * in.ywidth) / 2.0;
+            let border_radius = 1.0 - (abs(circle_coords.x) * in.xwidth + abs(circle_coords.y) * in.ywidth);
 
             if(
                 length(circle_coords) <= 1.0 &&
@@ -522,11 +525,11 @@ pub fn load_draw_arc_shader(resource_container: Arc<ResourceContainer>) {
                 instance_attributes: vec![
                     ShaderInstanceAttribute {
                         location: 5,
-                        ty: ShaderInstanceAttributeType::Vector4,
+                        ty: ShaderInstanceAttributeType::Vector2,
                     },
                     ShaderInstanceAttribute {
                         location: 6,
-                        ty: ShaderInstanceAttributeType::Vector4,
+                        ty: ShaderInstanceAttributeType::Float,
                     },
                     ShaderInstanceAttribute {
                         location: 7,
@@ -538,22 +541,14 @@ pub fn load_draw_arc_shader(resource_container: Arc<ResourceContainer>) {
                     },
                     ShaderInstanceAttribute {
                         location: 9,
-                        ty: ShaderInstanceAttributeType::Vector4,
-                    },
-                    ShaderInstanceAttribute {
-                        location: 10,
-                        ty: ShaderInstanceAttributeType::Vector4,
-                    },
-                    ShaderInstanceAttribute {
-                        location: 11,
                         ty: ShaderInstanceAttributeType::UInt,
                     },
                     ShaderInstanceAttribute {
-                        location: 12,
+                        location: 10,
                         ty: ShaderInstanceAttributeType::Float,
                     },
                     ShaderInstanceAttribute {
-                        location: 13,
+                        location: 11,
                         ty: ShaderInstanceAttributeType::Float,
                     },
                 ],
@@ -580,26 +575,26 @@ pub fn load_draw_arc_material(resource_container: Arc<ResourceContainer>) {
                     MaterialSettingsBinding::RenderSurfaceSize { bind_group: 1 },
                 ],
                 instance_attributes: hashmap! {
-                    "transform".to_string() => MaterialSettingsInstanceAttribute::Matrix4 {
-                        vec0_location: 5,
-                        vec1_location: 6,
-                        vec2_location: 7,
-                        vec3_location: 8,
+                    "center".to_string() => MaterialSettingsInstanceAttribute::Vector2 {
+                        location: 5,
+                    },
+                    "radius".to_string() => MaterialSettingsInstanceAttribute::Float {
+                        location: 6,
                     },
                     "fill_color".to_string() => MaterialSettingsInstanceAttribute::Vector4 {
-                        location: 9,
+                        location: 7,
                     },
                     "border_color".to_string() => MaterialSettingsInstanceAttribute::Vector4 {
-                        location: 10,
+                        location: 8,
                     },
                     "width".to_string() => MaterialSettingsInstanceAttribute::UInt {
-                        location: 11,
+                        location: 9,
                     },
                     "angle_start".to_string() => MaterialSettingsInstanceAttribute::Float {
-                        location: 12,
+                        location: 10,
                     },
                     "angle_end".to_string() => MaterialSettingsInstanceAttribute::Float {
-                        location: 13,
+                        location: 11,
                     },
                 },
             },

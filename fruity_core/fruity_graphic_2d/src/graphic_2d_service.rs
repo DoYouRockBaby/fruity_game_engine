@@ -8,7 +8,6 @@ use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::utils::math::normalise_angle_range;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::graphic_service::MaterialParam;
-use fruity_graphic::math::matrix3::Matrix3;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
 use fruity_graphic::resources::material_resource::MaterialResource;
@@ -128,19 +127,7 @@ impl Graphic2dService {
         border_color: Color,
         z_index: i32,
     ) {
-        let window_service = self.window_service.read();
-        let windows_size = window_service.get_size();
-
-        // Calculate squad transform
-        let scale = Vector2d {
-            x: radius * 2.0,
-            y: radius * 2.0,
-        };
-        let width = 2.0 * width as f32 / windows_size.0 as f32 / scale.x;
-
-        // Calculate transform
-        let transform =
-            Matrix3::identity() * Matrix3::translation(center) * Matrix3::scaling(scale);
+        // Calculate angle range
         let angle_range = normalise_angle_range(angle_range);
 
         // Draw the arc
@@ -148,10 +135,11 @@ impl Graphic2dService {
             0,
             self.draw_arc_material.clone(),
             hashmap! {
-                "transform".to_string() => MaterialParam::Matrix4(transform.into()),
+                "center".to_string() => MaterialParam::Vector2(center),
+                "radius".to_string() => MaterialParam::Float(radius),
                 "fill_color".to_string() => MaterialParam::Color(fill_color),
                 "border_color".to_string() => MaterialParam::Color(border_color),
-                "width".to_string() => MaterialParam::Float(width),
+                "width".to_string() => MaterialParam::UInt(width),
                 "angle_start".to_string() => MaterialParam::Float(angle_range.start),
                 "angle_end".to_string() => MaterialParam::Float(angle_range.end),
             },
