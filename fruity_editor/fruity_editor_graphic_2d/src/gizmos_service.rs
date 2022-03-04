@@ -162,6 +162,11 @@ impl GizmosService {
         let camera_invert = camera_transform.invert();
 
         let move_handle_size = camera_invert * Vector2d::new(0.05, 0.05);
+        let move_handle_size = Vector2d::new(
+            f32::min(move_handle_size.x, move_handle_size.y),
+            f32::min(move_handle_size.x, move_handle_size.y),
+        );
+
         let top_right = Vector2d::new(center.x + size.x / 2.0, center.y + size.y / 2.0);
 
         // Draw free move helper
@@ -170,12 +175,14 @@ impl GizmosService {
 
         // Draw the X arrow
         let from = (center + Vector2d::new(top_right.x, center.y)) / 2.0;
-        let to = Vector2d::new(top_right.x, center.y) + camera_invert * Vector2d::new(0.1, 0.0);
+        let to =
+            Vector2d::new(top_right.x, center.y) + Vector2d::new(move_handle_size.x * 2.0, 0.0);
         let is_hover_x_arrow = self.draw_arrow_helper(from, to, color, hover_color);
 
         // Draw the Y arrow
         let from = (center + Vector2d::new(center.x, top_right.y)) / 2.0;
-        let to = Vector2d::new(center.x, top_right.y) + camera_invert * Vector2d::new(0.0, 0.1);
+        let to =
+            Vector2d::new(center.x, top_right.y) + Vector2d::new(0.0, move_handle_size.y * 2.0);
         let is_hover_y_arrow = self.draw_arrow_helper(from, to, color, hover_color);
 
         // Implement the logic
@@ -269,6 +276,10 @@ impl GizmosService {
         let bottom_right = Vector2d::new(top_right.x, bottom_left.y);
         let top_left = Vector2d::new(bottom_left.x, top_right.y);
         let resize_handle_size = camera_invert * Vector2d::new(0.025, 0.025);
+        let resize_handle_size = Vector2d::new(
+            f32::min(resize_handle_size.x, resize_handle_size.y),
+            f32::min(resize_handle_size.x, resize_handle_size.y),
+        );
 
         // Draw the boundings
         self.draw_square_helper(bottom_left, top_right, color, hover_color);
