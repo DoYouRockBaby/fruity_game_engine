@@ -100,11 +100,13 @@ struct RenderInstance {
 #[derive(Debug, FruityAny)]
 pub struct WgpuGraphicService {
     state: State,
+    window_service: ResourceReference<dyn WindowService>,
     current_output: Option<wgpu::SurfaceTexture>,
     render_instances: RwLock<BTreeMap<RenderInstanceIdentifier, RenderInstance>>,
     render_bundles: RwLock<Vec<wgpu::RenderBundle>>,
     current_encoder: Option<RwLock<wgpu::CommandEncoder>>,
-    window_service: ResourceReference<dyn WindowService>,
+    viewport_offset: RwLock<(u32, u32)>,
+    viewport_size: RwLock<(u32, u32)>,
     pub on_before_draw_end: Signal<()>,
     pub on_after_draw_end: Signal<()>,
 }
@@ -163,11 +165,13 @@ impl WgpuGraphicService {
 
         WgpuGraphicService {
             state,
+            window_service,
             current_output: None,
             render_instances: RwLock::new(BTreeMap::new()),
             render_bundles: RwLock::new(Vec::new()),
             current_encoder: None,
-            window_service,
+            viewport_offset: Default::default(),
+            viewport_size: Default::default(),
             on_before_draw_end: Signal::new(),
             on_after_draw_end: Signal::new(),
         }
@@ -756,10 +760,7 @@ impl GraphicService for WgpuGraphicService {
 
                 (value, texture.get_size())
             })
-            .unwrap_or_else(|| {
-                let window_service = self.window_service.read();
-                (&self.state.rendering_view, window_service.get_size())
-            });
+            .unwrap_or_else(|| (&self.state.rendering_view, self.get_viewport_size()));
 
         // Update viewport size bind group
         let render_surface_size_uniform =
@@ -883,6 +884,49 @@ impl GraphicService for WgpuGraphicService {
         let resource = WgpuMaterialResource::new(self, &params);
 
         Ok(Box::new(resource))
+    }
+
+    /// Get the cursor position in the viewport, take in care the camera transform
+    fn get_cursor_position(&self) -> Vector2d {
+        // Get informations from the resource dependencies
+        let cursor_position = {
+            let window_service = self.window_service.read();
+            window_service.get_cursor_position()
+        };
+
+        let viewport_offset = self.get_viewport_offset();
+        let viewport_size = self.get_viewport_size();
+        let camera_transform = self.get_camera_transform().clone();
+
+        // Transform the cursor in the engine world (especialy taking care of camera)
+        let cursor_pos = Vector2d::new(
+            ((cursor_position.0 as f32 - viewport_offset.0 as f32) / viewport_size.0 as f32) * 2.0
+                - 1.0,
+            ((cursor_position.1 as f32 - viewport_offset.1 as f32) / viewport_size.1 as f32) * -2.0
+                + 1.0,
+        );
+
+        camera_transform.invert() * cursor_pos
+    }
+
+    fn get_viewport_offset(&self) -> (u32, u32) {
+        let viewport_offset = self.viewport_offset.read().unwrap();
+        viewport_offset.clone()
+    }
+
+    fn set_viewport_offset(&self, x: u32, y: u32) {
+        let mut viewport_offset = self.viewport_offset.write().unwrap();
+        *viewport_offset = (x, y);
+    }
+
+    fn get_viewport_size(&self) -> (u32, u32) {
+        let viewport_size = self.viewport_size.read().unwrap();
+        viewport_size.clone()
+    }
+
+    fn set_viewport_size(&self, x: u32, y: u32) {
+        let mut viewport_size = self.viewport_size.write().unwrap();
+        *viewport_size = (x, y);
     }
 }
 

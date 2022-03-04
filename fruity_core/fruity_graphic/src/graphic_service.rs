@@ -70,4 +70,9 @@ pub trait GraphicService: Resource {
     ) -> Result<Box<dyn MaterialResource>, String>;
     fn on_before_draw_end(&self) -> &Signal<()>;
     fn on_after_draw_end(&self) -> &Signal<()>;
+    fn get_cursor_position(&self) -> Vector2d;
+    fn get_viewport_offset(&self) -> (u32, u32);
+    fn set_viewport_offset(&self, x: u32, y: u32);
+    fn get_viewport_size(&self) -> (u32, u32);
+    fn set_viewport_size(&self, x: u32, y: u32);
 }

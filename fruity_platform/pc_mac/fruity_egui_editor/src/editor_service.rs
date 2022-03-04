@@ -104,7 +104,7 @@ impl EditorService {
         let config = graphic_service.get_config();
 
         // We use the egui_winit_platform crate as the platform.
-        let size = window_service.get_size();
+        let size = window_service.get_windows_size();
         let platform = Platform::new(PlatformDescriptor {
             physical_width: size.0 as u32,
             physical_height: size.1 as u32,

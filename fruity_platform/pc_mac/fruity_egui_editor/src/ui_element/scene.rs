@@ -94,6 +94,10 @@ pub fn draw_scene(ui: &mut egui::Ui, ctx: &mut DrawContext) {
         .require::<dyn GraphicService>();
     let graphic_service = graphic_service.read();
 
+    // Update viewport properties
+    graphic_service.set_viewport_offset(rect.left() as u32 * 2, rect.top() as u32 * 2);
+    graphic_service.set_viewport_size(rect.width() as u32 * 2, rect.height() as u32 * 2);
+
     // Draw the scene on the texture
     let background_color = ui.style().visuals.faint_bg_color;
     let background_color = Color::new(

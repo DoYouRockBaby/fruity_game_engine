@@ -6,6 +6,7 @@ use fruity_editor::hooks::use_global;
 use fruity_editor::state::inspector::InspectorState;
 use fruity_editor_graphic_2d::gizmos_service::DragAction;
 use fruity_editor_graphic_2d::gizmos_service::GizmosService;
+use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::matrix3::Matrix3;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
@@ -15,6 +16,7 @@ use fruity_input::input_service::InputService;
 use fruity_physic_2d::components::circle_collider::CircleCollider;
 
 pub fn draw_circle_collider_2d_gizmos(
+    graphic_service: Ref<dyn GraphicService>,
     graphic_2d_service: Ref<Graphic2dService>,
     input_service: Ref<InputService>,
     gizmos_service: Const<GizmosService>,
@@ -103,8 +105,17 @@ pub fn draw_circle_collider_2d_gizmos(
                 },
             );
 
+            // Get camera transform
+            let camera_transform = {
+                let graphic_service = graphic_service.read();
+                graphic_service.get_camera_transform()
+            };
+            let camera_invert = camera_transform.invert();
+            let radius_vec = camera_invert * Vector2d::new(0.012, 0.0);
+
             // Draw the gizmos to resize the radius of the collider
-            if gizmos_service.draw_circle_helper(bottom, 0.012, Color::green(), Color::red()) {
+            if gizmos_service.draw_circle_helper(bottom, radius_vec.x, Color::green(), Color::red())
+            {
                 DragAction::start(
                     move |drag_action| {
                         let selected_entity = entity.clone();
@@ -130,7 +141,7 @@ pub fn draw_circle_collider_2d_gizmos(
                         });
                     },
                     input_service.clone(),
-                    graphic_2d_service.clone(),
+                    graphic_service.clone(),
                 );
             }
         }

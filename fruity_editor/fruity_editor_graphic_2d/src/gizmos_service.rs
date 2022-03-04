@@ -69,12 +69,15 @@ impl GizmosService {
         color: Color,
         hover_color: Color,
     ) -> bool {
-        let graphic_2d_service = self.graphic_2d_service.read();
-        let cursor_pos = graphic_2d_service.get_cursor_position();
+        let cursor_pos = {
+            let graphic_service = self.graphic_service.read();
+            graphic_service.get_cursor_position()
+        };
 
         let is_hover = cursor_pos.in_triangle(&p1, &p2, &p3);
         let color = if is_hover { hover_color } else { color };
 
+        let graphic_2d_service = self.graphic_2d_service.read();
         graphic_2d_service.draw_line(p1, p2, 3, color, 1000);
         graphic_2d_service.draw_line(p2, p3, 3, color, 1000);
         graphic_2d_service.draw_line(p3, p1, 3, color, 1000);
@@ -89,12 +92,15 @@ impl GizmosService {
         color: Color,
         hover_color: Color,
     ) -> bool {
-        let graphic_2d_service = self.graphic_2d_service.read();
-        let cursor_pos = graphic_2d_service.get_cursor_position();
+        let cursor_pos = {
+            let graphic_service = self.graphic_service.read();
+            graphic_service.get_cursor_position()
+        };
 
         let is_hover = cursor_pos.in_circle(&center, &radius);
         let color = if is_hover { hover_color } else { color };
 
+        let graphic_2d_service = self.graphic_2d_service.read();
         graphic_2d_service.draw_circle(center, radius, 3, color, Color::alpha(), 1000);
 
         is_hover
@@ -155,7 +161,7 @@ impl GizmosService {
         };
         let camera_invert = camera_transform.invert();
 
-        let move_handle_size = Vector2d::new(0.05, 0.05);
+        let move_handle_size = camera_invert * Vector2d::new(0.05, 0.05);
         let top_right = Vector2d::new(center.x + size.x / 2.0, center.y + size.y / 2.0);
 
         // Draw free move helper
@@ -182,7 +188,7 @@ impl GizmosService {
             DragAction::start(
                 move |action| on_move(true, true, action),
                 self.input_service.clone(),
-                self.graphic_2d_service.clone(),
+                self.graphic_service.clone(),
             );
         }
 
@@ -191,7 +197,7 @@ impl GizmosService {
             DragAction::start(
                 move |action| on_move(true, false, action),
                 self.input_service.clone(),
-                self.graphic_2d_service.clone(),
+                self.graphic_service.clone(),
             );
         }
 
@@ -200,7 +206,7 @@ impl GizmosService {
             DragAction::start(
                 move |action| on_move(false, true, action),
                 self.input_service.clone(),
-                self.graphic_2d_service.clone(),
+                self.graphic_service.clone(),
             );
         }
 
@@ -211,7 +217,7 @@ impl GizmosService {
             DragAction::start(
                 move |action| on_move(true, true, action),
                 self.input_service.clone(),
-                self.graphic_2d_service.clone(),
+                self.graphic_service.clone(),
             );
         }
 
@@ -220,7 +226,7 @@ impl GizmosService {
             DragAction::start(
                 move |action| on_move(true, false, action),
                 self.input_service.clone(),
-                self.graphic_2d_service.clone(),
+                self.graphic_service.clone(),
             );
         }
 
@@ -229,7 +235,7 @@ impl GizmosService {
             DragAction::start(
                 move |action| on_move(false, true, action),
                 self.input_service.clone(),
-                self.graphic_2d_service.clone(),
+                self.graphic_service.clone(),
             );
         }
     }
@@ -244,6 +250,13 @@ impl GizmosService {
     ) where
         FResize: Fn(bool, bool, DragAction) + Send + Sync + 'static,
     {
+        // Get camera transform
+        let camera_transform = {
+            let graphic_service = self.graphic_service.read();
+            graphic_service.get_camera_transform()
+        };
+        let camera_invert = camera_transform.invert();
+
         let bottom_left = Vector2d::new(
             f32::min(corner1.x, corner2.x),
             f32::min(corner1.y, corner2.y),
@@ -255,7 +268,7 @@ impl GizmosService {
 
         let bottom_right = Vector2d::new(top_right.x, bottom_left.y);
         let top_left = Vector2d::new(bottom_left.x, top_right.y);
-        let resize_handle_size = Vector2d::new(0.025, 0.025);
+        let resize_handle_size = camera_invert * Vector2d::new(0.025, 0.025);
 
         // Draw the boundings
         self.draw_square_helper(bottom_left, top_right, color, hover_color);
@@ -302,7 +315,7 @@ impl GizmosService {
             DragAction::start(
                 move |action| on_resize(true, true, action),
                 self.input_service.clone(),
-                self.graphic_2d_service.clone(),
+                self.graphic_service.clone(),
             );
         }
 
@@ -312,7 +325,7 @@ impl GizmosService {
             DragAction::start(
                 move |action| on_resize(false, true, action),
                 self.input_service.clone(),
-                self.graphic_2d_service.clone(),
+                self.graphic_service.clone(),
             );
         }
 
@@ -323,7 +336,7 @@ impl GizmosService {
             DragAction::start(
                 move |action| on_resize(true, false, action),
                 self.input_service.clone(),
-                self.graphic_2d_service.clone(),
+                self.graphic_service.clone(),
             );
         }
 
@@ -332,14 +345,14 @@ impl GizmosService {
             DragAction::start(
                 move |action| on_resize(false, false, action),
                 self.input_service.clone(),
-                self.graphic_2d_service.clone(),
+                self.graphic_service.clone(),
             );
         }
     }
 
     fn is_cursor_hover(&self, bottom_left: &Vector2d, top_right: &Vector2d) -> bool {
-        let graphic_2d_service = self.graphic_2d_service.read();
-        let cursor_pos = graphic_2d_service.get_cursor_position();
+        let graphic_service = self.graphic_service.read();
+        let cursor_pos = graphic_service.get_cursor_position();
 
         // Check if the cursor is in the rect
         bottom_left.x <= cursor_pos.x
@@ -352,25 +365,25 @@ impl GizmosService {
 pub struct DragAction {
     start_pos: Vector2d,
     input_service: ResourceReference<InputService>,
-    graphic_2d_service: ResourceReference<Graphic2dService>,
+    graphic_service: ResourceReference<dyn GraphicService>,
 }
 
 impl DragAction {
     pub fn start<F>(
         callback: F,
         input_service: ResourceReference<InputService>,
-        graphic_2d_service: ResourceReference<Graphic2dService>,
+        graphic_service: ResourceReference<dyn GraphicService>,
     ) where
         F: Fn(DragAction) + Send + Sync + 'static,
     {
-        let graphic_2d_service_reader = graphic_2d_service.read();
-        let start_pos = graphic_2d_service_reader.get_cursor_position();
+        let graphic_service_reader = graphic_service.read();
+        let start_pos = graphic_service_reader.get_cursor_position();
 
         // Create the darg action structure
         let drag_action = DragAction {
             start_pos,
             input_service,
-            graphic_2d_service,
+            graphic_service,
         };
 
         // Start the action in a specific thread
@@ -382,10 +395,15 @@ impl DragAction {
     }
 
     pub fn while_dragging(self, callback: impl Fn(Vector2d, Vector2d) + Send + Sync + 'static) {
+        let cursor_position = {
+            let graphic_service = self.graphic_service.read();
+            graphic_service.get_cursor_position()
+        };
+
         spawn(move || {
             while self.is_dragging_button_pressed() {
                 sleep(Duration::from_millis(20));
-                callback(self.get_cursor_position(), self.start_pos());
+                callback(cursor_position, self.start_pos());
             }
         });
     }
@@ -393,11 +411,6 @@ impl DragAction {
     fn is_dragging_button_pressed(&self) -> bool {
         let input_service = self.input_service.read();
         input_service.is_source_pressed("Mouse/Left")
-    }
-
-    pub fn get_cursor_position(&self) -> Vector2d {
-        let graphic_2d_service = self.graphic_2d_service.read();
-        graphic_2d_service.get_cursor_position()
     }
 }
 

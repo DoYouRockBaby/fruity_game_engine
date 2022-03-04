@@ -11,6 +11,7 @@ use fruity_core::utils::introspect::ArgumentCaster;
 use fruity_windows::window_service::WindowService;
 use std::fmt::Debug;
 use std::sync::Arc;
+use std::sync::RwLock;
 use winit::dpi::LogicalSize;
 use winit::event::Event;
 use winit::window::Window;
@@ -18,7 +19,7 @@ use winit::window::Window;
 #[derive(FruityAny)]
 pub struct WinitWindowService {
     window: Window,
-    pub(crate) cursor_position: (u32, u32),
+    pub cursor_position: (u32, u32),
     pub on_enter_loop: Signal<()>,
     pub on_start_update: Signal<()>,
     pub on_end_update: Signal<()>,
@@ -64,7 +65,7 @@ impl WindowService for WinitWindowService {
         self.window.set_resizable(resizable);
     }
 
-    fn get_size(&self) -> (u32, u32) {
+    fn get_windows_size(&self) -> (u32, u32) {
         (
             self.window.inner_size().width,
             self.window.inner_size().height,
@@ -138,10 +139,10 @@ impl IntrospectObject for WinitWindowService {
                 })),
             },
             MethodInfo {
-                name: "get_size".to_string(),
+                name: "get_windows_size".to_string(),
                 call: MethodCaller::Const(Arc::new(|this, _args| {
                     let this = cast_introspect_ref::<WinitWindowService>(this);
-                    let result = this.get_size();
+                    let result = this.get_windows_size();
 
                     Ok(Some(Serialized::Array(vec![
                         Serialized::U32(result.0),
