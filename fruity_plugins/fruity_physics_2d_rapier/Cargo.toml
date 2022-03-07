@@ -15,3 +15,4 @@ fruity_any = { path = "../../fruity_core/fruity_any" }
 fruity_core = { path = "../../fruity_core" }
 fruity_ecs = { path = "../../fruity_core/fruity_ecs" }
 fruity_physic_2d = { path = "../../fruity_core/fruity_physic_2d" }
+fruity_graphic_2d = { path = "../../fruity_core/fruity_graphic_2d" }

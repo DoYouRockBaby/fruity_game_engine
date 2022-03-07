@@ -909,6 +909,25 @@ impl GraphicService for WgpuGraphicService {
         camera_transform.invert() * cursor_pos
     }
 
+    /// Check the cursor position is in the viewport
+    fn is_cursor_hover_scene(&self) -> bool {
+        // Get informations from the resource dependencies
+        let cursor_position = {
+            let window_service = self.window_service.read();
+            window_service.get_cursor_position()
+        };
+
+        let viewport_offset = self.get_viewport_offset();
+        let viewport_size = self.get_viewport_size();
+
+        let cursor_pos = Vector2d::new(
+            (cursor_position.0 as f32 - viewport_offset.0 as f32) / viewport_size.0 as f32,
+            (cursor_position.1 as f32 - viewport_offset.1 as f32) / viewport_size.1 as f32,
+        );
+
+        cursor_pos.x >= 0.0 && cursor_pos.x < 1.0 && cursor_pos.y >= 0.0 && cursor_pos.y < 1.0
+    }
+
     fn get_viewport_offset(&self) -> (u32, u32) {
         let viewport_offset = self.viewport_offset.read().unwrap();
         viewport_offset.clone()

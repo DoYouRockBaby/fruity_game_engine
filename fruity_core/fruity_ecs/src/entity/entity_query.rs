@@ -144,6 +144,34 @@ impl<'a, T: Component> QueryInjectable for &T {
     }
 }
 
+impl<'a, T: Component> QueryInjectable for Option<&T> {
+    fn require_read() -> bool {
+        true
+    }
+
+    fn require_write() -> bool {
+        false
+    }
+
+    fn from_components(
+        _entity: &EntityReference,
+        entity_guard: &mut RequestedEntityGuard,
+        request_identifier: &mut EntityTypeIdentifier,
+    ) -> Self {
+        let identifier = request_identifier.0.remove(0);
+        let component = match entity_guard {
+            RequestedEntityGuard::Read(guard) => guard.read_component(&identifier).unwrap(),
+            RequestedEntityGuard::Write(guard) => guard.read_component(&identifier).unwrap(),
+            RequestedEntityGuard::None => return None,
+        };
+
+        // TODO: Find a way to remove it
+        let component = unsafe { std::mem::transmute::<&dyn Component, &dyn Component>(component) };
+
+        component.as_any_ref().downcast_ref::<T>()
+    }
+}
+
 impl<'a, T: Component> QueryInjectable for &mut T {
     fn require_read() -> bool {
         false
@@ -170,6 +198,35 @@ impl<'a, T: Component> QueryInjectable for &mut T {
             unsafe { std::mem::transmute::<&mut dyn Component, &mut dyn Component>(component) };
 
         component.as_any_mut().downcast_mut::<T>().unwrap()
+    }
+}
+
+impl<'a, T: Component> QueryInjectable for Option<&mut T> {
+    fn require_read() -> bool {
+        false
+    }
+
+    fn require_write() -> bool {
+        true
+    }
+
+    fn from_components(
+        _entity: &EntityReference,
+        entity_guard: &mut RequestedEntityGuard,
+        request_identifier: &mut EntityTypeIdentifier,
+    ) -> Self {
+        let identifier = request_identifier.0.remove(0);
+        let component = match entity_guard {
+            RequestedEntityGuard::Read(_) => return None,
+            RequestedEntityGuard::Write(guard) => guard.write_component(&identifier).unwrap(),
+            RequestedEntityGuard::None => return None,
+        };
+
+        // TODO: Find a way to remove it
+        let component =
+            unsafe { std::mem::transmute::<&mut dyn Component, &mut dyn Component>(component) };
+
+        component.as_any_mut().downcast_mut::<T>()
     }
 }
 

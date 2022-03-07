@@ -18,17 +18,42 @@ use std::sync::RwLock;
 
 #[topo::nested]
 pub fn draw_scene(ui: &mut egui::Ui, ctx: &mut DrawContext) {
+    // Initialize local state
+    let world_state = use_global::<WorldState>();
+    let center_state = use_state(|| Vector2d::default());
+    let zoom_state = use_state(|| 4.0 as f32);
+
     // Get available dimensions
     let rect = ui.available_rect_before_wrap();
     let width = (ui.available_width() / ui.input().physical_pixel_size()) as u32;
     let height = (ui.available_height() / ui.input().physical_pixel_size()) as u32;
     let ratio = ui.available_width() / ui.available_height();
 
+    // Update viewport properties
+    {
+        let graphic_service = world_state
+            .resource_container
+            .require::<dyn GraphicService>();
+        let graphic_service = graphic_service.read();
+
+        graphic_service.set_viewport_offset(rect.left() as u32 * 2, rect.top() as u32 * 2);
+        graphic_service.set_viewport_size(rect.width() as u32 * 2, rect.height() as u32 * 2);
+    }
+
     // Update camera if needed
-    let center_state = use_state(|| Vector2d::default());
-    let zoom_state = use_state(|| 4.0 as f32);
-    if ui.input().scroll_delta.y != 0.0 {
-        zoom_state.set(zoom_state.get() + ui.input().scroll_delta.y * 0.001);
+    let is_cursor_hover_scene = {
+        let graphic_service = world_state
+            .resource_container
+            .require::<dyn GraphicService>();
+        let graphic_service = graphic_service.read();
+
+        graphic_service.is_cursor_hover_scene()
+    };
+
+    if is_cursor_hover_scene {
+        if ui.input().scroll_delta.y != 0.0 {
+            zoom_state.set(zoom_state.get() + ui.input().scroll_delta.y * 0.001);
+        }
     }
 
     // Calculate the camera view transform
@@ -88,15 +113,10 @@ pub fn draw_scene(ui: &mut egui::Ui, ctx: &mut DrawContext) {
     );
 
     // Get all what we need to draw
-    let world_state = use_global::<WorldState>();
     let graphic_service = world_state
         .resource_container
         .require::<dyn GraphicService>();
     let graphic_service = graphic_service.read();
-
-    // Update viewport properties
-    graphic_service.set_viewport_offset(rect.left() as u32 * 2, rect.top() as u32 * 2);
-    graphic_service.set_viewport_size(rect.width() as u32 * 2, rect.height() as u32 * 2);
 
     // Draw the scene on the texture
     let background_color = ui.style().visuals.faint_bg_color;

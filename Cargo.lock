@@ -1168,6 +1168,7 @@ dependencies = [
  "fruity_any",
  "fruity_core",
  "fruity_ecs",
+ "fruity_graphic_2d",
  "fruity_physic_2d",
  "log",
  "puffin 0.12.1",
