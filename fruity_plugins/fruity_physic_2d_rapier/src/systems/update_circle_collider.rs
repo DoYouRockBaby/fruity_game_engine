@@ -1,7 +1,7 @@
 use crate::Rapier2dService;
 use fruity_core::inject::Const;
 use fruity_core::inject::Ref;
-use fruity_ecs::entity::entity_query::Inject4;
+use fruity_ecs::entity::entity_query::Inject1;
 use fruity_ecs::entity::entity_service::EntityService;
 use fruity_ecs::entity_type;
 use fruity_graphic_2d::components::rotate_2d::Rotate2d;
@@ -14,14 +14,9 @@ pub fn update_circle_collider(
     rapier_2d_service: Ref<Rapier2dService>,
 ) {
     entity_service.for_each(
-        entity_type!["CircleCollider", "?Translate2d", "?Rotate2d", "?Scale2d"],
-        Inject4::new(
-            move |collider: &CircleCollider,
-                  translate: Option<&Translate2d>,
-                  rotate: Option<&Rotate2d>,
-                  scale: Option<&Scale2d>| {
-                let rapier_2d_service = rapier_2d_service.read();
-            },
-        ),
+        entity_type!["CircleCollider"],
+        Inject1::new(move |collider: &CircleCollider| {
+            let rapier_2d_service = rapier_2d_service.read();
+        }),
     )
 }

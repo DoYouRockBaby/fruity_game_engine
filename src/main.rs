@@ -21,6 +21,7 @@ use fruity_javascript::initialize as initialize_javascript;
 use fruity_javascript_watcher::initialize as initialize_javascript_watcher;
 use fruity_javascript_watcher::javascript_watcher_service::JavascriptWatcherService;
 use fruity_physic_2d::initialize as initialize_physic_2d;
+use fruity_physic_2d_rapier::initialize as initialize_physic_2d_rapier;
 use fruity_wgpu_graphic::initialize as initialize_wgpu_graphic;
 use fruity_windows::initialize as initialize_window;
 use fruity_winit_input::initialize as initialize_winit_input;
@@ -59,6 +60,7 @@ fn main() {
             initialize_graphic(resource_container.clone(), settings);
             initialize_graphic_2d(resource_container.clone(), settings);
             initialize_physic_2d(resource_container.clone(), settings);
+            initialize_physic_2d_rapier(resource_container.clone(), settings);
             initialize_hierarchy_2d(resource_container.clone(), settings);
             initialize_javascript(resource_container.clone(), settings);
             initialize_javascript_watcher(resource_container.clone(), settings);

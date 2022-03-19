@@ -11,7 +11,6 @@ use fruity_core::utils::introspect::ArgumentCaster;
 use fruity_windows::window_service::WindowService;
 use std::fmt::Debug;
 use std::sync::Arc;
-use std::sync::RwLock;
 use winit::dpi::LogicalSize;
 use winit::event::Event;
 use winit::window::Window;

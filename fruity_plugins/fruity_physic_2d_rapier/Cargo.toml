@@ -1,5 +1,5 @@
 [package]
-name = "fruity_physics_2d_rapier"
+name = "fruity_physic_2d_rapier"
 version = "0.1.0"
 edition = "2021"
 

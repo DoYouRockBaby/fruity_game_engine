@@ -15,7 +15,7 @@ pub mod rapier_2d_service;
 pub mod systems;
 
 /// The module name
-pub static MODULE_NAME: &str = "fruity_physics_2d_rapier";
+pub static MODULE_NAME: &str = "fruity_physic_2d_rapier";
 
 // #[no_mangle]
 pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
