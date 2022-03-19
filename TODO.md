@@ -13,6 +13,9 @@
 [X] Move ECS structure to a struct of array instead an array of struct (more efficient, easier to implement)
 [X] Implement ECS hierarchy
 [X] Remove the "Entity" component to replace it by a more cache friendly solution
+[ ] Add a way to have multiple components of the same type on a single entity
+[ ] Add a way to extend components
+[ ] Add component query selectors (? for optional and ! for exclude)
 [ ] Random crash when we delete an entity
 [ ] Add an exception when you try to access a deleted entity, propagate it into js
 [ ] There should be some memory leak in archetype
@@ -49,7 +52,6 @@
 [X] Squad transform should be done in shader instead of CPU
 [X] Proceed instantied rendering
 [X] Make instances parametrizable in material/shader
-[ ] Sprites should simply edit a field of material
 [ ] Implements spritesheet
 [ ] Implement rendering composers
 
