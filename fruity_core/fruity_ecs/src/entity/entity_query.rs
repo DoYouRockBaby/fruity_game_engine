@@ -1,4 +1,5 @@
 use crate::component::component::Component;
+use crate::component::component::StaticComponent;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
 use crate::entity::entity_guard::EntityReadGuard;
@@ -9,13 +10,12 @@ use std::sync::Arc;
 
 #[macro_export]
 macro_rules! query_params {
-    ($fn:expr,$entity:expr,$requested_entity_guard:expr,$request_identifier:expr, $($injection_type:ident),*) => {
+    ($fn:expr,$entity:expr,$requested_entity_guard:expr, $($injection_type:ident),*) => {
         #[allow(unused_parens)]
         for ($ ($injection_type),*) in iproduct!(
             $ ($injection_type::from_components(
                 $entity,
                 $requested_entity_guard,
-                $request_identifier,
             )),*
         ) {
             $fn($ ($injection_type),*);
@@ -48,8 +48,6 @@ pub trait QueryInjectable: Sized {
     fn from_components(
         entity: &EntityReference,
         entity_guard: &mut RequestedEntityGuard,
-        //TODO: Remove that and replace it by class name
-        request_identifier: &mut EntityTypeIdentifier,
     ) -> Vec<Self>;
 }
 
@@ -65,7 +63,6 @@ impl QueryInjectable for EntityReference {
     fn from_components(
         entity: &EntityReference,
         _entity_guard: &mut RequestedEntityGuard,
-        _request_identifier: &mut EntityTypeIdentifier,
     ) -> Vec<Self> {
         vec![entity.clone()]
     }
@@ -83,7 +80,6 @@ impl QueryInjectable for EntityId {
     fn from_components(
         _entity: &EntityReference,
         entity_guard: &mut RequestedEntityGuard,
-        _request_identifier: &mut EntityTypeIdentifier,
     ) -> Vec<Self> {
         match entity_guard {
             RequestedEntityGuard::Read(guard) => vec![guard.get_entity_id()],
@@ -105,7 +101,6 @@ impl QueryInjectable for String {
     fn from_components(
         _entity: &EntityReference,
         entity_guard: &mut RequestedEntityGuard,
-        _request_identifier: &mut EntityTypeIdentifier,
     ) -> Vec<Self> {
         match entity_guard {
             RequestedEntityGuard::Read(guard) => vec![guard.get_name()],
@@ -127,7 +122,6 @@ impl QueryInjectable for bool {
     fn from_components(
         _entity: &EntityReference,
         entity_guard: &mut RequestedEntityGuard,
-        _request_identifier: &mut EntityTypeIdentifier,
     ) -> Vec<Self> {
         match entity_guard {
             RequestedEntityGuard::Read(guard) => vec![guard.is_enabled()],
@@ -137,7 +131,7 @@ impl QueryInjectable for bool {
     }
 }
 
-impl<'a, T: Component> QueryInjectable for &T {
+impl<'a, T: Component + StaticComponent> QueryInjectable for &T {
     fn require_read() -> bool {
         true
     }
@@ -149,9 +143,8 @@ impl<'a, T: Component> QueryInjectable for &T {
     fn from_components(
         _entity: &EntityReference,
         entity_guard: &mut RequestedEntityGuard,
-        request_identifier: &mut EntityTypeIdentifier,
     ) -> Vec<Self> {
-        let identifier = request_identifier.0.remove(0);
+        let identifier = T::get_component_name();
         let components = match entity_guard {
             RequestedEntityGuard::Read(guard) => guard.read_typed_components::<T>(&identifier),
             RequestedEntityGuard::Write(guard) => guard.read_typed_components::<T>(&identifier),
@@ -168,7 +161,7 @@ impl<'a, T: Component> QueryInjectable for &T {
     }
 }
 
-impl<'a, T: Component> QueryInjectable for &mut T {
+impl<'a, T: Component + StaticComponent> QueryInjectable for &mut T {
     fn require_read() -> bool {
         false
     }
@@ -180,9 +173,8 @@ impl<'a, T: Component> QueryInjectable for &mut T {
     fn from_components(
         _entity: &EntityReference,
         entity_guard: &mut RequestedEntityGuard,
-        request_identifier: &mut EntityTypeIdentifier,
     ) -> Vec<Self> {
-        let identifier = request_identifier.0.remove(0);
+        let identifier = T::get_component_name();
         let components = match entity_guard {
             RequestedEntityGuard::Read(guard) => panic!(),
             RequestedEntityGuard::Write(guard) => guard.write_typed_components::<T>(&identifier),
@@ -268,14 +260,7 @@ impl<T1: QueryInjectable + 'static> QueryInject for Inject1<T1> {
                 RequestedEntityGuard::None
             };
 
-            let mut request_identifier = request_identifier.clone();
-            query_params!(
-                self.0,
-                &entity,
-                &mut requested_entity_guard,
-                &mut request_identifier,
-                T1
-            );
+            query_params!(self.0, &entity, &mut requested_entity_guard, T1);
         })
     }
 }
@@ -313,15 +298,7 @@ impl<T1: QueryInjectable + 'static, T2: QueryInjectable + 'static> QueryInject f
                 RequestedEntityGuard::None
             };
 
-            let mut request_identifier = request_identifier.clone();
-            query_params!(
-                self.0,
-                &entity,
-                &mut requested_entity_guard,
-                &mut request_identifier,
-                T1,
-                T2
-            );
+            query_params!(self.0, &entity, &mut requested_entity_guard, T1, T2);
         })
     }
 }

@@ -28,6 +28,7 @@ pub fn derive_component(input: TokenStream) -> TokenStream {
 
 fn derive_component_trait(input: TokenStream) -> TokenStream {
     let DeriveInput { ident, .. } = parse_macro_input!(input);
+    let struct_name = ident.to_string();
 
     let output = quote! {
         impl fruity_ecs::component::component::Component for #ident {
@@ -55,6 +56,12 @@ fn derive_component_trait(input: TokenStream) -> TokenStream {
 
             fn duplicate(&self) -> Box<dyn fruity_ecs::component::component::Component> {
                 Box::new(self.clone())
+            }
+        }
+
+        impl fruity_ecs::component::component::StaticComponent for #ident {
+            fn get_component_name() -> String {
+                #struct_name.to_string()
             }
         }
     };

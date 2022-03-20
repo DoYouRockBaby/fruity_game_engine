@@ -19,6 +19,12 @@ use std::sync::Arc;
 pub type ComponentDecoder = fn(buffer: &[u8]) -> &dyn Component;
 
 /// An abstraction over a component, should be implemented for every component
+pub trait StaticComponent {
+    /// Return the class type name
+    fn get_component_name() -> String;
+}
+
+/// An abstraction over a component, should be implemented for every component
 pub trait Component: IntrospectObject + Debug {
     /// Return the size that is required to encode the object
     fn encode_size(&self) -> usize;
