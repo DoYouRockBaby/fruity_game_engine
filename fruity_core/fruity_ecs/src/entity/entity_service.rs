@@ -26,6 +26,7 @@ use fruity_core::serialize::Serialize;
 use fruity_core::signal::Signal;
 use fruity_core::utils::introspect::cast_introspect_ref;
 use fruity_core::utils::introspect::ArgumentCaster;
+use itertools::Itertools;
 use maplit::hashmap;
 use rayon::iter::ParallelBridge;
 use rayon::iter::ParallelIterator;
@@ -480,16 +481,24 @@ impl IntrospectObject for EntityService {
                         .iter_components(&EntityTypeIdentifier(arg1.clone()))
                         .map(move |entity| {
                             let entity = entity.read();
-                            Serialized::Array(
-                                arg1.iter()
-                                    .map(|component_identifier| {
-                                        Serialized::NativeObject(Box::new(ReadComponent::new(
-                                            entity.read_component(component_identifier).unwrap(),
-                                        )))
-                                    })
-                                    .collect::<Vec<_>>(),
-                            )
-                        });
+
+                            arg1.iter()
+                                .map(|component_identifier| {
+                                    entity
+                                        .read_components(component_identifier)
+                                        .into_iter()
+                                        .map(|component| {
+                                            Serialized::NativeObject(Box::new(ReadComponent::new(
+                                                component,
+                                            )))
+                                        })
+                                        .collect::<Vec<_>>()
+                                })
+                                .multi_cartesian_product()
+                                .map(|params| Serialized::Array(params))
+                                .collect::<Vec<_>>()
+                        })
+                        .flatten();
 
                     Ok(Some(Serialized::Iterator(Arc::new(RwLock::new(iterator)))))
                 })),
@@ -499,23 +508,31 @@ impl IntrospectObject for EntityService {
                 call: MethodCaller::Const(Arc::new(move |this, args| {
                     let this = cast_introspect_ref::<EntityService>(this);
 
-                    let mut caster = ArgumentCaster::new("iter_components", args);
+                    let mut caster = ArgumentCaster::new("iter_components_mut", args);
                     let arg1 = caster.cast_next::<Vec<String>>()?;
 
                     let iterator = this
                         .iter_components(&EntityTypeIdentifier(arg1.clone()))
                         .map(move |entity| {
                             let entity = entity.write();
-                            Serialized::Array(
-                                arg1.iter()
-                                    .map(|component_identifier| {
-                                        Serialized::NativeObject(Box::new(WriteComponent::new(
-                                            entity.write_component(component_identifier).unwrap(),
-                                        )))
-                                    })
-                                    .collect::<Vec<_>>(),
-                            )
-                        });
+
+                            arg1.iter()
+                                .map(|component_identifier| {
+                                    entity
+                                        .write_components(component_identifier)
+                                        .into_iter()
+                                        .map(|component| {
+                                            Serialized::NativeObject(Box::new(WriteComponent::new(
+                                                component,
+                                            )))
+                                        })
+                                        .collect::<Vec<_>>()
+                                })
+                                .multi_cartesian_product()
+                                .map(|params| Serialized::Array(params))
+                                .collect::<Vec<_>>()
+                        })
+                        .flatten();
 
                     Ok(Some(Serialized::Iterator(Arc::new(RwLock::new(iterator)))))
                 })),

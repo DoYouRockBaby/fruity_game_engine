@@ -46,6 +46,14 @@
           fields:
             y: 0.0
             x: 0.0
+    - class_name: CircleCollider
+      fields:
+        radius: 0.3
+        center:
+          class_name: Vector2d
+          fields:
+            y: 1.0
+            x: 0.0
 - class_name: Entity
   fields:
     entity_id: 3

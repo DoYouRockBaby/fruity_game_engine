@@ -22,7 +22,8 @@ pub fn update_nested_level(entity_service: Ref<EntityService>) {
             // Set the nested level as the parent one plus one
             if let Some(parent_entity) = parent_entity {
                 let parent_entity = parent_entity.read();
-                if let Some(parent_parent) = parent_entity.read_typed_component::<Parent>("Parent")
+                if let Some(parent_parent) =
+                    parent_entity.read_single_typed_component::<Parent>("Parent")
                 {
                     parent.nested_level = parent_parent.nested_level + 1;
                 } else {
@@ -35,7 +36,9 @@ pub fn update_nested_level(entity_service: Ref<EntityService>) {
             let entity_service = entity_service.clone();
             parent.parent_id.on_updated.add_observer(move |parent_id| {
                 let entity = entity_2.write();
-                let mut parent = entity.write_typed_component::<Parent>("Parent").unwrap();
+                let mut parent = entity
+                    .write_single_typed_component::<Parent>("Parent")
+                    .unwrap();
 
                 // Get the parent entity reference
                 let parent_entity = if let Some(parent_id) = &parent_id {
@@ -49,7 +52,7 @@ pub fn update_nested_level(entity_service: Ref<EntityService>) {
                 if let Some(parent_entity) = parent_entity {
                     let parent_entity = parent_entity.read();
                     if let Some(parent_parent) =
-                        parent_entity.read_typed_component::<Parent>("Parent")
+                        parent_entity.read_single_typed_component::<Parent>("Parent")
                     {
                         parent.nested_level = parent_parent.nested_level + 1;
                     } else {

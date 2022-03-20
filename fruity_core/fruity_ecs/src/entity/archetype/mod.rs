@@ -7,7 +7,9 @@ use crate::entity::entity::get_type_identifier_by_any;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
 use crate::entity::entity_reference::EntityReference;
+use itertools::Itertools;
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -55,11 +57,12 @@ impl Archetype {
         let enabled_array = RwLock::new(vec![enabled]);
         let lock_array = RwLock::new(vec![RwLock::new(())]);
 
+        let grouped_components = Self::group_components_by_type(components);
         let mut component_arrays = BTreeMap::new();
-        for component in components {
+        for (class_name, components) in grouped_components {
             component_arrays.insert(
-                component.get_class_name(),
-                Arc::new(RwLock::new(ComponentArray::new(component))),
+                class_name,
+                Arc::new(RwLock::new(ComponentArray::new(components))),
             );
         }
 
@@ -141,11 +144,12 @@ impl Archetype {
         lock_array.push(RwLock::new(()));
 
         // Store all the components
-        for component in components {
-            let component_array = self.inner.component_arrays.get(&component.get_class_name());
+        let grouped_components = Self::group_components_by_type(components);
+        for (class_name, components) in grouped_components {
+            let component_array = self.inner.component_arrays.get(&class_name);
             if let Some(component_array) = component_array {
                 let mut component_array = component_array.write().unwrap();
-                component_array.add(component);
+                component_array.add(components);
             }
         }
     }
@@ -177,6 +181,7 @@ impl Archetype {
                     let mut component_array = component_array.write().unwrap();
                     component_array.remove(index)
                 })
+                .flatten()
                 .collect::<Vec<_>>()
         };
 
@@ -189,5 +194,16 @@ impl Archetype {
             },
             components,
         )
+    }
+
+    fn group_components_by_type(
+        components: Vec<AnyComponent>,
+    ) -> HashMap<String, Vec<AnyComponent>> {
+        components
+            .into_iter()
+            .group_by(|component| component.get_class_name())
+            .into_iter()
+            .map(|(class_name, component)| (class_name, component.collect::<Vec<_>>()))
+            .collect::<HashMap<_, _>>()
     }
 }

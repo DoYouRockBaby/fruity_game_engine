@@ -4,7 +4,27 @@ use crate::entity::entity::EntityTypeIdentifier;
 use crate::entity::entity_guard::EntityReadGuard;
 use crate::entity::entity_guard::EntityWriteGuard;
 use crate::entity::entity_reference::EntityReference;
+use itertools::iproduct;
 use std::sync::Arc;
+
+#[macro_export]
+macro_rules! query_params {
+    ($fn:expr,$entity:expr,$requested_entity_guard:expr,$request_identifier:expr, $($injection_type:ident),*) => {
+        #[allow(unused_parens)]
+        for ($ ($injection_type),*) in iproduct!(
+            $ ($injection_type::from_components(
+                $entity,
+                $requested_entity_guard,
+                $request_identifier,
+            )),*
+        ) {
+            $fn($ ($injection_type),*);
+        }
+    };
+    ($fn:expr) => {
+        query
+    };
+}
 
 /// An enum to pass a guard into the [’QueryInjectable’]
 pub enum RequestedEntityGuard<'a> {
@@ -17,7 +37,7 @@ pub enum RequestedEntityGuard<'a> {
 }
 
 /// A trait for types that can be exposed from components references
-pub trait QueryInjectable {
+pub trait QueryInjectable: Sized {
     /// Does this require a read guard over the reference
     fn require_read() -> bool;
 
@@ -28,8 +48,9 @@ pub trait QueryInjectable {
     fn from_components(
         entity: &EntityReference,
         entity_guard: &mut RequestedEntityGuard,
+        //TODO: Remove that and replace it by class name
         request_identifier: &mut EntityTypeIdentifier,
-    ) -> Self;
+    ) -> Vec<Self>;
 }
 
 impl QueryInjectable for EntityReference {
@@ -45,8 +66,8 @@ impl QueryInjectable for EntityReference {
         entity: &EntityReference,
         _entity_guard: &mut RequestedEntityGuard,
         _request_identifier: &mut EntityTypeIdentifier,
-    ) -> Self {
-        entity.clone()
+    ) -> Vec<Self> {
+        vec![entity.clone()]
     }
 }
 
@@ -63,10 +84,10 @@ impl QueryInjectable for EntityId {
         _entity: &EntityReference,
         entity_guard: &mut RequestedEntityGuard,
         _request_identifier: &mut EntityTypeIdentifier,
-    ) -> Self {
+    ) -> Vec<Self> {
         match entity_guard {
-            RequestedEntityGuard::Read(guard) => guard.get_entity_id(),
-            RequestedEntityGuard::Write(guard) => guard.get_entity_id(),
+            RequestedEntityGuard::Read(guard) => vec![guard.get_entity_id()],
+            RequestedEntityGuard::Write(guard) => vec![guard.get_entity_id()],
             RequestedEntityGuard::None => panic!(),
         }
     }
@@ -85,10 +106,10 @@ impl QueryInjectable for String {
         _entity: &EntityReference,
         entity_guard: &mut RequestedEntityGuard,
         _request_identifier: &mut EntityTypeIdentifier,
-    ) -> Self {
+    ) -> Vec<Self> {
         match entity_guard {
-            RequestedEntityGuard::Read(guard) => guard.get_name(),
-            RequestedEntityGuard::Write(guard) => guard.get_name(),
+            RequestedEntityGuard::Read(guard) => vec![guard.get_name()],
+            RequestedEntityGuard::Write(guard) => vec![guard.get_name()],
             RequestedEntityGuard::None => panic!(),
         }
     }
@@ -107,10 +128,10 @@ impl QueryInjectable for bool {
         _entity: &EntityReference,
         entity_guard: &mut RequestedEntityGuard,
         _request_identifier: &mut EntityTypeIdentifier,
-    ) -> Self {
+    ) -> Vec<Self> {
         match entity_guard {
-            RequestedEntityGuard::Read(guard) => guard.is_enabled(),
-            RequestedEntityGuard::Write(guard) => guard.is_enabled(),
+            RequestedEntityGuard::Read(guard) => vec![guard.is_enabled()],
+            RequestedEntityGuard::Write(guard) => vec![guard.is_enabled()],
             RequestedEntityGuard::None => panic!(),
         }
     }
@@ -129,46 +150,21 @@ impl<'a, T: Component> QueryInjectable for &T {
         _entity: &EntityReference,
         entity_guard: &mut RequestedEntityGuard,
         request_identifier: &mut EntityTypeIdentifier,
-    ) -> Self {
+    ) -> Vec<Self> {
         let identifier = request_identifier.0.remove(0);
-        let component = match entity_guard {
-            RequestedEntityGuard::Read(guard) => guard.read_component(&identifier).unwrap(),
-            RequestedEntityGuard::Write(guard) => guard.read_component(&identifier).unwrap(),
+        let components = match entity_guard {
+            RequestedEntityGuard::Read(guard) => guard.read_typed_components::<T>(&identifier),
+            RequestedEntityGuard::Write(guard) => guard.read_typed_components::<T>(&identifier),
             RequestedEntityGuard::None => panic!(),
         };
 
-        // TODO: Find a way to remove it
-        let component = unsafe { std::mem::transmute::<&dyn Component, &dyn Component>(component) };
-
-        component.as_any_ref().downcast_ref::<T>().unwrap()
-    }
-}
-
-impl<'a, T: Component> QueryInjectable for Option<&T> {
-    fn require_read() -> bool {
-        true
-    }
-
-    fn require_write() -> bool {
-        false
-    }
-
-    fn from_components(
-        _entity: &EntityReference,
-        entity_guard: &mut RequestedEntityGuard,
-        request_identifier: &mut EntityTypeIdentifier,
-    ) -> Self {
-        let identifier = request_identifier.0.remove(0);
-        let component = match entity_guard {
-            RequestedEntityGuard::Read(guard) => guard.read_component(&identifier).unwrap(),
-            RequestedEntityGuard::Write(guard) => guard.read_component(&identifier).unwrap(),
-            RequestedEntityGuard::None => return None,
-        };
-
-        // TODO: Find a way to remove it
-        let component = unsafe { std::mem::transmute::<&dyn Component, &dyn Component>(component) };
-
-        component.as_any_ref().downcast_ref::<T>()
+        components
+            .into_iter()
+            .map(|component| {
+                // TODO: Find a way to remove it
+                unsafe { std::mem::transmute::<&T, &T>(component) }
+            })
+            .collect::<Vec<_>>()
     }
 }
 
@@ -185,48 +181,21 @@ impl<'a, T: Component> QueryInjectable for &mut T {
         _entity: &EntityReference,
         entity_guard: &mut RequestedEntityGuard,
         request_identifier: &mut EntityTypeIdentifier,
-    ) -> Self {
+    ) -> Vec<Self> {
         let identifier = request_identifier.0.remove(0);
-        let component = match entity_guard {
-            RequestedEntityGuard::Read(_) => panic!(),
-            RequestedEntityGuard::Write(guard) => guard.write_component(&identifier).unwrap(),
+        let components = match entity_guard {
+            RequestedEntityGuard::Read(guard) => panic!(),
+            RequestedEntityGuard::Write(guard) => guard.write_typed_components::<T>(&identifier),
             RequestedEntityGuard::None => panic!(),
         };
 
-        // TODO: Find a way to remove it
-        let component =
-            unsafe { std::mem::transmute::<&mut dyn Component, &mut dyn Component>(component) };
-
-        component.as_any_mut().downcast_mut::<T>().unwrap()
-    }
-}
-
-impl<'a, T: Component> QueryInjectable for Option<&mut T> {
-    fn require_read() -> bool {
-        false
-    }
-
-    fn require_write() -> bool {
-        true
-    }
-
-    fn from_components(
-        _entity: &EntityReference,
-        entity_guard: &mut RequestedEntityGuard,
-        request_identifier: &mut EntityTypeIdentifier,
-    ) -> Self {
-        let identifier = request_identifier.0.remove(0);
-        let component = match entity_guard {
-            RequestedEntityGuard::Read(_) => return None,
-            RequestedEntityGuard::Write(guard) => guard.write_component(&identifier).unwrap(),
-            RequestedEntityGuard::None => return None,
-        };
-
-        // TODO: Find a way to remove it
-        let component =
-            unsafe { std::mem::transmute::<&mut dyn Component, &mut dyn Component>(component) };
-
-        component.as_any_mut().downcast_mut::<T>()
+        components
+            .into_iter()
+            .map(|component| {
+                // TODO: Find a way to remove it
+                unsafe { std::mem::transmute::<&mut T, &mut T>(component) }
+            })
+            .collect::<Vec<_>>()
     }
 }
 
@@ -300,11 +269,13 @@ impl<T1: QueryInjectable + 'static> QueryInject for Inject1<T1> {
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(T1::from_components(
+            query_params!(
+                self.0,
                 &entity,
                 &mut requested_entity_guard,
                 &mut request_identifier,
-            ))
+                T1
+            );
         })
     }
 }
@@ -343,21 +314,20 @@ impl<T1: QueryInjectable + 'static, T2: QueryInjectable + 'static> QueryInject f
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2
+            );
         })
     }
 }
+
+/*
+
 
 /// A shortcut for a boxed inject function
 #[derive(Clone)]
@@ -398,23 +368,15 @@ impl<
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T3::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2,
+                T3
+            );
         })
     }
 }
@@ -466,28 +428,16 @@ impl<
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T3::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T4::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2,
+                T3,
+                T4
+            );
         })
     }
 }
@@ -542,33 +492,17 @@ impl<
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T3::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T4::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T5::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2,
+                T3,
+                T4,
+                T5
+            );
         })
     }
 }
@@ -626,38 +560,18 @@ impl<
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T3::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T4::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T5::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T6::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2,
+                T3,
+                T4,
+                T5,
+                T6
+            );
         })
     }
 }
@@ -720,43 +634,19 @@ impl<
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T3::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T4::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T5::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T6::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T7::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2,
+                T3,
+                T4,
+                T5,
+                T6,
+                T7
+            );
         })
     }
 }
@@ -821,48 +711,20 @@ impl<
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T3::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T4::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T5::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T6::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T7::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T8::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2,
+                T3,
+                T4,
+                T5,
+                T6,
+                T7,
+                T8
+            );
         })
     }
 }
@@ -930,53 +792,21 @@ impl<
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T3::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T4::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T5::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T6::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T7::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T8::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T9::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2,
+                T3,
+                T4,
+                T5,
+                T6,
+                T7,
+                T8,
+                T9
+            );
         })
     }
 }
@@ -1049,58 +879,22 @@ impl<
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T3::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T4::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T5::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T6::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T7::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T8::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T9::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T10::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2,
+                T3,
+                T4,
+                T5,
+                T6,
+                T7,
+                T8,
+                T9,
+                T10
+            );
         })
     }
 }
@@ -1178,63 +972,23 @@ impl<
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T3::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T4::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T5::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T6::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T7::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T8::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T9::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T10::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T11::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2,
+                T3,
+                T4,
+                T5,
+                T6,
+                T7,
+                T8,
+                T9,
+                T10,
+                T11
+            );
         })
     }
 }
@@ -1315,68 +1069,24 @@ impl<
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T3::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T4::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T5::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T6::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T7::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T8::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T9::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T10::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T11::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T12::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2,
+                T3,
+                T4,
+                T5,
+                T6,
+                T7,
+                T8,
+                T9,
+                T10,
+                T11,
+                T12
+            );
         })
     }
 }
@@ -1460,73 +1170,25 @@ impl<
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T3::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T4::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T5::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T6::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T7::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T8::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T9::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T10::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T11::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T12::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T13::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2,
+                T3,
+                T4,
+                T5,
+                T6,
+                T7,
+                T8,
+                T9,
+                T10,
+                T11,
+                T12,
+                T13
+            );
         })
     }
 }
@@ -1616,78 +1278,26 @@ impl<
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T3::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T4::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T5::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T6::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T7::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T8::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T9::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T10::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T11::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T12::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T13::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T14::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2,
+                T3,
+                T4,
+                T5,
+                T6,
+                T7,
+                T8,
+                T9,
+                T10,
+                T11,
+                T12,
+                T13,
+                T14
+            );
         })
     }
 }
@@ -1780,83 +1390,27 @@ impl<
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T3::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T4::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T5::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T6::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T7::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T8::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T9::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T10::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T11::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T12::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T13::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T14::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T15::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2,
+                T3,
+                T4,
+                T5,
+                T6,
+                T7,
+                T8,
+                T9,
+                T10,
+                T11,
+                T12,
+                T13,
+                T14,
+                T15
+            );
         })
     }
 }
@@ -1955,88 +1509,28 @@ impl<
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T3::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T4::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T5::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T6::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T7::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T8::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T9::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T10::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T11::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T12::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T13::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T14::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T15::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T16::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2,
+                T3,
+                T4,
+                T5,
+                T6,
+                T7,
+                T8,
+                T9,
+                T10,
+                T11,
+                T12,
+                T13,
+                T14,
+                T15,
+                T16
+            );
         })
     }
 }
@@ -2140,93 +1634,29 @@ impl<
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T3::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T4::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T5::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T6::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T7::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T8::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T9::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T10::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T11::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T12::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T13::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T14::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T15::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T16::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T17::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2,
+                T3,
+                T4,
+                T5,
+                T6,
+                T7,
+                T8,
+                T9,
+                T10,
+                T11,
+                T12,
+                T13,
+                T14,
+                T15,
+                T16,
+                T17
+            );
         })
     }
 }
@@ -2333,98 +1763,30 @@ impl<
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T3::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T4::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T5::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T6::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T7::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T8::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T9::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T10::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T11::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T12::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T13::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T14::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T15::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T16::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T17::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T18::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2,
+                T3,
+                T4,
+                T5,
+                T6,
+                T7,
+                T8,
+                T9,
+                T10,
+                T11,
+                T12,
+                T13,
+                T14,
+                T15,
+                T16,
+                T17,
+                T18
+            );
         })
     }
 }
@@ -2574,103 +1936,31 @@ impl<
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T3::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T4::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T5::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T6::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T7::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T8::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T9::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T10::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T11::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T12::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T13::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T14::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T15::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T16::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T17::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T18::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T19::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2,
+                T3,
+                T4,
+                T5,
+                T6,
+                T7,
+                T8,
+                T9,
+                T10,
+                T11,
+                T12,
+                T13,
+                T14,
+                T15,
+                T16,
+                T17,
+                T18,
+                T19
+            );
         })
     }
 }
@@ -2886,108 +2176,35 @@ impl<
             };
 
             let mut request_identifier = request_identifier.clone();
-            (self.0)(
-                T1::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T2::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T3::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T4::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T5::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T6::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T7::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T8::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T9::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T10::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T11::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T12::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T13::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T14::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T15::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T16::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T17::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T18::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T19::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-                T20::from_components(
-                    &entity,
-                    &mut requested_entity_guard,
-                    &mut request_identifier,
-                ),
-            )
+            query_params!(
+                self.0,
+                &entity,
+                &mut requested_entity_guard,
+                &mut request_identifier,
+                T1,
+                T2,
+                T3,
+                T4,
+                T5,
+                T6,
+                T7,
+                T8,
+                T9,
+                T10,
+                T11,
+                T12,
+                T13,
+                T14,
+                T15,
+                T16,
+                T17,
+                T18,
+                T19,
+                T20
+            );
         })
     }
 }
+
+
+*/

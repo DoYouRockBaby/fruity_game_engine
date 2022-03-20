@@ -37,7 +37,7 @@ pub fn draw_circle_collider_2d_gizmos(
         let entity_reader = entity.read();
 
         let transform = if let Some(transform) =
-            entity_reader.read_typed_component::<Transform2d>("Transform2d")
+            entity_reader.read_typed_components::<Transform2d>("Transform2d")
         {
             transform.transform.clone()
         } else {
@@ -45,7 +45,7 @@ pub fn draw_circle_collider_2d_gizmos(
         };
 
         if let Some(circle_collider) =
-            entity_reader.read_typed_component::<CircleCollider>("CircleCollider")
+            entity_reader.read_typed_components::<CircleCollider>("CircleCollider")
         {
             let center = transform * circle_collider.center;
             let diff_center_extremity =
@@ -80,7 +80,7 @@ pub fn draw_circle_collider_2d_gizmos(
                     // Get the center origin
                     let center_origin = {
                         let circle_collider = entity_reader
-                            .read_typed_component::<CircleCollider>("CircleCollider")
+                            .read_typed_components::<CircleCollider>("CircleCollider")
                             .unwrap();
                         circle_collider.center
                     };
@@ -89,7 +89,7 @@ pub fn draw_circle_collider_2d_gizmos(
                     drag_action.while_dragging(move |cursor_position, start_pos| {
                         let entity_writer = selected_entity.write();
                         let mut circle_collider = entity_writer
-                            .write_typed_component::<CircleCollider>("CircleCollider")
+                            .write_typed_components::<CircleCollider>("CircleCollider")
                             .unwrap();
 
                         // Move the entity with the cursor
@@ -124,7 +124,7 @@ pub fn draw_circle_collider_2d_gizmos(
                         // Get the radius origin
                         let radius_origin = {
                             let circle_collider = entity_reader
-                                .read_typed_component::<CircleCollider>("CircleCollider")
+                                .read_typed_components::<CircleCollider>("CircleCollider")
                                 .unwrap();
                             circle_collider.radius
                         };
@@ -132,7 +132,7 @@ pub fn draw_circle_collider_2d_gizmos(
                         drag_action.while_dragging(move |cursor_position, start_pos| {
                             let entity_writer = entity.write();
                             let mut circle_collider = entity_writer
-                                .write_typed_component::<CircleCollider>("CircleCollider")
+                                .write_typed_components::<CircleCollider>("CircleCollider")
                                 .unwrap();
 
                             // Resize the entity with the cursor

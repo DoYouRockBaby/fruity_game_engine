@@ -1040,7 +1040,7 @@ dependencies = [
  "fruity_javascript",
  "fruity_javascript_watcher",
  "fruity_physic_2d",
- "fruity_physics_2d_rapier",
+ "fruity_physic_2d_rapier",
  "fruity_wgpu_graphic",
  "fruity_windows",
  "fruity_winit_input",
@@ -1162,7 +1162,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fruity_physics_2d_rapier"
+name = "fruity_physic_2d_rapier"
 version = "0.1.0"
 dependencies = [
  "fruity_any",

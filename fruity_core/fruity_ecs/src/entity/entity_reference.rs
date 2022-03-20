@@ -62,10 +62,21 @@ impl EntityReference {
         self.inner_archetype
             .component_arrays
             .iter()
-            .map(|(key, _)| ComponentReference {
-                entity: self.clone(),
-                component_identifier: key.clone(),
+            .map(|(key, component_array)| {
+                let component_count = {
+                    let component_array = component_array.read().unwrap();
+                    component_array.get_component_count()
+                };
+
+                (0..component_count)
+                    .into_iter()
+                    .map(|index| ComponentReference {
+                        entity: self.clone(),
+                        component_identifier: key.clone(),
+                        component_index: index,
+                    })
             })
+            .flatten()
     }
 }
 
@@ -138,13 +149,16 @@ impl FruityInto<Serialized> for EntityReference {
 pub struct ComponentReference {
     pub(crate) entity: EntityReference,
     pub(crate) component_identifier: String,
+    pub(crate) component_index: usize,
 }
 
 impl ComponentReference {
     /// Get a read access to the entity
     pub fn read(&self) -> &dyn Component {
         let entity = self.entity.read();
-        let component = entity.read_component(&self.component_identifier).unwrap();
+        let component = entity
+            .read_components(&self.component_identifier)
+            .remove(self.component_index);
 
         // TODO: Find a way to remove it
         let component = unsafe { std::mem::transmute::<&dyn Component, &dyn Component>(component) };
@@ -155,7 +169,9 @@ impl ComponentReference {
     /// Get a write access to the entity
     pub fn write(&self) -> &mut dyn Component {
         let entity = self.entity.write();
-        let component = entity.write_component(&self.component_identifier).unwrap();
+        let component = entity
+            .write_components(&self.component_identifier)
+            .remove(self.component_index);
 
         // TODO: Find a way to remove it
         let component =

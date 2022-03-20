@@ -31,7 +31,7 @@ pub fn draw_rectangle_collider_2d_gizmos(
         let entity_reader = entity.read();
 
         let transform = if let Some(transform) =
-            entity_reader.read_typed_component::<Transform2d>("Transform2d")
+            entity_reader.read_typed_components::<Transform2d>("Transform2d")
         {
             transform.transform.clone()
         } else {
@@ -39,7 +39,7 @@ pub fn draw_rectangle_collider_2d_gizmos(
         };
 
         if let Some(rect_collider) =
-            entity_reader.read_typed_component::<RectCollider>("RectCollider")
+            entity_reader.read_typed_components::<RectCollider>("RectCollider")
         {
             let bottom_left = transform * rect_collider.bottom_left;
             let top_right = transform * rect_collider.top_right;
@@ -70,7 +70,7 @@ pub fn draw_rectangle_collider_2d_gizmos(
                     // Get the rect origin
                     let (bottom_left_origin, top_right_origin) = {
                         let collider = entity_reader
-                            .read_typed_component::<RectCollider>("RectCollider")
+                            .read_typed_components::<RectCollider>("RectCollider")
                             .unwrap();
                         (collider.bottom_left, collider.top_right)
                     };
@@ -81,7 +81,7 @@ pub fn draw_rectangle_collider_2d_gizmos(
 
                         // Move the entity with the cursor
                         let mut collider = entity_writer
-                            .write_typed_component::<RectCollider>("RectCollider")
+                            .write_typed_components::<RectCollider>("RectCollider")
                             .unwrap();
                         collider.bottom_left = bottom_left_origin + cursor_movement / 2.0;
 

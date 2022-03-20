@@ -40,7 +40,7 @@ pub fn transform_2d_cascade_for_nested_level(
                 if let Some(parent_entity) = parent_entity {
                     let parent_entity = parent_entity.read();
                     if let Some(parent_transform) =
-                        parent_entity.read_typed_component::<Transform2d>("Transform2d")
+                        parent_entity.read_typed_components::<Transform2d>("Transform2d")
                     {
                         transform.transform = parent_transform.transform * transform.transform;
                         did_transform.store(true, Relaxed);

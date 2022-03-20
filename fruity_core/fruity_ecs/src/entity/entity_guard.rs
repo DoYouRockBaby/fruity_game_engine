@@ -45,34 +45,62 @@ impl<'a> EntityReadGuard<'a> {
         *enabled_array.get(self.index).unwrap()
     }
 
-    /// Read a specific component
+    /// Read components with a given type
     ///
     /// # Arguments
     /// * `component_identifier` - The component identifier
     ///
-    pub fn read_component(&self, component_identifier: &str) -> Option<&dyn Component> {
-        let component_array = self
+    pub fn read_components(&self, component_identifier: &str) -> Vec<&dyn Component> {
+        let component_array = if let Some(component_array) = self
             .inner_archetype
             .component_arrays
-            .get(component_identifier)?;
-        let component_array = component_array.read().unwrap();
-
-        // TODO: Try to find a way to remove that
-        let component = unsafe {
-            std::mem::transmute::<&dyn Component, &dyn Component>(component_array.get(&self.index))
+            .get(component_identifier)
+        {
+            component_array
+        } else {
+            return vec![];
         };
 
-        Some(component)
+        let component_array = component_array.read().unwrap();
+
+        component_array
+            .get(&self.index)
+            .into_iter()
+            .map(|component| {
+                // TODO: Try to find a way to remove that
+                unsafe { std::mem::transmute::<&dyn Component, &dyn Component>(component) }
+            })
+            .collect::<Vec<_>>()
     }
 
-    /// Read a specific component
+    /// Read components with a given type
     ///
     /// # Arguments
     /// * `component_identifier` - The component identifier
     ///
-    pub fn read_typed_component<T: Component>(&self, component_identifier: &str) -> Option<&T> {
-        let component = self.read_component(component_identifier)?;
-        component.as_any_ref().downcast_ref::<T>()
+    pub fn read_typed_components<T: Component>(&self, component_identifier: &str) -> Vec<&T> {
+        self.read_components(component_identifier)
+            .into_iter()
+            .filter_map(|component| component.as_any_ref().downcast_ref::<T>())
+            .collect::<Vec<_>>()
+    }
+
+    /// Read a single component with a given type
+    ///
+    /// # Arguments
+    /// * `component_identifier` - The component identifier
+    ///
+    pub fn read_single_typed_component<T: Component>(
+        &self,
+        component_identifier: &str,
+    ) -> Option<&T> {
+        let components = self.read_typed_components(component_identifier);
+
+        if components.len() > 0 {
+            Some(components.remove(0))
+        } else {
+            None
+        }
     }
 
     /// Iter over all components
@@ -92,6 +120,7 @@ impl<'a> EntityReadGuard<'a> {
 
                 components_array.get(&self.index)
             })
+            .flatten()
     }
 }
 
@@ -154,60 +183,107 @@ impl<'a> EntityWriteGuard<'a> {
         *enabled = value;
     }
 
-    /// Read a specific component
+    /// Read components with a given type
     ///
     /// # Arguments
     /// * `component_identifier` - The component identifier
     ///
-    pub fn read_component(&self, component_identifier: &str) -> Option<&dyn Component> {
-        let component_array = self
+    pub fn read_components(&self, component_identifier: &str) -> Vec<&dyn Component> {
+        let component_array = if let Some(component_array) = self
             .inner_archetype
             .component_arrays
-            .get(component_identifier)?;
+            .get(component_identifier)
+        {
+            component_array
+        } else {
+            return vec![];
+        };
+
         let component_array = component_array.read().unwrap();
 
-        // TODO: Try to find a way to remove that
-        let component = unsafe {
-            std::mem::transmute::<&dyn Component, &dyn Component>(component_array.get(&self.index))
-        };
-
-        Some(component)
+        component_array
+            .get(&self.index)
+            .into_iter()
+            .map(|component| {
+                // TODO: Try to find a way to remove that
+                unsafe { std::mem::transmute::<&dyn Component, &dyn Component>(component) }
+            })
+            .collect::<Vec<_>>()
     }
 
-    /// Write a specific component
+    /// Write components with a given type
     ///
     /// # Arguments
     /// * `component_identifier` - The component identifier
     ///
-    pub fn write_component(&self, component_identifier: &str) -> Option<&mut dyn Component> {
-        let component = self.read_component(component_identifier)?;
-        let component = unsafe {
-            &mut *(component as *const dyn Component as *mut dyn Component) as &mut dyn Component
-        };
-        Some(component)
+    pub fn write_components(&self, component_identifier: &str) -> Vec<&mut dyn Component> {
+        self.read_components(component_identifier)
+            .into_iter()
+            .map(|component| unsafe {
+                &mut *(component as *const dyn Component as *mut dyn Component)
+                    as &mut dyn Component
+            })
+            .collect::<Vec<_>>()
     }
 
-    /// Read a specific component
+    /// Read components with a given type
     ///
     /// # Arguments
     /// * `component_identifier` - The component identifier
     ///
-    pub fn read_typed_component<T: Component>(&self, component_identifier: &str) -> Option<&T> {
-        let component = self.read_component(component_identifier)?;
-        component.as_any_ref().downcast_ref::<T>()
+    pub fn read_typed_components<T: Component>(&self, component_identifier: &str) -> Vec<&T> {
+        self.read_components(component_identifier)
+            .into_iter()
+            .filter_map(|component| component.as_any_ref().downcast_ref::<T>())
+            .collect::<Vec<_>>()
     }
 
-    /// Write a specific component
+    /// Read a single component with a given type
     ///
     /// # Arguments
     /// * `component_identifier` - The component identifier
     ///
-    pub fn write_typed_component<T: Component>(
+    pub fn read_single_typed_component<T: Component>(
         &self,
         component_identifier: &str,
-    ) -> Option<&mut T> {
-        let component = self.write_component(component_identifier)?;
-        component.as_any_mut().downcast_mut::<T>()
+    ) -> Option<&T> {
+        let components = self.read_typed_components(component_identifier);
+
+        if components.len() > 0 {
+            Some(components.remove(0))
+        } else {
+            None
+        }
+    }
+
+    /// Write components with a given type
+    ///
+    /// # Arguments
+    /// * `component_identifier` - The component identifier
+    ///
+    pub fn write_typed_components<T: Component>(&self, component_identifier: &str) -> Vec<&mut T> {
+        self.write_components(component_identifier)
+            .into_iter()
+            .filter_map(|component| component.as_any_ref().downcast_mut::<T>())
+            .collect::<Vec<_>>()
+    }
+
+    /// Write a single component with a given type
+    ///
+    /// # Arguments
+    /// * `component_identifier` - The component identifier
+    ///
+    pub fn write_single_typed_component<T: Component>(
+        &self,
+        component_identifier: &str,
+    ) -> Option<&T> {
+        let components = self.write_typed_components(component_identifier);
+
+        if components.len() > 0 {
+            Some(components.remove(0))
+        } else {
+            None
+        }
     }
 
     /// Iter over all components
@@ -227,5 +303,6 @@ impl<'a> EntityWriteGuard<'a> {
 
                 components_array.get(&self.index)
             })
+            .flatten()
     }
 }
