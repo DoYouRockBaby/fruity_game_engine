@@ -94,7 +94,7 @@ impl<'a> EntityReadGuard<'a> {
         &self,
         component_identifier: &str,
     ) -> Option<&T> {
-        let components = self.read_typed_components(component_identifier);
+        let mut components = self.read_typed_components(component_identifier);
 
         if components.len() > 0 {
             Some(components.remove(0))
@@ -247,7 +247,7 @@ impl<'a> EntityWriteGuard<'a> {
         &self,
         component_identifier: &str,
     ) -> Option<&T> {
-        let components = self.read_typed_components(component_identifier);
+        let mut components = self.read_typed_components(component_identifier);
 
         if components.len() > 0 {
             Some(components.remove(0))
@@ -264,7 +264,7 @@ impl<'a> EntityWriteGuard<'a> {
     pub fn write_typed_components<T: Component>(&self, component_identifier: &str) -> Vec<&mut T> {
         self.write_components(component_identifier)
             .into_iter()
-            .filter_map(|component| component.as_any_ref().downcast_mut::<T>())
+            .filter_map(|component| component.as_any_mut().downcast_mut::<T>())
             .collect::<Vec<_>>()
     }
 
@@ -276,8 +276,8 @@ impl<'a> EntityWriteGuard<'a> {
     pub fn write_single_typed_component<T: Component>(
         &self,
         component_identifier: &str,
-    ) -> Option<&T> {
-        let components = self.write_typed_components(component_identifier);
+    ) -> Option<&mut T> {
+        let mut components = self.write_typed_components(component_identifier);
 
         if components.len() > 0 {
             Some(components.remove(0))

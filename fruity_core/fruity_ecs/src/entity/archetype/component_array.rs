@@ -21,7 +21,7 @@ impl ComponentArray {
 
         // Check that all the components share the same memory size
         if components.len() == 0 {
-            for component in components {
+            for component in &components {
                 if component.encode_size() != first_component.encode_size() {
                     panic!("Try to instantiate a component array from a array of components with different size");
                 }
@@ -58,12 +58,12 @@ impl ComponentArray {
 
     pub(crate) fn add(&mut self, components: Vec<AnyComponent>) {
         // Check the components count
-        if components.len() == self.component_count {
+        if components.len() != self.component_count {
             panic!("Try to instantiate a component array from a component array with the wrong size of elements");
         }
 
         // Check that every components have the good memory size
-        for component in components {
+        for component in &components {
             if component.encode_size() != self.component_encode_size {
                 panic!("Try to insert into a component array from a array of components with different size");
             }

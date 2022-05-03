@@ -82,9 +82,13 @@ pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
             .iter_all_component()
             .enumerate()
             .map(|(index, component)| {
-                let component_reader = component.read();
+                let class_name = {
+                    let component_reader = component.read();
+                    component_reader.get_class_name()
+                };
+
                 Collapsible {
-                    title: component_reader.get_class_name(),
+                    title: class_name,
                     child: inspector_state.inspect_component(component),
                     secondary_actions: vec![MenuItem {
                         label: "Delete".to_string(),

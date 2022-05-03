@@ -1,9 +1,7 @@
 use crate::ColliderState;
 use fruity_core::inject::Const;
 use fruity_core::inject::Ref;
-use fruity_ecs::entity::entity_reference::EntityReference;
 use fruity_editor::hooks::use_global;
-use fruity_editor::state::inspector::InspectorState;
 use fruity_editor_graphic_2d::gizmos_service::DragAction;
 use fruity_editor_graphic_2d::gizmos_service::GizmosService;
 use fruity_graphic::graphic_service::GraphicService;
@@ -21,32 +19,26 @@ pub fn draw_circle_collider_2d_gizmos(
     input_service: Ref<InputService>,
     gizmos_service: Const<GizmosService>,
 ) {
-    let inspector_state = use_global::<InspectorState>();
     let collider_state = use_global::<ColliderState>();
 
     if !collider_state.is_editing_collider() {
         return;
     }
 
-    if let Some(selected) = inspector_state.get_selected() {
-        let entity = if let Some(entity) = selected.as_any_ref().downcast_ref::<EntityReference>() {
-            entity
-        } else {
-            return;
-        };
-        let entity_reader = entity.read();
+    if let Some(collider) = collider_state.get_editing_collider() {
+        let transform = {
+            let entity_reader = collider.read_entity();
 
-        let transform = if let Some(transform) =
-            entity_reader.read_typed_components::<Transform2d>("Transform2d")
-        {
-            transform.transform.clone()
-        } else {
-            Matrix3::default()
+            if let Some(transform) =
+                entity_reader.read_single_typed_component::<Transform2d>("Transform2d")
+            {
+                transform.transform.clone()
+            } else {
+                Matrix3::default()
+            }
         };
 
-        if let Some(circle_collider) =
-            entity_reader.read_typed_components::<CircleCollider>("CircleCollider")
-        {
+        if let Some(circle_collider) = collider.read_typed::<CircleCollider>() {
             let center = transform * circle_collider.center;
             let diff_center_extremity =
                 transform * (circle_collider.center + Vector2d::new(0.0, -circle_collider.radius));
@@ -68,29 +60,23 @@ pub fn draw_circle_collider_2d_gizmos(
             }
 
             // Draw the gizmos to move the center of the collider
+            let collider_2 = collider.clone();
             gizmos_service.draw_move_helper(
                 center,
                 size,
                 Color::green(),
                 Color::red(),
                 move |move_x, move_y, drag_action| {
-                    let selected_entity = entity.clone();
-                    let entity_reader = selected_entity.read();
+                    let collider = collider_2.clone();
 
                     // Get the center origin
                     let center_origin = {
-                        let circle_collider = entity_reader
-                            .read_typed_components::<CircleCollider>("CircleCollider")
-                            .unwrap();
+                        let circle_collider = collider.read_typed::<CircleCollider>().unwrap();
                         circle_collider.center
                     };
 
-                    let selected_entity = entity.clone();
                     drag_action.while_dragging(move |cursor_position, start_pos| {
-                        let entity_writer = selected_entity.write();
-                        let mut circle_collider = entity_writer
-                            .write_typed_components::<CircleCollider>("CircleCollider")
-                            .unwrap();
+                        let mut circle_collider = collider.write_typed::<CircleCollider>().unwrap();
 
                         // Move the entity with the cursor
                         let cursor_movement = cursor_position - start_pos;
@@ -116,24 +102,20 @@ pub fn draw_circle_collider_2d_gizmos(
             // Draw the gizmos to resize the radius of the collider
             if gizmos_service.draw_circle_helper(bottom, radius_vec.x, Color::green(), Color::red())
             {
+                let collider_2 = collider.clone();
                 DragAction::start(
                     move |drag_action| {
-                        let selected_entity = entity.clone();
-                        let entity_reader = selected_entity.read();
+                        let collider = collider_2.clone();
 
                         // Get the radius origin
                         let radius_origin = {
-                            let circle_collider = entity_reader
-                                .read_typed_components::<CircleCollider>("CircleCollider")
-                                .unwrap();
+                            let circle_collider = collider.read_typed::<CircleCollider>().unwrap();
                             circle_collider.radius
                         };
 
                         drag_action.while_dragging(move |cursor_position, start_pos| {
-                            let entity_writer = entity.write();
-                            let mut circle_collider = entity_writer
-                                .write_typed_components::<CircleCollider>("CircleCollider")
-                                .unwrap();
+                            let mut circle_collider =
+                                collider.write_typed::<CircleCollider>().unwrap();
 
                             // Resize the entity with the cursor
                             let cursor_movement = cursor_position - start_pos;

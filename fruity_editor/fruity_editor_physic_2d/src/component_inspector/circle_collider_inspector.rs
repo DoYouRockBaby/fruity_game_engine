@@ -1,5 +1,5 @@
 use crate::ColliderState;
-use fruity_ecs::entity::entity_reference::ComponentReference;
+use fruity_ecs::component::component_reference::ComponentReference;
 use fruity_editor::components::fields::edit_introspect_fields;
 use fruity_editor::hooks::use_global;
 use fruity_editor::ui_element::input::Button;
@@ -16,7 +16,7 @@ pub fn circle_collider_inspector(component: ComponentReference) -> UIElement {
                 label: "Edit collider".to_string(),
                 on_click: Arc::new(move || {
                     let collider_state = use_global::<ColliderState>();
-                    collider_state.edit_collider();
+                    collider_state.edit_collider(component.clone());
                 }),
                 ..Default::default()
             }

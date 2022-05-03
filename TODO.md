@@ -21,6 +21,7 @@
 [ ] There should be some memory leak in archetype
 [ ] Test and stabilize ECS
 [ ] Find a way to move the introspect declaration into the associated traits
+[ ] The use of SOA should allow us to have a more effective storage based on type and not on binary encoding
 
 ## Editor
 

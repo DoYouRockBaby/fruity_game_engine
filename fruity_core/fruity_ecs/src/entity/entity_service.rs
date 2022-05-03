@@ -149,7 +149,7 @@ impl EntityService {
             .par_bridge()
             .for_each(|entity| {
                 let callback = callback.duplicate();
-                (callback.inject(&entity_identifier))(entity)
+                (callback.inject())(entity)
             });
     }
 

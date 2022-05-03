@@ -25,18 +25,18 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
         let entity_reader = entity.read();
 
         let transform = if let Some(transform) =
-            entity_reader.read_typed_components::<Transform2d>("Transform2d")
+            entity_reader.read_single_typed_component::<Transform2d>("Transform2d")
         {
             transform
         } else {
             return;
         };
 
-        if let Some(_) = entity_reader.read_typed_components::<Translate2d>("Translate2d") {
+        if let Some(_) = entity_reader.read_single_typed_component::<Translate2d>("Translate2d") {
             let bottom_left = transform.transform * Vector2d::new(-0.5, -0.5);
             let top_right = transform.transform * Vector2d::new(0.5, 0.5);
 
-            if let Some(_) = entity_reader.read_typed_components::<Scale2d>("Scale2d") {
+            if let Some(_) = entity_reader.read_single_typed_component::<Scale2d>("Scale2d") {
                 let selected_entity_2 = entity.clone();
                 gizmos_service.draw_resize_helper(
                     bottom_left,
@@ -50,14 +50,14 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
                         // Get the translate and the scale origin
                         let translate_origin = {
                             let translate = entity_reader
-                                .read_typed_components::<Translate2d>("Translate2d")
+                                .read_single_typed_component::<Translate2d>("Translate2d")
                                 .unwrap();
                             translate.vec
                         };
 
                         let scale_origin = {
                             let scale = entity_reader
-                                .read_typed_components::<Scale2d>("Scale2d")
+                                .read_single_typed_component::<Scale2d>("Scale2d")
                                 .unwrap();
                             scale.vec
                         };
@@ -68,13 +68,13 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
 
                             // Move the entity with the cursor
                             let mut translate = entity_writer
-                                .write_typed_components::<Translate2d>("Translate2d")
+                                .write_single_typed_component::<Translate2d>("Translate2d")
                                 .unwrap();
                             translate.vec = translate_origin + cursor_movement / 2.0;
 
                             // Resize the entity with the cursor
                             let mut scale = entity_writer
-                                .write_typed_components::<Scale2d>("Scale2d")
+                                .write_single_typed_component::<Scale2d>("Scale2d")
                                 .unwrap();
 
                             scale.vec.x = if fixed_x {
@@ -107,7 +107,7 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
                     // Get the translate origin
                     let translate_origin = {
                         let translate = entity_reader
-                            .read_typed_components::<Translate2d>("Translate2d")
+                            .read_single_typed_component::<Translate2d>("Translate2d")
                             .unwrap();
                         translate.vec
                     };
@@ -115,7 +115,7 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
                     drag_action.while_dragging(move |cursor_position, start_pos| {
                         let entity_writer = entity.write();
                         let mut translate = entity_writer
-                            .write_typed_components::<Translate2d>("Translate2d")
+                            .write_single_typed_component::<Translate2d>("Translate2d")
                             .unwrap();
 
                         // Move the entity with the cursor

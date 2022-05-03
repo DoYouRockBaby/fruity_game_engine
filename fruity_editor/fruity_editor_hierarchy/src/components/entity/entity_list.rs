@@ -29,7 +29,7 @@ pub fn entity_list_component() -> UIElement {
         .iter()
         .filter(|entity| {
             let entity_reader = entity.read();
-            if let Some(parent) = entity_reader.read_typed_components::<Parent>("Parent") {
+            if let Some(parent) = entity_reader.read_single_typed_component::<Parent>("Parent") {
                 if let Some(_) = *parent.parent_id {
                     false
                 } else {
@@ -71,7 +71,7 @@ pub fn draw_entity_line(
         .iter()
         .filter(|entity| {
             let entity_reader = entity.read();
-            if let Some(parent) = entity_reader.read_typed_components::<Parent>("Parent") {
+            if let Some(parent) = entity_reader.read_single_typed_component::<Parent>("Parent") {
                 if let Some(parent_id) = *parent.parent_id {
                     parent_id == entity_id
                 } else {

@@ -10,7 +10,7 @@ use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::serialize::serialized::Serialized;
 use fruity_ecs::component::component::AnyComponent;
-use fruity_ecs::entity::entity_reference::ComponentReference;
+use fruity_ecs::component::component_reference::ComponentReference;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
