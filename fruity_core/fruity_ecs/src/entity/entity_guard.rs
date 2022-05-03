@@ -1,5 +1,5 @@
 use crate::component::component::Component;
-use crate::entity::archetype::component_array::ComponentArray;
+use crate::entity::archetype::component_collection::ComponentCollection;
 use crate::entity::archetype::InnerArchetype;
 use crate::entity::entity::EntityId;
 use std::fmt::Debug;
@@ -53,7 +53,7 @@ impl<'a> EntityReadGuard<'a> {
     pub fn read_components(&self, component_identifier: &str) -> Vec<&dyn Component> {
         let component_array = if let Some(component_array) = self
             .inner_archetype
-            .component_arrays
+            .component_collections
             .get(component_identifier)
         {
             component_array
@@ -106,19 +106,19 @@ impl<'a> EntityReadGuard<'a> {
     /// Iter over all components
     pub fn iter_all_components(&self) -> impl Iterator<Item = &dyn Component> + '_ {
         self.inner_archetype
-            .component_arrays
+            .component_collections
             .iter()
             .map(|(_, components_array)| {
-                let components_array = components_array.read().unwrap();
+                let component_collection = components_array.read().unwrap();
 
                 // TODO: Find a way to remove it
-                let components_array = unsafe {
-                    std::mem::transmute::<&ComponentArray, &ComponentArray>(
-                        components_array.deref(),
+                let component_collection = unsafe {
+                    std::mem::transmute::<&dyn ComponentCollection, &dyn ComponentCollection>(
+                        component_collection.deref().deref(),
                     )
                 };
 
-                components_array.get(&self.index)
+                component_collection.get(&self.index)
             })
             .flatten()
     }
@@ -191,7 +191,7 @@ impl<'a> EntityWriteGuard<'a> {
     pub fn read_components(&self, component_identifier: &str) -> Vec<&dyn Component> {
         let component_array = if let Some(component_array) = self
             .inner_archetype
-            .component_arrays
+            .component_collections
             .get(component_identifier)
         {
             component_array
@@ -289,19 +289,19 @@ impl<'a> EntityWriteGuard<'a> {
     /// Iter over all components
     pub fn iter_all_components(&self) -> impl Iterator<Item = &dyn Component> + '_ {
         self.inner_archetype
-            .component_arrays
+            .component_collections
             .iter()
-            .map(|(_, components_array)| {
-                let components_array = components_array.read().unwrap();
+            .map(|(_, component_collection)| {
+                let component_collection = component_collection.read().unwrap();
 
                 // TODO: Find a way to remove it
-                let components_array = unsafe {
-                    std::mem::transmute::<&ComponentArray, &ComponentArray>(
-                        components_array.deref(),
+                let component_collection = unsafe {
+                    std::mem::transmute::<&dyn ComponentCollection, &dyn ComponentCollection>(
+                        component_collection.deref().deref(),
                     )
                 };
 
-                components_array.get(&self.index)
+                component_collection.get(&self.index)
             })
             .flatten()
     }

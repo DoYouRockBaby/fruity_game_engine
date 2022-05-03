@@ -1,12 +1,12 @@
 use crate::component::component::Component;
-use crate::component::component::ComponentDecoder;
+use crate::entity::archetype::component_array::ComponentArray;
+use crate::entity::archetype::component_collection::ComponentCollection;
 use fruity_any::FruityAny;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodInfo;
 use fruity_core::introspect::SetterCaller;
 use fruity_core::serialize::serialized::Serialized;
-use fruity_core::utils::slice::copy;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -25,26 +25,10 @@ impl SerializedComponent {
 }
 
 impl Component for SerializedComponent {
-    fn encode_size(&self) -> usize {
-        std::mem::size_of::<Self>()
-    }
-
-    fn encode(&self, buffer: &mut [u8]) {
-        let encoded = unsafe {
-            std::slice::from_raw_parts(
-                (&*self as *const Self) as *const u8,
-                std::mem::size_of::<Self>(),
-            )
-        };
-
-        copy(buffer, encoded);
-    }
-
-    fn get_decoder(&self) -> ComponentDecoder {
-        |data| {
-            let (_head, body, _tail) = unsafe { data.align_to::<Self>() };
-            &body[0]
-        }
+    fn get_collection(&self, components_per_entity: usize) -> Box<dyn ComponentCollection> {
+        Box::new(ComponentArray::<SerializedComponent>::new(
+            components_per_entity,
+        ))
     }
 
     fn duplicate(&self) -> Box<dyn Component> {

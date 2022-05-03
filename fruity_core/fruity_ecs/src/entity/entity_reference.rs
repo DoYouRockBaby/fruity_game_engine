@@ -59,15 +59,15 @@ impl EntityReference {
     /// Iter over all components
     pub fn iter_all_component(&self) -> impl Iterator<Item = ComponentReference> + '_ {
         self.inner_archetype
-            .component_arrays
+            .component_collections
             .iter()
             .map(|(key, component_array)| {
-                let component_count = {
+                let components_per_entity = {
                     let component_array = component_array.read().unwrap();
-                    component_array.get_component_count()
+                    component_array.get_components_per_entity()
                 };
 
-                (0..component_count)
+                (0..components_per_entity)
                     .into_iter()
                     .map(|index| ComponentReference {
                         entity: self.clone(),

@@ -1,7 +1,6 @@
 use crate::component::component::AnyComponent;
 use crate::component::component::Component;
-use crate::component::component::ComponentDecoder;
-use crate::entity::archetype::component_array::ComponentArray;
+use crate::entity::archetype::component_collection::ComponentCollection;
 use crate::entity::archetype::entity_properties::EntityProperties;
 use crate::entity::entity::get_type_identifier_by_any;
 use crate::entity::entity::EntityId;
@@ -19,12 +18,15 @@ pub mod entity_properties;
 /// An array of component
 pub mod component_array;
 
+/// An interface that should be implemented by collection of components used into archetypes
+pub mod component_collection;
+
 pub(crate) struct InnerArchetype {
     pub(crate) entity_id_array: RwLock<Vec<EntityId>>,
     pub(crate) name_array: RwLock<Vec<String>>,
     pub(crate) enabled_array: RwLock<Vec<bool>>,
     pub(crate) lock_array: RwLock<Vec<RwLock<()>>>,
-    pub(crate) component_arrays: BTreeMap<String, Arc<RwLock<ComponentArray>>>,
+    pub(crate) component_collections: BTreeMap<String, Arc<RwLock<Box<dyn ComponentCollection>>>>,
 }
 
 /// A collection of entities that share the same component structure
@@ -58,12 +60,13 @@ impl Archetype {
         let lock_array = RwLock::new(vec![RwLock::new(())]);
 
         let grouped_components = Self::group_components_by_type(components);
-        let mut component_arrays = BTreeMap::new();
+        let mut component_collections = BTreeMap::new();
         for (class_name, components) in grouped_components {
-            component_arrays.insert(
-                class_name,
-                Arc::new(RwLock::new(ComponentArray::new(components))),
-            );
+            let first_component = components.get(0).unwrap();
+            let mut collection = first_component.get_collection(components.len());
+            collection.add(components);
+
+            component_collections.insert(class_name, Arc::new(RwLock::new(collection)));
         }
 
         Archetype {
@@ -73,7 +76,7 @@ impl Archetype {
                 name_array,
                 enabled_array,
                 lock_array,
-                component_arrays,
+                component_collections,
             }),
         }
     }
@@ -146,7 +149,7 @@ impl Archetype {
         // Store all the components
         let grouped_components = Self::group_components_by_type(components);
         for (class_name, components) in grouped_components {
-            let component_array = self.inner.component_arrays.get(&class_name);
+            let component_array = self.inner.component_collections.get(&class_name);
             if let Some(component_array) = component_array {
                 let mut component_array = component_array.write().unwrap();
                 component_array.add(components);
@@ -175,7 +178,7 @@ impl Archetype {
         // Remove the entity components from the storage
         let components = {
             self.inner
-                .component_arrays
+                .component_collections
                 .iter()
                 .map(|(_, component_array)| {
                     let mut component_array = component_array.write().unwrap();

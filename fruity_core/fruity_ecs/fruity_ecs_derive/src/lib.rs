@@ -32,26 +32,10 @@ fn derive_component_trait(input: TokenStream) -> TokenStream {
 
     let output = quote! {
         impl fruity_ecs::component::component::Component for #ident {
-            fn encode_size(&self) -> usize {
-                std::mem::size_of::<Self>()
-            }
-
-            fn encode(&self, buffer: &mut [u8]) {
-                let encoded = unsafe {
-                    std::slice::from_raw_parts(
-                        (&*self as *const Self) as *const u8,
-                        std::mem::size_of::<Self>(),
-                    )
-                };
-
-                fruity_core::utils::slice::copy(buffer, encoded);
-            }
-
-            fn get_decoder(&self) -> fruity_ecs::component::component::ComponentDecoder {
-                |data| {
-                    let (_head, body, _tail) = unsafe { data.align_to::<Self>() };
-                    &body[0]
-                }
+            fn get_collection(&self, components_per_entity: usize) -> Box<dyn fruity_ecs::entity::archetype::component_collection::ComponentCollection> {
+                Box::new(fruity_ecs::entity::archetype::component_array::ComponentArray::<#ident>::new(
+                    components_per_entity,
+                ))
             }
 
             fn duplicate(&self) -> Box<dyn fruity_ecs::component::component::Component> {

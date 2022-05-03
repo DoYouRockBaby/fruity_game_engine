@@ -1,4 +1,5 @@
 use crate::component::serialized_component::SerializedComponent;
+use crate::entity::archetype::component_collection::ComponentCollection;
 use fruity_any::*;
 use fruity_core::convert::FruityTryFrom;
 use fruity_core::introspect::FieldInfo;
@@ -15,9 +16,6 @@ use std::fmt::Debug;
 use std::ops::Deref;
 use std::sync::Arc;
 
-/// A function to decode an object from byte array to an any reference
-pub type ComponentDecoder = fn(buffer: &[u8]) -> &dyn Component;
-
 /// An abstraction over a component, should be implemented for every component
 pub trait StaticComponent {
     /// Return the class type name
@@ -26,18 +24,8 @@ pub trait StaticComponent {
 
 /// An abstraction over a component, should be implemented for every component
 pub trait Component: IntrospectObject + Debug {
-    /// Return the size that is required to encode the object
-    fn encode_size(&self) -> usize;
-
-    /// Encode the object to a byte array
-    ///
-    /// # Arguments
-    /// * `buffer` - The buffer where the encoder will write, should match the result of encode_size function
-    ///
-    fn encode(&self, buffer: &mut [u8]);
-
-    /// Return a function to decode an object from byte array to an any reference
-    fn get_decoder(&self) -> ComponentDecoder;
+    /// Get a collection to store this component in the archetype
+    fn get_collection(&self, components_per_entity: usize) -> Box<dyn ComponentCollection>;
 
     /// Create a new component that is a clone of self
     fn duplicate(&self) -> Box<dyn Component>;
@@ -69,6 +57,11 @@ impl AnyComponent {
     /// Returns an AnyComponent
     pub fn from_box(component: Box<dyn Component>) -> AnyComponent {
         AnyComponent { component }
+    }
+
+    /// Returns an AnyComponent
+    pub fn into_box(self) -> Box<dyn Component> {
+        self.component
     }
 }
 
