@@ -13,7 +13,7 @@
 [X] Move ECS structure to a struct of array instead an array of struct (more efficient, easier to implement)
 [X] Implement ECS hierarchy
 [X] Remove the "Entity" component to replace it by a more cache friendly solution
-[ ] Add a way to have multiple components of the same type on a single entity
+[X] Add a way to have multiple components of the same type on a single entity
 [ ] Add a way to extend components
 [ ] Add component query selectors (? for optional and ! for exclude)
 [ ] Random crash when we delete an entity
@@ -22,6 +22,7 @@
 [ ] Test and stabilize ECS
 [ ] Find a way to move the introspect declaration into the associated traits
 [ ] The use of SOA should allow us to have a more effective storage based on type and not on binary encoding
+[ ] Change the begin/end system to a startup system that returns an optional end callback and add the startup that ignore pause
 
 ## Editor
 
