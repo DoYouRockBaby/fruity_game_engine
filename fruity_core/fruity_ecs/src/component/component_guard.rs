@@ -1,10 +1,20 @@
 use crate::component::component::Component;
-use crate::entity::entity_guard::EntityReadGuard;
-use crate::entity::entity_guard::EntityWriteGuard;
+use crate::entity::archetype::component_collection::ComponentCollection;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::ops::DerefMut;
+use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::RwLock;
+use std::sync::RwLockReadGuard;
+use std::sync::RwLockWriteGuard;
+
+#[derive(Clone)]
+pub(crate) enum InternalReadGuard<'a> {
+    Read(Rc<RwLockReadGuard<'a, ()>>),
+    Write(Rc<RwLockWriteGuard<'a, ()>>),
+}
 
 /// RAII structure used to release the shared read access of a lock when dropped.
 ///
@@ -12,9 +22,10 @@ use std::ops::DerefMut;
 ///
 /// [`read`]: ComponentReference::read
 ///
+#[derive(Clone)]
 pub struct ComponentReadGuard<'a> {
-    pub(crate) entity_reader: EntityReadGuard<'a>,
-    pub(crate) component_identifier: String,
+    pub(crate) _guard: InternalReadGuard<'a>,
+    pub(crate) collection: Arc<RwLock<Box<dyn ComponentCollection>>>,
     pub(crate) component_index: usize,
 }
 
@@ -28,9 +39,24 @@ impl<'a> Deref for ComponentReadGuard<'a> {
     type Target = dyn Component;
 
     fn deref(&self) -> &Self::Target {
-        self.entity_reader
-            .read_components(&self.component_identifier)
-            .remove(self.component_index)
+        let collection_reader = self.collection.read().unwrap();
+        let component = collection_reader.get(&self.component_index).unwrap();
+
+        unsafe { std::mem::transmute::<&Self::Target, &Self::Target>(component) }
+    }
+}
+
+impl<'a, T: Component> TryInto<TypedComponentReadGuard<'a, T>> for ComponentReadGuard<'a> {
+    type Error = String;
+
+    fn try_into(self) -> Result<TypedComponentReadGuard<'a, T>, Self::Error> {
+        match self.as_any_ref().downcast_ref::<T>() {
+            Some(_result) => Ok(TypedComponentReadGuard {
+                component_reader: self,
+                phantom: PhantomData::<T> {},
+            }),
+            None => Err(format!("Couldn't convert {:?} to typed component", self)),
+        }
     }
 }
 
@@ -40,9 +66,10 @@ impl<'a> Deref for ComponentReadGuard<'a> {
 ///
 /// [`write`]: ComponentReference::write
 ///
+#[derive(Clone)]
 pub struct ComponentWriteGuard<'a> {
-    pub(crate) entity_writer: EntityWriteGuard<'a>,
-    pub(crate) component_identifier: String,
+    pub(crate) _guard: Rc<RwLockWriteGuard<'a, ()>>,
+    pub(crate) collection: Arc<RwLock<Box<dyn ComponentCollection>>>,
     pub(crate) component_index: usize,
 }
 
@@ -56,17 +83,36 @@ impl<'a> Deref for ComponentWriteGuard<'a> {
     type Target = dyn Component;
 
     fn deref(&self) -> &Self::Target {
-        self.entity_writer
-            .read_components(&self.component_identifier)
-            .remove(self.component_index)
+        let collection_reader = self.collection.read().unwrap();
+        let component = collection_reader.get(&self.component_index).unwrap();
+
+        unsafe { std::mem::transmute::<&Self::Target, &Self::Target>(component) }
     }
 }
 
 impl<'a> DerefMut for ComponentWriteGuard<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.entity_writer
-            .write_components(&self.component_identifier)
-            .remove(self.component_index)
+        let collection_reader = self.collection.read().unwrap();
+        let component = collection_reader.get(&self.component_index).unwrap();
+
+        #[allow(mutable_transmutes)]
+        unsafe {
+            std::mem::transmute::<&dyn Component, &mut dyn Component>(component)
+        }
+    }
+}
+
+impl<'a, T: Component> TryInto<TypedComponentWriteGuard<'a, T>> for ComponentWriteGuard<'a> {
+    type Error = String;
+
+    fn try_into(self) -> Result<TypedComponentWriteGuard<'a, T>, Self::Error> {
+        match self.as_any_ref().downcast_ref::<T>() {
+            Some(_result) => Ok(TypedComponentWriteGuard {
+                component_writer: self,
+                phantom: PhantomData::<T> {},
+            }),
+            None => Err(format!("Couldn't convert {:?} to typed component", self)),
+        }
     }
 }
 
@@ -77,10 +123,17 @@ impl<'a> DerefMut for ComponentWriteGuard<'a> {
 /// [`read`]: ComponentReference::read
 ///
 pub struct TypedComponentReadGuard<'a, T: Component> {
-    pub(crate) entity_reader: EntityReadGuard<'a>,
-    pub(crate) component_identifier: String,
-    pub(crate) component_index: usize,
+    pub(crate) component_reader: ComponentReadGuard<'a>,
     pub(crate) phantom: PhantomData<T>,
+}
+
+impl<'a, T: Component> Clone for TypedComponentReadGuard<'a, T> {
+    fn clone(&self) -> Self {
+        Self {
+            component_reader: self.component_reader.clone(),
+            phantom: PhantomData {},
+        }
+    }
 }
 
 impl<'a, T: Component> Debug for TypedComponentReadGuard<'a, T> {
@@ -93,12 +146,10 @@ impl<'a, T: Component> Deref for TypedComponentReadGuard<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        let component = self
-            .entity_reader
-            .read_components(&self.component_identifier)
-            .remove(self.component_index);
-
-        component.as_any_ref().downcast_ref::<T>().unwrap()
+        self.component_reader
+            .as_any_ref()
+            .downcast_ref::<T>()
+            .unwrap()
     }
 }
 
@@ -109,10 +160,17 @@ impl<'a, T: Component> Deref for TypedComponentReadGuard<'a, T> {
 /// [`write`]: ComponentReference::write
 ///
 pub struct TypedComponentWriteGuard<'a, T: Component> {
-    pub(crate) entity_writer: EntityWriteGuard<'a>,
-    pub(crate) component_identifier: String,
-    pub(crate) component_index: usize,
+    pub(crate) component_writer: ComponentWriteGuard<'a>,
     pub(crate) phantom: PhantomData<T>,
+}
+
+impl<'a, T: Component> Clone for TypedComponentWriteGuard<'a, T> {
+    fn clone(&self) -> Self {
+        Self {
+            component_writer: self.component_writer.clone(),
+            phantom: PhantomData {},
+        }
+    }
 }
 
 impl<'a, T: Component> Debug for TypedComponentWriteGuard<'a, T> {
@@ -125,22 +183,18 @@ impl<'a, T: Component> Deref for TypedComponentWriteGuard<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        let component = self
-            .entity_writer
-            .read_components(&self.component_identifier)
-            .remove(self.component_index);
-
-        component.as_any_ref().downcast_ref::<T>().unwrap()
+        self.component_writer
+            .as_any_ref()
+            .downcast_ref::<T>()
+            .unwrap()
     }
 }
 
 impl<'a, T: Component> DerefMut for TypedComponentWriteGuard<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        let component = self
-            .entity_writer
-            .write_components(&self.component_identifier)
-            .remove(self.component_index);
-
-        component.as_any_mut().downcast_mut::<T>().unwrap()
+        self.component_writer
+            .as_any_mut()
+            .downcast_mut::<T>()
+            .unwrap()
     }
 }

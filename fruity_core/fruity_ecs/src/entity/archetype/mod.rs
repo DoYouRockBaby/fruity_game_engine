@@ -1,6 +1,7 @@
 use crate::component::component::AnyComponent;
 use crate::component::component::Component;
-use crate::entity::archetype::component_collection::ComponentCollection;
+use crate::component::component_reference::ComponentReference;
+use crate::entity::archetype::component_storage::ComponentStorage;
 use crate::entity::archetype::entity_properties::EntityProperties;
 use crate::entity::entity::get_type_identifier_by_any;
 use crate::entity::entity::EntityId;
@@ -18,22 +19,21 @@ pub mod entity_properties;
 /// An array of component
 pub mod component_array;
 
+/// Provides a collection that can store components by taking care of the number of component per entity
+pub mod component_storage;
+
 /// An interface that should be implemented by collection of components used into archetypes
 pub mod component_collection;
-
-pub(crate) struct InnerArchetype {
-    pub(crate) entity_id_array: RwLock<Vec<EntityId>>,
-    pub(crate) name_array: RwLock<Vec<String>>,
-    pub(crate) enabled_array: RwLock<Vec<bool>>,
-    pub(crate) lock_array: RwLock<Vec<RwLock<()>>>,
-    pub(crate) component_collections: BTreeMap<String, Arc<RwLock<Box<dyn ComponentCollection>>>>,
-}
 
 /// A collection of entities that share the same component structure
 /// Stored as a Struct Of Array
 pub struct Archetype {
-    identifier: EntityTypeIdentifier,
-    inner: Arc<InnerArchetype>,
+    pub(crate) identifier: EntityTypeIdentifier,
+    pub(crate) entity_id_array: RwLock<Vec<EntityId>>,
+    pub(crate) name_array: RwLock<Vec<String>>,
+    pub(crate) enabled_array: RwLock<Vec<bool>>,
+    pub(crate) lock_array: RwLock<Vec<RwLock<()>>>,
+    pub(crate) component_storages: BTreeMap<String, ComponentStorage>,
 }
 
 impl Archetype {
@@ -60,24 +60,18 @@ impl Archetype {
         let lock_array = RwLock::new(vec![RwLock::new(())]);
 
         let grouped_components = Self::group_components_by_type(components);
-        let mut component_collections = BTreeMap::new();
+        let mut component_storages = BTreeMap::new();
         for (class_name, components) in grouped_components {
-            let first_component = components.get(0).unwrap();
-            let mut collection = first_component.get_collection(components.len());
-            collection.add(components);
-
-            component_collections.insert(class_name, Arc::new(RwLock::new(collection)));
+            component_storages.insert(class_name, ComponentStorage::new(components));
         }
 
         Archetype {
             identifier: identifier,
-            inner: Arc::new(InnerArchetype {
-                entity_id_array,
-                name_array,
-                enabled_array,
-                lock_array,
-                component_collections,
-            }),
+            entity_id_array,
+            name_array,
+            enabled_array,
+            lock_array,
+            component_storages,
         }
     }
 
@@ -86,38 +80,94 @@ impl Archetype {
         &self.identifier
     }
 
-    /// Get components from an entity by index in the archetype storage
+    /// Get a reference to an entity by index
     ///
     /// # Arguments
     /// * `entity_id` - The entity id
-    /// * `identifier` - The components identifiers
     ///
-    pub fn get(&self, index: usize) -> EntityReference {
+    pub fn get(self: Arc<Self>, entity_id: usize) -> EntityReference {
         EntityReference {
-            index,
-            inner_archetype: self.inner.clone(),
+            entity_id,
+            archetype: self.clone(),
         }
     }
 
+    /// Get components from an entity by index
+    ///
+    /// # Arguments
+    /// * `entity_id` - The entity id
+    ///
+    pub fn get_entity_components(self: Arc<Self>, entity_id: usize) -> Vec<ComponentReference> {
+        self.component_storages
+            .iter()
+            .map(|(_, storage)| {
+                storage.get_entity_components(EntityReference {
+                    entity_id,
+                    archetype: self.clone(),
+                })
+            })
+            .flatten()
+            .collect::<Vec<_>>()
+    }
+
+    /// Get components of a specified type from an entity by index
+    ///
+    /// # Arguments
+    /// * `entity_id` - The entity id
+    /// * `component_identifier` - The components type identifier
+    ///
+    pub fn get_entity_components_from_type(
+        self: Arc<Self>,
+        entity_id: usize,
+        component_type_identifier: &str,
+    ) -> Vec<ComponentReference> {
+        self.component_storages
+            .get(component_type_identifier)
+            .map(|storage| {
+                storage
+                    .get_entity_components(EntityReference {
+                        entity_id,
+                        archetype: self.clone(),
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default()
+    }
+
+    /// Get components of a specified type from an entity by index
+    ///
+    /// # Arguments
+    /// * `entity_id` - The entity id
+    /// * `component_identifier` - The components type identifier
+    ///
+    pub(crate) fn get_storage_from_type(
+        self: Arc<Self>,
+        component_type_identifier: &str,
+    ) -> Option<ComponentStorage> {
+        self.component_storages
+            .get(component_type_identifier)
+            .map(|storage| storage.clone())
+    }
+
     /// Get an iterator over all the components of all the entities
-    pub fn iter(&self) -> impl Iterator<Item = EntityReference> {
-        let inner = self.inner.clone();
-        let inner2 = self.inner.clone();
+    pub fn iter(self: Arc<Self>) -> impl Iterator<Item = EntityReference> {
+        let inner = self.clone();
+        let inner2 = self.clone();
 
         (0..self.len())
-            .filter(move |index| {
+            .filter(move |entity_id| {
                 let enabled_array = inner.enabled_array.read().unwrap();
-                *enabled_array.get(*index).unwrap()
+                *enabled_array.get(*entity_id).unwrap()
             })
-            .map(move |index| EntityReference {
-                index,
-                inner_archetype: inner2.clone(),
+            .map(move |entity_id| EntityReference {
+                entity_id,
+                archetype: inner2.clone(),
             })
     }
 
     /// Get entity count
     pub fn len(&self) -> usize {
-        let entity_id_array = self.inner.entity_id_array.read().unwrap();
+        let entity_id_array = self.entity_id_array.read().unwrap();
         entity_id_array.len()
     }
 
@@ -136,10 +186,10 @@ impl Archetype {
         components: Vec<AnyComponent>,
     ) {
         // Store the entity properties
-        let mut entity_id_array = self.inner.entity_id_array.write().unwrap();
-        let mut name_array = self.inner.name_array.write().unwrap();
-        let mut enabled_array = self.inner.enabled_array.write().unwrap();
-        let mut lock_array = self.inner.lock_array.write().unwrap();
+        let mut entity_id_array = self.entity_id_array.write().unwrap();
+        let mut name_array = self.name_array.write().unwrap();
+        let mut enabled_array = self.enabled_array.write().unwrap();
+        let mut lock_array = self.lock_array.write().unwrap();
 
         entity_id_array.push(entity_id);
         name_array.push(name.to_string());
@@ -149,9 +199,8 @@ impl Archetype {
         // Store all the components
         let grouped_components = Self::group_components_by_type(components);
         for (class_name, components) in grouped_components {
-            let component_array = self.inner.component_collections.get(&class_name);
+            let component_array = self.component_storages.get(&class_name);
             if let Some(component_array) = component_array {
-                let mut component_array = component_array.write().unwrap();
                 component_array.add(components);
             }
         }
@@ -164,10 +213,10 @@ impl Archetype {
     ///
     pub fn remove(&self, index: usize) -> (EntityProperties, Vec<AnyComponent>) {
         // Remove the entity properties from the storage
-        let mut entity_id_array = self.inner.entity_id_array.write().unwrap();
-        let mut name_array = self.inner.name_array.write().unwrap();
-        let mut enabled_array = self.inner.enabled_array.write().unwrap();
-        let mut lock_array = self.inner.lock_array.write().unwrap();
+        let mut entity_id_array = self.entity_id_array.write().unwrap();
+        let mut name_array = self.name_array.write().unwrap();
+        let mut enabled_array = self.enabled_array.write().unwrap();
+        let mut lock_array = self.lock_array.write().unwrap();
 
         let entity_id = entity_id_array.remove(index);
         let name = name_array.remove(index);
@@ -177,13 +226,9 @@ impl Archetype {
 
         // Remove the entity components from the storage
         let components = {
-            self.inner
-                .component_collections
+            self.component_storages
                 .iter()
-                .map(|(_, component_array)| {
-                    let mut component_array = component_array.write().unwrap();
-                    component_array.remove(index)
-                })
+                .map(|(_, storage)| storage.remove(index))
                 .flatten()
                 .collect::<Vec<_>>()
         };

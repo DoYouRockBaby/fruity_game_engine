@@ -1,9 +1,14 @@
 use crate::component::component::Component;
-use crate::entity::archetype::component_collection::ComponentCollection;
-use crate::entity::archetype::InnerArchetype;
+use crate::component::component::StaticComponent;
+use crate::component::component_guard::ComponentReadGuard;
+use crate::component::component_guard::ComponentWriteGuard;
+use crate::component::component_guard::InternalReadGuard;
+use crate::component::component_guard::TypedComponentReadGuard;
+use crate::component::component_guard::TypedComponentWriteGuard;
+use crate::entity::archetype::Archetype;
 use crate::entity::entity::EntityId;
 use std::fmt::Debug;
-use std::ops::Deref;
+use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::RwLockReadGuard;
 use std::sync::RwLockWriteGuard;
@@ -14,10 +19,11 @@ use std::sync::RwLockWriteGuard;
 ///
 /// [`read`]: EntityRwLock::read
 ///
+#[derive(Clone)]
 pub struct EntityReadGuard<'a> {
-    pub(crate) _guard: RwLockReadGuard<'a, ()>,
-    pub(crate) index: usize,
-    pub(crate) inner_archetype: Arc<InnerArchetype>,
+    pub(crate) _guard: Rc<RwLockReadGuard<'a, ()>>,
+    pub(crate) entity_id: usize,
+    pub(crate) archetype: Arc<Archetype>,
 }
 
 impl<'a> Debug for EntityReadGuard<'a> {
@@ -29,47 +35,37 @@ impl<'a> Debug for EntityReadGuard<'a> {
 impl<'a> EntityReadGuard<'a> {
     /// Get the entity id
     pub fn get_entity_id(&self) -> EntityId {
-        let entity_id_array = self.inner_archetype.entity_id_array.read().unwrap();
-        *entity_id_array.get(self.index).unwrap()
+        let entity_id_array = self.archetype.entity_id_array.read().unwrap();
+        *entity_id_array.get(self.entity_id).unwrap()
     }
 
     /// Get the entity name
     pub fn get_name(&self) -> String {
-        let name_array = self.inner_archetype.name_array.read().unwrap();
-        name_array.get(self.index).unwrap().clone()
+        let name_array = self.archetype.name_array.read().unwrap();
+        name_array.get(self.entity_id).unwrap().clone()
     }
 
     /// Is the entity enabled
     pub fn is_enabled(&self) -> bool {
-        let enabled_array = self.inner_archetype.enabled_array.read().unwrap();
-        *enabled_array.get(self.index).unwrap()
+        let enabled_array = self.archetype.enabled_array.read().unwrap();
+        *enabled_array.get(self.entity_id).unwrap()
     }
 
-    /// Read components with a given type
-    ///
-    /// # Arguments
-    /// * `component_identifier` - The component identifier
-    ///
-    pub fn read_components(&self, component_identifier: &str) -> Vec<&dyn Component> {
-        let component_array = if let Some(component_array) = self
-            .inner_archetype
-            .component_collections
-            .get(component_identifier)
-        {
-            component_array
-        } else {
-            return vec![];
-        };
-
-        let component_array = component_array.read().unwrap();
-
-        component_array
-            .get(&self.index)
-            .into_iter()
-            .map(|component| {
-                // TODO: Try to find a way to remove that
-                unsafe { std::mem::transmute::<&dyn Component, &dyn Component>(component) }
+    /// Read all components of the entity
+    pub fn read_all_components(&self) -> Vec<ComponentReadGuard<'a>> {
+        self.archetype
+            .component_storages
+            .iter()
+            .map(|(_, storage)| {
+                (0..storage.components_per_entity)
+                    .map(|component_index| ComponentReadGuard {
+                        _guard: InternalReadGuard::Read(self._guard.clone()),
+                        collection: storage.collection.clone(),
+                        component_index,
+                    })
+                    .collect::<Vec<_>>()
             })
+            .flatten()
             .collect::<Vec<_>>()
     }
 
@@ -78,49 +74,54 @@ impl<'a> EntityReadGuard<'a> {
     /// # Arguments
     /// * `component_identifier` - The component identifier
     ///
-    pub fn read_typed_components<T: Component>(&self, component_identifier: &str) -> Vec<&T> {
-        self.read_components(component_identifier)
+    pub fn read_components<T: Component + StaticComponent>(
+        &self,
+    ) -> Vec<TypedComponentReadGuard<'a, T>> {
+        let component_identifier = T::get_component_name();
+
+        self.read_components_from_type_identifier(&component_identifier)
             .into_iter()
-            .filter_map(|component| component.as_any_ref().downcast_ref::<T>())
+            .map(|guard| guard.try_into())
+            .filter_map(|guard| guard.ok())
             .collect::<Vec<_>>()
+    }
+
+    /// Read components with a given type
+    ///
+    /// # Arguments
+    /// * `component_identifier` - The component identifier
+    ///
+    pub fn read_components_from_type_identifier(
+        &self,
+        component_identifier: &str,
+    ) -> Vec<ComponentReadGuard<'a>> {
+        match self
+            .archetype
+            .clone()
+            .get_storage_from_type(component_identifier)
+        {
+            Some(storage) => (0..storage.components_per_entity)
+                .map(|component_index| ComponentReadGuard {
+                    _guard: InternalReadGuard::Read(self._guard.clone()),
+                    collection: storage.collection.clone(),
+                    component_index,
+                })
+                .collect::<Vec<_>>(),
+            None => vec![],
+        }
     }
 
     /// Read a single component with a given type
-    ///
-    /// # Arguments
-    /// * `component_identifier` - The component identifier
-    ///
-    pub fn read_single_typed_component<T: Component>(
+    pub fn read_single_component<T: Component + StaticComponent>(
         &self,
-        component_identifier: &str,
-    ) -> Option<&T> {
-        let mut components = self.read_typed_components(component_identifier);
+    ) -> Option<TypedComponentReadGuard<'a, T>> {
+        let mut components = self.read_components();
 
         if components.len() > 0 {
             Some(components.remove(0))
         } else {
             None
         }
-    }
-
-    /// Iter over all components
-    pub fn iter_all_components(&self) -> impl Iterator<Item = &dyn Component> + '_ {
-        self.inner_archetype
-            .component_collections
-            .iter()
-            .map(|(_, components_array)| {
-                let component_collection = components_array.read().unwrap();
-
-                // TODO: Find a way to remove it
-                let component_collection = unsafe {
-                    std::mem::transmute::<&dyn ComponentCollection, &dyn ComponentCollection>(
-                        component_collection.deref().deref(),
-                    )
-                };
-
-                component_collection.get(&self.index)
-            })
-            .flatten()
     }
 }
 
@@ -130,10 +131,11 @@ impl<'a> EntityReadGuard<'a> {
 ///
 /// [`write`]: EntityRwLock::write
 ///
+#[derive(Clone)]
 pub struct EntityWriteGuard<'a> {
-    pub(crate) _guard: RwLockWriteGuard<'a, ()>,
-    pub(crate) index: usize,
-    pub(crate) inner_archetype: Arc<InnerArchetype>,
+    pub(crate) _guard: Rc<RwLockWriteGuard<'a, ()>>,
+    pub(crate) entity_id: usize,
+    pub(crate) archetype: Arc<Archetype>,
 }
 
 impl<'a> Debug for EntityWriteGuard<'a> {
@@ -145,14 +147,14 @@ impl<'a> Debug for EntityWriteGuard<'a> {
 impl<'a> EntityWriteGuard<'a> {
     /// Get the entity id
     pub fn get_entity_id(&self) -> EntityId {
-        let entity_id_array = self.inner_archetype.entity_id_array.read().unwrap();
-        *entity_id_array.get(self.index).unwrap()
+        let entity_id_array = self.archetype.entity_id_array.read().unwrap();
+        *entity_id_array.get(self.entity_id).unwrap()
     }
 
     /// Get the entity name
     pub fn get_name(&self) -> String {
-        let name_array = self.inner_archetype.name_array.read().unwrap();
-        name_array.get(self.index).unwrap().clone()
+        let name_array = self.archetype.name_array.read().unwrap();
+        name_array.get(self.entity_id).unwrap().clone()
     }
 
     /// Set the entity name
@@ -161,15 +163,15 @@ impl<'a> EntityWriteGuard<'a> {
     /// * `value` - The name value
     ///
     pub fn set_name(&self, value: &str) {
-        let mut name_array = self.inner_archetype.name_array.write().unwrap();
-        let name = name_array.get_mut(self.index).unwrap();
+        let mut name_array = self.archetype.name_array.write().unwrap();
+        let name = name_array.get_mut(self.entity_id).unwrap();
         *name = value.to_string();
     }
 
     /// Is the entity enabled
     pub fn is_enabled(&self) -> bool {
-        let enabled_array = self.inner_archetype.enabled_array.read().unwrap();
-        *enabled_array.get(self.index).unwrap()
+        let enabled_array = self.archetype.enabled_array.read().unwrap();
+        *enabled_array.get(self.entity_id).unwrap()
     }
 
     /// Set the entity enabled state
@@ -178,8 +180,8 @@ impl<'a> EntityWriteGuard<'a> {
     /// * `value` - Is the entity enabled
     ///
     pub fn set_enabled(&self, value: bool) {
-        let mut enabled_array = self.inner_archetype.enabled_array.write().unwrap();
-        let enabled = enabled_array.get_mut(self.index).unwrap();
+        let mut enabled_array = self.archetype.enabled_array.write().unwrap();
+        let enabled = enabled_array.get_mut(self.entity_id).unwrap();
         *enabled = value;
     }
 
@@ -188,41 +190,15 @@ impl<'a> EntityWriteGuard<'a> {
     /// # Arguments
     /// * `component_identifier` - The component identifier
     ///
-    pub fn read_components(&self, component_identifier: &str) -> Vec<&dyn Component> {
-        let component_array = if let Some(component_array) = self
-            .inner_archetype
-            .component_collections
-            .get(component_identifier)
-        {
-            component_array
-        } else {
-            return vec![];
-        };
+    pub fn read_components<T: Component + StaticComponent>(
+        &self,
+    ) -> Vec<TypedComponentReadGuard<'a, T>> {
+        let component_identifier = T::get_component_name();
 
-        let component_array = component_array.read().unwrap();
-
-        component_array
-            .get(&self.index)
+        self.read_components_from_type_identifier(&component_identifier)
             .into_iter()
-            .map(|component| {
-                // TODO: Try to find a way to remove that
-                unsafe { std::mem::transmute::<&dyn Component, &dyn Component>(component) }
-            })
-            .collect::<Vec<_>>()
-    }
-
-    /// Write components with a given type
-    ///
-    /// # Arguments
-    /// * `component_identifier` - The component identifier
-    ///
-    pub fn write_components(&self, component_identifier: &str) -> Vec<&mut dyn Component> {
-        self.read_components(component_identifier)
-            .into_iter()
-            .map(|component| unsafe {
-                &mut *(component as *const dyn Component as *mut dyn Component)
-                    as &mut dyn Component
-            })
+            .map(|guard| guard.try_into())
+            .filter_map(|guard| guard.ok())
             .collect::<Vec<_>>()
     }
 
@@ -231,23 +207,31 @@ impl<'a> EntityWriteGuard<'a> {
     /// # Arguments
     /// * `component_identifier` - The component identifier
     ///
-    pub fn read_typed_components<T: Component>(&self, component_identifier: &str) -> Vec<&T> {
-        self.read_components(component_identifier)
-            .into_iter()
-            .filter_map(|component| component.as_any_ref().downcast_ref::<T>())
-            .collect::<Vec<_>>()
+    pub fn read_components_from_type_identifier(
+        &self,
+        component_identifier: &str,
+    ) -> Vec<ComponentReadGuard<'a>> {
+        match self
+            .archetype
+            .clone()
+            .get_storage_from_type(component_identifier)
+        {
+            Some(storage) => (0..storage.components_per_entity)
+                .map(|component_index| ComponentReadGuard {
+                    _guard: InternalReadGuard::Write(self._guard.clone()),
+                    collection: storage.collection.clone(),
+                    component_index,
+                })
+                .collect::<Vec<_>>(),
+            None => vec![],
+        }
     }
 
     /// Read a single component with a given type
-    ///
-    /// # Arguments
-    /// * `component_identifier` - The component identifier
-    ///
-    pub fn read_single_typed_component<T: Component>(
+    pub fn read_single_component<T: Component + StaticComponent>(
         &self,
-        component_identifier: &str,
-    ) -> Option<&T> {
-        let mut components = self.read_typed_components(component_identifier);
+    ) -> Option<TypedComponentReadGuard<'a, T>> {
+        let mut components = self.read_components();
 
         if components.len() > 0 {
             Some(components.remove(0))
@@ -261,48 +245,53 @@ impl<'a> EntityWriteGuard<'a> {
     /// # Arguments
     /// * `component_identifier` - The component identifier
     ///
-    pub fn write_typed_components<T: Component>(&self, component_identifier: &str) -> Vec<&mut T> {
-        self.write_components(component_identifier)
+    pub fn write_components<T: Component + StaticComponent>(
+        &self,
+    ) -> Vec<TypedComponentWriteGuard<'a, T>> {
+        let component_identifier = T::get_component_name();
+
+        self.write_components_from_type_identifier(&component_identifier)
             .into_iter()
-            .filter_map(|component| component.as_any_mut().downcast_mut::<T>())
+            .map(|guard| guard.try_into())
+            .filter_map(|guard| guard.ok())
             .collect::<Vec<_>>()
     }
 
-    /// Write a single component with a given type
+    /// Write components with a given type
     ///
     /// # Arguments
     /// * `component_identifier` - The component identifier
     ///
-    pub fn write_single_typed_component<T: Component>(
+    pub fn write_components_from_type_identifier(
         &self,
         component_identifier: &str,
-    ) -> Option<&mut T> {
-        let mut components = self.write_typed_components(component_identifier);
+    ) -> Vec<ComponentWriteGuard<'a>> {
+        match self
+            .archetype
+            .clone()
+            .get_storage_from_type(component_identifier)
+        {
+            Some(storage) => (0..storage.components_per_entity)
+                .map(|component_index| ComponentWriteGuard {
+                    _guard: self._guard.clone(),
+                    collection: storage.collection.clone(),
+                    component_index,
+                })
+                .collect::<Vec<_>>(),
+            None => vec![],
+        }
+    }
+
+    /// Write a single component with a given type
+    pub fn write_single_component<T: Component + StaticComponent>(
+        &self,
+    ) -> Option<TypedComponentWriteGuard<'a, T>> {
+        let mut components = self.write_components();
 
         if components.len() > 0 {
             Some(components.remove(0))
         } else {
             None
         }
-    }
-
-    /// Iter over all components
-    pub fn iter_all_components(&self) -> impl Iterator<Item = &dyn Component> + '_ {
-        self.inner_archetype
-            .component_collections
-            .iter()
-            .map(|(_, component_collection)| {
-                let component_collection = component_collection.read().unwrap();
-
-                // TODO: Find a way to remove it
-                let component_collection = unsafe {
-                    std::mem::transmute::<&dyn ComponentCollection, &dyn ComponentCollection>(
-                        component_collection.deref().deref(),
-                    )
-                };
-
-                component_collection.get(&self.index)
-            })
-            .flatten()
     }
 }

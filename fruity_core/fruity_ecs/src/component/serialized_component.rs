@@ -25,10 +25,8 @@ impl SerializedComponent {
 }
 
 impl Component for SerializedComponent {
-    fn get_collection(&self, components_per_entity: usize) -> Box<dyn ComponentCollection> {
-        Box::new(ComponentArray::<SerializedComponent>::new(
-            components_per_entity,
-        ))
+    fn get_collection(&self) -> Box<dyn ComponentCollection> {
+        Box::new(ComponentArray::<SerializedComponent>::new())
     }
 
     fn duplicate(&self) -> Box<dyn Component> {

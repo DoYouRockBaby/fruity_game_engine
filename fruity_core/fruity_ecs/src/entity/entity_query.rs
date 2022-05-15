@@ -1,12 +1,21 @@
 use crate::component::component::Component;
 use crate::component::component::StaticComponent;
+use crate::component::component_guard::TypedComponentReadGuard;
+use crate::component::component_guard::TypedComponentWriteGuard;
 use crate::entity::entity::EntityId;
 use crate::entity::entity_guard::EntityReadGuard;
 use crate::entity::entity_guard::EntityWriteGuard;
 use crate::entity::entity_reference::EntityReference;
 use std::sync::Arc;
 
+/// A readable component reference
+pub type Read<'s, T> = TypedComponentReadGuard<'s, T>;
+
+/// A writable component reference
+pub type Write<'s, T> = TypedComponentWriteGuard<'s, T>;
+
 /// An enum to pass a guard into the [’QueryInjectable’]
+#[derive(Clone)]
 pub enum RequestedEntityGuard<'a> {
     /// No guard required
     None,
@@ -17,7 +26,7 @@ pub enum RequestedEntityGuard<'a> {
 }
 
 /// A trait for types that can be exposed from components references
-pub trait QueryInjectable: Sized {
+pub trait QueryInjectable: Sized + Clone {
     /// Does this require a read guard over the reference
     fn require_read() -> bool;
 
@@ -108,7 +117,7 @@ impl QueryInjectable for bool {
     }
 }
 
-impl<'a, T: Component + StaticComponent> QueryInjectable for &T {
+impl<T: Component + StaticComponent> QueryInjectable for Read<'_, T> {
     fn require_read() -> bool {
         true
     }
@@ -121,24 +130,19 @@ impl<'a, T: Component + StaticComponent> QueryInjectable for &T {
         _entity: &EntityReference,
         entity_guard: &RequestedEntityGuard,
     ) -> Vec<Self> {
-        let identifier = T::get_component_name();
-        let components = match entity_guard {
-            RequestedEntityGuard::Read(guard) => guard.read_typed_components::<T>(&identifier),
-            RequestedEntityGuard::Write(guard) => guard.read_typed_components::<T>(&identifier),
-            RequestedEntityGuard::None => panic!(),
+        let entity_guard = unsafe {
+            std::mem::transmute::<&RequestedEntityGuard, &RequestedEntityGuard>(entity_guard)
         };
 
-        components
-            .into_iter()
-            .map(|component| {
-                // TODO: Find a way to remove it
-                unsafe { std::mem::transmute::<&T, &T>(component) }
-            })
-            .collect::<Vec<_>>()
+        match entity_guard {
+            RequestedEntityGuard::Read(guard) => guard.read_components::<T>(),
+            RequestedEntityGuard::Write(guard) => guard.read_components::<T>(),
+            RequestedEntityGuard::None => panic!(),
+        }
     }
 }
 
-impl<'a, T: Component + StaticComponent> QueryInjectable for &mut T {
+impl<T: Component + StaticComponent> QueryInjectable for Write<'_, T> {
     fn require_read() -> bool {
         false
     }
@@ -151,20 +155,15 @@ impl<'a, T: Component + StaticComponent> QueryInjectable for &mut T {
         _entity: &EntityReference,
         entity_guard: &RequestedEntityGuard,
     ) -> Vec<Self> {
-        let identifier = T::get_component_name();
-        let components = match entity_guard {
-            RequestedEntityGuard::Read(_) => panic!(),
-            RequestedEntityGuard::Write(guard) => guard.write_typed_components::<T>(&identifier),
-            RequestedEntityGuard::None => panic!(),
+        let entity_guard = unsafe {
+            std::mem::transmute::<&RequestedEntityGuard, &RequestedEntityGuard>(entity_guard)
         };
 
-        components
-            .into_iter()
-            .map(|component| {
-                // TODO: Find a way to remove it
-                unsafe { std::mem::transmute::<&mut T, &mut T>(component) }
-            })
-            .collect::<Vec<_>>()
+        match entity_guard {
+            RequestedEntityGuard::Read(_) => panic!(),
+            RequestedEntityGuard::Write(guard) => guard.write_components::<T>(),
+            RequestedEntityGuard::None => panic!(),
+        }
     }
 }
 
@@ -174,7 +173,7 @@ pub trait QueryInject: Send + Sync {
     fn duplicate(&self) -> Self;
 
     /// Get a function that proceed the injection
-    fn inject(self) -> Box<dyn Fn(EntityReference) + Send + Sync>;
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync>;
 }
 
 /// A shortcut for a boxed inject function
@@ -193,7 +192,7 @@ impl QueryInject for Inject0 {
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |_| (self.0)())
     }
 }
@@ -214,7 +213,7 @@ impl<T1: QueryInjectable + 'static> QueryInject for Inject1<T1> {
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read();
             let require_write = T1::require_write();
@@ -250,7 +249,7 @@ impl<T1: QueryInjectable + 'static, T2: QueryInjectable + 'static> QueryInject f
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read() || T2::require_read();
             let require_write = T1::require_write() || T2::require_write();
@@ -265,8 +264,7 @@ impl<T1: QueryInjectable + 'static, T2: QueryInjectable + 'static> QueryInject f
 
             for param1 in T1::from_components(&entity, &entity_guard) {
                 for param2 in T2::from_components(&entity, &entity_guard) {
-                    let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                    (self.0)(param1, param2);
+                    (self.0)(param1.clone(), param2.clone());
                 }
             }
         })
@@ -294,9 +292,7 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(
-        self
-    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read() || T2::require_read() || T3::require_read();
             let require_write = T1::require_write() || T2::require_write() || T3::require_write();
@@ -312,11 +308,7 @@ impl<
             for param1 in T1::from_components(&entity, &entity_guard) {
                 for param2 in T2::from_components(&entity, &entity_guard) {
                     for param3 in T3::from_components(&entity, &entity_guard) {
-                        let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                        let param2 = unsafe { std::mem::transmute_copy::<T2, T2>(&param2) };
-                        let param3 = unsafe { std::mem::transmute_copy::<T3, T3>(&param3) };
-                        
-                        (self.0)(param1, param2, param3);
+                        (self.0)(param1.clone(), param2.clone(), param3.clone());
                     }
                 }
             }
@@ -336,7 +328,6 @@ impl<T1, T2, T3, T4> Inject4<T1, T2, T3, T4> {
 }
 
 impl<
-        'a,
         T1: QueryInjectable + 'static,
         T2: QueryInjectable + 'static,
         T3: QueryInjectable + 'static,
@@ -347,9 +338,7 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(
-        self
-    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read()
                 || T2::require_read()
@@ -372,12 +361,12 @@ impl<
                 for param2 in T2::from_components(&entity, &entity_guard) {
                     for param3 in T3::from_components(&entity, &entity_guard) {
                         for param4 in T4::from_components(&entity, &entity_guard) {
-                            let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                            let param2 = unsafe { std::mem::transmute_copy::<T2, T2>(&param2) };
-                            let param3 = unsafe { std::mem::transmute_copy::<T3, T3>(&param3) };
-                            let param4 = unsafe { std::mem::transmute_copy::<T4, T4>(&param4) };
-                            
-                            (self.0)(param1, param2, param3, param4);
+                            (self.0)(
+                                param1.clone(),
+                                param2.clone(),
+                                param3.clone(),
+                                param4.clone(),
+                            );
                         }
                     }
                 }
@@ -398,7 +387,6 @@ impl<T1, T2, T3, T4, T5> Inject5<T1, T2, T3, T4, T5> {
 }
 
 impl<
-        'a,
         T1: QueryInjectable + 'static,
         T2: QueryInjectable + 'static,
         T3: QueryInjectable + 'static,
@@ -410,9 +398,7 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(
-        self
-    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read()
                 || T2::require_read()
@@ -438,13 +424,13 @@ impl<
                     for param3 in T3::from_components(&entity, &entity_guard) {
                         for param4 in T4::from_components(&entity, &entity_guard) {
                             for param5 in T5::from_components(&entity, &entity_guard) {
-                                let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                                let param2 = unsafe { std::mem::transmute_copy::<T2, T2>(&param2) };
-                                let param3 = unsafe { std::mem::transmute_copy::<T3, T3>(&param3) };
-                                let param4 = unsafe { std::mem::transmute_copy::<T4, T4>(&param4) };
-                                let param5 = unsafe { std::mem::transmute_copy::<T5, T5>(&param5) };
-                                
-                                (self.0)(param1, param2, param3, param4, param5);
+                                (self.0)(
+                                    param1.clone(),
+                                    param2.clone(),
+                                    param3.clone(),
+                                    param4.clone(),
+                                    param5.clone(),
+                                );
                             }
                         }
                     }
@@ -466,7 +452,6 @@ impl<T1, T2, T3, T4, T5, T6> Inject6<T1, T2, T3, T4, T5, T6> {
 }
 
 impl<
-        'a,
         T1: QueryInjectable + 'static,
         T2: QueryInjectable + 'static,
         T3: QueryInjectable + 'static,
@@ -479,9 +464,7 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(
-        self
-    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read()
                 || T2::require_read()
@@ -510,14 +493,14 @@ impl<
                         for param4 in T4::from_components(&entity, &entity_guard) {
                             for param5 in T5::from_components(&entity, &entity_guard) {
                                 for param6 in T6::from_components(&entity, &entity_guard) {
-                                    let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                                    let param2 = unsafe { std::mem::transmute_copy::<T2, T2>(&param2) };
-                                    let param3 = unsafe { std::mem::transmute_copy::<T3, T3>(&param3) };
-                                    let param4 = unsafe { std::mem::transmute_copy::<T4, T4>(&param4) };
-                                    let param5 = unsafe { std::mem::transmute_copy::<T5, T5>(&param5) };
-                                    let param6 = unsafe { std::mem::transmute_copy::<T6, T6>(&param6) };
-                                    
-                                    (self.0)(param1, param2, param3, param4, param5, param6);
+                                    (self.0)(
+                                        param1.clone(),
+                                        param2.clone(),
+                                        param3.clone(),
+                                        param4.clone(),
+                                        param5.clone(),
+                                        param6.clone(),
+                                    );
                                 }
                             }
                         }
@@ -542,7 +525,6 @@ impl<T1, T2, T3, T4, T5, T6, T7> Inject7<T1, T2, T3, T4, T5, T6, T7> {
 }
 
 impl<
-        'a,
         T1: QueryInjectable + 'static,
         T2: QueryInjectable + 'static,
         T3: QueryInjectable + 'static,
@@ -556,9 +538,7 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(
-        self
-    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read()
                 || T2::require_read()
@@ -590,15 +570,15 @@ impl<
                             for param5 in T5::from_components(&entity, &entity_guard) {
                                 for param6 in T6::from_components(&entity, &entity_guard) {
                                     for param7 in T7::from_components(&entity, &entity_guard) {
-                                        let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                                        let param2 = unsafe { std::mem::transmute_copy::<T2, T2>(&param2) };
-                                        let param3 = unsafe { std::mem::transmute_copy::<T3, T3>(&param3) };
-                                        let param4 = unsafe { std::mem::transmute_copy::<T4, T4>(&param4) };
-                                        let param5 = unsafe { std::mem::transmute_copy::<T5, T5>(&param5) };
-                                        let param6 = unsafe { std::mem::transmute_copy::<T6, T6>(&param6) };
-                                        let param7 = unsafe { std::mem::transmute_copy::<T7, T7>(&param7) };
-                                        
-                                        (self.0)(param1, param2, param3, param4, param5, param6, param7);
+                                        (self.0)(
+                                            param1.clone(),
+                                            param2.clone(),
+                                            param3.clone(),
+                                            param4.clone(),
+                                            param5.clone(),
+                                            param6.clone(),
+                                            param7.clone(),
+                                        );
                                     }
                                 }
                             }
@@ -638,9 +618,7 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(
-        self
-    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read()
                 || T2::require_read()
@@ -675,16 +653,16 @@ impl<
                                 for param6 in T6::from_components(&entity, &entity_guard) {
                                     for param7 in T7::from_components(&entity, &entity_guard) {
                                         for param8 in T8::from_components(&entity, &entity_guard) {
-                                            let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                                            let param2 = unsafe { std::mem::transmute_copy::<T2, T2>(&param2) };
-                                            let param3 = unsafe { std::mem::transmute_copy::<T3, T3>(&param3) };
-                                            let param4 = unsafe { std::mem::transmute_copy::<T4, T4>(&param4) };
-                                            let param5 = unsafe { std::mem::transmute_copy::<T5, T5>(&param5) };
-                                            let param6 = unsafe { std::mem::transmute_copy::<T6, T6>(&param6) };
-                                            let param7 = unsafe { std::mem::transmute_copy::<T7, T7>(&param7) };
-                                            let param8 = unsafe { std::mem::transmute_copy::<T8, T8>(&param8) };
-                                            
-                                            (self.0)(param1, param2, param3, param4, param5, param6, param7, param8);
+                                            (self.0)(
+                                                param1.clone(),
+                                                param2.clone(),
+                                                param3.clone(),
+                                                param4.clone(),
+                                                param5.clone(),
+                                                param6.clone(),
+                                                param7.clone(),
+                                                param8.clone(),
+                                            );
                                         }
                                     }
                                 }
@@ -726,9 +704,7 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(
-        self
-    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read()
                 || T2::require_read()
@@ -768,17 +744,17 @@ impl<
                                             for param9 in
                                                 T9::from_components(&entity, &entity_guard)
                                             {
-                                                let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                                                let param2 = unsafe { std::mem::transmute_copy::<T2, T2>(&param2) };
-                                                let param3 = unsafe { std::mem::transmute_copy::<T3, T3>(&param3) };
-                                                let param4 = unsafe { std::mem::transmute_copy::<T4, T4>(&param4) };
-                                                let param5 = unsafe { std::mem::transmute_copy::<T5, T5>(&param5) };
-                                                let param6 = unsafe { std::mem::transmute_copy::<T6, T6>(&param6) };
-                                                let param7 = unsafe { std::mem::transmute_copy::<T7, T7>(&param7) };
-                                                let param8 = unsafe { std::mem::transmute_copy::<T8, T8>(&param8) };
-                                                let param9 = unsafe { std::mem::transmute_copy::<T9, T9>(&param9) };
-                                                
-                                                (self.0)(param1, param2, param3, param4, param5, param6, param7, param8, param9);
+                                                (self.0)(
+                                                    param1.clone(),
+                                                    param2.clone(),
+                                                    param3.clone(),
+                                                    param4.clone(),
+                                                    param5.clone(),
+                                                    param6.clone(),
+                                                    param7.clone(),
+                                                    param8.clone(),
+                                                    param9.clone(),
+                                                );
                                             }
                                         }
                                     }
@@ -824,9 +800,7 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(
-        self
-    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read()
                 || T2::require_read()
@@ -871,18 +845,18 @@ impl<
                                                 for param10 in
                                                     T10::from_components(&entity, &entity_guard)
                                                 {
-                                                    let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                                                    let param2 = unsafe { std::mem::transmute_copy::<T2, T2>(&param2) };
-                                                    let param3 = unsafe { std::mem::transmute_copy::<T3, T3>(&param3) };
-                                                    let param4 = unsafe { std::mem::transmute_copy::<T4, T4>(&param4) };
-                                                    let param5 = unsafe { std::mem::transmute_copy::<T5, T5>(&param5) };
-                                                    let param6 = unsafe { std::mem::transmute_copy::<T6, T6>(&param6) };
-                                                    let param7 = unsafe { std::mem::transmute_copy::<T7, T7>(&param7) };
-                                                    let param8 = unsafe { std::mem::transmute_copy::<T8, T8>(&param8) };
-                                                    let param9 = unsafe { std::mem::transmute_copy::<T9, T9>(&param9) };
-                                                    let param10 = unsafe { std::mem::transmute_copy::<T10, T10>(&param10) };
-                                                    
-                                                    (self.0)(param1, param2, param3, param4, param5, param6, param7, param8, param9, param10);
+                                                    (self.0)(
+                                                        param1.clone(),
+                                                        param2.clone(),
+                                                        param3.clone(),
+                                                        param4.clone(),
+                                                        param5.clone(),
+                                                        param6.clone(),
+                                                        param7.clone(),
+                                                        param8.clone(),
+                                                        param9.clone(),
+                                                        param10.clone(),
+                                                    );
                                                 }
                                             }
                                         }
@@ -932,9 +906,7 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(
-        self
-    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read()
                 || T2::require_read()
@@ -981,23 +953,22 @@ impl<
                                                 for param10 in
                                                     T10::from_components(&entity, &entity_guard)
                                                 {
-                                                    for param11 in T11::from_components(
-                                                        &entity,
-                                                        &entity_guard,
-                                                    ) {
-                                                        let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                                                        let param2 = unsafe { std::mem::transmute_copy::<T2, T2>(&param2) };
-                                                        let param3 = unsafe { std::mem::transmute_copy::<T3, T3>(&param3) };
-                                                        let param4 = unsafe { std::mem::transmute_copy::<T4, T4>(&param4) };
-                                                        let param5 = unsafe { std::mem::transmute_copy::<T5, T5>(&param5) };
-                                                        let param6 = unsafe { std::mem::transmute_copy::<T6, T6>(&param6) };
-                                                        let param7 = unsafe { std::mem::transmute_copy::<T7, T7>(&param7) };
-                                                        let param8 = unsafe { std::mem::transmute_copy::<T8, T8>(&param8) };
-                                                        let param9 = unsafe { std::mem::transmute_copy::<T9, T9>(&param9) };
-                                                        let param10 = unsafe { std::mem::transmute_copy::<T10, T10>(&param10) };
-                                                        let param11 = unsafe { std::mem::transmute_copy::<T11, T11>(&param11) };
-                                                        
-                                                        (self.0)(param1, param2, param3, param4, param5, param6, param7, param8, param9, param10, param11);
+                                                    for param11 in
+                                                        T11::from_components(&entity, &entity_guard)
+                                                    {
+                                                        (self.0)(
+                                                            param1.clone(),
+                                                            param2.clone(),
+                                                            param3.clone(),
+                                                            param4.clone(),
+                                                            param5.clone(),
+                                                            param6.clone(),
+                                                            param7.clone(),
+                                                            param8.clone(),
+                                                            param9.clone(),
+                                                            param10.clone(),
+                                                            param11.clone(),
+                                                        );
                                                     }
                                                 }
                                             }
@@ -1049,9 +1020,7 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(
-        self
-    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read()
                 || T2::require_read()
@@ -1100,28 +1069,27 @@ impl<
                                                 for param10 in
                                                     T10::from_components(&entity, &entity_guard)
                                                 {
-                                                    for param11 in T11::from_components(
-                                                        &entity,
-                                                        &entity_guard,
-                                                    ) {
+                                                    for param11 in
+                                                        T11::from_components(&entity, &entity_guard)
+                                                    {
                                                         for param12 in T12::from_components(
                                                             &entity,
                                                             &entity_guard,
                                                         ) {
-                                                            let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                                                            let param2 = unsafe { std::mem::transmute_copy::<T2, T2>(&param2) };
-                                                            let param3 = unsafe { std::mem::transmute_copy::<T3, T3>(&param3) };
-                                                            let param4 = unsafe { std::mem::transmute_copy::<T4, T4>(&param4) };
-                                                            let param5 = unsafe { std::mem::transmute_copy::<T5, T5>(&param5) };
-                                                            let param6 = unsafe { std::mem::transmute_copy::<T6, T6>(&param6) };
-                                                            let param7 = unsafe { std::mem::transmute_copy::<T7, T7>(&param7) };
-                                                            let param8 = unsafe { std::mem::transmute_copy::<T8, T8>(&param8) };
-                                                            let param9 = unsafe { std::mem::transmute_copy::<T9, T9>(&param9) };
-                                                            let param10 = unsafe { std::mem::transmute_copy::<T10, T10>(&param10) };
-                                                            let param11 = unsafe { std::mem::transmute_copy::<T11, T11>(&param11) };
-                                                            let param12 = unsafe { std::mem::transmute_copy::<T12, T12>(&param12) };
-                                                            
-                                                            (self.0)(param1, param2, param3, param4, param5, param6, param7, param8, param9, param10, param11, param12);
+                                                            (self.0)(
+                                                                param1.clone(),
+                                                                param2.clone(),
+                                                                param3.clone(),
+                                                                param4.clone(),
+                                                                param5.clone(),
+                                                                param6.clone(),
+                                                                param7.clone(),
+                                                                param8.clone(),
+                                                                param9.clone(),
+                                                                param10.clone(),
+                                                                param11.clone(),
+                                                                param12.clone(),
+                                                            );
                                                         }
                                                     }
                                                 }
@@ -1175,9 +1143,7 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(
-        self
-    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read()
                 || T2::require_read()
@@ -1228,10 +1194,9 @@ impl<
                                                 for param10 in
                                                     T10::from_components(&entity, &entity_guard)
                                                 {
-                                                    for param11 in T11::from_components(
-                                                        &entity,
-                                                        &entity_guard,
-                                                    ) {
+                                                    for param11 in
+                                                        T11::from_components(&entity, &entity_guard)
+                                                    {
                                                         for param12 in T12::from_components(
                                                             &entity,
                                                             &entity_guard,
@@ -1240,21 +1205,21 @@ impl<
                                                                 &entity,
                                                                 &entity_guard,
                                                             ) {
-                                                                let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                                                                let param2 = unsafe { std::mem::transmute_copy::<T2, T2>(&param2) };
-                                                                let param3 = unsafe { std::mem::transmute_copy::<T3, T3>(&param3) };
-                                                                let param4 = unsafe { std::mem::transmute_copy::<T4, T4>(&param4) };
-                                                                let param5 = unsafe { std::mem::transmute_copy::<T5, T5>(&param5) };
-                                                                let param6 = unsafe { std::mem::transmute_copy::<T6, T6>(&param6) };
-                                                                let param7 = unsafe { std::mem::transmute_copy::<T7, T7>(&param7) };
-                                                                let param8 = unsafe { std::mem::transmute_copy::<T8, T8>(&param8) };
-                                                                let param9 = unsafe { std::mem::transmute_copy::<T9, T9>(&param9) };
-                                                                let param10 = unsafe { std::mem::transmute_copy::<T10, T10>(&param10) };
-                                                                let param11 = unsafe { std::mem::transmute_copy::<T11, T11>(&param11) };
-                                                                let param12 = unsafe { std::mem::transmute_copy::<T12, T12>(&param12) };
-                                                                let param13 = unsafe { std::mem::transmute_copy::<T13, T13>(&param13) };
-                                                                
-                                                                (self.0)(param1, param2, param3, param4, param5, param6, param7, param8, param9, param10, param11, param12, param13);
+                                                                (self.0)(
+                                                                    param1.clone(),
+                                                                    param2.clone(),
+                                                                    param3.clone(),
+                                                                    param4.clone(),
+                                                                    param5.clone(),
+                                                                    param6.clone(),
+                                                                    param7.clone(),
+                                                                    param8.clone(),
+                                                                    param9.clone(),
+                                                                    param10.clone(),
+                                                                    param11.clone(),
+                                                                    param12.clone(),
+                                                                    param13.clone(),
+                                                                );
                                                             }
                                                         }
                                                     }
@@ -1313,9 +1278,7 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(
-        self
-    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read()
                 || T2::require_read()
@@ -1368,10 +1331,9 @@ impl<
                                                 for param10 in
                                                     T10::from_components(&entity, &entity_guard)
                                                 {
-                                                    for param11 in T11::from_components(
-                                                        &entity,
-                                                        &entity_guard,
-                                                    ) {
+                                                    for param11 in
+                                                        T11::from_components(&entity, &entity_guard)
+                                                    {
                                                         for param12 in T12::from_components(
                                                             &entity,
                                                             &entity_guard,
@@ -1380,28 +1342,26 @@ impl<
                                                                 &entity,
                                                                 &entity_guard,
                                                             ) {
-                                                                for param14 in
-                                                                    T14::from_components(
-                                                                        &entity,
-                                                                        &entity_guard,
-                                                                    )
-                                                                {
-                                                                    let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                                                                    let param2 = unsafe { std::mem::transmute_copy::<T2, T2>(&param2) };
-                                                                    let param3 = unsafe { std::mem::transmute_copy::<T3, T3>(&param3) };
-                                                                    let param4 = unsafe { std::mem::transmute_copy::<T4, T4>(&param4) };
-                                                                    let param5 = unsafe { std::mem::transmute_copy::<T5, T5>(&param5) };
-                                                                    let param6 = unsafe { std::mem::transmute_copy::<T6, T6>(&param6) };
-                                                                    let param7 = unsafe { std::mem::transmute_copy::<T7, T7>(&param7) };
-                                                                    let param8 = unsafe { std::mem::transmute_copy::<T8, T8>(&param8) };
-                                                                    let param9 = unsafe { std::mem::transmute_copy::<T9, T9>(&param9) };
-                                                                    let param10 = unsafe { std::mem::transmute_copy::<T10, T10>(&param10) };
-                                                                    let param11 = unsafe { std::mem::transmute_copy::<T11, T11>(&param11) };
-                                                                    let param12 = unsafe { std::mem::transmute_copy::<T12, T12>(&param12) };
-                                                                    let param13 = unsafe { std::mem::transmute_copy::<T13, T13>(&param13) };
-                                                                    let param14 = unsafe { std::mem::transmute_copy::<T14, T14>(&param14) };
-                                                                    
-                                                                    (self.0)(param1, param2, param3, param4, param5, param6, param7, param8, param9, param10, param11, param12, param13, param14);
+                                                                for param14 in T14::from_components(
+                                                                    &entity,
+                                                                    &entity_guard,
+                                                                ) {
+                                                                    (self.0)(
+                                                                        param1.clone(),
+                                                                        param2.clone(),
+                                                                        param3.clone(),
+                                                                        param4.clone(),
+                                                                        param5.clone(),
+                                                                        param6.clone(),
+                                                                        param7.clone(),
+                                                                        param8.clone(),
+                                                                        param9.clone(),
+                                                                        param10.clone(),
+                                                                        param11.clone(),
+                                                                        param12.clone(),
+                                                                        param13.clone(),
+                                                                        param14.clone(),
+                                                                    );
                                                                 }
                                                             }
                                                         }
@@ -1462,9 +1422,7 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(
-        self
-    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read()
                 || T2::require_read()
@@ -1519,10 +1477,9 @@ impl<
                                                 for param10 in
                                                     T10::from_components(&entity, &entity_guard)
                                                 {
-                                                    for param11 in T11::from_components(
-                                                        &entity,
-                                                        &entity_guard,
-                                                    ) {
+                                                    for param11 in
+                                                        T11::from_components(&entity, &entity_guard)
+                                                    {
                                                         for param12 in T12::from_components(
                                                             &entity,
                                                             &entity_guard,
@@ -1531,35 +1488,33 @@ impl<
                                                                 &entity,
                                                                 &entity_guard,
                                                             ) {
-                                                                for param14 in
-                                                                    T14::from_components(
-                                                                        &entity,
-                                                                        &entity_guard,
-                                                                    )
-                                                                {
+                                                                for param14 in T14::from_components(
+                                                                    &entity,
+                                                                    &entity_guard,
+                                                                ) {
                                                                     for param15 in
                                                                         T15::from_components(
                                                                             &entity,
                                                                             &entity_guard,
                                                                         )
                                                                     {
-                                                                        let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                                                                        let param2 = unsafe { std::mem::transmute_copy::<T2, T2>(&param2) };
-                                                                        let param3 = unsafe { std::mem::transmute_copy::<T3, T3>(&param3) };
-                                                                        let param4 = unsafe { std::mem::transmute_copy::<T4, T4>(&param4) };
-                                                                        let param5 = unsafe { std::mem::transmute_copy::<T5, T5>(&param5) };
-                                                                        let param6 = unsafe { std::mem::transmute_copy::<T6, T6>(&param6) };
-                                                                        let param7 = unsafe { std::mem::transmute_copy::<T7, T7>(&param7) };
-                                                                        let param8 = unsafe { std::mem::transmute_copy::<T8, T8>(&param8) };
-                                                                        let param9 = unsafe { std::mem::transmute_copy::<T9, T9>(&param9) };
-                                                                        let param10 = unsafe { std::mem::transmute_copy::<T10, T10>(&param10) };
-                                                                        let param11 = unsafe { std::mem::transmute_copy::<T11, T11>(&param11) };
-                                                                        let param12 = unsafe { std::mem::transmute_copy::<T12, T12>(&param12) };
-                                                                        let param13 = unsafe { std::mem::transmute_copy::<T13, T13>(&param13) };
-                                                                        let param14 = unsafe { std::mem::transmute_copy::<T14, T14>(&param14) };
-                                                                        let param15 = unsafe { std::mem::transmute_copy::<T15, T15>(&param15) };
-                                                                        
-                                                                        (self.0)(param1, param2, param3, param4, param5, param6, param7, param8, param9, param10, param11, param12, param13, param14, param15);
+                                                                        (self.0)(
+                                                                            param1.clone(),
+                                                                            param2.clone(),
+                                                                            param3.clone(),
+                                                                            param4.clone(),
+                                                                            param5.clone(),
+                                                                            param6.clone(),
+                                                                            param7.clone(),
+                                                                            param8.clone(),
+                                                                            param9.clone(),
+                                                                            param10.clone(),
+                                                                            param11.clone(),
+                                                                            param12.clone(),
+                                                                            param13.clone(),
+                                                                            param14.clone(),
+                                                                            param15.clone(),
+                                                                        );
                                                                     }
                                                                 }
                                                             }
@@ -1625,9 +1580,7 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(
-        self
-    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read()
                 || T2::require_read()
@@ -1684,10 +1637,9 @@ impl<
                                                 for param10 in
                                                     T10::from_components(&entity, &entity_guard)
                                                 {
-                                                    for param11 in T11::from_components(
-                                                        &entity,
-                                                        &entity_guard,
-                                                    ) {
+                                                    for param11 in
+                                                        T11::from_components(&entity, &entity_guard)
+                                                    {
                                                         for param12 in T12::from_components(
                                                             &entity,
                                                             &entity_guard,
@@ -1696,12 +1648,10 @@ impl<
                                                                 &entity,
                                                                 &entity_guard,
                                                             ) {
-                                                                for param14 in
-                                                                    T14::from_components(
-                                                                        &entity,
-                                                                        &entity_guard,
-                                                                    )
-                                                                {
+                                                                for param14 in T14::from_components(
+                                                                    &entity,
+                                                                    &entity_guard,
+                                                                ) {
                                                                     for param15 in
                                                                         T15::from_components(
                                                                             &entity,
@@ -1714,24 +1664,24 @@ impl<
                                                                                 &entity_guard,
                                                                             )
                                                                         {
-                                                                            let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                                                                            let param2 = unsafe { std::mem::transmute_copy::<T2, T2>(&param2) };
-                                                                            let param3 = unsafe { std::mem::transmute_copy::<T3, T3>(&param3) };
-                                                                            let param4 = unsafe { std::mem::transmute_copy::<T4, T4>(&param4) };
-                                                                            let param5 = unsafe { std::mem::transmute_copy::<T5, T5>(&param5) };
-                                                                            let param6 = unsafe { std::mem::transmute_copy::<T6, T6>(&param6) };
-                                                                            let param7 = unsafe { std::mem::transmute_copy::<T7, T7>(&param7) };
-                                                                            let param8 = unsafe { std::mem::transmute_copy::<T8, T8>(&param8) };
-                                                                            let param9 = unsafe { std::mem::transmute_copy::<T9, T9>(&param9) };
-                                                                            let param10 = unsafe { std::mem::transmute_copy::<T10, T10>(&param10) };
-                                                                            let param11 = unsafe { std::mem::transmute_copy::<T11, T11>(&param11) };
-                                                                            let param12 = unsafe { std::mem::transmute_copy::<T12, T12>(&param12) };
-                                                                            let param13 = unsafe { std::mem::transmute_copy::<T13, T13>(&param13) };
-                                                                            let param14 = unsafe { std::mem::transmute_copy::<T14, T14>(&param14) };
-                                                                            let param15 = unsafe { std::mem::transmute_copy::<T15, T15>(&param15) };
-                                                                            let param16 = unsafe { std::mem::transmute_copy::<T16, T16>(&param16) };
-                                                                            
-                                                                            (self.0)(param1, param2, param3, param4, param5, param6, param7, param8, param9, param10, param11, param12, param13, param14, param15, param16);
+                                                                            (self.0)(
+                                                                                param1.clone(),
+                                                                                param2.clone(),
+                                                                                param3.clone(),
+                                                                                param4.clone(),
+                                                                                param5.clone(),
+                                                                                param6.clone(),
+                                                                                param7.clone(),
+                                                                                param8.clone(),
+                                                                                param9.clone(),
+                                                                                param10.clone(),
+                                                                                param11.clone(),
+                                                                                param12.clone(),
+                                                                                param13.clone(),
+                                                                                param14.clone(),
+                                                                                param15.clone(),
+                                                                                param16.clone(),
+                                                                            );
                                                                         }
                                                                     }
                                                                 }
@@ -1801,9 +1751,7 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(
-        self
-    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read()
                 || T2::require_read()
@@ -1862,10 +1810,9 @@ impl<
                                                 for param10 in
                                                     T10::from_components(&entity, &entity_guard)
                                                 {
-                                                    for param11 in T11::from_components(
-                                                        &entity,
-                                                        &entity_guard,
-                                                    ) {
+                                                    for param11 in
+                                                        T11::from_components(&entity, &entity_guard)
+                                                    {
                                                         for param12 in T12::from_components(
                                                             &entity,
                                                             &entity_guard,
@@ -1874,12 +1821,10 @@ impl<
                                                                 &entity,
                                                                 &entity_guard,
                                                             ) {
-                                                                for param14 in
-                                                                    T14::from_components(
-                                                                        &entity,
-                                                                        &entity_guard,
-                                                                    )
-                                                                {
+                                                                for param14 in T14::from_components(
+                                                                    &entity,
+                                                                    &entity_guard,
+                                                                ) {
                                                                     for param15 in
                                                                         T15::from_components(
                                                                             &entity,
@@ -1892,26 +1837,31 @@ impl<
                                                                                 &entity_guard,
                                                                             )
                                                                         {
-                                                                            for param17 in T17::from_components(&entity, &entity_guard) {
-                                                                                let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                                                                                let param2 = unsafe { std::mem::transmute_copy::<T2, T2>(&param2) };
-                                                                                let param3 = unsafe { std::mem::transmute_copy::<T3, T3>(&param3) };
-                                                                                let param4 = unsafe { std::mem::transmute_copy::<T4, T4>(&param4) };
-                                                                                let param5 = unsafe { std::mem::transmute_copy::<T5, T5>(&param5) };
-                                                                                let param6 = unsafe { std::mem::transmute_copy::<T6, T6>(&param6) };
-                                                                                let param7 = unsafe { std::mem::transmute_copy::<T7, T7>(&param7) };
-                                                                                let param8 = unsafe { std::mem::transmute_copy::<T8, T8>(&param8) };
-                                                                                let param9 = unsafe { std::mem::transmute_copy::<T9, T9>(&param9) };
-                                                                                let param10 = unsafe { std::mem::transmute_copy::<T10, T10>(&param10) };
-                                                                                let param11 = unsafe { std::mem::transmute_copy::<T11, T11>(&param11) };
-                                                                                let param12 = unsafe { std::mem::transmute_copy::<T12, T12>(&param12) };
-                                                                                let param13 = unsafe { std::mem::transmute_copy::<T13, T13>(&param13) };
-                                                                                let param14 = unsafe { std::mem::transmute_copy::<T14, T14>(&param14) };
-                                                                                let param15 = unsafe { std::mem::transmute_copy::<T15, T15>(&param15) };
-                                                                                let param16 = unsafe { std::mem::transmute_copy::<T16, T16>(&param16) };
-                                                                                let param17 = unsafe { std::mem::transmute_copy::<T17, T17>(&param17) };
-                                                                                
-                                                                                (self.0)(param1, param2, param3, param4, param5, param6, param7, param8, param9, param10, param11, param12, param13, param14, param15, param16, param17);
+                                                                            for param17 in
+                                                                                T17::from_components(
+                                                                                    &entity,
+                                                                                    &entity_guard,
+                                                                                )
+                                                                            {
+                                                                                (self.0)(
+                                                                                    param1.clone(),
+                                                                                    param2.clone(),
+                                                                                    param3.clone(),
+                                                                                    param4.clone(),
+                                                                                    param5.clone(),
+                                                                                    param6.clone(),
+                                                                                    param7.clone(),
+                                                                                    param8.clone(),
+                                                                                    param9.clone(),
+                                                                                    param10.clone(),
+                                                                                    param11.clone(),
+                                                                                    param12.clone(),
+                                                                                    param13.clone(),
+                                                                                    param14.clone(),
+                                                                                    param15.clone(),
+                                                                                    param16.clone(),
+                                                                                    param17.clone(),
+                                                                                );
                                                                             }
                                                                         }
                                                                     }
@@ -1983,9 +1933,7 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(
-        self
-    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read()
                 || T2::require_read()
@@ -2046,10 +1994,9 @@ impl<
                                                 for param10 in
                                                     T10::from_components(&entity, &entity_guard)
                                                 {
-                                                    for param11 in T11::from_components(
-                                                        &entity,
-                                                        &entity_guard,
-                                                    ) {
+                                                    for param11 in
+                                                        T11::from_components(&entity, &entity_guard)
+                                                    {
                                                         for param12 in T12::from_components(
                                                             &entity,
                                                             &entity_guard,
@@ -2058,12 +2005,10 @@ impl<
                                                                 &entity,
                                                                 &entity_guard,
                                                             ) {
-                                                                for param14 in
-                                                                    T14::from_components(
-                                                                        &entity,
-                                                                        &entity_guard,
-                                                                    )
-                                                                {
+                                                                for param14 in T14::from_components(
+                                                                    &entity,
+                                                                    &entity_guard,
+                                                                ) {
                                                                     for param15 in
                                                                         T15::from_components(
                                                                             &entity,
@@ -2076,28 +2021,14 @@ impl<
                                                                                 &entity_guard,
                                                                             )
                                                                         {
-                                                                            for param17 in T17::from_components(&entity, &entity_guard) {
+                                                                            for param17 in
+                                                                                T17::from_components(
+                                                                                    &entity,
+                                                                                    &entity_guard,
+                                                                                )
+                                                                            {
                                                                                 for param18 in T18::from_components(&entity, &entity_guard) {
-                                                                                    let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                                                                                    let param2 = unsafe { std::mem::transmute_copy::<T2, T2>(&param2) };
-                                                                                    let param3 = unsafe { std::mem::transmute_copy::<T3, T3>(&param3) };
-                                                                                    let param4 = unsafe { std::mem::transmute_copy::<T4, T4>(&param4) };
-                                                                                    let param5 = unsafe { std::mem::transmute_copy::<T5, T5>(&param5) };
-                                                                                    let param6 = unsafe { std::mem::transmute_copy::<T6, T6>(&param6) };
-                                                                                    let param7 = unsafe { std::mem::transmute_copy::<T7, T7>(&param7) };
-                                                                                    let param8 = unsafe { std::mem::transmute_copy::<T8, T8>(&param8) };
-                                                                                    let param9 = unsafe { std::mem::transmute_copy::<T9, T9>(&param9) };
-                                                                                    let param10 = unsafe { std::mem::transmute_copy::<T10, T10>(&param10) };
-                                                                                    let param11 = unsafe { std::mem::transmute_copy::<T11, T11>(&param11) };
-                                                                                    let param12 = unsafe { std::mem::transmute_copy::<T12, T12>(&param12) };
-                                                                                    let param13 = unsafe { std::mem::transmute_copy::<T13, T13>(&param13) };
-                                                                                    let param14 = unsafe { std::mem::transmute_copy::<T14, T14>(&param14) };
-                                                                                    let param15 = unsafe { std::mem::transmute_copy::<T15, T15>(&param15) };
-                                                                                    let param16 = unsafe { std::mem::transmute_copy::<T16, T16>(&param16) };
-                                                                                    let param17 = unsafe { std::mem::transmute_copy::<T17, T17>(&param17) };
-                                                                                    let param18 = unsafe { std::mem::transmute_copy::<T18, T18>(&param18) };
-                                                                                    
-                                                                                    (self.0)(param1, param2, param3, param4, param5, param6, param7, param8, param9, param10, param11, param12, param13, param14, param15, param16, param17, param18);
+                                                                                    (self.0)(param1.clone(), param2.clone(), param3.clone(), param4.clone(), param5.clone(), param6.clone(), param7.clone(), param8.clone(), param9.clone(), param10.clone(), param11.clone(), param12.clone(), param13.clone(), param14.clone(), param15.clone(), param16.clone(), param17.clone(), param18.clone());
                                                                                 }
                                                                             }
                                                                         }
@@ -2211,9 +2142,7 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(
-        self
-    ) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read()
                 || T2::require_read()
@@ -2276,10 +2205,9 @@ impl<
                                                 for param10 in
                                                     T10::from_components(&entity, &entity_guard)
                                                 {
-                                                    for param11 in T11::from_components(
-                                                        &entity,
-                                                        &entity_guard,
-                                                    ) {
+                                                    for param11 in
+                                                        T11::from_components(&entity, &entity_guard)
+                                                    {
                                                         for param12 in T12::from_components(
                                                             &entity,
                                                             &entity_guard,
@@ -2288,12 +2216,10 @@ impl<
                                                                 &entity,
                                                                 &entity_guard,
                                                             ) {
-                                                                for param14 in
-                                                                    T14::from_components(
-                                                                        &entity,
-                                                                        &entity_guard,
-                                                                    )
-                                                                {
+                                                                for param14 in T14::from_components(
+                                                                    &entity,
+                                                                    &entity_guard,
+                                                                ) {
                                                                     for param15 in
                                                                         T15::from_components(
                                                                             &entity,
@@ -2306,30 +2232,15 @@ impl<
                                                                                 &entity_guard,
                                                                             )
                                                                         {
-                                                                            for param17 in T17::from_components(&entity, &entity_guard) {
+                                                                            for param17 in
+                                                                                T17::from_components(
+                                                                                    &entity,
+                                                                                    &entity_guard,
+                                                                                )
+                                                                            {
                                                                                 for param18 in T18::from_components(&entity, &entity_guard) {
                                                                                     for param19 in T19::from_components(&entity, &entity_guard) {
-                                                                                        let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                                                                                        let param2 = unsafe { std::mem::transmute_copy::<T2, T2>(&param2) };
-                                                                                        let param3 = unsafe { std::mem::transmute_copy::<T3, T3>(&param3) };
-                                                                                        let param4 = unsafe { std::mem::transmute_copy::<T4, T4>(&param4) };
-                                                                                        let param5 = unsafe { std::mem::transmute_copy::<T5, T5>(&param5) };
-                                                                                        let param6 = unsafe { std::mem::transmute_copy::<T6, T6>(&param6) };
-                                                                                        let param7 = unsafe { std::mem::transmute_copy::<T7, T7>(&param7) };
-                                                                                        let param8 = unsafe { std::mem::transmute_copy::<T8, T8>(&param8) };
-                                                                                        let param9 = unsafe { std::mem::transmute_copy::<T9, T9>(&param9) };
-                                                                                        let param10 = unsafe { std::mem::transmute_copy::<T10, T10>(&param10) };
-                                                                                        let param11 = unsafe { std::mem::transmute_copy::<T11, T11>(&param11) };
-                                                                                        let param12 = unsafe { std::mem::transmute_copy::<T12, T12>(&param12) };
-                                                                                        let param13 = unsafe { std::mem::transmute_copy::<T13, T13>(&param13) };
-                                                                                        let param14 = unsafe { std::mem::transmute_copy::<T14, T14>(&param14) };
-                                                                                        let param15 = unsafe { std::mem::transmute_copy::<T15, T15>(&param15) };
-                                                                                        let param16 = unsafe { std::mem::transmute_copy::<T16, T16>(&param16) };
-                                                                                        let param17 = unsafe { std::mem::transmute_copy::<T17, T17>(&param17) };
-                                                                                        let param18 = unsafe { std::mem::transmute_copy::<T18, T18>(&param18) };
-                                                                                        let param19 = unsafe { std::mem::transmute_copy::<T19, T19>(&param19) };
-                                                                                        
-                                                                                        (self.0)(param1, param2, param3, param4, param5, param6, param7, param8, param9, param10, param11, param12, param13, param14, param15, param16, param17, param18, param19);
+                                                                                        (self.0)(param1.clone(), param2.clone(), param3.clone(), param4.clone(), param5.clone(), param6.clone(), param7.clone(), param8.clone(), param9.clone(), param10.clone(), param11.clone(), param12.clone(), param13.clone(), param14.clone(), param15.clone(), param16.clone(), param17.clone(), param18.clone(), param19.clone());
                                                                                     }
                                                                                 }
                                                                             }
@@ -2508,7 +2419,7 @@ impl<
         Self(self.0.clone())
     }
 
-    fn inject(self) -> Box<dyn Fn(EntityReference) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(&EntityReference) + Send + Sync> {
         Box::new(move |entity| {
             let require_read = T1::require_read()
                 || T2::require_read()
@@ -2573,10 +2484,9 @@ impl<
                                                 for param10 in
                                                     T10::from_components(&entity, &entity_guard)
                                                 {
-                                                    for param11 in T11::from_components(
-                                                        &entity,
-                                                        &entity_guard,
-                                                    ) {
+                                                    for param11 in
+                                                        T11::from_components(&entity, &entity_guard)
+                                                    {
                                                         for param12 in T12::from_components(
                                                             &entity,
                                                             &entity_guard,
@@ -2585,12 +2495,10 @@ impl<
                                                                 &entity,
                                                                 &entity_guard,
                                                             ) {
-                                                                for param14 in
-                                                                    T14::from_components(
-                                                                        &entity,
-                                                                        &entity_guard,
-                                                                    )
-                                                                {
+                                                                for param14 in T14::from_components(
+                                                                    &entity,
+                                                                    &entity_guard,
+                                                                ) {
                                                                     for param15 in
                                                                         T15::from_components(
                                                                             &entity,
@@ -2603,32 +2511,16 @@ impl<
                                                                                 &entity_guard,
                                                                             )
                                                                         {
-                                                                            for param17 in T17::from_components(&entity, &entity_guard) {
+                                                                            for param17 in
+                                                                                T17::from_components(
+                                                                                    &entity,
+                                                                                    &entity_guard,
+                                                                                )
+                                                                            {
                                                                                 for param18 in T18::from_components(&entity, &entity_guard) {
                                                                                     for param19 in T19::from_components(&entity, &entity_guard) {
                                                                                         for param20 in T20::from_components(&entity, &entity_guard) {
-                                                                                            let param1 = unsafe { std::mem::transmute_copy::<T1, T1>(&param1) };
-                                                                                            let param2 = unsafe { std::mem::transmute_copy::<T2, T2>(&param2) };
-                                                                                            let param3 = unsafe { std::mem::transmute_copy::<T3, T3>(&param3) };
-                                                                                            let param4 = unsafe { std::mem::transmute_copy::<T4, T4>(&param4) };
-                                                                                            let param5 = unsafe { std::mem::transmute_copy::<T5, T5>(&param5) };
-                                                                                            let param6 = unsafe { std::mem::transmute_copy::<T6, T6>(&param6) };
-                                                                                            let param7 = unsafe { std::mem::transmute_copy::<T7, T7>(&param7) };
-                                                                                            let param8 = unsafe { std::mem::transmute_copy::<T8, T8>(&param8) };
-                                                                                            let param9 = unsafe { std::mem::transmute_copy::<T9, T9>(&param9) };
-                                                                                            let param10 = unsafe { std::mem::transmute_copy::<T10, T10>(&param10) };
-                                                                                            let param11 = unsafe { std::mem::transmute_copy::<T11, T11>(&param11) };
-                                                                                            let param12 = unsafe { std::mem::transmute_copy::<T12, T12>(&param12) };
-                                                                                            let param13 = unsafe { std::mem::transmute_copy::<T13, T13>(&param13) };
-                                                                                            let param14 = unsafe { std::mem::transmute_copy::<T14, T14>(&param14) };
-                                                                                            let param15 = unsafe { std::mem::transmute_copy::<T15, T15>(&param15) };
-                                                                                            let param16 = unsafe { std::mem::transmute_copy::<T16, T16>(&param16) };
-                                                                                            let param17 = unsafe { std::mem::transmute_copy::<T17, T17>(&param17) };
-                                                                                            let param18 = unsafe { std::mem::transmute_copy::<T18, T18>(&param18) };
-                                                                                            let param19 = unsafe { std::mem::transmute_copy::<T19, T19>(&param19) };
-                                                                                            let param20 = unsafe { std::mem::transmute_copy::<T20, T20>(&param20) };
-                                                                                            
-                                                                                            (self.0)(param1, param2, param3, param4, param5, param6, param7, param8, param9, param10, param11, param12, param13, param14, param15, param16, param17, param18, param19, param20);
+                                                                                            (self.0)(param1.clone(), param2.clone(), param3.clone(), param4.clone(), param5.clone(), param6.clone(), param7.clone(), param8.clone(), param9.clone(), param10.clone(), param11.clone(), param12.clone(), param13.clone(), param14.clone(), param15.clone(), param16.clone(), param17.clone(), param18.clone(), param19.clone(), param20.clone());
                                                                                         }
                                                                                     }
                                                                                 }

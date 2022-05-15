@@ -1,5 +1,7 @@
 use fruity_core::inject::Ref;
 use fruity_ecs::entity::entity_query::Inject2;
+use fruity_ecs::entity::entity_query::Read;
+use fruity_ecs::entity::entity_query::Write;
 use fruity_ecs::entity::entity_service::EntityService;
 use fruity_ecs::entity_type;
 use fruity_graphic_2d::components::transform_2d::Transform2d;
@@ -26,28 +28,29 @@ pub fn transform_2d_cascade_for_nested_level(
     let entity_service_reader = entity_service.read();
     entity_service_reader.for_each(
         entity_type!["Parent", "Transform2d"],
-        Inject2::new(move |child: &Parent, transform: &mut Transform2d| {
-            if child.nested_level == nested_level {
-                // Get the parent entity reference
-                let parent_entity = if let Some(parent_id) = &child.parent_id.deref() {
-                    let entity_service_reader = entity_service.read();
-                    entity_service_reader.get_entity(*parent_id)
-                } else {
-                    None
-                };
+        Inject2::new(
+            move |child: Read<Parent>, mut transform: Write<Transform2d>| {
+                if child.nested_level == nested_level {
+                    // Get the parent entity reference
+                    let parent_entity = if let Some(parent_id) = &child.parent_id.deref() {
+                        let entity_service_reader = entity_service.read();
+                        entity_service_reader.get_entity(*parent_id)
+                    } else {
+                        None
+                    };
 
-                // Apply the parent transform to the child
-                if let Some(parent_entity) = parent_entity {
-                    let parent_entity = parent_entity.read();
-                    if let Some(parent_transform) =
-                        parent_entity.read_single_typed_component::<Transform2d>("Transform2d")
-                    {
-                        transform.transform = parent_transform.transform * transform.transform;
-                        did_transform.store(true, Relaxed);
+                    // Apply the parent transform to the child
+                    if let Some(parent_entity) = parent_entity {
+                        if let Some(parent_transform) =
+                            parent_entity.read().read_single_component::<Transform2d>()
+                        {
+                            transform.transform = parent_transform.transform * transform.transform;
+                            did_transform.store(true, Relaxed);
+                        }
                     }
                 }
-            }
-        }),
+            },
+        ),
     );
 
     did_transform_2.load(Relaxed)

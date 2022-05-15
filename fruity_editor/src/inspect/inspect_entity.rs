@@ -79,7 +79,8 @@ pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
 
     let components = Column {
         children: entity
-            .iter_all_component()
+            .get_components()
+            .into_iter()
             .enumerate()
             .map(|(index, component)| {
                 let class_name = {

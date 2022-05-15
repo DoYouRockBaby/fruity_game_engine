@@ -1,6 +1,4 @@
 use crate::component::component::AnyComponent;
-use crate::component::component::ReadComponent;
-use crate::component::component::WriteComponent;
 use crate::entity::archetype::Archetype;
 use crate::entity::entity::get_type_identifier_by_any;
 use crate::entity::entity::EntityId;
@@ -33,6 +31,7 @@ use rayon::iter::ParallelIterator;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fs::File;
+use std::ops::Deref;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::RwLock;
@@ -48,7 +47,7 @@ pub enum RemoveEntityError {
 pub struct EntityService {
     id_incrementer: Mutex<u64>,
     index_map: RwLock<HashMap<EntityId, (usize, usize)>>,
-    archetypes: RwLock<Vec<Archetype>>,
+    archetypes: RwLock<Vec<Arc<Archetype>>>,
     object_factory_service: ResourceReference<ObjectFactoryService>,
 
     /// Signal notified when an entity is deleted
@@ -87,21 +86,25 @@ impl EntityService {
         let index_map = self.index_map.read().unwrap();
         index_map
             .get(&entity_id)
-            .map(|(archetype_index, entity_index)| {
+            .map(|(archetype_index, entity_id)| {
                 let archetypes = self.archetypes.read().unwrap();
-                archetypes[*archetype_index].get(*entity_index)
+                archetypes[*archetype_index].clone().get(*entity_id)
             })
     }
 
     /// Iterate over all entities
     pub fn iter_all_entities(&self) -> impl Iterator<Item = EntityReference> + '_ {
         let archetypes = self.archetypes.read().unwrap();
-        let archetypes =
-            unsafe { std::mem::transmute::<&Vec<Archetype>, &Vec<Archetype>>(&archetypes) };
+        let archetypes = unsafe {
+            std::mem::transmute::<&Vec<Arc<Archetype>>, &Vec<Arc<Archetype>>>(&archetypes)
+        };
 
         archetypes
             .iter()
-            .map(|archetype| archetype.iter())
+            .map(|archetype| {
+                let archetype = archetype.clone();
+                archetype.iter()
+            })
             .flatten()
     }
 
@@ -116,8 +119,9 @@ impl EntityService {
         entity_identifier: &EntityTypeIdentifier,
     ) -> impl Iterator<Item = EntityReference> {
         let archetypes = self.archetypes.read().unwrap();
-        let archetypes =
-            unsafe { std::mem::transmute::<&Vec<Archetype>, &Vec<Archetype>>(&archetypes) };
+        let archetypes = unsafe {
+            std::mem::transmute::<&Vec<Arc<Archetype>>, &Vec<Arc<Archetype>>>(&archetypes)
+        };
 
         let entity_identifier_2 = entity_identifier.clone();
         archetypes
@@ -127,7 +131,10 @@ impl EntityService {
                     .get_type_identifier()
                     .contains(&entity_identifier_2)
             })
-            .map(move |archetype| archetype.iter())
+            .map(|archetype| {
+                let archetype = archetype.clone();
+                archetype.iter()
+            })
             .flatten()
     }
 
@@ -140,16 +147,12 @@ impl EntityService {
     /// * `entity_identifier` - The entity type identifier
     /// * `callback` - The closure to execute
     ///
-    pub fn for_each<'a>(
-        &self,
-        entity_identifier: EntityTypeIdentifier,
-        callback: impl QueryInject,
-    ) {
+    pub fn for_each(&self, entity_identifier: EntityTypeIdentifier, callback: impl QueryInject) {
         self.iter_components(&entity_identifier)
             .par_bridge()
             .for_each(|entity| {
                 let callback = callback.duplicate();
-                (callback.inject())(entity)
+                (callback.inject())(&entity)
             });
     }
 
@@ -200,16 +203,16 @@ impl EntityService {
 
         let indexes = match self.archetype_by_identifier(entity_identifier) {
             Some((archetype_index, archetype)) => {
-                let archetype_entity_index = archetype.len();
+                let archetype_entity_id = archetype.len();
                 archetype.add(entity_id, name, enabled, components);
 
-                (archetype_index, archetype_entity_index)
+                (archetype_index, archetype_entity_id)
             }
             None => {
                 let mut archetypes = self.archetypes.write().unwrap();
                 let archetype_index = archetypes.len();
                 let archetype = Archetype::new(entity_id, name, enabled, components);
-                archetypes.push(archetype);
+                archetypes.push(Arc::new(archetype));
                 (archetype_index, 0)
             }
         };
@@ -361,8 +364,9 @@ impl EntityService {
                 let entity = entity.read();
                 let serialized_components = Serialized::Array(
                     entity
-                        .iter_all_components()
-                        .filter_map(|component| component.serialize())
+                        .read_all_components()
+                        .into_iter()
+                        .filter_map(|component| component.deref().serialize())
                         .collect::<Vec<_>>(),
                 );
 
@@ -480,51 +484,13 @@ impl IntrospectObject for EntityService {
                     let iterator = this
                         .iter_components(&EntityTypeIdentifier(arg1.clone()))
                         .map(move |entity| {
-                            let entity = entity.read();
-
                             arg1.iter()
                                 .map(|component_identifier| {
                                     entity
-                                        .read_components(component_identifier)
+                                        .get_components_by_type_identifier(component_identifier)
                                         .into_iter()
                                         .map(|component| {
-                                            Serialized::NativeObject(Box::new(ReadComponent::new(
-                                                component,
-                                            )))
-                                        })
-                                        .collect::<Vec<_>>()
-                                })
-                                .multi_cartesian_product()
-                                .map(|params| Serialized::Array(params))
-                                .collect::<Vec<_>>()
-                        })
-                        .flatten();
-
-                    Ok(Some(Serialized::Iterator(Arc::new(RwLock::new(iterator)))))
-                })),
-            },
-            MethodInfo {
-                name: "iter_components_mut".to_string(),
-                call: MethodCaller::Const(Arc::new(move |this, args| {
-                    let this = cast_introspect_ref::<EntityService>(this);
-
-                    let mut caster = ArgumentCaster::new("iter_components_mut", args);
-                    let arg1 = caster.cast_next::<Vec<String>>()?;
-
-                    let iterator = this
-                        .iter_components(&EntityTypeIdentifier(arg1.clone()))
-                        .map(move |entity| {
-                            let entity = entity.write();
-
-                            arg1.iter()
-                                .map(|component_identifier| {
-                                    entity
-                                        .write_components(component_identifier)
-                                        .into_iter()
-                                        .map(|component| {
-                                            Serialized::NativeObject(Box::new(WriteComponent::new(
-                                                component,
-                                            )))
+                                            Serialized::NativeObject(Box::new(component))
                                         })
                                         .collect::<Vec<_>>()
                                 })

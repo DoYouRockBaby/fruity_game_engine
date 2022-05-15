@@ -32,10 +32,8 @@ fn derive_component_trait(input: TokenStream) -> TokenStream {
 
     let output = quote! {
         impl fruity_ecs::component::component::Component for #ident {
-            fn get_collection(&self, components_per_entity: usize) -> Box<dyn fruity_ecs::entity::archetype::component_collection::ComponentCollection> {
-                Box::new(fruity_ecs::entity::archetype::component_array::ComponentArray::<#ident>::new(
-                    components_per_entity,
-                ))
+            fn get_collection(&self) -> Box<dyn fruity_ecs::entity::archetype::component_collection::ComponentCollection> {
+                Box::new(fruity_ecs::entity::archetype::component_array::ComponentArray::<#ident>::new())
             }
 
             fn duplicate(&self) -> Box<dyn fruity_ecs::component::component::Component> {

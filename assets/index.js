@@ -44,7 +44,7 @@ customService.hello("World");
 
 systemService.addSystem("test 1", () => {
     entityService
-        .iterComponentsMut(["Translate2d", "Velocity"])
+        .iterComponents(["Translate2d", "Velocity"])
         .forEach(([translate, velocity]) => {
             translate.vec = translate.vec.add(translate.vel.mul(frameService.delta));
         });
@@ -52,7 +52,7 @@ systemService.addSystem("test 1", () => {
 
 systemService.addSystem("test 2", () => {
     entityService
-        .iterComponentsMut(["Translate2d", "Move"])
+        .iterComponents(["Translate2d", "Move"])
         .forEach(([translate, move]) => {
             let vel = new Vector2d({ x: 0, y: 0 });
 

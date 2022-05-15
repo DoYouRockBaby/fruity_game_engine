@@ -5,6 +5,7 @@ use fruity_core::inject::Const;
 use fruity_core::inject::Ref;
 use fruity_ecs::entity::entity::EntityId;
 use fruity_ecs::entity::entity_query::Inject3;
+use fruity_ecs::entity::entity_query::Read;
 use fruity_ecs::entity::entity_service::EntityService;
 use fruity_ecs::entity_type;
 use fruity_graphic::graphic_service::MaterialParam;
@@ -17,7 +18,7 @@ pub fn draw_sprite(
     entity_service.for_each(
         entity_type!["Transform2d", "Sprite"],
         Inject3::new(
-            move |entity_id: EntityId, transform: &Transform2d, sprite: &Sprite| {
+            move |entity_id: EntityId, transform: Read<Transform2d>, sprite: Read<Sprite>| {
                 let graphic_2d_service = graphic_2d_service.read();
 
                 if let Some(material) = &sprite.material {

@@ -1,5 +1,5 @@
 use crate::component::component_reference::ComponentReference;
-use crate::entity::archetype::InnerArchetype;
+use crate::entity::archetype::Archetype;
 use crate::entity::entity_guard::EntityReadGuard;
 use crate::entity::entity_guard::EntityWriteGuard;
 use fruity_any::*;
@@ -12,6 +12,7 @@ use fruity_core::serialize::serialized::SerializableObject;
 use fruity_core::serialize::serialized::Serialized;
 use fruity_core::utils::introspect::cast_introspect_ref;
 use std::fmt::Debug;
+use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::RwLockReadGuard;
 use std::sync::RwLockWriteGuard;
@@ -19,63 +20,60 @@ use std::sync::RwLockWriteGuard;
 /// A reference over an entity stored into an Archetype
 #[derive(Clone, FruityAny)]
 pub struct EntityReference {
-    pub(crate) index: usize,
-    pub(crate) inner_archetype: Arc<InnerArchetype>,
+    pub(crate) entity_id: usize,
+    pub(crate) archetype: Arc<Archetype>,
 }
 
 impl EntityReference {
     /// Get a read access to the entity
     pub fn read(&self) -> EntityReadGuard {
-        let lock_array = self.inner_archetype.lock_array.read().unwrap();
-        let guard = lock_array.get(self.index).unwrap().read().unwrap();
+        let lock_array = self.archetype.lock_array.read().unwrap();
+        let guard = lock_array.get(self.entity_id).unwrap().read().unwrap();
 
         // TODO: Find a way to remove it
         let guard =
             unsafe { std::mem::transmute::<RwLockReadGuard<()>, RwLockReadGuard<()>>(guard) };
 
         EntityReadGuard {
-            _guard: guard,
-            index: self.index,
-            inner_archetype: self.inner_archetype.clone(),
+            _guard: Rc::new(guard),
+            entity_id: self.entity_id,
+            archetype: self.archetype.clone(),
         }
     }
 
     /// Get a write access to the entity
     pub fn write(&self) -> EntityWriteGuard {
-        let lock_array = self.inner_archetype.lock_array.read().unwrap();
-        let guard = lock_array.get(self.index).unwrap().write().unwrap();
+        let lock_array = self.archetype.lock_array.read().unwrap();
+        let guard = lock_array.get(self.entity_id).unwrap().write().unwrap();
 
         // TODO: Find a way to remove it
         let guard =
             unsafe { std::mem::transmute::<RwLockWriteGuard<()>, RwLockWriteGuard<()>>(guard) };
 
         EntityWriteGuard {
-            _guard: guard,
-            index: self.index,
-            inner_archetype: self.inner_archetype.clone(),
+            _guard: Rc::new(guard),
+            entity_id: self.entity_id,
+            archetype: self.archetype.clone(),
         }
     }
 
-    /// Iter over all components
-    pub fn iter_all_component(&self) -> impl Iterator<Item = ComponentReference> + '_ {
-        self.inner_archetype
-            .component_collections
-            .iter()
-            .map(|(key, component_array)| {
-                let components_per_entity = {
-                    let component_array = component_array.read().unwrap();
-                    component_array.get_components_per_entity()
-                };
+    /// Get all components
+    pub fn get_components(&self) -> Vec<ComponentReference> {
+        self.archetype.clone().get_entity_components(self.entity_id)
+    }
 
-                (0..components_per_entity)
-                    .into_iter()
-                    .map(|index| ComponentReference {
-                        entity: self.clone(),
-                        component_identifier: key.clone(),
-                        component_index: index,
-                    })
-            })
-            .flatten()
+    /// Get components with a given type
+    ///
+    /// # Arguments
+    /// * `component_identifier` - The component identifier
+    ///
+    pub fn get_components_by_type_identifier(
+        &self,
+        component_identifier: &str,
+    ) -> Vec<ComponentReference> {
+        self.archetype
+            .clone()
+            .get_entity_components_from_type(self.entity_id, component_identifier)
     }
 }
 

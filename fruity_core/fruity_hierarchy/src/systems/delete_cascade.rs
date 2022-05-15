@@ -21,9 +21,7 @@ pub fn delete_cascade(entity_service: Ref<EntityService>) {
                 Inject1::new(move |entity: EntityReference| {
                     let is_child_of_deleted = {
                         let entity = entity.read();
-                        let parent = entity
-                            .read_single_typed_component::<Parent>("Parent")
-                            .unwrap();
+                        let parent = entity.read_single_component::<Parent>().unwrap();
                         if let Some(entity_parent_id) = parent.parent_id.deref() {
                             *entity_parent_id == parent_id
                         } else {

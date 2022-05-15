@@ -1,8 +1,10 @@
 use crate::component::component::Component;
 use crate::component::component_guard::ComponentReadGuard;
 use crate::component::component_guard::ComponentWriteGuard;
+use crate::component::component_guard::InternalReadGuard;
 use crate::component::component_guard::TypedComponentReadGuard;
 use crate::component::component_guard::TypedComponentWriteGuard;
+use crate::entity::archetype::component_collection::ComponentCollection;
 use crate::entity::entity_guard::EntityReadGuard;
 use crate::entity::entity_guard::EntityWriteGuard;
 use crate::entity::entity_reference::EntityReference;
@@ -17,12 +19,13 @@ use std::any::TypeId;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::sync::Arc;
+use std::sync::RwLock;
 
 /// A reference over an entity stored into an Archetype
 #[derive(Clone, FruityAny)]
 pub struct ComponentReference {
-    pub(crate) entity: EntityReference,
-    pub(crate) component_identifier: String,
+    pub(crate) entity_reference: EntityReference,
+    pub(crate) collection: Arc<RwLock<Box<dyn ComponentCollection>>>,
     pub(crate) component_index: usize,
 }
 
@@ -30,8 +33,8 @@ impl ComponentReference {
     /// Get a read access to the component
     pub fn read(&self) -> ComponentReadGuard<'_> {
         ComponentReadGuard {
-            entity_reader: self.entity.read(),
-            component_identifier: self.component_identifier.clone(),
+            _guard: InternalReadGuard::Read(self.entity_reference.read()._guard.clone()),
+            collection: self.collection.clone(),
             component_index: self.component_index,
         }
     }
@@ -39,29 +42,20 @@ impl ComponentReference {
     /// Get a write access to the component
     pub fn write(&self) -> ComponentWriteGuard<'_> {
         ComponentWriteGuard {
-            entity_writer: self.entity.write(),
-            component_identifier: self.component_identifier.clone(),
+            _guard: self.entity_reference.write()._guard.clone(),
+            collection: self.collection.clone(),
             component_index: self.component_index,
         }
     }
 
     /// Get a read access to the component
     pub fn read_typed<T: Component>(&self) -> Option<TypedComponentReadGuard<'_, T>> {
-        let component_type_id = {
-            let entity_reader = self.entity.read();
-
-            let component = entity_reader
-                .read_components(&self.component_identifier)
-                .remove(self.component_index);
-
-            component.as_any_ref().type_id()
-        };
+        let component_reader = self.read();
+        let component_type_id = component_reader.as_any_ref().type_id();
 
         if component_type_id == TypeId::of::<T>() {
             Some(TypedComponentReadGuard {
-                entity_reader: self.entity.read(),
-                component_identifier: self.component_identifier.clone(),
-                component_index: self.component_index,
+                component_reader,
                 phantom: PhantomData {},
             })
         } else {
@@ -71,21 +65,12 @@ impl ComponentReference {
 
     /// Get a write access to the component
     pub fn write_typed<T: Component>(&self) -> Option<TypedComponentWriteGuard<'_, T>> {
-        let component_type_id = {
-            let entity_reader = self.entity.read();
-
-            let component = entity_reader
-                .read_components(&self.component_identifier)
-                .remove(self.component_index);
-
-            component.as_any_ref().type_id()
-        };
+        let component_writer = self.write();
+        let component_type_id = component_writer.as_any_ref().type_id();
 
         if component_type_id == TypeId::of::<T>() {
             Some(TypedComponentWriteGuard {
-                entity_writer: self.entity.write(),
-                component_identifier: self.component_identifier.clone(),
-                component_index: self.component_index,
+                component_writer,
                 phantom: PhantomData {},
             })
         } else {
@@ -95,12 +80,12 @@ impl ComponentReference {
 
     /// Get a read access to the entity
     pub fn read_entity(&self) -> EntityReadGuard<'_> {
-        self.entity.read()
+        self.entity_reference.read()
     }
 
     /// Get a write access to the entity
     pub fn write_entity(&self) -> EntityWriteGuard<'_> {
-        self.entity.write()
+        self.entity_reference.write()
     }
 }
 

@@ -23,9 +23,7 @@ pub fn draw_rectangle_collider_2d_gizmos(
         let transform = {
             let entity_reader = collider.read_entity();
 
-            if let Some(transform) =
-                entity_reader.read_single_typed_component::<Transform2d>("Transform2d")
-            {
+            if let Some(transform) = entity_reader.read_single_component::<Transform2d>() {
                 transform.transform.clone()
             } else {
                 Matrix3::default()
