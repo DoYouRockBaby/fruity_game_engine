@@ -57,7 +57,10 @@ impl<'a> EntityReadGuard<'a> {
             .component_storages
             .iter()
             .map(|(_, storage)| {
-                (0..storage.components_per_entity)
+                let start_index = self.entity_id * storage.components_per_entity;
+                let end_index = start_index + storage.components_per_entity;
+
+                (start_index..end_index)
                     .map(|component_index| ComponentReadGuard {
                         _guard: InternalReadGuard::Read(self._guard.clone()),
                         collection: storage.collection.clone(),
@@ -100,13 +103,18 @@ impl<'a> EntityReadGuard<'a> {
             .clone()
             .get_storage_from_type(component_identifier)
         {
-            Some(storage) => (0..storage.components_per_entity)
-                .map(|component_index| ComponentReadGuard {
-                    _guard: InternalReadGuard::Read(self._guard.clone()),
-                    collection: storage.collection.clone(),
-                    component_index,
-                })
-                .collect::<Vec<_>>(),
+            Some(storage) => {
+                let start_index = self.entity_id * storage.components_per_entity;
+                let end_index = start_index + storage.components_per_entity;
+
+                (start_index..end_index)
+                    .map(|component_index| ComponentReadGuard {
+                        _guard: InternalReadGuard::Read(self._guard.clone()),
+                        collection: storage.collection.clone(),
+                        component_index,
+                    })
+                    .collect::<Vec<_>>()
+            }
             None => vec![],
         }
     }
@@ -216,13 +224,18 @@ impl<'a> EntityWriteGuard<'a> {
             .clone()
             .get_storage_from_type(component_identifier)
         {
-            Some(storage) => (0..storage.components_per_entity)
-                .map(|component_index| ComponentReadGuard {
-                    _guard: InternalReadGuard::Write(self._guard.clone()),
-                    collection: storage.collection.clone(),
-                    component_index,
-                })
-                .collect::<Vec<_>>(),
+            Some(storage) => {
+                let start_index = self.entity_id * storage.components_per_entity;
+                let end_index = start_index + storage.components_per_entity;
+
+                (start_index..end_index)
+                    .map(|component_index| ComponentReadGuard {
+                        _guard: InternalReadGuard::Write(self._guard.clone()),
+                        collection: storage.collection.clone(),
+                        component_index,
+                    })
+                    .collect::<Vec<_>>()
+            }
             None => vec![],
         }
     }
@@ -271,13 +284,18 @@ impl<'a> EntityWriteGuard<'a> {
             .clone()
             .get_storage_from_type(component_identifier)
         {
-            Some(storage) => (0..storage.components_per_entity)
-                .map(|component_index| ComponentWriteGuard {
-                    _guard: self._guard.clone(),
-                    collection: storage.collection.clone(),
-                    component_index,
-                })
-                .collect::<Vec<_>>(),
+            Some(storage) => {
+                let start_index = self.entity_id * storage.components_per_entity;
+                let end_index = start_index + storage.components_per_entity;
+
+                (start_index..end_index)
+                    .map(|component_index| ComponentWriteGuard {
+                        _guard: self._guard.clone(),
+                        collection: storage.collection.clone(),
+                        component_index,
+                    })
+                    .collect::<Vec<_>>()
+            }
             None => vec![],
         }
     }

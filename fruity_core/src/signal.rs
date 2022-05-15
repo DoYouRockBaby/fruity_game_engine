@@ -12,6 +12,7 @@ use crate::utils::introspect::cast_introspect_mut;
 use crate::utils::introspect::ArgumentCaster;
 use fruity_any::FruityAny;
 use std::fmt::Debug;
+use std::fmt::Formatter;
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::Arc;
@@ -285,8 +286,8 @@ impl<T: FruityTryFrom<Serialized, Error = String> + Send + Sync + Debug + Clone 
     }
 }
 
-impl<T: Send + Sync + Clone> Debug for SignalProperty<T> {
-    fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        Ok(())
+impl<T: Send + Sync + Clone + Debug> Debug for SignalProperty<T> {
+    fn fmt(&self, formatter: &mut Formatter) -> Result<(), std::fmt::Error> {
+        self.value.fmt(formatter)
     }
 }

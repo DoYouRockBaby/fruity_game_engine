@@ -1,6 +1,7 @@
 use crate::component::component::Component;
 use crate::entity::archetype::component_collection::ComponentCollection;
 use std::fmt::Debug;
+use std::fmt::Formatter;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -137,8 +138,8 @@ impl<'a, T: Component> Clone for TypedComponentReadGuard<'a, T> {
 }
 
 impl<'a, T: Component> Debug for TypedComponentReadGuard<'a, T> {
-    fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        Ok(())
+    fn fmt(&self, formatter: &mut Formatter) -> Result<(), std::fmt::Error> {
+        self.deref().fmt(formatter)
     }
 }
 
@@ -174,8 +175,8 @@ impl<'a, T: Component> Clone for TypedComponentWriteGuard<'a, T> {
 }
 
 impl<'a, T: Component> Debug for TypedComponentWriteGuard<'a, T> {
-    fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        Ok(())
+    fn fmt(&self, formatter: &mut Formatter) -> Result<(), std::fmt::Error> {
+        self.deref().fmt(formatter)
     }
 }
 

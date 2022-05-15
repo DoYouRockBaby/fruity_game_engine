@@ -9,7 +9,7 @@ use fruity_graphic::math::matrix3::Matrix3;
 pub fn reset_transform_2d(entity_service: Const<EntityService>) {
     entity_service.for_each(
         entity_type!["Transform2d"],
-        Inject1::new(move |mut transform: Write<Transform2d>| {
+        Inject1::new(|mut transform: Write<Transform2d>| {
             transform.transform = Matrix3::identity();
         }),
     )
