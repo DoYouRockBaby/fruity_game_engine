@@ -115,11 +115,17 @@ impl JavascriptWatcherService {
                             if let Some(extension) = path.as_path().extension() {
                                 if extension.to_string_lossy() == "js" {
                                     if op == CREATE || op == REMOVE || op == WRITE {
+                                        // Run all old end scripts
+                                        // TODO
+
                                         // Unload all system of the script
                                         {
                                             let mut system_service = system_service.write();
                                             system_service.unload_origin(&inner.module_path);
                                         }
+
+                                        // Run all new start scripts
+                                        // TODO
 
                                         // Reload the module
                                         let javascript_service = javascript_service.read();

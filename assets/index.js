@@ -70,7 +70,7 @@ systemService.addSystem("test 2", () => {
 
             if (inputService.isPressed("Down")) {
                 vel.y -= move.velocity;
-                // entityService.remove(3);
+                entityService.remove(3);
             }
 
             translate.vec = translate.vec.add(vel.mul(frameService.delta));

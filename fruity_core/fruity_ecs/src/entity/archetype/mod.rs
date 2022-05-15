@@ -29,6 +29,8 @@ pub mod component_collection;
 /// Stored as a Struct Of Array
 pub struct Archetype {
     pub(crate) identifier: EntityTypeIdentifier,
+
+    // Store all the component properties into a index persisting storage
     pub(crate) entity_id_array: RwLock<Vec<EntityId>>,
     pub(crate) name_array: RwLock<Vec<String>>,
     pub(crate) enabled_array: RwLock<Vec<bool>>,
