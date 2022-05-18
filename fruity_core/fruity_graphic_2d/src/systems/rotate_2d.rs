@@ -13,7 +13,7 @@ pub fn rotate_2d(entity_service: Const<EntityService>) {
         entity_type!["Transform2d", "Rotate2d"],
         Inject2::new(
             move |mut transform: Write<Transform2d>, rotate: Read<Rotate2d>| {
-                transform.transform = transform.transform * Matrix3::rotation(rotate.angle);
+                transform.transform = transform.transform * Matrix3::new_rotation(rotate.angle);
             },
         ),
     )

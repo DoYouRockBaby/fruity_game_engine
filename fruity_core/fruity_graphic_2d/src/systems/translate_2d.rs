@@ -13,7 +13,7 @@ pub fn translate_2d(entity_service: Const<EntityService>) {
         entity_type!["Transform2d", "Translate2d"],
         Inject2::new(
             move |mut transform: Write<Transform2d>, translate: Read<Translate2d>| {
-                transform.transform = transform.transform * Matrix3::translation(translate.vec);
+                transform.transform = transform.transform * Matrix3::new_translation(translate.vec);
             },
         ),
     )
