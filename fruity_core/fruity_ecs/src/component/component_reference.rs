@@ -1,4 +1,5 @@
 use crate::component::component::Component;
+use crate::component::component::StaticComponent;
 use crate::component::component_guard::ComponentReadGuard;
 use crate::component::component_guard::ComponentWriteGuard;
 use crate::component::component_guard::InternalReadGuard;
@@ -49,7 +50,9 @@ impl ComponentReference {
     }
 
     /// Get a read access to the component
-    pub fn read_typed<T: Component>(&self) -> Option<TypedComponentReadGuard<'_, T>> {
+    pub fn read_typed<T: Component + StaticComponent>(
+        &self,
+    ) -> Option<TypedComponentReadGuard<'_, T>> {
         let component_reader = self.read();
         let component_type_id = component_reader.as_any_ref().type_id();
 
@@ -64,7 +67,9 @@ impl ComponentReference {
     }
 
     /// Get a write access to the component
-    pub fn write_typed<T: Component>(&self) -> Option<TypedComponentWriteGuard<'_, T>> {
+    pub fn write_typed<T: Component + StaticComponent>(
+        &self,
+    ) -> Option<TypedComponentWriteGuard<'_, T>> {
         let component_writer = self.write();
         let component_type_id = component_writer.as_any_ref().type_id();
 

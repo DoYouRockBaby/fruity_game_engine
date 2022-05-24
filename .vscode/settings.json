@@ -1,6 +1,6 @@
 {
     "editor.formatOnSave": true,
     "lldb.adapterEnv": {
-        "DYLD_LIBRARY_PATH": "/Users/leo/.rustup/toolchains/stable-aarch64-apple-darwin/lib"
+        "DYLD_LIBRARY_PATH": "/Users/leo/.rustup/toolchains/nightly-aarch64-apple-darwin/lib"
     }
 }

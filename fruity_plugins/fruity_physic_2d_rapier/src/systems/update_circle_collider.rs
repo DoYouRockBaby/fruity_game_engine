@@ -26,6 +26,7 @@ pub fn update_circle_collider(
                     let center = transform.transform * collider.center;
                     let scaled_radius = transform.transform.scale() * collider.radius;
 
+                    // TODO: Use an ellipse collider
                     let collider = ColliderBuilder::new(SharedShape::ball(f32::max(
                         scaled_radius.x,
                         scaled_radius.y,

@@ -1,4 +1,5 @@
 use crate::component::component::Component;
+use crate::component::component::StaticComponent;
 use crate::entity::archetype::component_collection::ComponentCollection;
 use std::fmt::Debug;
 use std::fmt::Formatter;
@@ -47,7 +48,9 @@ impl<'a> Deref for ComponentReadGuard<'a> {
     }
 }
 
-impl<'a, T: Component> TryInto<TypedComponentReadGuard<'a, T>> for ComponentReadGuard<'a> {
+impl<'a, T: Component + StaticComponent> TryInto<TypedComponentReadGuard<'a, T>>
+    for ComponentReadGuard<'a>
+{
     type Error = String;
 
     fn try_into(self) -> Result<TypedComponentReadGuard<'a, T>, Self::Error> {
@@ -103,7 +106,9 @@ impl<'a> DerefMut for ComponentWriteGuard<'a> {
     }
 }
 
-impl<'a, T: Component> TryInto<TypedComponentWriteGuard<'a, T>> for ComponentWriteGuard<'a> {
+impl<'a, T: Component + StaticComponent> TryInto<TypedComponentWriteGuard<'a, T>>
+    for ComponentWriteGuard<'a>
+{
     type Error = String;
 
     fn try_into(self) -> Result<TypedComponentWriteGuard<'a, T>, Self::Error> {
@@ -123,12 +128,12 @@ impl<'a, T: Component> TryInto<TypedComponentWriteGuard<'a, T>> for ComponentWri
 ///
 /// [`read`]: ComponentReference::read
 ///
-pub struct TypedComponentReadGuard<'a, T: Component> {
+pub struct TypedComponentReadGuard<'a, T: Component + StaticComponent> {
     pub(crate) component_reader: ComponentReadGuard<'a>,
     pub(crate) phantom: PhantomData<T>,
 }
 
-impl<'a, T: Component> Clone for TypedComponentReadGuard<'a, T> {
+impl<'a, T: Component + StaticComponent> Clone for TypedComponentReadGuard<'a, T> {
     fn clone(&self) -> Self {
         Self {
             component_reader: self.component_reader.clone(),
@@ -137,13 +142,13 @@ impl<'a, T: Component> Clone for TypedComponentReadGuard<'a, T> {
     }
 }
 
-impl<'a, T: Component> Debug for TypedComponentReadGuard<'a, T> {
+impl<'a, T: Component + StaticComponent> Debug for TypedComponentReadGuard<'a, T> {
     fn fmt(&self, formatter: &mut Formatter) -> Result<(), std::fmt::Error> {
         self.deref().fmt(formatter)
     }
 }
 
-impl<'a, T: Component> Deref for TypedComponentReadGuard<'a, T> {
+impl<'a, T: Component + StaticComponent> Deref for TypedComponentReadGuard<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -160,12 +165,12 @@ impl<'a, T: Component> Deref for TypedComponentReadGuard<'a, T> {
 ///
 /// [`write`]: ComponentReference::write
 ///
-pub struct TypedComponentWriteGuard<'a, T: Component> {
+pub struct TypedComponentWriteGuard<'a, T: Component + StaticComponent> {
     pub(crate) component_writer: ComponentWriteGuard<'a>,
     pub(crate) phantom: PhantomData<T>,
 }
 
-impl<'a, T: Component> Clone for TypedComponentWriteGuard<'a, T> {
+impl<'a, T: Component + StaticComponent> Clone for TypedComponentWriteGuard<'a, T> {
     fn clone(&self) -> Self {
         Self {
             component_writer: self.component_writer.clone(),
@@ -174,13 +179,13 @@ impl<'a, T: Component> Clone for TypedComponentWriteGuard<'a, T> {
     }
 }
 
-impl<'a, T: Component> Debug for TypedComponentWriteGuard<'a, T> {
+impl<'a, T: Component + StaticComponent> Debug for TypedComponentWriteGuard<'a, T> {
     fn fmt(&self, formatter: &mut Formatter) -> Result<(), std::fmt::Error> {
         self.deref().fmt(formatter)
     }
 }
 
-impl<'a, T: Component> Deref for TypedComponentWriteGuard<'a, T> {
+impl<'a, T: Component + StaticComponent> Deref for TypedComponentWriteGuard<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -191,7 +196,7 @@ impl<'a, T: Component> Deref for TypedComponentWriteGuard<'a, T> {
     }
 }
 
-impl<'a, T: Component> DerefMut for TypedComponentWriteGuard<'a, T> {
+impl<'a, T: Component + StaticComponent> DerefMut for TypedComponentWriteGuard<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.component_writer
             .as_any_mut()

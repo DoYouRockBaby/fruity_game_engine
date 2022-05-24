@@ -3,7 +3,10 @@ use crate::entity::archetype::Archetype;
 use crate::entity::entity::get_type_identifier_by_any;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
-use crate::entity::entity_query::QueryInject;
+use crate::entity::entity_query::Query;
+use crate::entity::entity_query::QueryParam;
+use std::marker::PhantomData;
+// use crate::entity::entity_query_inject::QueryInject;
 use crate::entity::entity_reference::EntityReference;
 use crate::ResourceContainer;
 use fruity_any::*;
@@ -24,10 +27,7 @@ use fruity_core::serialize::Serialize;
 use fruity_core::signal::Signal;
 use fruity_core::utils::introspect::cast_introspect_ref;
 use fruity_core::utils::introspect::ArgumentCaster;
-use itertools::Itertools;
 use maplit::hashmap;
-use rayon::iter::ParallelBridge;
-use rayon::iter::ParallelIterator;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fs::File;
@@ -47,7 +47,7 @@ pub enum RemoveEntityError {
 pub struct EntityService {
     id_incrementer: Mutex<u64>,
     index_map: RwLock<HashMap<EntityId, (usize, usize)>>,
-    archetypes: RwLock<Vec<Arc<Archetype>>>,
+    archetypes: Arc<RwLock<Vec<Arc<Archetype>>>>,
     object_factory_service: ResourceReference<ObjectFactoryService>,
 
     /// Signal notified when an entity is deleted
@@ -70,7 +70,7 @@ impl EntityService {
         EntityService {
             id_incrementer: Mutex::new(0),
             index_map: RwLock::new(HashMap::new()),
-            archetypes: RwLock::new(Vec::new()),
+            archetypes: Arc::new(RwLock::new(Vec::new())),
             object_factory_service: resource_container.require::<ObjectFactoryService>(),
             on_deleted: Signal::new(),
         }
@@ -108,52 +108,17 @@ impl EntityService {
             .flatten()
     }
 
-    /// Iterate over all entities with a specific archetype type
-    /// Use every entity that contains the provided entity type
-    ///
-    /// # Arguments
-    /// * `entity_identifier` - The entity type identifier
-    ///
-    pub fn iter_components(
-        &self,
-        entity_identifier: &EntityTypeIdentifier,
-    ) -> impl Iterator<Item = EntityReference> {
-        let archetypes = self.archetypes.read().unwrap();
-        let archetypes = unsafe {
-            std::mem::transmute::<&Vec<Arc<Archetype>>, &Vec<Arc<Archetype>>>(&archetypes)
-        };
-
-        let entity_identifier_2 = entity_identifier.clone();
-        archetypes
-            .iter()
-            .filter(move |archetype| {
-                archetype
-                    .get_type_identifier()
-                    .contains(&entity_identifier_2)
-            })
-            .map(|archetype| {
-                let archetype = archetype.clone();
-                archetype.iter()
-            })
-            .flatten()
-    }
-
-    /// Execute a closure over all entities with a specific archetype type
-    /// Use every entity that contains the provided entity type
-    /// Also map components to the order of provided entity type
-    /// identifier
+    /// Create a query over entities
     ///
     /// # Arguments
     /// * `entity_identifier` - The entity type identifier
     /// * `callback` - The closure to execute
     ///
-    pub fn for_each(&self, entity_identifier: EntityTypeIdentifier, callback: impl QueryInject) {
-        self.iter_components(&entity_identifier)
-            .par_bridge()
-            .for_each(|entity| {
-                let callback = callback.duplicate();
-                (callback.inject())(&entity)
-            });
+    pub fn query<'a, T: QueryParam<'a> + 'static>(&self) -> Query<T> {
+        Query::<T> {
+            archetypes: self.archetypes.clone(),
+            _param_phantom: PhantomData {},
+        }
     }
 
     /// Add a new entity in the storage
@@ -473,7 +438,7 @@ impl IntrospectObject for EntityService {
                     Ok(Some(result.fruity_into()))
                 })),
             },
-            MethodInfo {
+            /*MethodInfo {
                 name: "iter_components".to_string(),
                 call: MethodCaller::Const(Arc::new(move |this, args| {
                     let this = cast_introspect_ref::<EntityService>(this);
@@ -502,7 +467,7 @@ impl IntrospectObject for EntityService {
 
                     Ok(Some(Serialized::Iterator(Arc::new(RwLock::new(iterator)))))
                 })),
-            },
+            },*/
             MethodInfo {
                 name: "create".to_string(),
                 call: MethodCaller::Const(Arc::new(move |this, args| {

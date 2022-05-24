@@ -143,7 +143,7 @@ impl Archetype {
     /// * `component_identifier` - The components type identifier
     ///
     pub(crate) fn get_storage_from_type(
-        self: Arc<Self>,
+        &self,
         component_type_identifier: &str,
     ) -> Option<ComponentStorage> {
         self.component_storages

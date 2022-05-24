@@ -33,14 +33,8 @@ impl Hash for EntityTypeIdentifier {
 impl EntityTypeIdentifier {
     /// Check if an entity identifier contains an other one
     /// For example ["c1", "c2", "c3"] contains ["c3", "c2"]
-    pub fn contains(&self, other: &EntityTypeIdentifier) -> bool {
-        let matching = other
-            .0
-            .iter()
-            .filter(|component_identifier| self.0.contains(component_identifier))
-            .count();
-
-        matching == other.0.len()
+    pub fn contains(&self, other: &String) -> bool {
+        self.0.contains(other)
     }
 }
 
