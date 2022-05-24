@@ -11,8 +11,13 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-pub mod union;
+/// Queries for tuples
+pub mod tuple;
+
+/// Queries for with stuffs
 pub mod with;
+
+/// Queries for without stuffs
 pub mod without;
 
 /// An enum to pass a guard into the [’QueryInjectable’]
@@ -26,9 +31,12 @@ pub enum RequestedEntityGuard<'a> {
     Write(EntityWriteGuard<'a>),
 }
 
+/// A trait that should be implement for everything that can be queried from ['EntityService']
 pub trait QueryParam<'a> {
+    /// The type of the query callback parameter
     type Item: Clone;
 
+    /// A filter over the archetypes
     fn filter_archetype(
         iter: Box<dyn Iterator<Item = Arc<Archetype>>>,
     ) -> Box<dyn Iterator<Item = Arc<Archetype>>>;
@@ -46,12 +54,26 @@ pub trait QueryParam<'a> {
     ) -> Box<dyn Iterator<Item = Self::Item> + 'a>;
 }
 
+/// A query over entities
 pub struct Query<T> {
     pub(crate) archetypes: Arc<RwLock<Vec<Arc<Archetype>>>>,
     pub(crate) _param_phantom: PhantomData<T>,
 }
 
-impl<'a, T: QueryParam<'a>> Query<T> {
+impl<T> Clone for Query<T> {
+    fn clone(&self) -> Self {
+        Query {
+            archetypes: self.archetypes.clone(),
+            _param_phantom: PhantomData {},
+        }
+    }
+}
+
+unsafe impl<T> Sync for Query<T> {}
+unsafe impl<T> Send for Query<T> {}
+
+impl<'a, T: QueryParam<'a> + 'static> Query<T> {
+    /// Call a function for every entities of an query
     pub fn for_each(&self, callback: impl Fn(T::Item) + Send + Sync) {
         let archetypes = self.archetypes.read().unwrap();
         let archetypes = unsafe {

@@ -7,8 +7,9 @@ use crate::entity::entity_reference::EntityReference;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
+/// Exclude a component from a query
 pub struct Without<T: Component + StaticComponent + 'static> {
-    _phantom_without: PhantomData<T>,
+    _phantom: PhantomData<T>,
 }
 
 impl<'a, T: Component + StaticComponent + 'static> QueryParam<'a> for Without<T> {
@@ -29,8 +30,8 @@ impl<'a, T: Component + StaticComponent + 'static> QueryParam<'a> for Without<T>
     }
 
     fn iter_entity_components(
-        entity_reference: EntityReference,
-        entity_guard: &'a RequestedEntityGuard<'a>,
+        _entity_reference: EntityReference,
+        _entity_guard: &'a RequestedEntityGuard<'a>,
     ) -> Box<dyn Iterator<Item = Self::Item> + 'a> {
         Box::new(vec![()].into_iter())
     }

@@ -22,20 +22,39 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
         } else {
             return;
         };
-        let entity_reader = entity.read();
 
-        let transform =
-            if let Some(transform) = entity_reader.read_single_component::<Transform2d>() {
+        let transform = {
+            let entity_reader = entity.read();
+
+            if let Some(transform) = entity_reader
+                .read_single_component::<Transform2d>()
+                .map(|transform| transform.transform)
+            {
                 transform
             } else {
                 return;
-            };
+            }
+        };
 
-        if let Some(_) = entity_reader.read_single_component::<Translate2d>() {
-            let bottom_left = transform.transform * Vector2d::new(-0.5, -0.5);
-            let top_right = transform.transform * Vector2d::new(0.5, 0.5);
+        let translate_2d = {
+            let entity_reader = entity.read();
+            entity_reader
+                .read_single_component::<Translate2d>()
+                .map(|translate| translate.vec)
+        };
 
-            if let Some(_) = entity_reader.read_single_component::<Scale2d>() {
+        let scale_2d = {
+            let entity_reader = entity.read();
+            entity_reader
+                .read_single_component::<Scale2d>()
+                .map(|translate| translate.vec)
+        };
+
+        if let Some(_) = translate_2d {
+            let bottom_left = transform * Vector2d::new(-0.5, -0.5);
+            let top_right = transform * Vector2d::new(0.5, 0.5);
+
+            if let Some(_) = scale_2d {
                 let selected_entity_2 = entity.clone();
                 gizmos_service.draw_resize_helper(
                     bottom_left,
@@ -44,10 +63,10 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
                     Color::red(),
                     move |fixed_x, fixed_y, drag_action| {
                         let selected_entity = selected_entity_2.clone();
-                        let entity_reader = selected_entity.read();
 
                         // Get the translate and the scale origin
                         let translate_origin = {
+                            let entity_reader = selected_entity.read();
                             let translate = entity_reader
                                 .read_single_component::<Translate2d>()
                                 .unwrap();
@@ -55,6 +74,7 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
                         };
 
                         let scale_origin = {
+                            let entity_reader = selected_entity.read();
                             let scale = entity_reader.read_single_component::<Scale2d>().unwrap();
                             scale.vec
                         };
@@ -98,10 +118,10 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
                 Color::red(),
                 move |move_x, move_y, drag_action| {
                     let selected_entity = entity.clone();
-                    let entity_reader = selected_entity.read();
 
                     // Get the translate origin
                     let translate_origin = {
+                        let entity_reader = selected_entity.read();
                         let translate = entity_reader
                             .read_single_component::<Translate2d>()
                             .unwrap();

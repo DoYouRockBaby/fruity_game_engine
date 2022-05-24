@@ -1,5 +1,5 @@
 use crate::systems::transform_2d_cascade::transform_2d_cascade;
-use fruity_core::inject::Inject1;
+use fruity_core::inject::Inject2;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use fruity_ecs::system::system_service::SystemParams;
@@ -19,7 +19,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     system_service.add_system(
         "transform_2d_cascade",
         MODULE_NAME,
-        Inject1::new(transform_2d_cascade),
+        Inject2::new(transform_2d_cascade),
         Some(SystemParams {
             pool_index: 96,
             ignore_pause: true,

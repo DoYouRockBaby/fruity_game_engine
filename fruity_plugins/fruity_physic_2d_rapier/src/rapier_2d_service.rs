@@ -22,7 +22,7 @@ impl Debug for Rapier2dService {
 }
 
 impl Rapier2dService {
-    pub fn new(resource_container: Arc<ResourceContainer>) -> Self {
+    pub fn new(_resource_container: Arc<ResourceContainer>) -> Self {
         Self {
             rigid_body_set: RigidBodySet::new(),
             collider_set: ColliderSet::new(),

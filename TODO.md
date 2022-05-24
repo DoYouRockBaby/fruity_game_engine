@@ -16,9 +16,9 @@
 [X] Add a way to have multiple components of the same type on a single entity
 [X] The use of SOA should allow us to have a more effective storage based on type and not on binary encoding
 [X] There should be some memory leak in archetype
+[X] Add component query selectors
 [ ] Create a way to query based on generics
 [ ] Add a way to extend components
-[ ] Add component query selectors (? for optional and ! for exclude)
 [ ] Random crash when we delete an entity
 [ ] Add an exception when you try to access a deleted entity, propagate it into js
 [ ] Test and stabilize ECS

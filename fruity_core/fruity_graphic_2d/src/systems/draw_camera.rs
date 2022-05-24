@@ -1,11 +1,8 @@
 use crate::Camera;
 use crate::Transform2d;
-use fruity_core::inject::Const;
 use fruity_core::inject::Ref;
 use fruity_ecs::entity::entity_query::with::With;
 use fruity_ecs::entity::entity_query::Query;
-use fruity_ecs::entity::entity_service::EntityService;
-use fruity_ecs::entity_type;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::matrix4::Matrix4;
 use fruity_graphic::math::vector2d::Vector2d;

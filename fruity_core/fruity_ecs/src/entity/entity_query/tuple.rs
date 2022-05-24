@@ -4,7 +4,6 @@ use crate::entity::entity_query::RequestedEntityGuard;
 use crate::entity::entity_reference::EntityReference;
 use std::sync::Arc;
 
-#[macro_export]
 macro_rules! tuple_impl_generics {
     ($t1:ident, $($tn:ident),+) => {
         impl<

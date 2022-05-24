@@ -1,33 +1,29 @@
 use crate::Graphic2dService;
 use crate::Sprite;
 use crate::Transform2d;
-use fruity_core::inject::Const;
 use fruity_core::inject::Ref;
-use fruity_ecs::entity::entity::EntityId;
-use fruity_ecs::entity::entity_query::Inject3;
-use fruity_ecs::entity::entity_query::Read;
-use fruity_ecs::entity::entity_service::EntityService;
-use fruity_ecs::entity_type;
+use fruity_ecs::entity::entity_query::with::With;
+use fruity_ecs::entity::entity_query::with::WithId;
+use fruity_ecs::entity::entity_query::Query;
 use fruity_graphic::graphic_service::MaterialParam;
 use maplit::hashmap;
 
 pub fn draw_sprite(
-    entity_service: Const<EntityService>,
     graphic_2d_service: Ref<Graphic2dService>,
+    query: Query<(WithId, With<Transform2d>, With<Sprite>)>,
 ) {
-    entity_service.for_each(
-        entity_type!["Transform2d", "Sprite"],
-        Inject3::new(
-            move |entity_id: EntityId, transform: Read<Transform2d>, sprite: Read<Sprite>| {
-                let graphic_2d_service = graphic_2d_service.read();
+    query.for_each(|(entity_id, transform, sprite)| {
+        let graphic_2d_service = graphic_2d_service.read();
 
-                if let Some(material) = &sprite.material {
-                    graphic_2d_service.draw_quad(entity_id, material.clone(),
-                    hashmap! {
-                        "transform".to_string() => MaterialParam::Matrix4(transform.transform.into()),
-                    }, sprite.z_index);
-                }
-            },
-        ),
-    )
+        if let Some(material) = &sprite.material {
+            graphic_2d_service.draw_quad(
+                entity_id,
+                material.clone(),
+                hashmap! {
+                    "transform".to_string() => MaterialParam::Matrix4(transform.transform.into()),
+                },
+                sprite.z_index,
+            );
+        }
+    })
 }

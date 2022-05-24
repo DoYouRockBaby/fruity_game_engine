@@ -7,10 +7,7 @@ use crate::components::translate_2d::Translate2d;
 use crate::graphic_2d_service::Graphic2dService;
 use crate::systems::draw_camera::draw_camera;
 use crate::systems::draw_sprite::draw_sprite;
-use crate::systems::reset_transform_2d::reset_transform_2d;
-use crate::systems::rotate_2d::rotate_2d;
-use crate::systems::scale_2d::scale_2d;
-use crate::systems::translate_2d::translate_2d;
+use crate::systems::update_transform_2d::update_transform_2d;
 use fruity_core::inject::Inject1;
 use fruity_core::inject::Inject2;
 use fruity_core::object_factory_service::ObjectFactoryService;
@@ -47,39 +44,9 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let mut system_service = system_service.write();
 
     system_service.add_system(
-        "reset_transform_2d",
+        "update_transform_2d",
         MODULE_NAME,
-        Inject1::new(reset_transform_2d),
-        Some(SystemParams {
-            pool_index: 92,
-            ignore_pause: true,
-        }),
-    );
-
-    system_service.add_system(
-        "translate_2d",
-        MODULE_NAME,
-        Inject1::new(translate_2d),
-        Some(SystemParams {
-            pool_index: 93,
-            ignore_pause: true,
-        }),
-    );
-
-    system_service.add_system(
-        "rotate_2d",
-        MODULE_NAME,
-        Inject1::new(rotate_2d),
-        Some(SystemParams {
-            pool_index: 94,
-            ignore_pause: true,
-        }),
-    );
-
-    system_service.add_system(
-        "scale_2d",
-        MODULE_NAME,
-        Inject1::new(scale_2d),
+        Inject1::new(update_transform_2d),
         Some(SystemParams {
             pool_index: 95,
             ignore_pause: true,

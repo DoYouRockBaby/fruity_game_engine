@@ -5,7 +5,6 @@ use fruity_editor::hooks::use_global;
 use fruity_editor_graphic_2d::gizmos_service::DragAction;
 use fruity_editor_graphic_2d::gizmos_service::GizmosService;
 use fruity_graphic::graphic_service::GraphicService;
-use fruity_graphic::math::matrix3::Matrix3;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
 use fruity_graphic_2d::components::transform_2d::Transform2d;
@@ -29,10 +28,13 @@ pub fn draw_circle_collider_2d_gizmos(
         let transform = {
             let entity_reader = collider.read_entity();
 
-            if let Some(transform) = entity_reader.read_single_component::<Transform2d>() {
-                transform.transform.clone()
+            if let Some(transform) = entity_reader
+                .read_single_component::<Transform2d>()
+                .map(|transform| transform.transform)
+            {
+                transform
             } else {
-                Matrix3::default()
+                return;
             }
         };
 
