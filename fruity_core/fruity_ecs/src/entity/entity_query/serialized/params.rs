@@ -6,6 +6,23 @@ use fruity_core::convert::FruityInto;
 use fruity_core::serialize::serialized::Serialized;
 
 #[derive(FruityAny, Clone)]
+pub struct WithEntity {}
+
+impl SerializedQueryParam for WithEntity {
+    fn duplicate(&self) -> Box<dyn SerializedQueryParam> {
+        Box::new(self.clone())
+    }
+
+    fn filter_archetype(&self, _archetype: &Archetype) -> bool {
+        true
+    }
+
+    fn get_entity_components(&self, entity_reference: EntityReference) -> Vec<Serialized> {
+        vec![entity_reference.fruity_into()]
+    }
+}
+
+#[derive(FruityAny, Clone)]
 pub struct WithId {}
 
 impl SerializedQueryParam for WithId {

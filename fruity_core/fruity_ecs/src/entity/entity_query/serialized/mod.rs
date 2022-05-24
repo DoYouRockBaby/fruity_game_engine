@@ -1,6 +1,7 @@
 use crate::entity::archetype::Archetype;
 use crate::entity::entity_query::serialized::params::With;
 use crate::entity::entity_query::serialized::params::WithEnabled;
+use crate::entity::entity_query::serialized::params::WithEntity;
 use crate::entity::entity_query::serialized::params::WithId;
 use crate::entity::entity_query::serialized::params::WithName;
 use crate::entity::entity_query::serialized::params::WithOptional;
@@ -17,8 +18,6 @@ use fruity_core::serialize::serialized::Serialized;
 use fruity_core::utils::introspect::cast_introspect_mut;
 use fruity_core::utils::introspect::ArgumentCaster;
 use itertools::Itertools;
-use rayon::iter::ParallelBridge;
-use rayon::iter::ParallelIterator;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -60,6 +59,10 @@ impl Debug for SerializedQuery {
 }
 
 impl SerializedQuery {
+    pub fn with_entity(&mut self) {
+        self.params.push(Box::new(WithEntity {}));
+    }
+
     pub fn with_id(&mut self) {
         self.params.push(Box::new(WithId {}));
     }
@@ -105,6 +108,7 @@ impl SerializedQuery {
             .flatten()
             .collect::<Vec<_>>();
 
+        //TODO: We cannot make it async, why ?
         entities
             .into_iter() /*.par_bridge()*/
             .for_each(|entity| {
@@ -138,6 +142,15 @@ impl IntrospectObject for SerializedQuery {
 
     fn get_method_infos(&self) -> Vec<MethodInfo> {
         vec![
+            MethodInfo {
+                name: "with_entity".to_string(),
+                call: MethodCaller::Mut(Arc::new(|this, _args| {
+                    let this = cast_introspect_mut::<SerializedQuery>(this);
+                    this.with_entity();
+
+                    Ok(Some(Serialized::NativeObject(this.duplicate())))
+                })),
+            },
             MethodInfo {
                 name: "with_id".to_string(),
                 call: MethodCaller::Mut(Arc::new(|this, _args| {

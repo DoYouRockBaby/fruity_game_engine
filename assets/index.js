@@ -55,10 +55,13 @@ systemService.addSystem("test 1", () => {
 systemService.addSystem("test 2", () => {
     entityService
         .query()
+        .withEntity()
         .with("Translate2d")
         .with("Move")
-        .forEach((translate, move) => {
+        .forEach((entity, translate, move) => {
             let vel = new Vector2d({ x: 0, y: 0 });
+
+            console.log(entity.getName())
 
             if (inputService.isPressed("Run Left")) {
                 vel.x -= move.velocity;
