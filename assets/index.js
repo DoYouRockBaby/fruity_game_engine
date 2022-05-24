@@ -45,9 +45,9 @@ customService.hello("World");
 systemService.addSystem("test 1", () => {
     entityService
         .query()
-        .withMut("Translate")
+        .with("Translate2d")
         .with("Velocity")
-        .forEach(([translate, velocity]) => {
+        .forEach((translate, velocity) => {
             translate.vec = translate.vec.add(translate.vel.mul(frameService.delta));
         });
 });
@@ -55,9 +55,9 @@ systemService.addSystem("test 1", () => {
 systemService.addSystem("test 2", () => {
     entityService
         .query()
-        .withMut("Translate")
+        .with("Translate2d")
         .with("Move")
-        .forEach(([translate, move]) => {
+        .forEach((translate, move) => {
             let vel = new Vector2d({ x: 0, y: 0 });
 
             if (inputService.isPressed("Run Left")) {
@@ -65,7 +65,7 @@ systemService.addSystem("test 2", () => {
             }
 
             if (inputService.isPressed("Run Right")) {
-                vel.x += move.velocity * 10;
+                vel.x += move.velocity;
             }
 
             if (inputService.isPressed("Jump")) {
@@ -83,9 +83,9 @@ systemService.addSystem("test 2", () => {
 systemService.addSystem("test 3", () => {
     entityService
         .query()
-        .withMut("Rotate2d")
+        .with("Rotate2d")
         .with("Move")
-        .forEach(([rotate, move]) => {
+        .forEach((rotate, move) => {
             if (inputService.isPressed("Rotate")) {
                 rotate.angle += move.velocity * frameService.delta;
             }

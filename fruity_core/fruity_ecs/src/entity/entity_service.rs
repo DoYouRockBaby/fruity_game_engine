@@ -3,6 +3,7 @@ use crate::entity::archetype::Archetype;
 use crate::entity::entity::get_type_identifier_by_any;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
+use crate::entity::entity_query::serialized::SerializedQuery;
 use crate::entity::entity_query::Query;
 use crate::entity::entity_query::QueryParam;
 use std::marker::PhantomData;
@@ -438,36 +439,19 @@ impl IntrospectObject for EntityService {
                     Ok(Some(result.fruity_into()))
                 })),
             },
-            /*MethodInfo {
-                name: "iter_components".to_string(),
-                call: MethodCaller::Const(Arc::new(move |this, args| {
+            MethodInfo {
+                name: "query".to_string(),
+                call: MethodCaller::Const(Arc::new(move |this, _args| {
                     let this = cast_introspect_ref::<EntityService>(this);
 
-                    let mut caster = ArgumentCaster::new("iter_components", args);
-                    let arg1 = caster.cast_next::<Vec<String>>()?;
+                    let query = SerializedQuery {
+                        archetypes: this.archetypes.clone(),
+                        params: vec![],
+                    };
 
-                    let iterator = this
-                        .iter_components(&EntityTypeIdentifier(arg1.clone()))
-                        .map(move |entity| {
-                            arg1.iter()
-                                .map(|component_identifier| {
-                                    entity
-                                        .get_components_by_type_identifier(component_identifier)
-                                        .into_iter()
-                                        .map(|component| {
-                                            Serialized::NativeObject(Box::new(component))
-                                        })
-                                        .collect::<Vec<_>>()
-                                })
-                                .multi_cartesian_product()
-                                .map(|params| Serialized::Array(params))
-                                .collect::<Vec<_>>()
-                        })
-                        .flatten();
-
-                    Ok(Some(Serialized::Iterator(Arc::new(RwLock::new(iterator)))))
+                    Ok(Some(query.fruity_into()))
                 })),
-            },*/
+            },
             MethodInfo {
                 name: "create".to_string(),
                 call: MethodCaller::Const(Arc::new(move |this, args| {

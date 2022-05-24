@@ -10,12 +10,14 @@ use crate::entity::entity_guard::EntityReadGuard;
 use crate::entity::entity_guard::EntityWriteGuard;
 use crate::entity::entity_reference::EntityReference;
 use fruity_any::*;
+use fruity_core::convert::FruityInto;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodCaller;
 use fruity_core::introspect::MethodInfo;
 use fruity_core::introspect::SetterCaller;
 use fruity_core::serialize::serialized::SerializableObject;
+use fruity_core::serialize::serialized::Serialized;
 use std::any::TypeId;
 use std::fmt::Debug;
 use std::marker::PhantomData;
@@ -97,6 +99,12 @@ impl ComponentReference {
 impl Debug for ComponentReference {
     fn fmt(&self, _: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         Ok(())
+    }
+}
+
+impl FruityInto<Serialized> for ComponentReference {
+    fn fruity_into(self) -> Serialized {
+        Serialized::NativeObject(Box::new(self))
     }
 }
 

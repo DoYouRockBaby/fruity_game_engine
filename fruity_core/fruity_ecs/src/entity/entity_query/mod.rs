@@ -11,6 +11,9 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 use std::sync::RwLock;
 
+/// Queries for scripting languages
+pub(crate) mod serialized;
+
 /// Queries for tuples
 pub mod tuple;
 
