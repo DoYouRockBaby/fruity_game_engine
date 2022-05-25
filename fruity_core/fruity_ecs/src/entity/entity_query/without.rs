@@ -15,7 +15,9 @@ impl<'a, T: Component + StaticComponent + 'static> QueryParam<'a> for Without<T>
     type Item = ();
 
     fn filter_archetype(archetype: &Archetype) -> bool {
-        !archetype.identifier.contains(&T::get_component_name())
+        !archetype
+            .identifier
+            .contains(&T::get_component_name().to_string())
     }
 
     fn require_read() -> bool {

@@ -137,7 +137,9 @@ impl<'a, T: Component + StaticComponent + 'static> QueryParam<'a> for With<T> {
     type Item = TypedComponentReadGuard<'a, T>;
 
     fn filter_archetype(archetype: &Archetype) -> bool {
-        archetype.identifier.contains(&T::get_component_name())
+        archetype
+            .identifier
+            .contains(&T::get_component_name().to_string())
     }
 
     fn require_read() -> bool {
@@ -173,7 +175,9 @@ impl<'a, T: Component + StaticComponent + 'static> QueryParam<'a> for WithMut<T>
     type Item = TypedComponentWriteGuard<'a, T>;
 
     fn filter_archetype(archetype: &Archetype) -> bool {
-        archetype.identifier.contains(&T::get_component_name())
+        archetype
+            .identifier
+            .contains(&T::get_component_name().to_string())
     }
 
     fn require_read() -> bool {

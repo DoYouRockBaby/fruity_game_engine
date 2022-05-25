@@ -19,7 +19,7 @@ use std::sync::Arc;
 /// An abstraction over a component, should be implemented for every component
 pub trait StaticComponent {
     /// Return the class type name
-    fn get_component_name() -> String;
+    fn get_component_name() -> &'static str;
 }
 
 /// An abstraction over a component, should be implemented for every component

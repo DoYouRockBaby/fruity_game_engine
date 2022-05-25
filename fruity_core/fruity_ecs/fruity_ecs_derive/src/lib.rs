@@ -42,8 +42,8 @@ fn derive_component_trait(input: TokenStream) -> TokenStream {
         }
 
         impl fruity_ecs::component::component::StaticComponent for #ident {
-            fn get_component_name() -> String {
-                #struct_name.to_string()
+            fn get_component_name() -> &'static str {
+                #struct_name
             }
         }
     };

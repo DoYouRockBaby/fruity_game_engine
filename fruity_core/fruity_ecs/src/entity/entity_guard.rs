@@ -60,7 +60,7 @@ impl<'a> EntityReadGuard<'a> {
     }
 
     /// Read all components of the entity
-    pub fn read_all_components(&'a self) -> impl Iterator<Item = ComponentReadGuard<'a>> {
+    pub fn read_all_components(&self) -> impl Iterator<Item = ComponentReadGuard<'_>> {
         self.archetype_reader
             .component_storages
             .iter()
@@ -84,11 +84,9 @@ impl<'a> EntityReadGuard<'a> {
     /// * `component_identifier` - The component identifier
     ///
     pub fn iter_components<T: Component + StaticComponent>(
-        &'a self,
-    ) -> impl Iterator<Item = TypedComponentReadGuard<'a, T>> {
-        let component_identifier = T::get_component_name();
-
-        self.iter_components_from_type_identifier(&component_identifier)
+        &self,
+    ) -> impl Iterator<Item = TypedComponentReadGuard<'_, T>> {
+        self.iter_components_from_type_identifier(T::get_component_name())
             .into_iter()
             .map(|guard| guard.try_into())
             .filter_map(|guard| guard.ok())
@@ -100,9 +98,9 @@ impl<'a> EntityReadGuard<'a> {
     /// * `component_identifier` - The component identifier
     ///
     pub fn iter_components_from_type_identifier(
-        &'a self,
+        &self,
         component_identifier: &str,
-    ) -> Box<dyn Iterator<Item = ComponentReadGuard<'a>> + 'a> {
+    ) -> Box<dyn Iterator<Item = ComponentReadGuard<'_>> + '_> {
         match self
             .archetype_reader
             .get_storage_from_type(component_identifier)
@@ -127,8 +125,8 @@ impl<'a> EntityReadGuard<'a> {
 
     /// Read a single component with a given type
     pub fn read_single_component<T: Component + StaticComponent>(
-        &'a self,
-    ) -> Option<TypedComponentReadGuard<'a, T>> {
+        &self,
+    ) -> Option<TypedComponentReadGuard<'_, T>> {
         self.iter_components().next()
     }
 }
@@ -224,11 +222,9 @@ impl<'a> EntityWriteGuard<'a> {
     /// * `component_identifier` - The component identifier
     ///
     pub fn iter_components<T: Component + StaticComponent>(
-        &'a self,
-    ) -> impl Iterator<Item = TypedComponentReadGuard<'a, T>> {
-        let component_identifier = T::get_component_name();
-
-        self.iter_components_from_type_identifier(&component_identifier)
+        &self,
+    ) -> impl Iterator<Item = TypedComponentReadGuard<'_, T>> {
+        self.iter_components_from_type_identifier(T::get_component_name())
             .into_iter()
             .map(|guard| guard.try_into())
             .filter_map(|guard| guard.ok())
@@ -240,9 +236,9 @@ impl<'a> EntityWriteGuard<'a> {
     /// * `component_identifier` - The component identifier
     ///
     pub fn iter_components_from_type_identifier(
-        &'a self,
+        &self,
         component_identifier: &str,
-    ) -> Box<dyn Iterator<Item = ComponentReadGuard<'a>> + 'a> {
+    ) -> Box<dyn Iterator<Item = ComponentReadGuard<'_>> + '_> {
         match self
             .archetype_reader
             .get_storage_from_type(component_identifier)
@@ -267,8 +263,8 @@ impl<'a> EntityWriteGuard<'a> {
 
     /// Read a single component with a given type
     pub fn read_single_component<T: Component + StaticComponent>(
-        &'a self,
-    ) -> Option<TypedComponentReadGuard<'a, T>> {
+        &self,
+    ) -> Option<TypedComponentReadGuard<'_, T>> {
         self.iter_components().next()
     }
 
@@ -278,11 +274,9 @@ impl<'a> EntityWriteGuard<'a> {
     /// * `component_identifier` - The component identifier
     ///
     pub fn iter_components_mut<T: Component + StaticComponent>(
-        &'a self,
-    ) -> impl Iterator<Item = TypedComponentWriteGuard<'a, T>> {
-        let component_identifier = T::get_component_name();
-
-        self.iter_components_from_type_identifier_mut(&component_identifier)
+        &self,
+    ) -> impl Iterator<Item = TypedComponentWriteGuard<'_, T>> {
+        self.iter_components_from_type_identifier_mut(T::get_component_name())
             .into_iter()
             .map(|guard| guard.try_into())
             .filter_map(|guard| guard.ok())
@@ -294,9 +288,9 @@ impl<'a> EntityWriteGuard<'a> {
     /// * `component_identifier` - The component identifier
     ///
     pub fn iter_components_from_type_identifier_mut(
-        &'a self,
+        &self,
         component_identifier: &str,
-    ) -> Box<dyn Iterator<Item = ComponentWriteGuard<'a>> + 'a> {
+    ) -> Box<dyn Iterator<Item = ComponentWriteGuard<'_>> + '_> {
         match self
             .archetype_reader
             .get_storage_from_type(component_identifier)
@@ -321,8 +315,8 @@ impl<'a> EntityWriteGuard<'a> {
 
     /// Write a single component with a given type
     pub fn write_single_component<T: Component + StaticComponent>(
-        &'a self,
-    ) -> Option<TypedComponentWriteGuard<'a, T>> {
+        &self,
+    ) -> Option<TypedComponentWriteGuard<'_, T>> {
         self.iter_components_mut().next()
     }
 }
