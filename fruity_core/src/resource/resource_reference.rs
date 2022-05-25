@@ -221,7 +221,7 @@ impl<T: Resource + ?Sized> ResourceReference<T> {
     pub fn read(&self) -> ResourceReadGuard<T> {
         let inner_guard = self.resource.read().unwrap();
 
-        // Safe cause the write guard contains an arc to the referenced resource so it will
+        // Safe cause the resource guard contains an arc to the referenced resource so it will
         // not be released until the guard is released
         let inner_guard = unsafe {
             std::mem::transmute::<RwLockReadGuard<Box<T>>, RwLockReadGuard<'static, Box<T>>>(
@@ -239,7 +239,7 @@ impl<T: Resource + ?Sized> ResourceReference<T> {
     pub fn write(&self) -> ResourceWriteGuard<T> {
         let inner_guard = self.resource.write().unwrap();
 
-        // Safe cause the write guard contains an arc to the referenced resource so it will
+        // Safe cause the resource guard contains an arc to the referenced resource so it will
         // not be released until the guard is released
         let inner_guard = unsafe {
             std::mem::transmute::<RwLockWriteGuard<Box<T>>, RwLockWriteGuard<'static, Box<T>>>(
