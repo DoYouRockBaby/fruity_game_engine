@@ -1,4 +1,5 @@
 use crate::entity::archetype::Archetype;
+use crate::entity::archetype::ArchetypeArcRwLock;
 use crate::entity::entity_query::serialized::params::With;
 use crate::entity::entity_query::serialized::params::WithEnabled;
 use crate::entity::entity_query::serialized::params::WithEntity;
@@ -31,8 +32,8 @@ pub trait SerializedQueryParam: FruityAny {
 }
 
 #[derive(FruityAny)]
-pub struct SerializedQuery {
-    pub archetypes: Arc<RwLock<Vec<Arc<Archetype>>>>,
+pub(crate) struct SerializedQuery {
+    pub archetypes: Arc<RwLock<Vec<ArchetypeArcRwLock>>>,
     pub params: Vec<Box<dyn SerializedQueryParam>>,
 }
 
@@ -89,22 +90,18 @@ impl SerializedQuery {
 
     pub fn for_each(&self, callback: impl Fn(&[Serialized]) + Send + Sync) {
         let archetypes = self.archetypes.read().unwrap();
-        let archetypes = unsafe {
-            std::mem::transmute::<&Vec<Arc<Archetype>>, &Vec<Arc<Archetype>>>(&archetypes)
-        };
+        let mut archetype_iter: Box<dyn Iterator<Item = &ArchetypeArcRwLock>> =
+            Box::new(archetypes.iter());
 
-        let mut archetype_iter: Box<dyn Iterator<Item = Arc<Archetype>>> =
-            Box::new(archetypes.iter().map(|archetype| archetype.clone()));
         for param in self.params.iter() {
-            archetype_iter =
-                Box::new(archetype_iter.filter(|archetype| param.filter_archetype(archetype)));
+            archetype_iter = Box::new(
+                archetype_iter
+                    .filter(|archetype| param.filter_archetype(&archetype.read().unwrap())),
+            );
         }
 
         let entities = archetype_iter
-            .map(|archetype| {
-                let archetype = archetype.clone();
-                archetype.iter()
-            })
+            .map(|archetype| archetype.iter())
             .flatten()
             .collect::<Vec<_>>();
 

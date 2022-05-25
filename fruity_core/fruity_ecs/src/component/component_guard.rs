@@ -1,14 +1,12 @@
 use crate::component::component::Component;
 use crate::component::component::StaticComponent;
-use crate::entity::archetype::component_collection::ComponentCollection;
+use crate::entity::archetype::Archetype;
 use std::fmt::Debug;
 use std::fmt::Formatter;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::rc::Rc;
-use std::sync::Arc;
-use std::sync::RwLock;
 use std::sync::RwLockReadGuard;
 use std::sync::RwLockWriteGuard;
 
@@ -27,7 +25,8 @@ pub(crate) enum InternalReadGuard<'a> {
 #[derive(Clone)]
 pub struct ComponentReadGuard<'a> {
     pub(crate) _guard: InternalReadGuard<'a>,
-    pub(crate) collection: Arc<RwLock<Box<dyn ComponentCollection>>>,
+    pub(crate) archetype_reader: Rc<RwLockReadGuard<'a, Archetype>>,
+    pub(crate) component_identifier: String,
     pub(crate) component_index: usize,
 }
 
@@ -41,10 +40,13 @@ impl<'a> Deref for ComponentReadGuard<'a> {
     type Target = dyn Component;
 
     fn deref(&self) -> &Self::Target {
-        let collection_reader = self.collection.read().unwrap();
-        let component = collection_reader.get(&self.component_index).unwrap();
+        let storage = self
+            .archetype_reader
+            .component_storages
+            .get(&self.component_identifier)
+            .unwrap();
 
-        unsafe { std::mem::transmute::<&Self::Target, &Self::Target>(component) }
+        storage.collection.get(&self.component_index).unwrap()
     }
 }
 
@@ -73,7 +75,8 @@ impl<'a, T: Component + StaticComponent> TryInto<TypedComponentReadGuard<'a, T>>
 #[derive(Clone)]
 pub struct ComponentWriteGuard<'a> {
     pub(crate) _guard: Rc<RwLockWriteGuard<'a, ()>>,
-    pub(crate) collection: Arc<RwLock<Box<dyn ComponentCollection>>>,
+    pub(crate) archetype_reader: Rc<RwLockReadGuard<'a, Archetype>>,
+    pub(crate) component_identifier: String,
     pub(crate) component_index: usize,
 }
 
@@ -87,18 +90,27 @@ impl<'a> Deref for ComponentWriteGuard<'a> {
     type Target = dyn Component;
 
     fn deref(&self) -> &Self::Target {
-        let collection_reader = self.collection.read().unwrap();
-        let component = collection_reader.get(&self.component_index).unwrap();
+        let storage = self
+            .archetype_reader
+            .component_storages
+            .get(&self.component_identifier)
+            .unwrap();
 
-        unsafe { std::mem::transmute::<&Self::Target, &Self::Target>(component) }
+        storage.collection.get(&self.component_index).unwrap()
     }
 }
 
 impl<'a> DerefMut for ComponentWriteGuard<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        let collection_reader = self.collection.read().unwrap();
-        let component = collection_reader.get(&self.component_index).unwrap();
+        let storage = self
+            .archetype_reader
+            .component_storages
+            .get(&self.component_identifier)
+            .unwrap();
 
+        let component = storage.collection.get(&self.component_index).unwrap();
+
+        // Safe cause it is protected by self._guard
         #[allow(mutable_transmutes)]
         unsafe {
             std::mem::transmute::<&dyn Component, &mut dyn Component>(component)

@@ -2,7 +2,6 @@ use crate::entity::archetype::Archetype;
 use crate::entity::entity_query::QueryParam;
 use crate::entity::entity_query::RequestedEntityGuard;
 use crate::entity::entity_reference::EntityReference;
-use std::sync::Arc;
 
 macro_rules! tuple_impl_generics {
     ($t1:ident, $($tn:ident),+) => {
@@ -17,12 +16,9 @@ macro_rules! tuple_impl_generics {
                 $ ($tn::Item),*
             );
 
-            fn filter_archetype(
-                iter: Box<dyn Iterator<Item = Arc<Archetype>>>,
-            ) -> Box<dyn Iterator<Item = Arc<Archetype>>> {
-                Box::new(<($ ($tn),*)>::filter_archetype($t1::filter_archetype(
-                    iter,
-                )))
+
+            fn filter_archetype(archetype: &Archetype) -> bool {
+                <($ ($tn),*)>::filter_archetype(archetype) && $t1::filter_archetype(archetype)
             }
 
             fn require_read() -> bool {

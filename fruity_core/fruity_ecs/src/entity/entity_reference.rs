@@ -1,5 +1,5 @@
 use crate::component::component_reference::ComponentReference;
-use crate::entity::archetype::Archetype;
+use crate::entity::archetype::ArchetypeArcRwLock;
 use crate::entity::entity_guard::EntityReadGuard;
 use crate::entity::entity_guard::EntityWriteGuard;
 use fruity_any::*;
@@ -21,39 +21,49 @@ use std::sync::RwLockWriteGuard;
 #[derive(Clone, FruityAny)]
 pub struct EntityReference {
     pub(crate) entity_id: usize,
-    pub(crate) archetype: Arc<Archetype>,
+    pub(crate) archetype: ArchetypeArcRwLock,
 }
 
 impl EntityReference {
     /// Get a read access to the entity
     pub fn read(&self) -> EntityReadGuard {
-        let lock_array = self.archetype.lock_array.read().unwrap();
-        let guard = lock_array.get(self.entity_id).unwrap().read().unwrap();
+        let archetype_reader = self.archetype.read().unwrap();
+        let guard = archetype_reader
+            .lock_array
+            .get(self.entity_id)
+            .unwrap()
+            .read()
+            .unwrap();
 
         // TODO: Find a way to remove it
         let guard =
             unsafe { std::mem::transmute::<RwLockReadGuard<()>, RwLockReadGuard<()>>(guard) };
 
         EntityReadGuard {
-            _guard: Rc::new(guard),
             entity_id: self.entity_id,
-            archetype: self.archetype.clone(),
+            _guard: Rc::new(guard),
+            archetype_reader: Rc::new(archetype_reader),
         }
     }
 
     /// Get a write access to the entity
     pub fn write(&self) -> EntityWriteGuard {
-        let lock_array = self.archetype.lock_array.read().unwrap();
-        let guard = lock_array.get(self.entity_id).unwrap().write().unwrap();
+        let archetype_reader = self.archetype.read().unwrap();
+        let guard = archetype_reader
+            .lock_array
+            .get(self.entity_id)
+            .unwrap()
+            .write()
+            .unwrap();
 
         // TODO: Find a way to remove it
         let guard =
             unsafe { std::mem::transmute::<RwLockWriteGuard<()>, RwLockWriteGuard<()>>(guard) };
 
         EntityWriteGuard {
-            _guard: Rc::new(guard),
             entity_id: self.entity_id,
-            archetype: self.archetype.clone(),
+            _guard: Rc::new(guard),
+            archetype_reader: Rc::new(archetype_reader),
         }
     }
 

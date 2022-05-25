@@ -5,7 +5,6 @@ use crate::component::component_guard::ComponentWriteGuard;
 use crate::component::component_guard::InternalReadGuard;
 use crate::component::component_guard::TypedComponentReadGuard;
 use crate::component::component_guard::TypedComponentWriteGuard;
-use crate::entity::archetype::component_collection::ComponentCollection;
 use crate::entity::entity_guard::EntityReadGuard;
 use crate::entity::entity_guard::EntityWriteGuard;
 use crate::entity::entity_reference::EntityReference;
@@ -21,14 +20,14 @@ use fruity_core::serialize::serialized::Serialized;
 use std::any::TypeId;
 use std::fmt::Debug;
 use std::marker::PhantomData;
+use std::rc::Rc;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 /// A reference over an entity stored into an Archetype
 #[derive(Clone, FruityAny)]
 pub struct ComponentReference {
     pub(crate) entity_reference: EntityReference,
-    pub(crate) collection: Arc<RwLock<Box<dyn ComponentCollection>>>,
+    pub(crate) component_identifier: String,
     pub(crate) component_index: usize,
 }
 
@@ -37,7 +36,8 @@ impl ComponentReference {
     pub fn read(&self) -> ComponentReadGuard<'_> {
         ComponentReadGuard {
             _guard: InternalReadGuard::Read(self.entity_reference.read()._guard.clone()),
-            collection: self.collection.clone(),
+            archetype_reader: Rc::new(self.entity_reference.archetype.read().unwrap()),
+            component_identifier: self.component_identifier.clone(),
             component_index: self.component_index,
         }
     }
@@ -46,7 +46,8 @@ impl ComponentReference {
     pub fn write(&self) -> ComponentWriteGuard<'_> {
         ComponentWriteGuard {
             _guard: self.entity_reference.write()._guard.clone(),
-            collection: self.collection.clone(),
+            archetype_reader: Rc::new(self.entity_reference.archetype.read().unwrap()),
+            component_identifier: self.component_identifier.clone(),
             component_index: self.component_index,
         }
     }

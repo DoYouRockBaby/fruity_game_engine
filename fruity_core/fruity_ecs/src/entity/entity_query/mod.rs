@@ -1,4 +1,5 @@
 use crate::entity::archetype::Archetype;
+use crate::entity::archetype::ArchetypeArcRwLock;
 use crate::entity::entity_guard::EntityReadGuard;
 use crate::entity::entity_guard::EntityWriteGuard;
 use crate::entity::entity_reference::EntityReference;
@@ -40,9 +41,7 @@ pub trait QueryParam<'a> {
     type Item: Clone;
 
     /// A filter over the archetypes
-    fn filter_archetype(
-        iter: Box<dyn Iterator<Item = Arc<Archetype>>>,
-    ) -> Box<dyn Iterator<Item = Arc<Archetype>>>;
+    fn filter_archetype(archetype: &Archetype) -> bool;
 
     /// Does this require a read guard over the reference
     fn require_read() -> bool;
@@ -59,7 +58,7 @@ pub trait QueryParam<'a> {
 
 /// A query over entities
 pub struct Query<T> {
-    pub(crate) archetypes: Arc<RwLock<Vec<Arc<Archetype>>>>,
+    pub(crate) archetypes: Arc<RwLock<Vec<ArchetypeArcRwLock>>>,
     pub(crate) _param_phantom: PhantomData<T>,
 }
 
@@ -72,26 +71,22 @@ impl<T> Clone for Query<T> {
     }
 }
 
+// Safe cause all non phantom fields implements ['Sync']
 unsafe impl<T> Sync for Query<T> {}
+
+// Safe cause all non phantom fields implements ['Send']
 unsafe impl<T> Send for Query<T> {}
 
 impl<'a, T: QueryParam<'a> + 'static> Query<T> {
     /// Call a function for every entities of an query
     pub fn for_each(&self, callback: impl Fn(T::Item) + Send + Sync) {
         let archetypes = self.archetypes.read().unwrap();
-        let archetypes = unsafe {
-            std::mem::transmute::<&Vec<Arc<Archetype>>, &Vec<Arc<Archetype>>>(&archetypes)
-        };
-
-        let archetype_iter = T::filter_archetype(Box::new(
-            archetypes.iter().map(|archetype| archetype.clone()),
-        ));
+        let archetype_iter = archetypes
+            .iter()
+            .filter(|archetype| T::filter_archetype(&archetype.read().unwrap()));
 
         let entities = archetype_iter
-            .map(|archetype| {
-                let archetype = archetype.clone();
-                archetype.iter()
-            })
+            .map(|archetype| archetype.iter())
             .flatten()
             .collect::<Vec<_>>();
 

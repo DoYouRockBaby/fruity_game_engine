@@ -5,7 +5,6 @@ use crate::entity::entity_query::QueryParam;
 use crate::entity::entity_query::RequestedEntityGuard;
 use crate::entity::entity_reference::EntityReference;
 use std::marker::PhantomData;
-use std::sync::Arc;
 
 /// Exclude a component from a query
 pub struct Without<T: Component + StaticComponent + 'static> {
@@ -15,10 +14,8 @@ pub struct Without<T: Component + StaticComponent + 'static> {
 impl<'a, T: Component + StaticComponent + 'static> QueryParam<'a> for Without<T> {
     type Item = ();
 
-    fn filter_archetype(
-        iter: Box<dyn Iterator<Item = Arc<Archetype>>>,
-    ) -> Box<dyn Iterator<Item = Arc<Archetype>>> {
-        Box::new(iter.filter(|archetype| !archetype.identifier.contains(&T::get_component_name())))
+    fn filter_archetype(archetype: &Archetype) -> bool {
+        !archetype.identifier.contains(&T::get_component_name())
     }
 
     fn require_read() -> bool {
