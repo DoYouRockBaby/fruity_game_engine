@@ -7,12 +7,12 @@ use crate::entity::entity::get_type_identifier_by_any;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
 use crate::entity::entity_reference::EntityReference;
+use fruity_core::RwLock;
 use itertools::Itertools;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 /// This store all the information that are common accross all entities
 pub mod entity_properties;
@@ -140,7 +140,7 @@ impl Archetype {
         let name = self.name_array.remove(index);
         let enabled = self.enabled_array.remove(index);
         let lock = self.lock_array.remove(index);
-        let _write_guard = lock.write().unwrap();
+        let _write_guard = lock.write();
 
         // Remove the entity components from the storage
         let components = {
@@ -203,7 +203,7 @@ impl ArchetypeArcRwLock {
         entity_id: usize,
         component_identifier: &str,
     ) -> Vec<ComponentReference> {
-        let archetype_reader = self.0.read().unwrap();
+        let archetype_reader = self.0.read();
 
         archetype_reader
             .component_storages
@@ -229,12 +229,12 @@ impl ArchetypeArcRwLock {
 
     /// Get an iterator over all the components of all the entities
     pub fn iter(&self) -> impl Iterator<Item = EntityReference> + '_ {
-        let archetype_len = self.0.read().unwrap().len();
+        let archetype_len = self.0.read().len();
 
         (0..archetype_len)
             .filter(|entity_id| {
                 // TODO: Try yo move it outside
-                let archetype_reader = self.0.read().unwrap();
+                let archetype_reader = self.0.read();
                 *archetype_reader.enabled_array.get(*entity_id).unwrap()
             })
             .map(move |entity_id| EntityReference {
@@ -249,7 +249,7 @@ impl ArchetypeArcRwLock {
     /// * `entity_id` - The entity id
     ///
     pub fn get_entity_components(&self, entity_id: usize) -> Vec<ComponentReference> {
-        let archetype_reader = self.0.read().unwrap();
+        let archetype_reader = self.0.read();
 
         archetype_reader
             .component_storages

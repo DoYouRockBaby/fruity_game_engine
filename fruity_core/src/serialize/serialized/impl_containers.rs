@@ -7,9 +7,9 @@ use crate::introspect::MethodInfo;
 use crate::introspect::SetterCaller;
 use crate::serialize::serialized::SerializableObject;
 use crate::serialize::serialized::Serialized;
+use crate::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 impl<T: IntrospectObject + ?Sized> FruityTryFrom<Serialized> for RwLock<Box<T>> {
     type Error = String;

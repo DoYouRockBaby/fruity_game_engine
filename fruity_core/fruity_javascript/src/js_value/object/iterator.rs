@@ -2,10 +2,10 @@ use crate::js_value::utils::get_intern_value_from_v8_object;
 use crate::serialize::serialize::serialize_v8;
 use crate::JsObject;
 use fruity_core::serialize::serialized::Serialized;
+use fruity_core::RwLock;
 use rusty_v8 as v8;
 use std::convert::TryFrom;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 impl JsObject {
     pub fn from_iterator(
@@ -32,7 +32,7 @@ fn iterator_next_callback(
 
     if let Some(iterator) = intern_value {
         // Call the function
-        let mut iterator = iterator.write().unwrap();
+        let mut iterator = iterator.write();
         let result = iterator.next();
 
         // Return the result

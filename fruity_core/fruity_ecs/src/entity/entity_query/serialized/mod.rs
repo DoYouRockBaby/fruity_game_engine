@@ -18,10 +18,10 @@ use fruity_core::serialize::serialized::SerializableObject;
 use fruity_core::serialize::serialized::Serialized;
 use fruity_core::utils::introspect::cast_introspect_mut;
 use fruity_core::utils::introspect::ArgumentCaster;
+use fruity_core::RwLock;
 use itertools::Itertools;
 use std::fmt::Debug;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 pub(crate) mod params;
 
@@ -89,14 +89,13 @@ impl SerializedQuery {
     }
 
     pub fn for_each(&self, callback: impl Fn(&[Serialized]) + Send + Sync) {
-        let archetypes = self.archetypes.read().unwrap();
+        let archetypes = self.archetypes.read();
         let mut archetype_iter: Box<dyn Iterator<Item = &ArchetypeArcRwLock>> =
             Box::new(archetypes.iter());
 
         for param in self.params.iter() {
             archetype_iter = Box::new(
-                archetype_iter
-                    .filter(|archetype| param.filter_archetype(&archetype.read().unwrap())),
+                archetype_iter.filter(|archetype| param.filter_archetype(&archetype.read())),
             );
         }
 

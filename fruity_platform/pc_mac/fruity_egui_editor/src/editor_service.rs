@@ -179,7 +179,7 @@ impl EditorService {
             .update_buffers(&device, &queue, &paint_jobs, &screen_descriptor);
 
         // Record all render passes.
-        let mut encoder = encoder.write().unwrap();
+        let mut encoder = encoder.write();
         self.state
             .egui_rpass
             .execute(

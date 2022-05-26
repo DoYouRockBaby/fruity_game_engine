@@ -12,13 +12,13 @@ use crate::serialize::serialized::SerializableObject;
 use crate::serialize::serialized::Serialized;
 use crate::utils::introspect::ArgumentCaster;
 use crate::ResourceContainer;
+use crate::RwLock;
+use crate::RwLockReadGuard;
+use crate::RwLockWriteGuard;
 use fruity_any::FruityAny;
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::Arc;
-use std::sync::RwLock;
-use std::sync::RwLockReadGuard;
-use std::sync::RwLockWriteGuard;
 
 /// A reference over an any resource that is supposed to be used by components
 #[derive(Debug, Clone, FruityAny)]
@@ -219,7 +219,7 @@ impl<T: Resource + ?Sized> ResourceReference<T> {
 
     /// Create a read guard over the resource
     pub fn read(&self) -> ResourceReadGuard<T> {
-        let inner_guard = self.resource.read().unwrap();
+        let inner_guard = self.resource.read();
 
         // Safe cause the resource guard contains an arc to the referenced resource so it will
         // not be released until the guard is released
@@ -237,7 +237,7 @@ impl<T: Resource + ?Sized> ResourceReference<T> {
 
     /// Create a write guard over the resource
     pub fn write(&self) -> ResourceWriteGuard<T> {
-        let inner_guard = self.resource.write().unwrap();
+        let inner_guard = self.resource.write();
 
         // Safe cause the resource guard contains an arc to the referenced resource so it will
         // not be released until the guard is released

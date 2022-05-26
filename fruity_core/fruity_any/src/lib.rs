@@ -7,10 +7,10 @@
 //! The difference with the classic Any is that this Any needs to implement converter
 
 pub use fruity_any_derive::FruityAny;
+use parking_lot::Mutex;
+use parking_lot::RwLock;
 use std::any::Any;
 use std::sync::Arc;
-use std::sync::Mutex;
-use std::sync::RwLock;
 
 /// The any trait
 pub trait FruityAny: Any + Send + Sync {

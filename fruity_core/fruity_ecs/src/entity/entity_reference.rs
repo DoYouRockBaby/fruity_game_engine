@@ -11,11 +11,11 @@ use fruity_core::introspect::MethodInfo;
 use fruity_core::serialize::serialized::SerializableObject;
 use fruity_core::serialize::serialized::Serialized;
 use fruity_core::utils::introspect::cast_introspect_ref;
+use fruity_core::RwLockReadGuard;
+use fruity_core::RwLockWriteGuard;
 use std::fmt::Debug;
 use std::rc::Rc;
 use std::sync::Arc;
-use std::sync::RwLockReadGuard;
-use std::sync::RwLockWriteGuard;
 
 /// A reference over an entity stored into an Archetype
 #[derive(Clone, FruityAny)]
@@ -27,13 +27,12 @@ pub struct EntityReference {
 impl EntityReference {
     /// Get a read access to the entity
     pub fn read(&self) -> EntityReadGuard {
-        let archetype_reader = self.archetype.read().unwrap();
+        let archetype_reader = self.archetype.read();
         let guard = archetype_reader
             .lock_array
             .get(self.entity_id)
             .unwrap()
-            .read()
-            .unwrap();
+            .read();
 
         // TODO: Find a way to remove it
         let guard =
@@ -48,13 +47,12 @@ impl EntityReference {
 
     /// Get a write access to the entity
     pub fn write(&self) -> EntityWriteGuard {
-        let archetype_reader = self.archetype.read().unwrap();
+        let archetype_reader = self.archetype.read();
         let guard = archetype_reader
             .lock_array
             .get(self.entity_id)
             .unwrap()
-            .write()
-            .unwrap();
+            .write();
 
         // TODO: Find a way to remove it
         let guard =

@@ -7,13 +7,13 @@
 
 use crate::serialize::serialized::Serialized;
 use crate::ResourceContainer;
+use crate::RwLock;
 use fruity_any::FruityAny;
 use std::any::Any;
 use std::fmt::Debug;
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 #[derive(Debug, Clone)]
 /// Informations about a field of an introspect object
@@ -275,12 +275,12 @@ impl<T: IntrospectObject + ?Sized> IntrospectObject for Arc<T> {
 
 impl<T: IntrospectObject> IntrospectObject for RwLock<T> {
     fn get_class_name(&self) -> String {
-        let reader = self.read().unwrap();
+        let reader = self.read();
         format!("RwLock<{}>", reader.get_class_name())
     }
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
-        let reader = self.read().unwrap();
+        let reader = self.read();
         reader
             .get_field_infos()
             .into_iter()
@@ -289,7 +289,7 @@ impl<T: IntrospectObject> IntrospectObject for RwLock<T> {
                 serializable: field_info.serializable,
                 getter: Arc::new(move |this| {
                     let this = this.downcast_ref::<RwLock<T>>().unwrap();
-                    let reader = this.read().unwrap();
+                    let reader = this.read();
 
                     (field_info.getter)(reader.deref())
                 }),
@@ -297,14 +297,14 @@ impl<T: IntrospectObject> IntrospectObject for RwLock<T> {
                     SetterCaller::Const(call) => {
                         SetterCaller::Const(Arc::new(move |this, args| {
                             let this = this.downcast_ref::<RwLock<T>>().unwrap();
-                            let reader = this.read().unwrap();
+                            let reader = this.read();
 
                             call(reader.deref(), args)
                         }))
                     }
                     SetterCaller::Mut(call) => SetterCaller::Const(Arc::new(move |this, args| {
                         let this = this.downcast_ref::<RwLock<T>>().unwrap();
-                        let mut writer = this.write().unwrap();
+                        let mut writer = this.write();
 
                         call(writer.deref_mut(), args)
                     })),
@@ -315,7 +315,7 @@ impl<T: IntrospectObject> IntrospectObject for RwLock<T> {
     }
 
     fn get_method_infos(&self) -> Vec<MethodInfo> {
-        let reader = self.read().unwrap();
+        let reader = self.read();
         reader
             .get_method_infos()
             .into_iter()
@@ -325,14 +325,14 @@ impl<T: IntrospectObject> IntrospectObject for RwLock<T> {
                     MethodCaller::Const(call) => {
                         MethodCaller::Const(Arc::new(move |this, args| {
                             let this = this.downcast_ref::<RwLock<T>>().unwrap();
-                            let reader = this.read().unwrap();
+                            let reader = this.read();
 
                             call(reader.deref(), args)
                         }))
                     }
                     MethodCaller::Mut(call) => MethodCaller::Const(Arc::new(move |this, args| {
                         let this = this.downcast_ref::<RwLock<T>>().unwrap();
-                        let mut writer = this.write().unwrap();
+                        let mut writer = this.write();
 
                         call(writer.deref_mut(), args)
                     })),

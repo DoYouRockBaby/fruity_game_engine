@@ -1,6 +1,7 @@
 use crate::ui_element::DrawContext;
 use comp_state::CloneState;
 use fruity_core::resource::resource_reference::ResourceReference;
+use fruity_core::RwLock;
 use fruity_editor::hooks::topo;
 use fruity_editor::hooks::use_global;
 use fruity_editor::hooks::use_memo;
@@ -14,7 +15,6 @@ use fruity_graphic::resources::texture_resource::TextureResource;
 use fruity_wgpu_graphic::graphic_service::WgpuGraphicService;
 use fruity_wgpu_graphic::resources::texture_resource::WgpuTextureResource;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 #[topo::nested]
 pub fn draw_scene(ui: &mut egui::Ui, ctx: &mut DrawContext) {

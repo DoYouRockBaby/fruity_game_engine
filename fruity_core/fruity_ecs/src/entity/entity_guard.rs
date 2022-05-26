@@ -9,8 +9,8 @@ use crate::entity::archetype::Archetype;
 use crate::entity::entity::EntityId;
 use std::fmt::Debug;
 use std::rc::Rc;
-use std::sync::RwLockReadGuard;
-use std::sync::RwLockWriteGuard;
+use fruity_core::RwLockReadGuard;
+use fruity_core::RwLockWriteGuard;
 
 /// RAII structure used to release the shared read access of a lock when dropped.
 ///

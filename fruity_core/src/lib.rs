@@ -15,6 +15,8 @@ use crate::resource::resource_container::ResourceContainer;
 use crate::resource::resource_reference::AnyResourceReference;
 use std::sync::Arc;
 
+pub use parking_lot::*;
+
 #[macro_use]
 extern crate lazy_static;
 

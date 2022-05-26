@@ -36,7 +36,7 @@ impl ComponentReference {
     pub fn read(&self) -> ComponentReadGuard<'_> {
         ComponentReadGuard {
             _guard: InternalReadGuard::Read(self.entity_reference.read()._guard.clone()),
-            archetype_reader: Rc::new(self.entity_reference.archetype.read().unwrap()),
+            archetype_reader: Rc::new(self.entity_reference.archetype.read()),
             component_identifier: self.component_identifier.clone(),
             component_index: self.component_index,
         }
@@ -46,7 +46,7 @@ impl ComponentReference {
     pub fn write(&self) -> ComponentWriteGuard<'_> {
         ComponentWriteGuard {
             _guard: self.entity_reference.write()._guard.clone(),
-            archetype_reader: Rc::new(self.entity_reference.archetype.read().unwrap()),
+            archetype_reader: Rc::new(self.entity_reference.archetype.read()),
             component_identifier: self.component_identifier.clone(),
             component_index: self.component_index,
         }

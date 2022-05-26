@@ -12,6 +12,7 @@ use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::signal::Signal;
 use fruity_core::utils::slice::encode_into_bytes;
+use fruity_core::RwLock;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::graphic_service::MaterialParam;
 use fruity_graphic::math::matrix4::Matrix4;
@@ -34,7 +35,6 @@ use std::fmt::Debug;
 use std::iter;
 use std::ops::Deref;
 use std::sync::Arc;
-use std::sync::RwLock;
 use tokio::runtime::Builder;
 use wgpu::util::DeviceExt;
 use winit::window::Window;
@@ -274,7 +274,7 @@ impl WgpuGraphicService {
             z_index,
         };
 
-        let mut render_instances = self.render_instances.write().unwrap();
+        let mut render_instances = self.render_instances.write();
         if let Some(render_instance) = render_instances.get_mut(&identifier) {
             render_instance.instance_count += 1;
 
@@ -306,9 +306,9 @@ impl WgpuGraphicService {
 
     pub fn update_render_bundles(&self) {
         // We update the bundles only once per frame and not per camera per frame
-        let render_instances_reader = self.render_instances.read().unwrap();
+        let render_instances_reader = self.render_instances.read();
         if render_instances_reader.len() > 0 {
-            let mut render_bundles = self.render_bundles.write().unwrap();
+            let mut render_bundles = self.render_bundles.write();
 
             *render_bundles = render_instances_reader
                 .iter()
@@ -379,7 +379,7 @@ impl WgpuGraphicService {
                 .collect::<Vec<wgpu::RenderBundle>>();
             std::mem::drop(render_instances_reader);
 
-            let mut render_instances = self.render_instances.write().unwrap();
+            let mut render_instances = self.render_instances.write();
             render_instances.clear();
         } else {
         }
@@ -387,7 +387,7 @@ impl WgpuGraphicService {
 
     fn update_camera(&self, view_proj: Matrix4) {
         // Update camera viewproj bind group
-        let mut camera_transform = self.state.camera_transform.write().unwrap();
+        let mut camera_transform = self.state.camera_transform.write();
         *camera_transform = view_proj.clone();
         let camera_uniform = CameraUniform(view_proj.into());
         self.state.queue.write_buffer(
@@ -710,7 +710,7 @@ impl GraphicService for WgpuGraphicService {
 
     fn end_draw(&mut self) {
         let encoder = if let Some(encoder) = self.current_encoder.take() {
-            encoder.into_inner().unwrap()
+            encoder.into_inner()
         } else {
             return;
         };
@@ -724,10 +724,10 @@ impl GraphicService for WgpuGraphicService {
         self.get_queue().submit(std::iter::once(encoder.finish()));
         output.present();
 
-        let mut render_instances = self.render_instances.write().unwrap();
+        let mut render_instances = self.render_instances.write();
         render_instances.clear();
 
-        let mut render_bundles = self.render_bundles.write().unwrap();
+        let mut render_bundles = self.render_bundles.write();
         render_bundles.clear();
     }
 
@@ -742,7 +742,7 @@ impl GraphicService for WgpuGraphicService {
         self.update_camera(view_proj);
 
         let mut encoder = if let Some(encoder) = self.current_encoder.as_ref() {
-            encoder.write().unwrap()
+            encoder.write()
         } else {
             return;
         };
@@ -794,14 +794,14 @@ impl GraphicService for WgpuGraphicService {
         // Render the instances bundles
         self.update_render_bundles();
 
-        let render_bundles = self.render_bundles.read().unwrap();
+        let render_bundles = self.render_bundles.read();
         render_bundles.iter().for_each(move |bundle| {
             render_pass.execute_bundles(iter::once(bundle));
         });
     }
 
     fn get_camera_transform(&self) -> Matrix4 {
-        let camera_transform = self.state.camera_transform.read().unwrap();
+        let camera_transform = self.state.camera_transform.read();
         camera_transform.clone()
     }
 
@@ -929,22 +929,22 @@ impl GraphicService for WgpuGraphicService {
     }
 
     fn get_viewport_offset(&self) -> (u32, u32) {
-        let viewport_offset = self.viewport_offset.read().unwrap();
+        let viewport_offset = self.viewport_offset.read();
         viewport_offset.clone()
     }
 
     fn set_viewport_offset(&self, x: u32, y: u32) {
-        let mut viewport_offset = self.viewport_offset.write().unwrap();
+        let mut viewport_offset = self.viewport_offset.write();
         *viewport_offset = (x, y);
     }
 
     fn get_viewport_size(&self) -> (u32, u32) {
-        let viewport_size = self.viewport_size.read().unwrap();
+        let viewport_size = self.viewport_size.read();
         viewport_size.clone()
     }
 
     fn set_viewport_size(&self, x: u32, y: u32) {
-        let mut viewport_size = self.viewport_size.write().unwrap();
+        let mut viewport_size = self.viewport_size.write();
         *viewport_size = (x, y);
     }
 }

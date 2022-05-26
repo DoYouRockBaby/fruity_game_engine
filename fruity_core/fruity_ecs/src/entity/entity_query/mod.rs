@@ -6,11 +6,11 @@ use crate::entity::entity_reference::EntityReference;
 use crate::EntityService;
 use fruity_core::inject::Injectable;
 use fruity_core::resource::resource_container::ResourceContainer;
+use fruity_core::RwLock;
 use rayon::iter::ParallelBridge;
 use rayon::iter::ParallelIterator;
 use std::marker::PhantomData;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 /// Queries for scripting languages
 pub(crate) mod serialized;
@@ -80,10 +80,10 @@ unsafe impl<T> Send for Query<T> {}
 impl<'a, T: QueryParam<'a> + 'static> Query<T> {
     /// Call a function for every entities of an query
     pub fn for_each(&self, callback: impl Fn(T::Item) + Send + Sync) {
-        let archetypes = self.archetypes.read().unwrap();
+        let archetypes = self.archetypes.read();
         let archetype_iter = archetypes
             .iter()
-            .filter(|archetype| T::filter_archetype(&archetype.read().unwrap()));
+            .filter(|archetype| T::filter_archetype(&archetype.read()));
 
         let entities = archetype_iter
             .map(|archetype| archetype.iter())

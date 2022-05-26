@@ -29,14 +29,14 @@ use fruity_core::serialize::Serialize;
 use fruity_core::signal::Signal;
 use fruity_core::utils::introspect::cast_introspect_ref;
 use fruity_core::utils::introspect::ArgumentCaster;
+use fruity_core::Mutex;
+use fruity_core::RwLock;
 use maplit::hashmap;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fs::File;
 use std::ops::Deref;
 use std::sync::Arc;
-use std::sync::Mutex;
-use std::sync::RwLock;
 
 /// An error over entity deletion
 pub enum RemoveEntityError {
@@ -85,18 +85,18 @@ impl EntityService {
     /// * `component_identifier` - The component identifiers
     ///
     pub fn get_entity(&self, entity_id: EntityId) -> Option<EntityReference> {
-        let index_map = self.index_map.read().unwrap();
+        let index_map = self.index_map.read();
         index_map
             .get(&entity_id)
             .map(|(archetype_index, entity_id)| {
-                let archetypes = self.archetypes.read().unwrap();
+                let archetypes = self.archetypes.read();
                 archetypes[*archetype_index].clone().get(*entity_id)
             })
     }
 
     /// Iterate over all entities
     pub fn iter_all_entities(&self) -> impl Iterator<Item = EntityReference> + '_ {
-        let archetypes = self.archetypes.read().unwrap();
+        let archetypes = self.archetypes.read();
         let archetypes = unsafe {
             std::mem::transmute::<&Vec<ArchetypeArcRwLock>, &Vec<ArchetypeArcRwLock>>(&archetypes)
         };
@@ -131,7 +131,7 @@ impl EntityService {
     ///
     pub fn create(&self, name: &str, enabled: bool, components: Vec<AnyComponent>) -> EntityId {
         let entity_id = {
-            let mut id_incrementer = self.id_incrementer.lock().unwrap();
+            let mut id_incrementer = self.id_incrementer.lock();
             *id_incrementer += 1;
             *id_incrementer
         };
@@ -157,7 +157,7 @@ impl EntityService {
         mut components: Vec<AnyComponent>,
     ) -> EntityId {
         let entity_id = {
-            let mut id_incrementer = self.id_incrementer.lock().unwrap();
+            let mut id_incrementer = self.id_incrementer.lock();
             *id_incrementer = u64::max(entity_id + 1, *id_incrementer);
             entity_id
         };
@@ -167,16 +167,13 @@ impl EntityService {
 
         let indexes = match self.archetype_by_identifier(entity_identifier) {
             Some((archetype_index, archetype)) => {
-                let archetype_entity_id = archetype.read().unwrap().len();
-                archetype
-                    .write()
-                    .unwrap()
-                    .add(entity_id, name, enabled, components);
+                let archetype_entity_id = archetype.read().len();
+                archetype.write().add(entity_id, name, enabled, components);
 
                 (archetype_index, archetype_entity_id)
             }
             None => {
-                let mut archetypes = self.archetypes.write().unwrap();
+                let mut archetypes = self.archetypes.write();
                 let archetype_index = archetypes.len();
                 let archetype = Archetype::new(entity_id, name, enabled, components);
                 archetypes.push(ArchetypeArcRwLock::new(archetype));
@@ -184,7 +181,7 @@ impl EntityService {
             }
         };
 
-        let mut index_map = self.index_map.write().unwrap();
+        let mut index_map = self.index_map.write();
         index_map.insert(entity_id, indexes);
 
         // self.on_entity_created.notify(self.get(entity_id).unwrap());
@@ -198,16 +195,16 @@ impl EntityService {
     ///
     pub fn remove(&self, entity_id: EntityId) -> Result<(), RemoveEntityError> {
         let indexes = {
-            let mut index_map = self.index_map.write().unwrap();
+            let mut index_map = self.index_map.write();
             index_map.remove(&entity_id)
         };
 
         if let Some(indexes) = indexes {
             // Delete the entity
             {
-                let archetypes = self.archetypes.read().unwrap();
+                let archetypes = self.archetypes.read();
                 let archetype = archetypes.get(indexes.0).unwrap();
-                archetype.write().unwrap().remove(indexes.1);
+                archetype.write().remove(indexes.1);
             }
 
             // Propagate the deleted signal
@@ -231,13 +228,13 @@ impl EntityService {
         mut components: Vec<AnyComponent>,
     ) -> Result<(), RemoveEntityError> {
         let indexes = {
-            let mut index_map = self.index_map.write().unwrap();
+            let mut index_map = self.index_map.write();
             index_map.remove(&entity_id)
         };
 
         if let Some(indexes) = indexes {
             let (old_entity, mut old_components) = {
-                let archetypes = self.archetypes.read().unwrap();
+                let archetypes = self.archetypes.read();
                 let archetypes = unsafe {
                     std::mem::transmute::<&Vec<ArchetypeArcRwLock>, &Vec<ArchetypeArcRwLock>>(
                         &archetypes,
@@ -245,7 +242,7 @@ impl EntityService {
                 };
 
                 let archetype = archetypes.get(indexes.0).unwrap();
-                archetype.write().unwrap().remove(indexes.1)
+                archetype.write().remove(indexes.1)
             };
 
             old_components.append(&mut components);
@@ -275,13 +272,13 @@ impl EntityService {
         component_index: usize,
     ) -> Result<(), RemoveEntityError> {
         let indexes = {
-            let mut index_map = self.index_map.write().unwrap();
+            let mut index_map = self.index_map.write();
             index_map.remove(&entity_id)
         };
 
         if let Some(indexes) = indexes {
             let (old_entity, mut old_components) = {
-                let archetypes = self.archetypes.read().unwrap();
+                let archetypes = self.archetypes.read();
                 let archetypes = unsafe {
                     std::mem::transmute::<&Vec<ArchetypeArcRwLock>, &Vec<ArchetypeArcRwLock>>(
                         &archetypes,
@@ -289,7 +286,7 @@ impl EntityService {
                 };
 
                 let archetype = archetypes.get(indexes.0).unwrap();
-                archetype.write().unwrap().remove(indexes.1)
+                archetype.write().remove(indexes.1)
             };
 
             old_components.remove(component_index);
@@ -311,22 +308,22 @@ impl EntityService {
         &self,
         entity_identifier: EntityTypeIdentifier,
     ) -> Option<(usize, &ArchetypeArcRwLock)> {
-        let archetypes = self.archetypes.read().unwrap();
+        let archetypes = self.archetypes.read();
         let archetypes = unsafe {
             std::mem::transmute::<&Vec<ArchetypeArcRwLock>, &Vec<ArchetypeArcRwLock>>(&archetypes)
         };
 
         archetypes.iter().enumerate().find(|(_index, archetype)| {
-            *archetype.read().unwrap().get_type_identifier() == entity_identifier
+            *archetype.read().get_type_identifier() == entity_identifier
         })
     }
 
     /// Clear all the entities
     pub fn clear(&self) {
         // Clear all entities
-        let mut index_map = self.index_map.write().unwrap();
-        let mut id_incrementer = self.id_incrementer.lock().unwrap();
-        let mut archetypes = self.archetypes.write().unwrap();
+        let mut index_map = self.index_map.write();
+        let mut id_incrementer = self.id_incrementer.lock();
+        let mut archetypes = self.archetypes.write();
 
         index_map.clear();
         *id_incrementer = 0;

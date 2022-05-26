@@ -5,7 +5,9 @@ use crate::entity::entity_reference::EntityReference;
 
 macro_rules! tuple_impl_generics {
     ($t1:ident, $($tn:ident),+) => {
-        impl<
+    #[allow(unused_parens)]
+    #[allow(non_snake_case)]
+    impl<
                 'a,
                 $t1: QueryParam<'a> + 'static,
                 $ ($tn: QueryParam<'a> + 'static),*

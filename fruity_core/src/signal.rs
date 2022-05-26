@@ -10,14 +10,14 @@ use crate::serialize::serialized::SerializableObject;
 use crate::serialize::serialized::Serialized;
 use crate::utils::introspect::cast_introspect_mut;
 use crate::utils::introspect::ArgumentCaster;
+use crate::Mutex;
+use crate::RwLock;
 use fruity_any::FruityAny;
 use std::fmt::Debug;
 use std::fmt::Formatter;
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::Arc;
-use std::sync::Mutex;
-use std::sync::RwLock;
 
 struct IdGenerator {
     incrementer: usize,
@@ -75,9 +75,9 @@ impl<T> Signal<T> {
         &self,
         observer: F,
     ) -> ObserverIdentifier {
-        let mut intern = self.intern.write().unwrap();
+        let mut intern = self.intern.write();
 
-        let mut id_generator = ID_GENERATOR.lock().unwrap();
+        let mut id_generator = ID_GENERATOR.lock();
         let identifier = ObserverIdentifier(id_generator.generate_id());
         intern.observers.push((identifier, Box::new(observer)));
 
@@ -86,7 +86,7 @@ impl<T> Signal<T> {
 
     /// Remove an observer from the signal
     pub fn remove_observer(&self, observer_id: ObserverIdentifier) {
-        let mut intern = self.intern.write().unwrap();
+        let mut intern = self.intern.write();
         let observer_index = intern
             .observers
             .iter()
@@ -102,7 +102,7 @@ impl<T> Signal<T> {
     /// Notify that the event happened
     /// This will launch all the observers that are registered for this signal
     pub fn notify(&self, event: T) {
-        let intern = self.intern.read().unwrap();
+        let intern = self.intern.read();
         intern
             .observers
             .iter()

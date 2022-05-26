@@ -11,6 +11,7 @@ use egui::Response;
 use egui::Sense;
 use egui::Shape;
 use egui::Ui;
+use fruity_core::Mutex;
 use fruity_editor::hooks::topo;
 use fruity_editor::hooks::use_global;
 use fruity_editor::hooks::use_state;
@@ -24,7 +25,6 @@ use fruity_wgpu_graphic::resources::texture_resource::WgpuTextureResource;
 use lazy_static::*;
 use std::any::Any;
 use std::sync::Arc;
-use std::sync::Mutex;
 
 lazy_static! {
     static ref CURRENT_DRAGGED_ITEM: Mutex::<Option<Arc<dyn Any + Send + Sync>>> = Mutex::new(None);
@@ -56,7 +56,7 @@ pub fn draw_button<'a>(elem: Button, ui: &mut egui::Ui, _ctx: &mut DrawContext) 
             Id::new("item").with(CallId::current()),
             response.clone(),
             move || {
-                let mut current_dragged_item = CURRENT_DRAGGED_ITEM.lock().unwrap();
+                let mut current_dragged_item = CURRENT_DRAGGED_ITEM.lock();
                 *current_dragged_item = Some(drag_item.clone());
             },
             |ui| {
@@ -67,7 +67,7 @@ pub fn draw_button<'a>(elem: Button, ui: &mut egui::Ui, _ctx: &mut DrawContext) 
 
     if let Some(on_drag) = &elem.on_drag {
         let accept_dragged = if let Some(accept_drag) = &elem.accept_drag {
-            let current_dragged_item = CURRENT_DRAGGED_ITEM.lock().unwrap();
+            let current_dragged_item = CURRENT_DRAGGED_ITEM.lock();
 
             if let Some(current_dragged_item) = current_dragged_item.deref() {
                 accept_drag(current_dragged_item.deref())
@@ -83,7 +83,7 @@ pub fn draw_button<'a>(elem: Button, ui: &mut egui::Ui, _ctx: &mut DrawContext) 
             Id::new("item").with(CallId::current()),
             accept_dragged,
             move || {
-                let mut current_dragged_item = CURRENT_DRAGGED_ITEM.lock().unwrap();
+                let mut current_dragged_item = CURRENT_DRAGGED_ITEM.lock();
 
                 if let Some(current_dragged_item) = current_dragged_item.take() {
                     on_drag(current_dragged_item.deref());
@@ -123,7 +123,7 @@ pub fn draw_image_button<'a>(elem: ImageButton, ui: &mut egui::Ui, ctx: &mut Dra
             Id::new("item").with(CallId::current()),
             response.clone(),
             move || {
-                let mut current_dragged_item = CURRENT_DRAGGED_ITEM.lock().unwrap();
+                let mut current_dragged_item = CURRENT_DRAGGED_ITEM.lock();
                 *current_dragged_item = Some(drag_item.clone());
             },
             |ui| {
@@ -137,7 +137,7 @@ pub fn draw_image_button<'a>(elem: ImageButton, ui: &mut egui::Ui, ctx: &mut Dra
 
     if let Some(on_drag) = &elem.on_drag {
         let accept_dragged = if let Some(accept_drag) = &elem.accept_drag {
-            let current_dragged_item = CURRENT_DRAGGED_ITEM.lock().unwrap();
+            let current_dragged_item = CURRENT_DRAGGED_ITEM.lock();
 
             if let Some(current_dragged_item) = current_dragged_item.deref() {
                 accept_drag(current_dragged_item.deref())
@@ -153,7 +153,7 @@ pub fn draw_image_button<'a>(elem: ImageButton, ui: &mut egui::Ui, ctx: &mut Dra
             Id::new("item").with(CallId::current()),
             accept_dragged,
             move || {
-                let mut current_dragged_item = CURRENT_DRAGGED_ITEM.lock().unwrap();
+                let mut current_dragged_item = CURRENT_DRAGGED_ITEM.lock();
 
                 if let Some(current_dragged_item) = current_dragged_item.take() {
                     on_drag(current_dragged_item.deref());

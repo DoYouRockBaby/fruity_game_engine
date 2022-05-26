@@ -18,10 +18,10 @@ pub mod impl_tuples;
 use crate::convert::FruityTryFrom;
 use crate::introspect::IntrospectError;
 use crate::introspect::IntrospectObject;
+use crate::RwLock;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 /// A callback for the serialized type
 #[derive(Clone)]

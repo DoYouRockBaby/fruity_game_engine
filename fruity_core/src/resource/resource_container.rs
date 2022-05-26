@@ -12,6 +12,7 @@ use crate::serialize::serialized::Serialized;
 use crate::settings::Settings;
 use crate::utils::introspect::cast_introspect_ref;
 use crate::utils::introspect::ArgumentCaster;
+use crate::RwLock;
 use fruity_any::*;
 use std::any::TypeId;
 use std::collections::HashMap;
@@ -20,7 +21,6 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 /// A a function that is used to load a resource
 pub type ResourceLoader = fn(&str, &mut dyn Read, Settings, Arc<ResourceContainer>);
@@ -68,7 +68,7 @@ impl ResourceContainer {
     /// * `T` - The resource type
     ///
     pub fn require<T: Resource + ?Sized>(&self) -> ResourceReference<T> {
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read();
 
         match inner.identifier_by_type.get(&TypeId::of::<T>()) {
             Some(resource_name) => match inner.resources.get(resource_name) {
@@ -101,7 +101,7 @@ impl ResourceContainer {
     /// * `T` - The resource type
     ///
     pub fn get<T: Resource + ?Sized>(&self, identifier: &str) -> Option<ResourceReference<T>> {
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read();
 
         match inner
             .resources
@@ -126,7 +126,7 @@ impl ResourceContainer {
     /// * `identifier` - The resource identifier
     ///
     pub fn get_untyped(&self, identifier: &str) -> Option<AnyResourceReference> {
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read();
 
         inner.resources.get(identifier).map(|resource| {
             AnyResourceReference::new(identifier, resource.clone(), Arc::new(self.clone()))
@@ -139,7 +139,7 @@ impl ResourceContainer {
     /// * `identifier` - The resource identifier
     ///
     pub fn contains(&self, identifier: &str) -> bool {
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read();
         inner.resources.contains_key(identifier)
     }
 
@@ -150,7 +150,7 @@ impl ResourceContainer {
     /// * `resource` - The resource object
     ///
     pub fn add<T: Resource + ?Sized>(&self, identifier: &str, resource: Box<T>) {
-        let mut inner = self.inner.write().unwrap();
+        let mut inner = self.inner.write();
 
         let shared = Arc::new(RwLock::new(resource));
         inner
@@ -167,7 +167,7 @@ impl ResourceContainer {
     /// * `identifier` - The resource identifier
     ///
     pub fn remove(&self, identifier: &str) -> Result<(), RemoveResourceError> {
-        let mut inner = self.inner.write().unwrap();
+        let mut inner = self.inner.write();
 
         if inner.resources.contains_key(identifier) {
             inner.resources.remove(identifier);
@@ -187,7 +187,7 @@ impl ResourceContainer {
     /// * `loader` - The resource loader
     ///
     pub fn add_resource_loader(&self, resource_type: &str, loader: ResourceLoader) {
-        let mut inner = self.inner.write().unwrap();
+        let mut inner = self.inner.write();
         inner
             .resource_loaders
             .insert(resource_type.to_string(), loader);
@@ -225,7 +225,7 @@ impl ResourceContainer {
         settings: Settings,
     ) -> Result<(), LoadResourceError> {
         let resource_loader = {
-            let inner_reader = self.inner.read().unwrap();
+            let inner_reader = self.inner.read();
 
             if let Some(resource_loader) = inner_reader.resource_loaders.get(resource_type) {
                 Ok(resource_loader.clone())

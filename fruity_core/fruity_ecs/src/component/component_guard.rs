@@ -1,14 +1,14 @@
 use crate::component::component::Component;
 use crate::component::component::StaticComponent;
 use crate::entity::archetype::Archetype;
+use fruity_core::RwLockReadGuard;
+use fruity_core::RwLockWriteGuard;
 use std::fmt::Debug;
 use std::fmt::Formatter;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::rc::Rc;
-use std::sync::RwLockReadGuard;
-use std::sync::RwLockWriteGuard;
 
 #[derive(Clone)]
 pub(crate) enum InternalReadGuard<'a> {
