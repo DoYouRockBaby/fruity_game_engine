@@ -145,7 +145,7 @@ impl EditorService {
         let egui_start = Instant::now();
         self.state.platform.begin_frame();
 
-        // Draw the demo application
+        // Draw the application
         self.state.application.draw(&mut DrawContext {
             device: device,
             platform: &self.state.platform,

@@ -21,7 +21,6 @@
 [ ] Add a way to extend components
 [ ] Random crash when we delete an entity
 [ ] Add an exception when you try to access a deleted entity, propagate it into js
-[ ] Test and stabilize ECS
 [ ] Find a way to move the introspect declaration into the associated traits
 [ ] Change the begin/end system to a startup system that returns an optional end callback and add the startup that ignore pause
 
