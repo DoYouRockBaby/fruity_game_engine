@@ -886,8 +886,24 @@ impl GraphicService for WgpuGraphicService {
         Ok(Box::new(resource))
     }
 
-    /// Get a position in the viewport to a position in 2d world
-    fn get_viewport_position(&self, x: u32, y: u32) -> Vector2d {
+    /// Convert a position in 2d world to a position in viewport
+    fn world_position_to_viewport_position(&self, pos: Vector2d) -> (u32, u32) {
+        let viewport_offset = self.get_viewport_offset();
+        let viewport_size = self.get_viewport_size();
+        let camera_transform = self.get_camera_transform().clone();
+
+        let viewport_pos = camera_transform * pos;
+
+        (
+            ((viewport_pos.x + 1.0) / 2.0 * viewport_size.0 as f32 + viewport_offset.0 as f32)
+                as u32,
+            ((viewport_pos.y - 1.0) / -2.0 * viewport_size.1 as f32 + viewport_offset.1 as f32)
+                as u32,
+        )
+    }
+
+    /// Convert a position in the viewport to a position in 2d world
+    fn viewport_position_to_world_position(&self, x: u32, y: u32) -> Vector2d {
         let viewport_offset = self.get_viewport_offset();
         let viewport_size = self.get_viewport_size();
         let camera_transform = self.get_camera_transform().clone();
@@ -909,7 +925,7 @@ impl GraphicService for WgpuGraphicService {
             window_service.get_cursor_position()
         };
 
-        self.get_viewport_position(cursor_position.0, cursor_position.1)
+        self.viewport_position_to_world_position(cursor_position.0, cursor_position.1)
     }
 
     /// Check the cursor position is in the viewport

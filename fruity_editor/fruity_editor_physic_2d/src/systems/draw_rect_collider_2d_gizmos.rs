@@ -71,12 +71,14 @@ pub fn draw_rectangle_collider_2d_gizmos(
                         let (cursor_pos, start_pos) = {
                             let graphic_service_reader = graphic_service.read();
                             (
-                                graphic_service_reader.get_viewport_position(
+                                graphic_service_reader.viewport_position_to_world_position(
                                     action.cursor_pos.0,
                                     action.cursor_pos.1,
                                 ),
-                                graphic_service_reader
-                                    .get_viewport_position(action.start_pos.0, action.start_pos.1),
+                                graphic_service_reader.viewport_position_to_world_position(
+                                    action.start_pos.0,
+                                    action.start_pos.1,
+                                ),
                             )
                         };
 

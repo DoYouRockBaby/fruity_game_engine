@@ -39,12 +39,12 @@
 [X] Save/Load
 [X] Add componnent from editor
 [X] Remove component from editor
+[X] Fix resize gizmos
+[X] Add a cool grid for 2D view
 [ ] Expose the GUI API to javascript to create custom component editor
 [ ] Resources visualisation, take the material as an example and try to make it easy to edit in sprite component
-[ ] Fix resize gizmos
 [ ] Select an object when clicking on it (set_scissor_rect)
 [ ] Add a cool free camera for 2D view
-[ ] Add a cool grid for 2D view
 
 ## Graphics
 

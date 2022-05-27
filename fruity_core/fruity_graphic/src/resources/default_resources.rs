@@ -22,6 +22,8 @@ pub fn load_default_resources(resource_container: Arc<ResourceContainer>) {
     load_squad_mesh(resource_container.clone());
     load_draw_line_shader(resource_container.clone());
     load_draw_line_material(resource_container.clone());
+    load_draw_dotted_line_shader(resource_container.clone());
+    load_draw_dotted_line_material(resource_container.clone());
     load_draw_rect_shader(resource_container.clone());
     load_draw_rect_material(resource_container.clone());
     load_draw_arc_shader(resource_container.clone());
@@ -218,6 +220,171 @@ pub fn load_draw_line_material(resource_container: Arc<ResourceContainer>) {
         .unwrap();
 
     resource_container.add("Materials/Draw Line", resource);
+}
+
+pub fn load_draw_dotted_line_shader(resource_container: Arc<ResourceContainer>) {
+    let graphic_service = resource_container.require::<dyn GraphicService>();
+    let graphic_service = graphic_service.read();
+
+    let code = "
+        [[block]]
+        struct CameraUniform {
+            view_proj: mat4x4<f32>;
+        };
+        
+        [[block]]
+        struct RenderSurfaceSizeUniform {
+            value: vec2<f32>;
+        };
+        
+        struct VertexInput {
+            [[location(0)]] position: vec3<f32>;
+            [[location(1)]] tex_coords: vec2<f32>;
+            [[location(2)]] normal: vec3<f32>;
+        };
+        
+        struct InstanceInput {
+            [[location(5)]] pos1: vec2<f32>;
+            [[location(6)]] pos2: vec2<f32>;
+            [[location(7)]] width: u32;
+            [[location(8)]] color: vec4<f32>;
+        };
+        
+        struct VertexOutput {
+            [[builtin(position)]] position: vec4<f32>;
+            [[location(0)]] color: vec4<f32>;
+            [[location(1)]] tex_coords: vec2<f32>;
+            [[location(2)]] xwidth: f32;
+            [[location(3)]] ywidth: f32;
+        };
+
+        [[group(0), binding(0)]]
+        var<uniform> camera: CameraUniform;
+
+        [[group(1), binding(0)]]
+        var<uniform> render_surface_size: RenderSurfaceSizeUniform;
+
+        [[stage(vertex)]]
+        fn main(
+            model: VertexInput,
+            instance: InstanceInput,
+        ) -> VertexOutput {
+            var diff = camera.view_proj * (vec4<f32>(instance.pos2, 0.0, 1.0) - vec4<f32>(instance.pos1, 0.0, 0.0));
+            let x_scale = f32(instance.width) / render_surface_size.value.x;
+            let y_scale = f32(instance.width) / render_surface_size.value.y;
+            let normal = normalize(vec2<f32>(-diff.y, diff.x));
+            let scaled_normal = vec2<f32>(normal.x * x_scale, normal.y * y_scale);
+
+            var out: VertexOutput;
+            out.color = instance.color;
+            out.tex_coords = model.tex_coords;
+            out.xwidth = f32(instance.width) / length(diff) / render_surface_size.value.x;
+
+            if (model.position.x == -0.5 && model.position.y == -0.5) {
+                out.position = camera.view_proj * vec4<f32>(instance.pos1, 0.0, 1.0) + vec4<f32>(scaled_normal, 0.0, 0.0);
+            } elseif (model.position.x == 0.5 && model.position.y == -0.5) {
+                out.position = camera.view_proj * vec4<f32>(instance.pos1, 0.0, 1.0) - vec4<f32>(scaled_normal, 0.0, 0.0);
+            } elseif (model.position.x == 0.5 && model.position.y == 0.5) {
+                out.position = camera.view_proj * vec4<f32>(instance.pos2, 0.0, 1.0) - vec4<f32>(scaled_normal, 0.0, 0.0);
+            } elseif (model.position.x == -0.5 && model.position.y == 0.5) {
+                out.position = camera.view_proj * vec4<f32>(instance.pos2, 0.0, 1.0) + vec4<f32>(scaled_normal, 0.0, 0.0);
+            } else {
+                out.position = camera.view_proj * vec4<f32>(model.position, 1.0);
+            }
+
+            return out;
+        }
+
+        [[stage(fragment)]]
+        fn main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
+            let dotx = i32(floor(in.tex_coords.y / in.xwidth / 25.0));
+
+            if(dotx % 2 == 0) {
+                return in.color;
+            } else {
+                return vec4<f32>(0.0);
+            }
+        }"
+    .to_string();
+
+    let resource = graphic_service
+        .create_shader_resource(
+            "Shaders/Draw Dotted Line",
+            code,
+            ShaderResourceSettings {
+                binding_groups: vec![
+                    ShaderBindingGroup {
+                        bindings: vec![ShaderBinding {
+                            visibility: ShaderBindingVisibility::Vertex,
+                            ty: ShaderBindingType::Uniform,
+                        }],
+                    },
+                    ShaderBindingGroup {
+                        bindings: vec![ShaderBinding {
+                            visibility: ShaderBindingVisibility::Vertex,
+                            ty: ShaderBindingType::Uniform,
+                        }],
+                    },
+                ],
+                instance_attributes: vec![
+                    ShaderInstanceAttribute {
+                        location: 5,
+                        ty: ShaderInstanceAttributeType::Vector2,
+                    },
+                    ShaderInstanceAttribute {
+                        location: 6,
+                        ty: ShaderInstanceAttributeType::Vector2,
+                    },
+                    ShaderInstanceAttribute {
+                        location: 7,
+                        ty: ShaderInstanceAttributeType::UInt,
+                    },
+                    ShaderInstanceAttribute {
+                        location: 8,
+                        ty: ShaderInstanceAttributeType::Vector4,
+                    },
+                ],
+            },
+        )
+        .unwrap();
+
+    resource_container.add("Shaders/Draw Dotted Line", resource);
+}
+
+pub fn load_draw_dotted_line_material(resource_container: Arc<ResourceContainer>) {
+    let graphic_service = resource_container.require::<dyn GraphicService>();
+    let graphic_service = graphic_service.read();
+
+    let shader = resource_container.get::<dyn ShaderResource>("Shaders/Draw Dotted Line");
+
+    let resource = graphic_service
+        .create_material_resource(
+            "Materials/Draw Dotted Line",
+            MaterialResourceSettings {
+                shader,
+                bindings: vec![
+                    MaterialSettingsBinding::Camera { bind_group: 0 },
+                    MaterialSettingsBinding::RenderSurfaceSize { bind_group: 1 },
+                ],
+                instance_attributes: hashmap! {
+                    "pos1".to_string() => MaterialSettingsInstanceAttribute::Vector2 {
+                        location: 5,
+                    },
+                    "pos2".to_string() => MaterialSettingsInstanceAttribute::Vector2 {
+                        location: 6,
+                    },
+                    "width".to_string() => MaterialSettingsInstanceAttribute::UInt {
+                        location: 7,
+                    },
+                    "color".to_string() => MaterialSettingsInstanceAttribute::Vector4 {
+                        location: 8,
+                    },
+                },
+            },
+        )
+        .unwrap();
+
+    resource_container.add("Materials/Draw Dotted Line", resource);
 }
 
 pub fn load_draw_rect_shader(resource_container: Arc<ResourceContainer>) {

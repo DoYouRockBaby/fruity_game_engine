@@ -23,6 +23,7 @@ pub struct Graphic2dService {
     graphic_service: ResourceReference<dyn GraphicService>,
     resource_container: Arc<ResourceContainer>,
     draw_line_material: ResourceReference<dyn MaterialResource>,
+    draw_dotted_line_material: ResourceReference<dyn MaterialResource>,
     draw_rect_material: ResourceReference<dyn MaterialResource>,
     draw_arc_material: ResourceReference<dyn MaterialResource>,
 }
@@ -33,6 +34,10 @@ impl Graphic2dService {
 
         let draw_line_material = resource_container
             .get::<dyn MaterialResource>("Materials/Draw Line")
+            .unwrap();
+
+        let draw_dotted_line_material = resource_container
+            .get::<dyn MaterialResource>("Materials/Draw Dotted Line")
             .unwrap();
 
         let draw_rect_material = resource_container
@@ -47,6 +52,7 @@ impl Graphic2dService {
             graphic_service,
             resource_container,
             draw_line_material,
+            draw_dotted_line_material,
             draw_rect_material,
             draw_arc_material,
         }
@@ -80,6 +86,27 @@ impl Graphic2dService {
         self.draw_quad(
             0,
             self.draw_line_material.clone(),
+            hashmap! {
+                "pos1".to_string() => MaterialParam::Vector2(pos1),
+                "pos2".to_string() => MaterialParam::Vector2(pos2),
+                "width".to_string() => MaterialParam::UInt(width),
+                "color".to_string() => MaterialParam::Color(color),
+            },
+            z_index,
+        );
+    }
+
+    pub fn draw_dotted_line(
+        &self,
+        pos1: Vector2d,
+        pos2: Vector2d,
+        width: u32,
+        color: Color,
+        z_index: i32,
+    ) {
+        self.draw_quad(
+            0,
+            self.draw_dotted_line_material.clone(),
             hashmap! {
                 "pos1".to_string() => MaterialParam::Vector2(pos1),
                 "pos2".to_string() => MaterialParam::Vector2(pos2),
