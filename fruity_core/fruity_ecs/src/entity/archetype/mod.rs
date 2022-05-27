@@ -34,6 +34,9 @@ pub(crate) struct ArchetypeArcRwLock(Arc<RwLock<Archetype>>);
 pub struct Archetype {
     pub(crate) identifier: EntityTypeIdentifier,
 
+    // Indexes with dead memory
+    pub(crate) erased_indexes: RwLock<Vec<usize>>,
+
     // Store all the component properties into a index persisting storage
     pub(crate) entity_id_array: Vec<EntityId>,
     pub(crate) name_array: Vec<String>,
@@ -68,6 +71,7 @@ impl Archetype {
 
         Archetype {
             identifier: identifier,
+            erased_indexes: RwLock::new(vec![]),
             entity_id_array: vec![entity_id],
             name_array: vec![name.to_string()],
             enabled_array: vec![enabled],
@@ -113,6 +117,8 @@ impl Archetype {
         enabled: bool,
         components: Vec<AnyComponent>,
     ) {
+        // TODO: Use previous deleted cells
+
         // Store the entity properties
         self.entity_id_array.push(entity_id);
         self.name_array.push(name.to_string());
@@ -134,20 +140,30 @@ impl Archetype {
     /// # Arguments
     /// * `index` - The entity index
     ///
-    pub fn remove(&mut self, index: usize) -> (EntityProperties, Vec<AnyComponent>) {
-        // Remove the entity properties from the storage
-        let entity_id = self.entity_id_array.remove(index);
-        let name = self.name_array.remove(index);
-        let enabled = self.enabled_array.remove(index);
-        let lock = self.lock_array.remove(index);
-        let _write_guard = lock.write();
+    pub fn remove(&self, index: usize) -> (EntityProperties, Vec<AnyComponent>) {
+        // Get the write lock over the entity
+        // TODO: Decide to keep it or not
+        // let lock = self.lock_array.get(index);
+        // let _write_guard = lock.write();
 
-        // Remove the entity components from the storage
+        // Mark the index as deleted
+        {
+            let mut erased_indexes_writer = self.erased_indexes.write();
+            erased_indexes_writer.push(index);
+        }
+
+        // Get the entity properties from the storage
+        let entity_id = *self.entity_id_array.get(index).unwrap();
+        let name = self.name_array.get(index).unwrap().clone();
+        let enabled = *self.enabled_array.get(index).unwrap();
+
+        // Get the entity components from the storage
         let components = {
             self.component_storages
-                .iter_mut()
-                .map(|(_, storage)| storage.remove(index))
+                .iter()
+                .map(|(_, storage)| storage.get(index))
                 .flatten()
+                .map(|component| AnyComponent::from_box(component.duplicate()))
                 .collect::<Vec<_>>()
         };
 
@@ -228,14 +244,28 @@ impl ArchetypeArcRwLock {
     }
 
     /// Get an iterator over all the components of all the entities
-    pub fn iter(&self) -> impl Iterator<Item = EntityReference> + '_ {
+    pub fn iter(&self, ignore_enabled: bool) -> impl Iterator<Item = EntityReference> + '_ {
         let archetype_len = self.0.read().len();
 
         (0..archetype_len)
-            .filter(|entity_id| {
-                // TODO: Try yo move it outside
-                let archetype_reader = self.0.read();
-                *archetype_reader.enabled_array.get(*entity_id).unwrap()
+            .filter(move |entity_id| {
+                let is_deleted = {
+                    let archetype_reader = self.0.read();
+                    let erased_indexes_reader = archetype_reader.erased_indexes.read();
+                    erased_indexes_reader.contains(entity_id)
+                };
+
+                if is_deleted {
+                    return false;
+                }
+
+                if !ignore_enabled {
+                    // TODO: Try yo move it outside
+                    let archetype_reader = self.0.read();
+                    *archetype_reader.enabled_array.get(*entity_id).unwrap()
+                } else {
+                    true
+                }
             })
             .map(move |entity_id| EntityReference {
                 entity_id,

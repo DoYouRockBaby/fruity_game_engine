@@ -100,7 +100,7 @@ impl SerializedQuery {
         }
 
         let entities = archetype_iter
-            .map(|archetype| archetype.iter())
+            .map(|archetype| archetype.iter(false))
             .flatten()
             .collect::<Vec<_>>();
 

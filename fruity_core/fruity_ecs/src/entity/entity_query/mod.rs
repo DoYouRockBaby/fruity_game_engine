@@ -86,7 +86,7 @@ impl<'a, T: QueryParam<'a> + 'static> Query<T> {
             .filter(|archetype| T::filter_archetype(&archetype.read()));
 
         let entities = archetype_iter
-            .map(|archetype| archetype.iter())
+            .map(|archetype| archetype.iter(false))
             .flatten()
             .collect::<Vec<_>>();
 

@@ -1,5 +1,6 @@
 use crate::component::component::AnyComponent;
 use crate::entity::archetype::component_collection::ComponentCollection;
+use crate::entity::archetype::Component;
 
 pub(crate) struct ComponentStorage {
     pub(crate) collection: Box<dyn ComponentCollection>,
@@ -26,6 +27,13 @@ impl ComponentStorage {
         }
 
         self.collection.add_many(components);
+    }
+
+    pub(crate) fn get(&self, entity_id: usize) -> impl Iterator<Item = &dyn Component> {
+        let start_index = entity_id * self.components_per_entity;
+        let end_index = start_index + self.components_per_entity;
+
+        (start_index..end_index).filter_map(|index| self.collection.get(&index))
     }
 
     pub(crate) fn remove(&mut self, entity_id: usize) -> Vec<AnyComponent> {

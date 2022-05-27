@@ -14,7 +14,6 @@ pub trait ComponentCollection: Sync + Send {
     fn add_many(&mut self, components: Vec<AnyComponent>);
 
     /// Remove components from the collection
-    /// Previous index should persists
     ///
     /// # Arguments
     /// * `index` - The index of the first component to remove

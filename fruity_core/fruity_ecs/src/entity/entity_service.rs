@@ -103,7 +103,7 @@ impl EntityService {
 
         archetypes
             .iter()
-            .map(|archetype| archetype.iter())
+            .map(|archetype| archetype.iter(true))
             .flatten()
     }
 
@@ -204,7 +204,7 @@ impl EntityService {
             {
                 let archetypes = self.archetypes.read();
                 let archetype = archetypes.get(indexes.0).unwrap();
-                archetype.write().remove(indexes.1);
+                archetype.read().remove(indexes.1);
             }
 
             // Propagate the deleted signal
