@@ -3,7 +3,7 @@ use crate::component_inspector::rect_collider_inspector::rect_collider_inspector
 use crate::state::collider::ColliderState;
 use crate::systems::draw_circle_collider_2d_gizmos::draw_circle_collider_2d_gizmos;
 use crate::systems::draw_rect_collider_2d_gizmos::draw_rectangle_collider_2d_gizmos;
-use fruity_core::inject::Inject2;
+use fruity_core::inject::Inject3;
 use fruity_core::inject::Inject4;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
@@ -41,7 +41,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     system_service.add_system(
         "draw_rectangle_collider_2d_gizmos",
         MODULE_NAME,
-        Inject2::new(draw_rectangle_collider_2d_gizmos),
+        Inject3::new(draw_rectangle_collider_2d_gizmos),
         Some(SystemParams {
             pool_index: 98,
             ignore_pause: true,

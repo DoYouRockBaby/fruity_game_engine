@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+puffin = "0.12.1"
 fruity_any = { path = "../fruity_any" }
 fruity_core = { path = ".." }
 fruity_ecs = { path = "../fruity_ecs" }

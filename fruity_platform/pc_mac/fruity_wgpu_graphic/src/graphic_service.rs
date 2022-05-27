@@ -886,6 +886,21 @@ impl GraphicService for WgpuGraphicService {
         Ok(Box::new(resource))
     }
 
+    /// Get a position in the viewport to a position in 2d world
+    fn get_viewport_position(&self, x: u32, y: u32) -> Vector2d {
+        let viewport_offset = self.get_viewport_offset();
+        let viewport_size = self.get_viewport_size();
+        let camera_transform = self.get_camera_transform().clone();
+
+        // Transform the cursor in the engine world (especialy taking care of camera)
+        let cursor_pos = Vector2d::new(
+            ((x as f32 - viewport_offset.0 as f32) / viewport_size.0 as f32) * 2.0 - 1.0,
+            ((y as f32 - viewport_offset.1 as f32) / viewport_size.1 as f32) * -2.0 + 1.0,
+        );
+
+        camera_transform.invert() * cursor_pos
+    }
+
     /// Get the cursor position in the viewport, take in care the camera transform
     fn get_cursor_position(&self) -> Vector2d {
         // Get informations from the resource dependencies
@@ -894,19 +909,7 @@ impl GraphicService for WgpuGraphicService {
             window_service.get_cursor_position()
         };
 
-        let viewport_offset = self.get_viewport_offset();
-        let viewport_size = self.get_viewport_size();
-        let camera_transform = self.get_camera_transform().clone();
-
-        // Transform the cursor in the engine world (especialy taking care of camera)
-        let cursor_pos = Vector2d::new(
-            ((cursor_position.0 as f32 - viewport_offset.0 as f32) / viewport_size.0 as f32) * 2.0
-                - 1.0,
-            ((cursor_position.1 as f32 - viewport_offset.1 as f32) / viewport_size.1 as f32) * -2.0
-                + 1.0,
-        );
-
-        camera_transform.invert() * cursor_pos
+        self.get_viewport_position(cursor_position.0, cursor_position.1)
     }
 
     /// Check the cursor position is in the viewport

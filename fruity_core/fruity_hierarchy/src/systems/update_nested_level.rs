@@ -29,11 +29,10 @@ pub fn update_nested_level(
         }
 
         // When parent is updated, we update the nested level
-        let entity_2 = entity.clone();
         let entity_service = entity_service.clone();
         parent.parent_id.on_updated.add_observer(move |parent_id| {
-            let entity = entity_2.write();
-            let mut parent = entity.write_single_component::<Parent>().unwrap();
+            let entity_writer = entity.write();
+            let mut parent = entity_writer.write_single_component::<Parent>().unwrap();
             // Get the parent entity reference
             let parent_entity = if let Some(parent_id) = &parent_id {
                 let entity_service_reader = entity_service.read();

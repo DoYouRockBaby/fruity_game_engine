@@ -7,7 +7,7 @@ edition = "2021"
 log = "0.4.14"
 puffin = "0.12.1"
 rayon = "1.5"
-parking_lot = "0.12"
+parking_lot = { version = "0.12", features = ["deadlock_detection"] }
 yaml-rust = "0.4"
 lazy_static = "1.4"
 libloading = "0.7.1"

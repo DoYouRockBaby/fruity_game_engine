@@ -9,16 +9,16 @@ use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
 use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
+use fruity_input::drag_service::DragCallback;
+use fruity_input::drag_service::DragService;
 use fruity_input::input_service::InputService;
 use std::fmt::Debug;
 use std::sync::Arc;
-use std::thread::sleep;
-use std::thread::spawn;
-use std::time::Duration;
 
 #[derive(Debug, FruityAny)]
 pub struct GizmosService {
     input_service: ResourceReference<InputService>,
+    drag_service: ResourceReference<DragService>,
     graphic_service: ResourceReference<dyn GraphicService>,
     graphic_2d_service: ResourceReference<Graphic2dService>,
 }
@@ -26,11 +26,13 @@ pub struct GizmosService {
 impl GizmosService {
     pub fn new(resource_container: Arc<ResourceContainer>) -> GizmosService {
         let input_service = resource_container.require::<InputService>();
+        let drag_service = resource_container.require::<DragService>();
         let graphic_service = resource_container.require::<dyn GraphicService>();
         let graphic_2d_service = resource_container.require::<Graphic2dService>();
 
         GizmosService {
             input_service,
+            drag_service,
             graphic_service,
             graphic_2d_service,
         }
@@ -152,7 +154,7 @@ impl GizmosService {
         hover_color: Color,
         on_move: FMove,
     ) where
-        FMove: Fn(bool, bool, DragAction) + Send + Sync + 'static,
+        FMove: Fn(bool, bool) -> DragCallback,
     {
         // Get camera transform
         let camera_transform = {
@@ -189,61 +191,35 @@ impl GizmosService {
         let input_service = self.input_service.read();
 
         // Handle moving
-        let on_move = Arc::new(on_move);
         if is_hover_free_move && input_service.is_source_pressed_this_frame("Mouse/Left") {
-            let on_move = on_move.clone();
-            DragAction::start(
-                move |action| on_move(true, true, action),
-                self.input_service.clone(),
-                self.graphic_service.clone(),
-            );
+            let drag_service_reader = self.drag_service.read();
+            drag_service_reader.start_drag(|| on_move(true, true));
         }
 
         if is_hover_x_arrow && input_service.is_source_pressed_this_frame("Mouse/Left") {
-            let on_move = on_move.clone();
-            DragAction::start(
-                move |action| on_move(true, false, action),
-                self.input_service.clone(),
-                self.graphic_service.clone(),
-            );
+            let drag_service_reader = self.drag_service.read();
+            drag_service_reader.start_drag(|| on_move(true, false));
         }
 
         if is_hover_y_arrow && input_service.is_source_pressed_this_frame("Mouse/Left") {
-            let on_move = on_move.clone();
-            DragAction::start(
-                move |action| on_move(false, true, action),
-                self.input_service.clone(),
-                self.graphic_service.clone(),
-            );
+            let drag_service_reader = self.drag_service.read();
+            drag_service_reader.start_drag(|| on_move(false, true));
         }
 
         // Handle moving
-        let on_move = Arc::new(on_move);
         if is_hover_free_move && input_service.is_source_pressed_this_frame("Mouse/Left") {
-            let on_move = on_move.clone();
-            DragAction::start(
-                move |action| on_move(true, true, action),
-                self.input_service.clone(),
-                self.graphic_service.clone(),
-            );
+            let drag_service_reader = self.drag_service.read();
+            drag_service_reader.start_drag(|| on_move(true, true));
         }
 
         if is_hover_x_arrow && input_service.is_source_pressed_this_frame("Mouse/Left") {
-            let on_move = on_move.clone();
-            DragAction::start(
-                move |action| on_move(true, false, action),
-                self.input_service.clone(),
-                self.graphic_service.clone(),
-            );
+            let drag_service_reader = self.drag_service.read();
+            drag_service_reader.start_drag(|| on_move(true, false));
         }
 
         if is_hover_y_arrow && input_service.is_source_pressed_this_frame("Mouse/Left") {
-            let on_move = on_move.clone();
-            DragAction::start(
-                move |action| on_move(false, true, action),
-                self.input_service.clone(),
-                self.graphic_service.clone(),
-            );
+            let drag_service_reader = self.drag_service.read();
+            drag_service_reader.start_drag(|| on_move(false, true));
         }
     }
 
@@ -255,7 +231,7 @@ impl GizmosService {
         hover_color: Color,
         on_resize: FResize,
     ) where
-        FResize: Fn(bool, bool, DragAction) + Send + Sync + 'static,
+        FResize: Fn(bool, bool) -> DragCallback,
     {
         // Get camera transform
         let camera_transform = {
@@ -320,44 +296,25 @@ impl GizmosService {
         let input_service = self.input_service.read();
 
         // Handle resize
-        let on_resize = Arc::new(on_resize);
         if is_hover_resize_top_right && input_service.is_source_pressed_this_frame("Mouse/Left") {
-            let on_resize = on_resize.clone();
-            DragAction::start(
-                move |action| on_resize(true, true, action),
-                self.input_service.clone(),
-                self.graphic_service.clone(),
-            );
+            let drag_service_reader = self.drag_service.read();
+            drag_service_reader.start_drag(|| on_resize(true, true));
         }
 
-        let on_resize = Arc::new(on_resize);
         if is_hover_resize_top_left && input_service.is_source_pressed_this_frame("Mouse/Left") {
-            let on_resize = on_resize.clone();
-            DragAction::start(
-                move |action| on_resize(false, true, action),
-                self.input_service.clone(),
-                self.graphic_service.clone(),
-            );
+            let drag_service_reader = self.drag_service.read();
+            drag_service_reader.start_drag(|| on_resize(false, true));
         }
 
-        let on_resize = Arc::new(on_resize);
         if is_hover_resize_bottom_right && input_service.is_source_pressed_this_frame("Mouse/Left")
         {
-            let on_resize = on_resize.clone();
-            DragAction::start(
-                move |action| on_resize(true, false, action),
-                self.input_service.clone(),
-                self.graphic_service.clone(),
-            );
+            let drag_service_reader = self.drag_service.read();
+            drag_service_reader.start_drag(|| on_resize(true, false));
         }
 
         if is_hover_resize_bottom_left && input_service.is_source_pressed_this_frame("Mouse/Left") {
-            let on_resize = on_resize.clone();
-            DragAction::start(
-                move |action| on_resize(false, false, action),
-                self.input_service.clone(),
-                self.graphic_service.clone(),
-            );
+            let drag_service_reader = self.drag_service.read();
+            drag_service_reader.start_drag(|| on_resize(false, false));
         }
     }
 
@@ -370,58 +327,6 @@ impl GizmosService {
             && cursor_pos.x <= top_right.x
             && bottom_left.y <= cursor_pos.y
             && cursor_pos.y <= top_right.y
-    }
-}
-
-pub struct DragAction {
-    start_pos: Vector2d,
-    input_service: ResourceReference<InputService>,
-    graphic_service: ResourceReference<dyn GraphicService>,
-}
-
-impl DragAction {
-    pub fn start<F>(
-        callback: F,
-        input_service: ResourceReference<InputService>,
-        graphic_service: ResourceReference<dyn GraphicService>,
-    ) where
-        F: Fn(DragAction) + Send + Sync + 'static,
-    {
-        let graphic_service_reader = graphic_service.read();
-        let start_pos = graphic_service_reader.get_cursor_position();
-
-        // Create the darg action structure
-        let drag_action = DragAction {
-            start_pos,
-            input_service,
-            graphic_service,
-        };
-
-        // Start the action in a specific thread
-        callback(drag_action);
-    }
-
-    pub fn start_pos(&self) -> Vector2d {
-        self.start_pos
-    }
-
-    pub fn while_dragging(self, callback: impl Fn(Vector2d, Vector2d) + Send + Sync + 'static) {
-        let cursor_position = {
-            let graphic_service = self.graphic_service.read();
-            graphic_service.get_cursor_position()
-        };
-
-        spawn(move || {
-            while self.is_dragging_button_pressed() {
-                sleep(Duration::from_millis(20));
-                callback(cursor_position, self.start_pos());
-            }
-        });
-    }
-
-    fn is_dragging_button_pressed(&self) -> bool {
-        let input_service = self.input_service.read();
-        input_service.is_source_pressed("Mouse/Left")
     }
 }
 

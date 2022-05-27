@@ -53,9 +53,8 @@ impl JavascriptWatcherService {
         let window_service = window_service.read();
 
         // Subscribe to windows observer to proceed the hot reload before the system run
-        let resource_container_2 = resource_container.clone();
         window_service.on_start_update().add_observer(move |_| {
-            let watcher_service = resource_container_2.require::<JavascriptWatcherService>();
+            let watcher_service = resource_container.require::<JavascriptWatcherService>();
             let watcher_service = watcher_service.read();
 
             watcher_service.update_watch();

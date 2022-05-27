@@ -18,6 +18,7 @@
 [X] There should be some memory leak in archetype
 [X] Add component query selectors
 [X] Create a way to query based on generics
+[ ] Support for async systems/queries for_each with tokio
 [ ] Add a way to extend components
 [ ] Random crash when we delete an entity
 [ ] Add an exception when you try to access a deleted entity, propagate it into js
@@ -103,6 +104,7 @@
 [ ] Typescript
 [ ] Expose rust-like enums in serialized
 [ ] Create a macro to expose the enums easely to serialized
+[ ] Support for async systems/queries for_each
 
 ## Others
 

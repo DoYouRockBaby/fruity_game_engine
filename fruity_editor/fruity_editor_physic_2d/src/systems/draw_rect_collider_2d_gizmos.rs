@@ -3,12 +3,14 @@ use fruity_core::inject::Const;
 use fruity_core::inject::Ref;
 use fruity_editor::hooks::use_global;
 use fruity_editor_graphic_2d::gizmos_service::GizmosService;
+use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::Color;
 use fruity_graphic_2d::components::transform_2d::Transform2d;
 use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
 use fruity_physic_2d::components::rect_collider::RectCollider;
 
 pub fn draw_rectangle_collider_2d_gizmos(
+    graphic_service: Ref<dyn GraphicService>,
     graphic_2d_service: Ref<Graphic2dService>,
     gizmos_service: Const<GizmosService>,
 ) {
@@ -55,7 +57,8 @@ pub fn draw_rectangle_collider_2d_gizmos(
                 top_right,
                 Color::green(),
                 Color::red(),
-                move |fixed_x, fixed_y, drag_action| {
+                move |fixed_x, fixed_y| {
+                    let graphic_service = graphic_service.clone();
                     let collider = collider.clone();
 
                     // Get the rect origin
@@ -64,8 +67,20 @@ pub fn draw_rectangle_collider_2d_gizmos(
                         (collider.bottom_left, collider.top_right)
                     };
 
-                    drag_action.while_dragging(move |cursor_position, start_pos| {
-                        let cursor_movement = cursor_position - start_pos;
+                    Box::new(move |action| {
+                        let (cursor_pos, start_pos) = {
+                            let graphic_service_reader = graphic_service.read();
+                            (
+                                graphic_service_reader.get_viewport_position(
+                                    action.cursor_pos.0,
+                                    action.cursor_pos.1,
+                                ),
+                                graphic_service_reader
+                                    .get_viewport_position(action.start_pos.0, action.start_pos.1),
+                            )
+                        };
+
+                        let cursor_movement = cursor_pos - start_pos;
 
                         // Move the entity with the cursor
                         let mut collider = collider.write_typed::<RectCollider>().unwrap();
@@ -83,7 +98,7 @@ pub fn draw_rectangle_collider_2d_gizmos(
                         } else {
                             top_right_origin.y - cursor_movement.y
                         };
-                    });
+                    })
                 },
             );
         }

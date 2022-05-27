@@ -1,15 +1,20 @@
 use crate::gizmos_service::GizmosService;
 use fruity_core::inject::Const;
+use fruity_core::inject::Ref;
 use fruity_ecs::entity::entity_reference::EntityReference;
 use fruity_editor::hooks::use_global;
 use fruity_editor::state::inspector::InspectorState;
+use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
 use fruity_graphic_2d::components::scale_2d::Scale2d;
 use fruity_graphic_2d::components::transform_2d::Transform2d;
 use fruity_graphic_2d::components::translate_2d::Translate2d;
 
-pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
+pub fn draw_gizmos_2d(
+    gizmos_service: Const<GizmosService>,
+    graphic_service: Ref<dyn GraphicService>,
+) {
     let inspector_state = use_global::<InspectorState>();
 
     if !inspector_state.is_gizmos_enabled() {
@@ -55,18 +60,17 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
             let top_right = transform * Vector2d::new(0.5, 0.5);
 
             if let Some(_) = scale_2d {
-                let selected_entity_2 = entity.clone();
                 gizmos_service.draw_resize_helper(
                     bottom_left,
                     top_right,
                     Color::green(),
                     Color::red(),
-                    move |fixed_x, fixed_y, drag_action| {
-                        let selected_entity = selected_entity_2.clone();
+                    |fixed_x, fixed_y| {
+                        let graphic_service = graphic_service.clone();
 
                         // Get the translate and the scale origin
                         let translate_origin = {
-                            let entity_reader = selected_entity.read();
+                            let entity_reader = entity.read();
                             let translate = entity_reader
                                 .read_single_component::<Translate2d>()
                                 .unwrap();
@@ -74,19 +78,34 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
                         };
 
                         let scale_origin = {
-                            let entity_reader = selected_entity.read();
+                            let entity_reader = entity.read();
                             let scale = entity_reader.read_single_component::<Scale2d>().unwrap();
                             scale.vec
                         };
 
-                        drag_action.while_dragging(move |cursor_position, start_pos| {
-                            let cursor_movement = cursor_position - start_pos;
+                        Box::new(move |action| {
+                            let (cursor_pos, start_pos) = {
+                                let graphic_service_reader = graphic_service.read();
+                                (
+                                    graphic_service_reader.get_viewport_position(
+                                        action.cursor_pos.0,
+                                        action.cursor_pos.1,
+                                    ),
+                                    graphic_service_reader.get_viewport_position(
+                                        action.start_pos.0,
+                                        action.start_pos.1,
+                                    ),
+                                )
+                            };
+
                             let entity_writer = entity.write();
 
                             // Move the entity with the cursor
                             let mut translate = entity_writer
                                 .write_single_component::<Translate2d>()
                                 .unwrap();
+
+                            let cursor_movement = cursor_pos - start_pos;
                             translate.vec = translate_origin + cursor_movement / 2.0;
 
                             // Resize the entity with the cursor
@@ -104,7 +123,7 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
                             } else {
                                 scale_origin.y - cursor_movement.y
                             };
-                        });
+                        })
                     },
                 );
             }
@@ -116,26 +135,38 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
                 size,
                 Color::green(),
                 Color::red(),
-                move |move_x, move_y, drag_action| {
-                    let selected_entity = entity.clone();
+                |move_x, move_y| {
+                    let graphic_service = graphic_service.clone();
 
                     // Get the translate origin
                     let translate_origin = {
-                        let entity_reader = selected_entity.read();
+                        let entity_reader = entity.read();
                         let translate = entity_reader
                             .read_single_component::<Translate2d>()
                             .unwrap();
                         translate.vec
                     };
 
-                    drag_action.while_dragging(move |cursor_position, start_pos| {
+                    Box::new(move |action| {
+                        let (cursor_pos, start_pos) = {
+                            let graphic_service_reader = graphic_service.read();
+                            (
+                                graphic_service_reader.get_viewport_position(
+                                    action.cursor_pos.0,
+                                    action.cursor_pos.1,
+                                ),
+                                graphic_service_reader
+                                    .get_viewport_position(action.start_pos.0, action.start_pos.1),
+                            )
+                        };
+
                         let entity_writer = entity.write();
                         let mut translate = entity_writer
                             .write_single_component::<Translate2d>()
                             .unwrap();
 
                         // Move the entity with the cursor
-                        let cursor_movement = cursor_position - start_pos;
+                        let cursor_movement = cursor_pos - start_pos;
                         if move_x {
                             translate.vec.x = translate_origin.x + cursor_movement.x;
                         }
@@ -143,7 +174,7 @@ pub fn draw_gizmos_2d(gizmos_service: Const<GizmosService>) {
                         if move_y {
                             translate.vec.y = translate_origin.y + cursor_movement.y;
                         }
-                    });
+                    })
                 },
             );
         }
