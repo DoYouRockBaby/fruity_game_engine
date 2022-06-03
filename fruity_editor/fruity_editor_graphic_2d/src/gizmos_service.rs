@@ -10,6 +10,7 @@ use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
 use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
 use fruity_input::drag_service::DragCallback;
+use fruity_input::drag_service::DragEndCallback;
 use fruity_input::drag_service::DragService;
 use fruity_input::input_service::InputService;
 use std::fmt::Debug;
@@ -154,7 +155,7 @@ impl GizmosService {
         hover_color: Color,
         on_move: FMove,
     ) where
-        FMove: Fn(bool, bool) -> DragCallback,
+        FMove: Fn(bool, bool) -> (DragCallback, DragEndCallback),
     {
         // Get camera transform
         let camera_transform = {
@@ -231,7 +232,7 @@ impl GizmosService {
         hover_color: Color,
         on_resize: FResize,
     ) where
-        FResize: Fn(bool, bool) -> DragCallback,
+        FResize: Fn(bool, bool) -> (DragCallback, DragEndCallback),
     {
         // Get camera transform
         let camera_transform = {

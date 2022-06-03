@@ -18,8 +18,8 @@
 [X] There should be some memory leak in archetype
 [X] Add component query selectors
 [X] Create a way to query based on generics
-[ ] Support for async systems/queries for_each with tokio
 [ ] Add a way to extend components
+[ ] Support for async systems/queries for_each with tokio
 [ ] Random crash when we delete an entity
 [ ] Add an exception when you try to access a deleted entity, propagate it into js
 [ ] Find a way to move the introspect declaration into the associated traits
@@ -91,16 +91,16 @@
 
 ## Scripting
 
+[X] Javascript module is highly unsafe cause i force to put a one thread runtime into a multi thread host
+[X] Allow javascript to play with signals (depends on next)
+[X] Fix javascript services
+[X] Abstract everything (espescialy javascript and render)
 [ ] Find a better way to store SerializedComponent, to have something more effective on read
 [ ] Allow to handle size variations of SerializedComponent
 [ ] There should be some memory leak when a js object is released
-[X] Javascript module is highly unsafe cause i force to put a one thread runtime into a multi thread host
 [ ] Implement web workers in js
-[X] Allow javascript to play with signals (depends on next)
-[X] Fix javascript services
 [ ] Make javascript able to import modules via package.json
 [ ] Test and make microjob library compatible with javascript
-[X] Abstract everything (espescialy javascript and render)
 [ ] Typescript
 [ ] Expose rust-like enums in serialized
 [ ] Create a macro to expose the enums easely to serialized
@@ -108,11 +108,11 @@
 
 ## Others
 
-[ ] Implement a basic sound features
 [X] Dynamic libraries rust
+[X] Implements a profiling tool
 [X] Hot reload js
 [ ] Hot reload rust
-[X] Implements a profiling tool
+[ ] Implement a basic sound features
 
 ## Code clean
 

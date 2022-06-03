@@ -9,15 +9,18 @@ use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::RwLock;
 use fruity_windows::window_service::WindowService;
 use std::fmt::Debug;
+use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::Arc;
 
 pub type DragCallback = Box<dyn Fn(&DragAction) + Send + Sync + 'static>;
+pub type DragEndCallback = Box<dyn Fn(&DragAction) + Send + Sync + 'static>;
 
 pub struct DragAction {
     pub start_pos: (u32, u32),
     pub cursor_pos: (u32, u32),
     callback: DragCallback,
+    end_callback: DragEndCallback,
 }
 
 impl Debug for DragAction {
@@ -58,16 +61,19 @@ impl DragService {
         }
     }
 
-    pub fn start_drag(&self, callback: impl Fn() -> DragCallback) {
+    pub fn start_drag(&self, start_callback: impl Fn() -> (DragCallback, DragEndCallback)) {
         let start_pos = {
             let window_service_reader = self.window_service.read();
             window_service_reader.get_cursor_position()
         };
 
+        let start_callback_result = start_callback();
+
         let drag_action = DragAction {
             start_pos,
             cursor_pos: start_pos,
-            callback: callback(),
+            callback: start_callback_result.0,
+            end_callback: start_callback_result.1,
         };
 
         let mut current_drag_action_writer = self.current_drag_action.write();
@@ -76,15 +82,26 @@ impl DragService {
 
     pub fn update_drag(&self) {
         // If the left mouse button is released, we stop dragging
-        if !self.is_dragging_button_pressed() {
+        if !self.is_dragging_button_pressed() && self.is_dragging() {
+            // Call the end action
             let mut current_drag_action_writer = self.current_drag_action.write();
-            *current_drag_action_writer = None;
-        } else {
-        }
+            if let Some(current_drag_action) = current_drag_action_writer.deref_mut() {
+                // Update cursor pos
+                current_drag_action.cursor_pos = {
+                    let window_service_reader = self.window_service.read();
+                    window_service_reader.get_cursor_position()
+                };
+
+                (current_drag_action.end_callback)(&current_drag_action);
+
+                // Clear the current action
+                *current_drag_action_writer = None;
+            }
+        };
 
         // If a drag is active, we execute the associated callback
-        let mut current_drag_action_reader = self.current_drag_action.write();
-        if let Some(current_drag_action) = current_drag_action_reader.deref_mut() {
+        let mut current_drag_action_writer = self.current_drag_action.write();
+        if let Some(current_drag_action) = current_drag_action_writer.deref_mut() {
             // Update cursor pos
             current_drag_action.cursor_pos = {
                 let window_service_reader = self.window_service.read();
@@ -98,6 +115,16 @@ impl DragService {
     fn is_dragging_button_pressed(&self) -> bool {
         let input_service = self.input_service.read();
         input_service.is_source_pressed("Mouse/Left")
+    }
+
+    fn is_dragging(&self) -> bool {
+        let current_drag_action_reader = self.current_drag_action.read();
+
+        if let Some(_) = current_drag_action_reader.deref() {
+            true
+        } else {
+            false
+        }
     }
 }
 

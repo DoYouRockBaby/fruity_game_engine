@@ -13,6 +13,7 @@ use crate::components::fields::primitive::draw_editor_u64;
 use crate::components::fields::primitive::draw_editor_u8;
 use crate::components::fields::primitive::draw_editor_usize;
 use crate::hooks::use_global;
+use crate::mutations::set_field_mutation::SetFieldMutation;
 use crate::state::world::WorldState;
 use crate::ui_element::display::Text;
 use crate::ui_element::input::Button;
@@ -22,12 +23,11 @@ use crate::ui_element::UIAlign;
 use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
 use crate::IntrospectEditorService;
-use fruity_core::introspect::SetterCaller;
+use crate::MutationService;
 use fruity_core::serialize::serialized::SerializableObject;
 use fruity_core::serialize::serialized::Serialized;
 use std::collections::HashMap;
 use std::ops::Deref;
-use std::ops::DerefMut;
 use std::sync::Arc;
 
 pub mod primitive;
@@ -43,19 +43,20 @@ pub fn edit_introspect_fields(introspect_object: Box<dyn SerializableObject>) ->
 
             let name = field_info.name.clone();
             field_editor(
-                &name,
-                field_value,
+                &name.clone(),
+                field_value.clone(),
                 Box::new(move |new_value| {
-                    match &field_info.setter {
-                        SetterCaller::Const(call) => {
-                            call(introspect_object.deref().as_any_ref(), new_value)
-                        }
-                        SetterCaller::Mut(call) => {
-                            let mut introspect_object = introspect_object.duplicate();
-                            call(introspect_object.deref_mut().as_any_mut(), new_value)
-                        }
-                        SetterCaller::None => {}
-                    };
+                    let world_state = use_global::<WorldState>();
+                    let mutation_service =
+                        world_state.resource_container.require::<MutationService>();
+                    let mut mutation_service = mutation_service.write();
+
+                    mutation_service.push_action(SetFieldMutation {
+                        target: introspect_object.clone(),
+                        field: name.clone(),
+                        previous_value: field_value.clone(),
+                        new_value,
+                    });
                 }),
             )
         })

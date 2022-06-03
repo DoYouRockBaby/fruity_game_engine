@@ -4,34 +4,14 @@ use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
-use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::sync::Arc;
 
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Section {
-    label: String,
     order: usize,
-}
-
-impl PartialEq for Section {
-    fn eq(&self, rhs: &Self) -> bool {
-        self.label == rhs.label
-    }
-}
-
-impl Eq for Section {}
-
-impl PartialOrd for Section {
-    fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
-        self.order.partial_cmp(&rhs.order)
-    }
-}
-
-impl Ord for Section {
-    fn cmp(&self, rhs: &Self) -> Ordering {
-        self.order.cmp(&rhs.order)
-    }
+    label: String,
 }
 
 struct MenuItem {
@@ -73,17 +53,20 @@ impl EditorMenuService {
         section_label: &str,
         action: impl Fn() + Send + Sync + 'static,
     ) {
-        let section = Section {
-            label: label.to_string(),
-            order: usize::MAX,
-        };
-
         // Get or create the menu section
-        let section_items = if let Some(section_items) = self.sections.get_mut(&section) {
-            section_items
+        let section_items = if let Some(section_items) = self
+            .sections
+            .iter_mut()
+            .find(|(section, _)| section.label == section_label)
+        {
+            section_items.1
         } else {
             self.add_section(section_label, usize::MAX);
-            self.sections.get_mut(&section).unwrap()
+            self.sections
+                .iter_mut()
+                .find(|(section, _)| section.label == section_label)
+                .unwrap()
+                .1
         };
 
         section_items.push(MenuItem {

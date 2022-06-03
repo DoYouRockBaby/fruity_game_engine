@@ -1,7 +1,11 @@
 use crate::ColliderState;
+use fruity_core::convert::FruityInto;
 use fruity_core::inject::Const;
 use fruity_core::inject::Ref;
 use fruity_editor::hooks::use_global;
+use fruity_editor::mutations::mutation_service::MutationService;
+use fruity_editor::mutations::set_field_mutation::SetFieldMutation;
+use fruity_editor::state::world::WorldState;
 use fruity_editor_graphic_2d::gizmos_service::GizmosService;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::vector2d::Vector2d;
@@ -68,6 +72,7 @@ pub fn draw_circle_collider_2d_gizmos(
                 |move_x, move_y| {
                     let graphic_service = graphic_service.clone();
                     let collider = collider_2.clone();
+                    let collider_2 = collider_2.clone();
 
                     // Get the center origin
                     let center_origin = {
@@ -75,33 +80,59 @@ pub fn draw_circle_collider_2d_gizmos(
                         circle_collider.center
                     };
 
-                    Box::new(move |action| {
-                        let (cursor_pos, start_pos) = {
-                            let graphic_service_reader = graphic_service.read();
-                            (
-                                graphic_service_reader.viewport_position_to_world_position(
-                                    action.cursor_pos.0,
-                                    action.cursor_pos.1,
-                                ),
-                                graphic_service_reader.viewport_position_to_world_position(
-                                    action.start_pos.0,
-                                    action.start_pos.1,
-                                ),
-                            )
-                        };
+                    (
+                        Box::new(move |action| {
+                            let (cursor_pos, start_pos) = {
+                                let graphic_service_reader = graphic_service.read();
+                                (
+                                    graphic_service_reader.viewport_position_to_world_position(
+                                        action.cursor_pos.0,
+                                        action.cursor_pos.1,
+                                    ),
+                                    graphic_service_reader.viewport_position_to_world_position(
+                                        action.start_pos.0,
+                                        action.start_pos.1,
+                                    ),
+                                )
+                            };
 
-                        let mut circle_collider = collider.write_typed::<CircleCollider>().unwrap();
+                            let mut circle_collider =
+                                collider.write_typed::<CircleCollider>().unwrap();
 
-                        // Move the entity with the cursor
-                        let cursor_movement = cursor_pos - start_pos;
-                        if move_x {
-                            circle_collider.center.x = center_origin.x + cursor_movement.x;
-                        }
+                            // Move the entity with the cursor
+                            let cursor_movement = cursor_pos - start_pos;
+                            if move_x {
+                                circle_collider.center.x = center_origin.x + cursor_movement.x;
+                            }
 
-                        if move_y {
-                            circle_collider.center.y = center_origin.y + cursor_movement.y;
-                        }
-                    })
+                            if move_y {
+                                circle_collider.center.y = center_origin.y + cursor_movement.y;
+                            }
+                        }),
+                        Box::new(move |_| {
+                            let collider = collider_2.clone();
+
+                            let world_state = use_global::<WorldState>();
+                            let mutation_service =
+                                world_state.resource_container.require::<MutationService>();
+                            let mut mutation_service = mutation_service.write();
+
+                            // Get current values
+                            let center_current = {
+                                let circle_collider =
+                                    collider.read_typed::<CircleCollider>().unwrap();
+                                circle_collider.center
+                            };
+
+                            // Store the mutations
+                            mutation_service.push_action(SetFieldMutation {
+                                target: Box::new(collider.clone()),
+                                field: "center".to_string(),
+                                previous_value: center_origin.fruity_into(),
+                                new_value: center_current.fruity_into(),
+                            });
+                        }),
+                    )
                 },
             );
 
@@ -119,6 +150,7 @@ pub fn draw_circle_collider_2d_gizmos(
                 let drag_service_reader = drag_service.read();
                 drag_service_reader.start_drag(move || {
                     let collider = collider_2.clone();
+                    let collider_2 = collider_2.clone();
 
                     // Get the radius origin
                     let radius_origin = {
@@ -127,27 +159,55 @@ pub fn draw_circle_collider_2d_gizmos(
                     };
 
                     let graphic_service = graphic_service.clone();
-                    Box::new(move |action| {
-                        let (cursor_pos, start_pos) = {
-                            let graphic_service_reader = graphic_service.read();
-                            (
-                                graphic_service_reader.viewport_position_to_world_position(
-                                    action.cursor_pos.0,
-                                    action.cursor_pos.1,
-                                ),
-                                graphic_service_reader.viewport_position_to_world_position(
-                                    action.start_pos.0,
-                                    action.start_pos.1,
-                                ),
-                            )
-                        };
+                    (
+                        Box::new(move |action| {
+                            let collider = collider.clone();
 
-                        let mut circle_collider = collider.write_typed::<CircleCollider>().unwrap();
+                            let (cursor_pos, start_pos) = {
+                                let graphic_service_reader = graphic_service.read();
+                                (
+                                    graphic_service_reader.viewport_position_to_world_position(
+                                        action.cursor_pos.0,
+                                        action.cursor_pos.1,
+                                    ),
+                                    graphic_service_reader.viewport_position_to_world_position(
+                                        action.start_pos.0,
+                                        action.start_pos.1,
+                                    ),
+                                )
+                            };
 
-                        // Resize the entity with the cursor
-                        let cursor_movement = cursor_pos - start_pos;
-                        circle_collider.radius = radius_origin - cursor_movement.y;
-                    })
+                            let mut circle_collider =
+                                collider.write_typed::<CircleCollider>().unwrap();
+
+                            // Resize the entity with the cursor
+                            let cursor_movement = cursor_pos - start_pos;
+                            circle_collider.radius = radius_origin - cursor_movement.y;
+                        }),
+                        Box::new(move |_| {
+                            let collider = collider_2.clone();
+
+                            let world_state = use_global::<WorldState>();
+                            let mutation_service =
+                                world_state.resource_container.require::<MutationService>();
+                            let mut mutation_service = mutation_service.write();
+
+                            // Get current values
+                            let radius_current = {
+                                let circle_collider =
+                                    collider.read_typed::<CircleCollider>().unwrap();
+                                circle_collider.radius
+                            };
+
+                            // Store the mutations
+                            mutation_service.push_action(SetFieldMutation {
+                                target: Box::new(collider.clone()),
+                                field: "center".to_string(),
+                                previous_value: radius_origin.fruity_into(),
+                                new_value: radius_current.fruity_into(),
+                            });
+                        }),
+                    )
                 });
             }
         }

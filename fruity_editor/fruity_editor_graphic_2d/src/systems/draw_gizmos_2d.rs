@@ -1,9 +1,13 @@
 use crate::gizmos_service::GizmosService;
+use fruity_core::convert::FruityInto;
 use fruity_core::inject::Const;
 use fruity_core::inject::Ref;
 use fruity_ecs::entity::entity_reference::EntityReference;
 use fruity_editor::hooks::use_global;
+use fruity_editor::mutations::mutation_service::MutationService;
+use fruity_editor::mutations::set_field_mutation::SetFieldMutation;
 use fruity_editor::state::inspector::InspectorState;
+use fruity_editor::state::world::WorldState;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
@@ -83,47 +87,100 @@ pub fn draw_gizmos_2d(
                             scale.vec
                         };
 
-                        Box::new(move |action| {
-                            let (cursor_pos, start_pos) = {
-                                let graphic_service_reader = graphic_service.read();
-                                (
-                                    graphic_service_reader.viewport_position_to_world_position(
-                                        action.cursor_pos.0,
-                                        action.cursor_pos.1,
-                                    ),
-                                    graphic_service_reader.viewport_position_to_world_position(
-                                        action.start_pos.0,
-                                        action.start_pos.1,
-                                    ),
-                                )
-                            };
+                        (
+                            Box::new(move |action| {
+                                let (cursor_pos, start_pos) = {
+                                    let graphic_service_reader = graphic_service.read();
+                                    (
+                                        graphic_service_reader.viewport_position_to_world_position(
+                                            action.cursor_pos.0,
+                                            action.cursor_pos.1,
+                                        ),
+                                        graphic_service_reader.viewport_position_to_world_position(
+                                            action.start_pos.0,
+                                            action.start_pos.1,
+                                        ),
+                                    )
+                                };
 
-                            let entity_writer = entity.write();
+                                let entity_writer = entity.write();
 
-                            // Move the entity with the cursor
-                            let mut translate = entity_writer
-                                .write_single_component::<Translate2d>()
-                                .unwrap();
+                                // Move the entity with the cursor
+                                let mut translate = entity_writer
+                                    .write_single_component::<Translate2d>()
+                                    .unwrap();
 
-                            let cursor_movement = cursor_pos - start_pos;
-                            translate.vec = translate_origin + cursor_movement / 2.0;
+                                let cursor_movement = cursor_pos - start_pos;
+                                translate.vec = translate_origin + cursor_movement / 2.0;
 
-                            // Resize the entity with the cursor
-                            let mut scale =
-                                entity_writer.write_single_component::<Scale2d>().unwrap();
+                                // Resize the entity with the cursor
+                                let mut scale =
+                                    entity_writer.write_single_component::<Scale2d>().unwrap();
 
-                            scale.vec.x = if fixed_x {
-                                scale_origin.x + cursor_movement.x
-                            } else {
-                                scale_origin.x - cursor_movement.x
-                            };
+                                scale.vec.x = if fixed_x {
+                                    scale_origin.x + cursor_movement.x
+                                } else {
+                                    scale_origin.x - cursor_movement.x
+                                };
 
-                            scale.vec.y = if fixed_y {
-                                scale_origin.y + cursor_movement.y
-                            } else {
-                                scale_origin.y - cursor_movement.y
-                            };
-                        })
+                                scale.vec.y = if fixed_y {
+                                    scale_origin.y + cursor_movement.y
+                                } else {
+                                    scale_origin.y - cursor_movement.y
+                                };
+                            }),
+                            Box::new(move |_| {
+                                let world_state = use_global::<WorldState>();
+                                let mutation_service =
+                                    world_state.resource_container.require::<MutationService>();
+                                let mut mutation_service = mutation_service.write();
+
+                                // Get current values
+                                let translate_current = {
+                                    let entity_reader = entity.read();
+                                    let translate = entity_reader
+                                        .read_single_component::<Translate2d>()
+                                        .unwrap();
+                                    translate.vec
+                                };
+
+                                let scale_current = {
+                                    let entity_reader = entity.read();
+                                    let scale =
+                                        entity_reader.read_single_component::<Scale2d>().unwrap();
+                                    scale.vec
+                                };
+
+                                // Get component references
+                                let translate_component = entity
+                                    .get_components_by_type_identifier("Translate2d")
+                                    .into_iter()
+                                    .next()
+                                    .unwrap();
+
+                                let scale_component = entity
+                                    .get_components_by_type_identifier("Scale2d")
+                                    .into_iter()
+                                    .next()
+                                    .unwrap();
+
+                                // Store the mutations
+                                mutation_service.push_action((
+                                    SetFieldMutation {
+                                        target: Box::new(translate_component),
+                                        field: "vec".to_string(),
+                                        previous_value: translate_origin.fruity_into(),
+                                        new_value: translate_current.fruity_into(),
+                                    },
+                                    SetFieldMutation {
+                                        target: Box::new(scale_component),
+                                        field: "vec".to_string(),
+                                        previous_value: scale_origin.fruity_into(),
+                                        new_value: scale_current.fruity_into(),
+                                    },
+                                ));
+                            }),
+                        )
                     },
                 );
             }
@@ -147,36 +204,68 @@ pub fn draw_gizmos_2d(
                         translate.vec
                     };
 
-                    Box::new(move |action| {
-                        let (cursor_pos, start_pos) = {
-                            let graphic_service_reader = graphic_service.read();
-                            (
-                                graphic_service_reader.viewport_position_to_world_position(
-                                    action.cursor_pos.0,
-                                    action.cursor_pos.1,
-                                ),
-                                graphic_service_reader.viewport_position_to_world_position(
-                                    action.start_pos.0,
-                                    action.start_pos.1,
-                                ),
-                            )
-                        };
+                    (
+                        Box::new(move |action| {
+                            let (cursor_pos, start_pos) = {
+                                let graphic_service_reader = graphic_service.read();
+                                (
+                                    graphic_service_reader.viewport_position_to_world_position(
+                                        action.cursor_pos.0,
+                                        action.cursor_pos.1,
+                                    ),
+                                    graphic_service_reader.viewport_position_to_world_position(
+                                        action.start_pos.0,
+                                        action.start_pos.1,
+                                    ),
+                                )
+                            };
 
-                        let entity_writer = entity.write();
-                        let mut translate = entity_writer
-                            .write_single_component::<Translate2d>()
-                            .unwrap();
+                            let entity_writer = entity.write();
+                            let mut translate = entity_writer
+                                .write_single_component::<Translate2d>()
+                                .unwrap();
 
-                        // Move the entity with the cursor
-                        let cursor_movement = cursor_pos - start_pos;
-                        if move_x {
-                            translate.vec.x = translate_origin.x + cursor_movement.x;
-                        }
+                            // Move the entity with the cursor
+                            let cursor_movement = cursor_pos - start_pos;
+                            if move_x {
+                                translate.vec.x = translate_origin.x + cursor_movement.x;
+                            }
 
-                        if move_y {
-                            translate.vec.y = translate_origin.y + cursor_movement.y;
-                        }
-                    })
+                            if move_y {
+                                translate.vec.y = translate_origin.y + cursor_movement.y;
+                            }
+                        }),
+                        Box::new(move |_| {
+                            let world_state = use_global::<WorldState>();
+                            let mutation_service =
+                                world_state.resource_container.require::<MutationService>();
+                            let mut mutation_service = mutation_service.write();
+
+                            // Get current values
+                            let translate_current = {
+                                let entity_reader = entity.read();
+                                let translate = entity_reader
+                                    .read_single_component::<Translate2d>()
+                                    .unwrap();
+                                translate.vec
+                            };
+
+                            // Get component references
+                            let translate_component = entity
+                                .get_components_by_type_identifier("Translate2d")
+                                .into_iter()
+                                .next()
+                                .unwrap();
+
+                            // Store the mutations
+                            mutation_service.push_action(SetFieldMutation {
+                                target: Box::new(translate_component),
+                                field: "vec".to_string(),
+                                previous_value: translate_origin.fruity_into(),
+                                new_value: translate_current.fruity_into(),
+                            });
+                        }),
+                    )
                 },
             );
         }

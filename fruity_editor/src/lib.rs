@@ -10,6 +10,7 @@ use crate::hooks::use_global;
 use crate::inspect::inspect_entity::inspect_entity;
 use crate::inspector_service::InspectorService;
 use crate::introspect_editor_service::IntrospectEditorService;
+use crate::mutations::mutation_service::MutationService;
 use crate::resources::default_resources::load_default_resources;
 use crate::state::file_explorer::FileExplorerState;
 use crate::state::inspector::InspectorState;
@@ -40,6 +41,7 @@ pub mod hooks;
 pub mod inspect;
 pub mod inspector_service;
 pub mod introspect_editor_service;
+pub mod mutations;
 pub mod resources;
 pub mod state;
 pub mod systems;
@@ -56,6 +58,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let editor_panels_service = EditorPanelsService::new(resource_container.clone());
     let editor_component_service = EditorComponentService::new(resource_container.clone());
     let file_explorer_service = FileExplorerService::new(resource_container.clone());
+    let mutation_service = MutationService::new(resource_container.clone());
 
     resource_container.add::<InspectorService>("inspector_service", Box::new(inspector_service));
     resource_container.add::<IntrospectEditorService>(
@@ -72,6 +75,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
         "editor_component_service",
         Box::new(editor_component_service),
     );
+    resource_container.add::<MutationService>("mutation_service", Box::new(mutation_service));
 
     declare_global(WorldState::new(resource_container.clone()));
     declare_global(ThemeState::default());
@@ -98,6 +102,8 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let editor_menu_service = resource_container.require::<EditorMenuService>();
     let mut editor_menu_service = editor_menu_service.write();
 
+    editor_menu_service.add_section("File", 10);
+    editor_menu_service.add_section("Edit", 20);
     editor_menu_service.add_menu("Open", "File", move || {
         let scene_state = use_global::<SceneState>();
         scene_state.open();
@@ -109,6 +115,20 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     editor_menu_service.add_menu("Save as", "File", move || {
         let scene_state = use_global::<SceneState>();
         scene_state.save_as();
+    });
+    editor_menu_service.add_menu("Undo", "Edit", move || {
+        let world_state = use_global::<WorldState>();
+        let mutation_service = world_state.resource_container.require::<MutationService>();
+        let mut mutation_service = mutation_service.write();
+
+        mutation_service.undo();
+    });
+    editor_menu_service.add_menu("Redo", "Edit", move || {
+        let world_state = use_global::<WorldState>();
+        let mutation_service = world_state.resource_container.require::<MutationService>();
+        let mut mutation_service = mutation_service.write();
+
+        mutation_service.redo();
     });
 
     let editor_panels_service = resource_container.require::<EditorPanelsService>();
