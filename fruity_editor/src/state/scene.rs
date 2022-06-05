@@ -101,6 +101,14 @@ impl SceneState {
         }
     }
 
+    pub fn can_save(&mut self) -> bool {
+        if let Some(_) = &self.current_filepath {
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn save_as(&mut self) {
         let dialog_service = self.resource_container.require::<dyn DialogService>();
         let dialog_service = dialog_service.read();

@@ -55,8 +55,8 @@ fn main() {
             initialize_winit_window(resource_container.clone(), settings);
             initialize_window(resource_container.clone(), settings);
             initialize_input(resource_container.clone(), settings);
-            initialize_winit_input(resource_container.clone(), settings);
             initialize_wgpu_graphic(resource_container.clone(), settings);
+            initialize_winit_input(resource_container.clone(), settings);
             initialize_graphic(resource_container.clone(), settings);
             initialize_graphic_2d(resource_container.clone(), settings);
             initialize_physic_2d(resource_container.clone(), settings);

@@ -3,6 +3,7 @@ use crate::components::inspector::inspector_component;
 use crate::components::scene::scene_component;
 use crate::editor_component_service::EditorComponentService;
 use crate::editor_menu_service::EditorMenuService;
+use crate::editor_menu_service::MenuItemOptions;
 use crate::editor_panels_service::EditorPanelsService;
 use crate::file_explorer_service::FileExplorerService;
 use crate::hooks::declare_global;
@@ -10,6 +11,14 @@ use crate::hooks::use_global;
 use crate::inspect::inspect_entity::inspect_entity;
 use crate::inspector_service::InspectorService;
 use crate::introspect_editor_service::IntrospectEditorService;
+use crate::menu::is_redo_enabled;
+use crate::menu::is_save_enabled;
+use crate::menu::is_undo_enabled;
+use crate::menu::open;
+use crate::menu::redo;
+use crate::menu::save;
+use crate::menu::save_as;
+use crate::menu::undo;
 use crate::mutations::mutation_service::MutationService;
 use crate::resources::default_resources::load_default_resources;
 use crate::state::file_explorer::FileExplorerState;
@@ -41,6 +50,7 @@ pub mod hooks;
 pub mod inspect;
 pub mod inspector_service;
 pub mod introspect_editor_service;
+pub mod menu;
 pub mod mutations;
 pub mod resources;
 pub mod state;
@@ -104,32 +114,54 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
 
     editor_menu_service.add_section("File", 10);
     editor_menu_service.add_section("Edit", 20);
-    editor_menu_service.add_menu("Open", "File", move || {
-        let scene_state = use_global::<SceneState>();
-        scene_state.open();
-    });
-    editor_menu_service.add_menu("Save", "File", move || {
-        let scene_state = use_global::<SceneState>();
-        scene_state.save();
-    });
-    editor_menu_service.add_menu("Save as", "File", move || {
-        let scene_state = use_global::<SceneState>();
-        scene_state.save_as();
-    });
-    editor_menu_service.add_menu("Undo", "Edit", move || {
-        let world_state = use_global::<WorldState>();
-        let mutation_service = world_state.resource_container.require::<MutationService>();
-        let mut mutation_service = mutation_service.write();
-
-        mutation_service.undo();
-    });
-    editor_menu_service.add_menu("Redo", "Edit", move || {
-        let world_state = use_global::<WorldState>();
-        let mutation_service = world_state.resource_container.require::<MutationService>();
-        let mut mutation_service = mutation_service.write();
-
-        mutation_service.redo();
-    });
+    editor_menu_service.add_menu(
+        "Open",
+        "File",
+        open,
+        MenuItemOptions {
+            shortcut: Some("Ctrl + O".to_string()),
+            ..Default::default()
+        },
+    );
+    editor_menu_service.add_menu(
+        "Save",
+        "File",
+        save,
+        MenuItemOptions {
+            is_enabled: Some(Arc::new(is_save_enabled)),
+            shortcut: Some("Ctrl + S".to_string()),
+            ..Default::default()
+        },
+    );
+    editor_menu_service.add_menu(
+        "Save as",
+        "File",
+        save_as,
+        MenuItemOptions {
+            shortcut: Some("Ctrl + Shift + S".to_string()),
+            ..Default::default()
+        },
+    );
+    editor_menu_service.add_menu(
+        "Undo",
+        "Edit",
+        undo,
+        MenuItemOptions {
+            is_enabled: Some(Arc::new(is_undo_enabled)),
+            shortcut: Some("Ctrl + Z".to_string()),
+            ..Default::default()
+        },
+    );
+    editor_menu_service.add_menu(
+        "Redo",
+        "Edit",
+        redo,
+        MenuItemOptions {
+            is_enabled: Some(Arc::new(is_redo_enabled)),
+            shortcut: Some("Ctrl + Shift + Z".to_string()),
+            ..Default::default()
+        },
+    );
 
     let editor_panels_service = resource_container.require::<EditorPanelsService>();
     let mut editor_panels_service = editor_panels_service.write();

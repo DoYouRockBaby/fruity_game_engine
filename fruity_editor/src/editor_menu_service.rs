@@ -8,15 +8,23 @@ use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
-struct Section {
-    order: usize,
-    label: String,
+#[derive(Default, Clone)]
+pub struct MenuItemOptions {
+    pub is_enabled: Option<Arc<dyn Fn() -> bool + Send + Sync>>,
+    pub shortcut: Option<String>,
 }
 
-struct MenuItem {
-    label: String,
-    action: Arc<dyn Fn() + Send + Sync>,
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+struct Section {
+    pub order: usize,
+    pub label: String,
+}
+
+#[derive(Clone)]
+pub struct MenuItem {
+    pub label: String,
+    pub action: Arc<dyn Fn() + Send + Sync>,
+    pub options: MenuItemOptions,
 }
 
 #[derive(FruityAny)]
@@ -52,6 +60,7 @@ impl EditorMenuService {
         label: &str,
         section_label: &str,
         action: impl Fn() + Send + Sync + 'static,
+        options: MenuItemOptions,
     ) {
         // Get or create the menu section
         let section_items = if let Some(section_items) = self
@@ -72,18 +81,17 @@ impl EditorMenuService {
         section_items.push(MenuItem {
             label: label.to_string(),
             action: Arc::new(action),
+            options,
         });
     }
 
-    pub fn iter_sections(
-        &self,
-    ) -> impl Iterator<Item = (String, Vec<(String, Arc<dyn Fn() + Send + Sync>)>)> + '_ {
+    pub fn iter_sections(&self) -> impl Iterator<Item = (String, Vec<MenuItem>)> + '_ {
         self.sections.iter().map(|(section, items)| {
             (
                 section.label.to_string(),
                 items
                     .iter()
-                    .map(|menu_item| (menu_item.label.to_string(), menu_item.action.clone()))
+                    .map(|menu_item| menu_item.clone())
                     .collect::<Vec<_>>(),
             )
         })

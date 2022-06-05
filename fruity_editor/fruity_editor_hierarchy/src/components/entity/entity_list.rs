@@ -107,6 +107,7 @@ pub fn draw_entity_line(
                     let entity_service = entity_service.read();
                     entity_service.remove(entity_id).ok();
                 }),
+                options: Default::default(),
             }],
             ..Default::default()
         }
@@ -126,6 +127,7 @@ pub fn draw_entity_line(
                     let entity_service = entity_service.read();
                     entity_service.remove(entity_id).ok();
                 }),
+                options: Default::default(),
             }],
             ..Default::default()
         }

@@ -1,6 +1,7 @@
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use fruity_input::input_service::InputService;
+use fruity_input::input_service::Modifiers;
 use fruity_windows::window_service::WindowService;
 use fruity_winit_windows::window_service::WinitWindowService;
 use std::sync::Arc;
@@ -50,6 +51,8 @@ fn handle_keyboard_input(input_service: &mut InputService, event: &Event<()>) {
             } else {
                 input_service.notify_released(source);
             }
+        } else if let WindowEvent::ModifiersChanged(modifier) = event {
+            input_service.notify_modifiers(Modifiers::from_bits(modifier.bits()).unwrap());
         } else if let WindowEvent::KeyboardInput { input, .. } = event {
             if let Some(key) = input.virtual_keycode {
                 // Get the key source

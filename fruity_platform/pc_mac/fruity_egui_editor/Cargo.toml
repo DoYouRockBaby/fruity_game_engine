@@ -22,6 +22,7 @@ fruity_any = { path = "../../../fruity_core/fruity_any" }
 fruity_core = { path = "../../../fruity_core" }
 fruity_ecs = { path = "../../../fruity_core/fruity_ecs" }
 fruity_graphic = { path = "../../../fruity_core/fruity_graphic" }
+fruity_input = { path = "../../../fruity_core/fruity_input" }
 fruity_windows = { path = "../../../fruity_core/fruity_windows" }
 fruity_editor = { path = "../../../fruity_editor" }
 fruity_wgpu_graphic = { path = "../fruity_wgpu_graphic" }

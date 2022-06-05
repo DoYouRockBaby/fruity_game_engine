@@ -1,5 +1,6 @@
 use crate::ui_element::UIElement;
 use crate::ui_element::UIWidget;
+use crate::MenuItemOptions;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -17,6 +18,7 @@ pub struct MenuSection {
 pub struct MenuItem {
     pub label: String,
     pub on_click: Arc<dyn Fn() + Send + Sync>,
+    pub options: MenuItemOptions,
 }
 
 impl Debug for MenuItem {

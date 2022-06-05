@@ -118,6 +118,7 @@ impl WgpuGraphicService {
         let state = {
             let window_service = window_service.read();
             let window_service = window_service.downcast_ref::<WinitWindowService>();
+
             // Subscribe to windows observer to proceed the graphics when it's neededs
             let resource_container_2 = resource_container.clone();
             window_service.on_start_update().add_observer(move |_| {
@@ -127,6 +128,7 @@ impl WgpuGraphicService {
                 let graphic_service = graphic_service.downcast_mut::<WgpuGraphicService>();
                 graphic_service.start_draw();
             });
+
             let resource_container_2 = resource_container.clone();
             window_service.on_end_update().add_observer(move |_| {
                 puffin::profile_scope!("end_draw");
@@ -147,6 +149,7 @@ impl WgpuGraphicService {
                     graphic_service.on_after_draw_end().notify(());
                 }
             });
+
             let resource_container_2 = resource_container.clone();
             window_service
                 .on_resize()

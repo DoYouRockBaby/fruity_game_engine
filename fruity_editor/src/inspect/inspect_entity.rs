@@ -108,6 +108,7 @@ pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
                             inspector_state
                                 .select(Box::new(entity_service.get_entity(entity_id).unwrap()));
                         }),
+                        options: Default::default(),
                     }],
                     ..Default::default()
                 }

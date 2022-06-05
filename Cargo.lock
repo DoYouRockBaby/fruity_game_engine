@@ -1036,6 +1036,7 @@ dependencies = [
  "fruity_ecs",
  "fruity_editor",
  "fruity_graphic",
+ "fruity_input",
  "fruity_wgpu_graphic",
  "fruity_windows",
  "fruity_winit_windows",
@@ -1143,6 +1144,7 @@ dependencies = [
 name = "fruity_input"
 version = "0.1.0"
 dependencies = [
+ "bitflags",
  "fruity_any",
  "fruity_core",
  "fruity_ecs",

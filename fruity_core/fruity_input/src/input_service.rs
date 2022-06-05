@@ -1,3 +1,4 @@
+use bitflags::bitflags;
 use fruity_any::*;
 use fruity_core::convert::FruityInto;
 use fruity_core::convert::FruityTryFrom;
@@ -18,11 +19,41 @@ use std::collections::HashSet;
 use std::fmt::Debug;
 use std::sync::Arc;
 
+bitflags! {
+    #[derive(Default)]
+    pub struct Modifiers: u32 {
+        const SHIFT = 0b100 << 0;
+        const CTRL = 0b100 << 3;
+        const ALT = 0b100 << 6;
+        const LOGO = 0b100 << 9;
+    }
+}
+
+impl Modifiers {
+    /// Returns `true` if the shift key is pressed.
+    pub fn shift(&self) -> bool {
+        self.intersects(Self::SHIFT)
+    }
+    /// Returns `true` if the control key is pressed.
+    pub fn ctrl(&self) -> bool {
+        self.intersects(Self::CTRL)
+    }
+    /// Returns `true` if the alt key is pressed.
+    pub fn alt(&self) -> bool {
+        self.intersects(Self::ALT)
+    }
+    /// Returns `true` if the logo key is pressed.
+    pub fn logo(&self) -> bool {
+        self.intersects(Self::LOGO)
+    }
+}
+
 #[derive(FruityAny)]
 pub struct InputService {
     pub input_map: HashMap<String, String>,
     pub pressed_inputs: HashSet<String>,
     pub pressed_sources: HashSet<String>,
+    pub pressed_modifiers: Modifiers,
     pub pressed_this_frame_inputs: HashSet<String>,
     pub pressed_this_frame_sources: HashSet<String>,
     pub released_this_frame_inputs: HashSet<String>,
@@ -43,6 +74,7 @@ impl InputService {
             input_map: HashMap::new(),
             pressed_inputs: HashSet::new(),
             pressed_sources: HashSet::new(),
+            pressed_modifiers: Default::default(),
             pressed_this_frame_inputs: HashSet::new(),
             pressed_this_frame_sources: HashSet::new(),
             released_this_frame_inputs: HashSet::new(),
@@ -81,6 +113,24 @@ impl InputService {
 
     pub fn is_pressed_this_frame(&self, input: &str) -> bool {
         self.pressed_this_frame_inputs.contains(input)
+    }
+
+    pub fn is_keyboard_pressed_this_frame(&self, source: &str) -> bool {
+        let mut source = source.to_string();
+        source.retain(|c| !c.is_whitespace());
+
+        let result = source
+            .split("+")
+            .map(|input| match input {
+                "Shift" => self.pressed_modifiers.shift(),
+                "Ctrl" => self.pressed_modifiers.ctrl(),
+                "Alt" => self.pressed_modifiers.alt(),
+                "Logo" => self.pressed_modifiers.logo(),
+                key => self.is_source_pressed_this_frame(&format!("Keyboard/{}", key)),
+            })
+            .fold(true, |acc, elem| acc && elem);
+
+        result
     }
 
     pub fn is_source_pressed_this_frame(&self, source: &str) -> bool {
@@ -126,6 +176,10 @@ impl InputService {
         self.pressed_this_frame_inputs.clear();
         self.released_this_frame_sources.clear();
         self.released_this_frame_inputs.clear();
+    }
+
+    pub fn notify_modifiers(&mut self, modifier: Modifiers) {
+        self.pressed_modifiers = modifier;
     }
 }
 

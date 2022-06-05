@@ -22,8 +22,9 @@ pub fn menu_sections_component() -> Vec<UIElement> {
                     .1
                     .iter()
                     .map(|menu_item| MenuItem {
-                        label: menu_item.0.clone(),
-                        on_click: menu_item.1.clone(),
+                        label: menu_item.label.clone(),
+                        on_click: menu_item.action.clone(),
+                        options: menu_item.options.clone(),
                     })
                     .collect::<Vec<_>>(),
             }
