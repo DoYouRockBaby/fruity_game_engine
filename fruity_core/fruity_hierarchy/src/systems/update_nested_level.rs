@@ -11,8 +11,7 @@ pub fn update_nested_level(
     entity_service: Ref<EntityService>,
     query: Query<(WithEntity, WithMut<Parent>)>,
 ) -> StartupDisposeSystemCallback {
-    // TODO: Make an entity created system
-    query.for_each(move |(entity, mut parent)| {
+    query.on_created(move |(entity, mut parent)| {
         // Get the parent entity reference
         let parent_entity = if let Some(parent_id) = &parent.parent_id.deref() {
             let entity_service_reader = entity_service.read();
@@ -32,7 +31,7 @@ pub fn update_nested_level(
 
         // When parent is updated, we update the nested level
         let entity_service = entity_service.clone();
-        parent.parent_id.on_updated.add_observer(move |parent_id| {
+        let handle = parent.parent_id.on_updated.add_observer(move |parent_id| {
             let entity_writer = entity.write();
             let mut parent = entity_writer.write_single_component::<Parent>().unwrap();
             // Get the parent entity reference
@@ -53,6 +52,10 @@ pub fn update_nested_level(
                 }
             }
         });
+
+        Some(Box::new(move || {
+            handle.dispose_by_ref();
+        }))
     });
 
     None
