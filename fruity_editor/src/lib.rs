@@ -96,11 +96,11 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let system_service = resource_container.require::<SystemService>();
     let mut system_service = system_service.write();
 
-    system_service.add_begin_system(
+    system_service.add_startup_system(
         "pause_at_startup",
         MODULE_NAME,
         Inject1::new(pause_at_startup),
-        None,
+        Default::default(),
     );
     system_service.disable_pool(&99);
 

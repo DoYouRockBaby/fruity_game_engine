@@ -14,6 +14,8 @@ input:
   - "Keyboard/Down"
   "Rotate":
   - "Keyboard/A"
+  "Action 1":
+  - "Keyboard/E"
 resources:
 - name: "./assets/ball.png"
   path: "./assets/ball.png"

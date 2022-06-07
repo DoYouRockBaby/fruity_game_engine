@@ -47,9 +47,11 @@ pub fn configure_constructors(runtime: &mut JsRuntime, resource_container: Arc<R
                 let data_fields = ObjectFields::fruity_try_from(data).unwrap();
 
                 // Get the object factory
-                let test = data_fields.get("object_factory_service").unwrap().clone();
                 let object_factory_service =
-                    ResourceReference::<ObjectFactoryService>::fruity_try_from(test).unwrap();
+                    ResourceReference::<ObjectFactoryService>::fruity_try_from(
+                        data_fields.get("object_factory_service").unwrap().clone(),
+                    )
+                    .unwrap();
                 let object_factory_service = object_factory_service.read();
 
                 // Get the object identifier

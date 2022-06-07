@@ -10,9 +10,12 @@ use fruity_core::introspect::MethodCaller;
 use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::serialize::serialized::Callback;
+use fruity_core::serialize::serialized::Serialized;
+use fruity_core::utils::collection::drain_filter;
 use fruity_core::utils::introspect::cast_introspect_mut;
 use fruity_core::utils::introspect::cast_introspect_ref;
 use fruity_core::utils::introspect::ArgumentCaster;
+use fruity_core::Mutex;
 use fruity_ecs_derive::*;
 use rayon::prelude::*;
 use std::collections::BTreeMap;
@@ -21,7 +24,15 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-type SystemCallback = dyn Fn(Arc<ResourceContainer>) + Sync + Send + 'static;
+/// A callback for a system called every frame
+pub type SystemCallback = dyn Fn(Arc<ResourceContainer>) + Sync + Send + 'static;
+
+/// A callback for a startup system dispose callback
+pub type StartupDisposeSystemCallback = Option<Box<dyn FnOnce() + Sync + Send + 'static>>;
+
+/// A callback for a startup system
+pub type StartupSystemCallback =
+    dyn Fn(Arc<ResourceContainer>) -> StartupDisposeSystemCallback + Sync + Send + 'static;
 
 /// Params for a system
 #[derive(Debug, Clone, FruityAny, SerializableObject, IntrospectObject, InstantiableObject)]
@@ -44,42 +55,31 @@ impl Default for SystemParams {
 
 /// Params for a system
 #[derive(Debug, Clone, FruityAny, SerializableObject, IntrospectObject, InstantiableObject)]
-pub struct BeginSystemParams {
-    /// The pool index
-    pub pool_index: usize,
+pub struct StartupSystemParams {
+    /// If true, the system is still running while pause
+    pub ignore_pause: bool,
 }
 
-impl Default for BeginSystemParams {
+impl Default for StartupSystemParams {
     fn default() -> Self {
-        Self { pool_index: 50 }
-    }
-}
-
-/// Params for a system
-#[derive(Debug, Clone, FruityAny, SerializableObject, IntrospectObject, InstantiableObject)]
-pub struct EndSystemParams {
-    /// The pool index
-    pub pool_index: usize,
-}
-
-impl Default for EndSystemParams {
-    fn default() -> Self {
-        Self { pool_index: 50 }
+        Self {
+            ignore_pause: false,
+        }
     }
 }
 
 #[derive(Clone)]
-struct BeginSystem {
+struct StartupSystem {
     identifier: String,
     origin: String,
-    callback: Arc<SystemCallback>,
+    callback: Arc<StartupSystemCallback>,
+    ignore_pause: bool,
 }
 
-#[derive(Clone)]
-struct EndSystem {
+struct StartupDisposeSystem {
     identifier: String,
     origin: String,
-    callback: Arc<SystemCallback>,
+    callback: Box<dyn FnOnce() + Sync + Send + 'static>,
 }
 
 #[derive(Clone)]
@@ -116,8 +116,9 @@ pub struct SystemPool<T> {
 pub struct SystemService {
     pause: AtomicBool,
     system_pools: BTreeMap<usize, SystemPool<FrameSystem>>,
-    begin_system_pools: BTreeMap<usize, SystemPool<BeginSystem>>,
-    end_system_pools: BTreeMap<usize, SystemPool<EndSystem>>,
+    startup_systems: Vec<StartupSystem>,
+    startup_dispose_callbacks: Mutex<Vec<StartupDisposeSystem>>,
+    startup_pause_dispose_callbacks: Mutex<Vec<StartupDisposeSystem>>,
     resource_container: Arc<ResourceContainer>,
 }
 
@@ -131,10 +132,11 @@ impl<'s> SystemService {
     /// Returns a SystemService
     pub fn new(resource_container: Arc<ResourceContainer>) -> SystemService {
         SystemService {
-            pause: AtomicBool::new(false),
+            pause: AtomicBool::new(true),
             system_pools: BTreeMap::new(),
-            begin_system_pools: BTreeMap::new(),
-            end_system_pools: BTreeMap::new(),
+            startup_systems: Vec::new(),
+            startup_dispose_callbacks: Mutex::new(Vec::new()),
+            startup_pause_dispose_callbacks: Mutex::new(Vec::new()),
             resource_container: resource_container.clone(),
         }
     }
@@ -151,10 +153,8 @@ impl<'s> SystemService {
         identifier: &str,
         origin: &str,
         callback: T,
-        params: Option<SystemParams>,
+        params: SystemParams,
     ) {
-        let params = params.unwrap_or_default();
-
         let system = FrameSystem {
             identifier: identifier.to_string(),
             origin: origin.to_string(),
@@ -177,78 +177,28 @@ impl<'s> SystemService {
         };
     }
 
-    /// Add a begin system to the collection
+    /// Add a startup system
     ///
     /// # Arguments
     /// * `origin` - An identifier for the origin of the system, used for hot reload
     /// * `system` - A function that will compute the world
     /// * `pool_index` - A pool identifier, all the systems of the same pool will be processed together in parallel
     ///
-    pub fn add_begin_system<T: Inject>(
+    pub fn add_startup_system<T: Inject<StartupDisposeSystemCallback>>(
         &mut self,
         identifier: &str,
         origin: &str,
         callback: T,
-        params: Option<BeginSystemParams>,
+        params: StartupSystemParams,
     ) {
-        let params = params.unwrap_or_default();
-
-        let system = BeginSystem {
+        let system = StartupSystem {
             identifier: identifier.to_string(),
             origin: origin.to_string(),
             callback: callback.inject().into(),
+            ignore_pause: params.ignore_pause,
         };
 
-        if let Some(pool) = self.begin_system_pools.get_mut(&params.pool_index) {
-            pool.systems.push(system)
-        } else {
-            // If the pool not exists, we create it
-            let systems = vec![system];
-            self.begin_system_pools.insert(
-                params.pool_index,
-                SystemPool {
-                    systems,
-                    enabled: true,
-                },
-            );
-        };
-    }
-
-    /// Add an end system to the collection
-    ///
-    /// # Arguments
-    /// * `origin` - An identifier for the origin of the system, used for hot reload
-    /// * `system` - A function that will compute the world
-    /// * `pool_index` - A pool identifier, all the systems of the same pool will be processed together in parallel
-    ///
-    pub fn add_end_system<T: Inject>(
-        &mut self,
-        identifier: &str,
-        origin: &str,
-        callback: T,
-        params: Option<EndSystemParams>,
-    ) {
-        let params = params.unwrap_or_default();
-
-        let system = EndSystem {
-            identifier: identifier.to_string(),
-            origin: origin.to_string(),
-            callback: callback.inject().into(),
-        };
-
-        if let Some(pool) = self.end_system_pools.get_mut(&params.pool_index) {
-            pool.systems.push(system)
-        } else {
-            // If the pool not exists, we create it
-            let systems = vec![system];
-            self.end_system_pools.insert(
-                params.pool_index,
-                SystemPool {
-                    systems,
-                    enabled: true,
-                },
-            );
-        };
+        self.startup_systems.push(system);
     }
 
     /// Remove all systems with the given origin
@@ -258,28 +208,33 @@ impl<'s> SystemService {
     ///
     pub fn unload_origin(&mut self, origin: &str) {
         self.system_pools.values_mut().for_each(|pool| {
-            pool.systems = pool
-                .systems
-                .clone()
-                .into_iter()
-                .filter(|system| system.origin != origin)
-                .collect::<Vec<_>>();
+            drain_filter(&mut pool.systems, |system| system.origin == origin);
         });
+
+        {
+            let mut startup_dispose_callbacks = self.startup_pause_dispose_callbacks.lock();
+
+            drain_filter(&mut startup_dispose_callbacks, |system| {
+                system.origin == origin
+            })
+            .into_iter()
+            .for_each(|system| {
+                let _profiler_scope = if puffin::are_scopes_on() {
+                    // Safe cause identifier don't need to be static (from the doc)
+                    let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
+                    Some(puffin::ProfilerScope::new(identifier, "dispose system", ""))
+                } else {
+                    None
+                };
+
+                (system.callback)()
+            });
+        }
     }
 
     /// Iter over all the systems pools
     fn iter_system_pools(&self) -> impl Iterator<Item = &SystemPool<FrameSystem>> {
         self.system_pools.iter().map(|pool| pool.1)
-    }
-
-    /// Iter over all the begin systems pools
-    fn iter_begin_system_pools(&self) -> impl Iterator<Item = &SystemPool<BeginSystem>> {
-        self.begin_system_pools.iter().map(|pool| pool.1)
-    }
-
-    /// Iter over all the end systems pools
-    fn iter_end_system_pools(&self) -> impl Iterator<Item = &SystemPool<EndSystem>> {
-        self.end_system_pools.iter().map(|pool| pool.1)
     }
 
     /// Run all the stored systems
@@ -305,69 +260,103 @@ impl<'s> SystemService {
         });
     }
 
-    /// Run all the stored begin systems
-    pub fn run_begin(&self) {
-        let resource_container = self.resource_container.clone();
-        self.iter_begin_system_pools().for_each(|pool| {
-            if pool.enabled {
-                pool.systems.iter().par_bridge().for_each(|system| {
-                    let _profiler_scope = if puffin::are_scopes_on() {
-                        // Safe cause identifier don't need to be static (from the doc)
-                        let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
-                        Some(puffin::ProfilerScope::new(identifier, "system", ""))
-                    } else {
-                        None
-                    };
+    /// Run all the startup systems
+    pub fn run_start(&self) {
+        self.startup_systems
+            .iter()
+            .filter(|system| system.ignore_pause)
+            .for_each(|system| {
+                let _profiler_scope = if puffin::are_scopes_on() {
+                    // Safe cause identifier don't need to be static (from the doc)
+                    let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
+                    Some(puffin::ProfilerScope::new(identifier, "system", ""))
+                } else {
+                    None
+                };
 
-                    (system.callback)(resource_container.clone());
-                });
-            }
-        });
+                let dispose_callback = (system.callback)(self.resource_container.clone());
+
+                if let Some(dispose_callback) = dispose_callback {
+                    let mut startup_dispose_callbacks = self.startup_dispose_callbacks.lock();
+                    startup_dispose_callbacks.push(StartupDisposeSystem {
+                        identifier: system.identifier.clone(),
+                        origin: system.origin.clone(),
+                        callback: dispose_callback,
+                    });
+                }
+            });
+
+        if !self.is_paused() {
+            self.run_unpause_start();
+        }
     }
 
-    /// Run all the stored end systems
+    /// Run all startup dispose callbacks
     pub fn run_end(&self) {
-        let resource_container = self.resource_container.clone();
-        self.iter_end_system_pools().for_each(|pool| {
-            if pool.enabled {
-                pool.systems.iter().par_bridge().for_each(|system| {
-                    let _profiler_scope = if puffin::are_scopes_on() {
-                        // Safe cause identifier don't need to be static (from the doc)
-                        let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
-                        Some(puffin::ProfilerScope::new(identifier, "system", ""))
-                    } else {
-                        None
-                    };
+        if !self.is_paused() {
+            self.run_unpause_end();
+        }
 
-                    (system.callback)(resource_container.clone())
-                });
-            }
+        let mut startup_dispose_callbacks = self.startup_dispose_callbacks.lock();
+        startup_dispose_callbacks.drain(..).for_each(|system| {
+            let _profiler_scope = if puffin::are_scopes_on() {
+                // Safe cause identifier don't need to be static (from the doc)
+                let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
+                Some(puffin::ProfilerScope::new(identifier, "dispose system", ""))
+            } else {
+                None
+            };
+
+            (system.callback)()
         });
     }
 
-    /// Run all the stored systems
+    /// Run all the startup systems that start when pause is stopped
+    pub fn run_unpause_start(&self) {
+        self.startup_systems
+            .iter()
+            .filter(|system| !system.ignore_pause)
+            .for_each(|system| {
+                let _profiler_scope = if puffin::are_scopes_on() {
+                    // Safe cause identifier don't need to be static (from the doc)
+                    let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
+                    Some(puffin::ProfilerScope::new(identifier, "system", ""))
+                } else {
+                    None
+                };
+
+                let dispose_callback = (system.callback)(self.resource_container.clone());
+
+                if let Some(dispose_callback) = dispose_callback {
+                    let mut startup_dispose_callbacks = self.startup_pause_dispose_callbacks.lock();
+                    startup_dispose_callbacks.push(StartupDisposeSystem {
+                        identifier: system.identifier.clone(),
+                        origin: system.origin.clone(),
+                        callback: dispose_callback,
+                    });
+                }
+            });
+    }
+
+    /// Run all the startup dispose callbacks of systems that start when pause is stopped
+    pub fn run_unpause_end(&self) {
+        let mut startup_dispose_callbacks = self.startup_pause_dispose_callbacks.lock();
+        startup_dispose_callbacks.drain(..).for_each(|system| {
+            let _profiler_scope = if puffin::are_scopes_on() {
+                // Safe cause identifier don't need to be static (from the doc)
+                let identifier = unsafe { &*(&system.identifier as *const _) } as &str;
+                Some(puffin::ProfilerScope::new(identifier, "dispose system", ""))
+            } else {
+                None
+            };
+
+            (system.callback)()
+        });
+    }
+
+    /// Run all the systems contained in a pool
     pub fn run_pool(&self, index: &usize) {
         if let Some(pool) = self.system_pools.get(index) {
-            pool.systems
-                .iter()
-                .par_bridge()
-                .for_each(|system| (system.callback)(self.resource_container.clone()));
-        }
-    }
-
-    /// Run all the stored begin systems
-    pub fn run_pool_begin(&self, index: &usize) {
-        if let Some(pool) = self.begin_system_pools.get(index) {
-            pool.systems
-                .iter()
-                .par_bridge()
-                .for_each(|system| (system.callback)(self.resource_container.clone()));
-        }
-    }
-
-    /// Run all the stored end systems
-    pub fn run_poll_end(&self, index: &usize) {
-        if let Some(pool) = self.end_system_pools.get(index) {
             pool.systems
                 .iter()
                 .par_bridge()
@@ -400,6 +389,14 @@ impl<'s> SystemService {
     /// * `paused` - The paused value
     ///
     pub fn set_paused(&self, paused: bool) {
+        if !paused && self.is_paused() {
+            self.run_unpause_start();
+        }
+
+        if paused && !self.is_paused() {
+            self.run_unpause_end();
+        }
+
         self.pause.store(paused, Ordering::Relaxed);
     }
 }
@@ -431,59 +428,44 @@ impl IntrospectObject for SystemService {
                                 Err(err) => log_introspect_error(&err),
                             };
                         }),
-                        arg3,
+                        arg3.unwrap_or_default(),
                     );
 
                     Ok(None)
                 })),
             },
             MethodInfo {
-                name: "add_begin_system".to_string(),
+                name: "add_startup_system".to_string(),
                 call: MethodCaller::Mut(Arc::new(|this, args| {
                     let this = cast_introspect_mut::<SystemService>(this);
 
-                    let mut caster = ArgumentCaster::new("add_begin_system", args);
+                    let mut caster = ArgumentCaster::new("add_startup_system", args);
                     let arg1 = caster.cast_next::<String>()?;
                     let arg2 = caster.cast_next::<Callback>()?;
-                    let arg3 = caster.cast_next_optional::<BeginSystemParams>();
+                    let arg3 = caster.cast_next_optional::<StartupSystemParams>();
 
                     let callback = arg2.callback;
-                    this.add_begin_system(
+                    this.add_startup_system(
                         &arg1,
                         &arg2.origin,
-                        Inject0::new(move || {
+                        Inject0::<StartupDisposeSystemCallback>::new(move || {
                             match callback(vec![]) {
-                                Ok(_) => (),
-                                Err(err) => log_introspect_error(&err),
-                            };
+                                Ok(result) => {
+                                    if let Some(Serialized::Callback(callback)) = result {
+                                        Some(Box::new(move || {
+                                            (callback.callback)(vec![]).ok();
+                                        }))
+                                    } else {
+                                        None
+                                    }
+                                }
+                                Err(err) => {
+                                    log_introspect_error(&err);
+                                    None
+                                }
+                            }
                         }),
-                        arg3,
-                    );
-
-                    Ok(None)
-                })),
-            },
-            MethodInfo {
-                name: "add_end_system".to_string(),
-                call: MethodCaller::Mut(Arc::new(|this, args| {
-                    let this = cast_introspect_mut::<SystemService>(this);
-
-                    let mut caster = ArgumentCaster::new("add_end_system", args);
-                    let arg1 = caster.cast_next::<String>()?;
-                    let arg2 = caster.cast_next::<Callback>()?;
-                    let arg3 = caster.cast_next_optional::<EndSystemParams>();
-
-                    let callback = arg2.callback;
-                    this.add_end_system(
-                        &arg1,
-                        &arg2.origin,
-                        Inject0::new(move || {
-                            match callback(vec![]) {
-                                Ok(_) => (),
-                                Err(err) => log_introspect_error(&err),
-                            };
-                        }),
-                        arg3,
+                        arg3.unwrap_or_default(),
                     );
 
                     Ok(None)

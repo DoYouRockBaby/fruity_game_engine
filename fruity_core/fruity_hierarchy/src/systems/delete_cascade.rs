@@ -4,15 +4,15 @@ use fruity_ecs::entity::entity_query::with::With;
 use fruity_ecs::entity::entity_query::with::WithEntity;
 use fruity_ecs::entity::entity_query::Query;
 use fruity_ecs::entity::entity_service::EntityService;
+use fruity_ecs::system::system_service::StartupDisposeSystemCallback;
 use std::ops::Deref;
 
 pub fn delete_cascade(
     entity_service: Ref<EntityService>,
     query: Query<(WithEntity, With<Parent>)>,
-) {
-    // TODO: Disable observer on system end
+) -> StartupDisposeSystemCallback {
     let entity_service_reader = entity_service.read();
-    entity_service_reader
+    let handle = entity_service_reader
         .on_deleted
         .add_observer(move |parent_id| {
             let parent_id = *parent_id;
@@ -40,4 +40,6 @@ pub fn delete_cascade(
                 }
             })
         });
+
+    Some(Box::new(move || handle.dispose()))
 }

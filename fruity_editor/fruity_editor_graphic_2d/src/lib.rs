@@ -30,20 +30,20 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
         "draw_gizmos_2d",
         MODULE_NAME,
         Inject2::new(draw_gizmos_2d),
-        Some(SystemParams {
+        SystemParams {
             pool_index: 98,
             ignore_pause: true,
-        }),
+        },
     );
 
     system_service.add_system(
         "display_grid",
         MODULE_NAME,
         Inject3::new(display_grid),
-        Some(SystemParams {
+        SystemParams {
             pool_index: 98,
             ignore_pause: true,
-        }),
+        },
     );
 
     let editor_component_service = resource_container.require::<EditorComponentService>();

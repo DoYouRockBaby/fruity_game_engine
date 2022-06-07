@@ -275,6 +275,32 @@ pub fn derive_serializable_object(input: TokenStream)  -> TokenStream {
         
             fn fruity_try_from(value: fruity_core::serialize::serialized::Serialized) -> Result<Self, Self::Error> {
                 match value {
+                    /*fruity_core::serialize::serialized::Serialized::SerializedObject { fields, .. } => {
+                        use fruity_core::introspect::IntrospectObject;
+
+                        let mut new_object = #ident::default();
+                        let new_object_fields = new_object.get_field_infos();
+
+                        fields.into_iter().for_each(|(key, value)| {
+                            let field_info = new_object_fields
+                                .iter()
+                                .find(|field_info| field_info.name == *key);
+
+                            if let Some(field_info) = field_info {
+                                match &field_info.setter {
+                                    fruity_core::introspect::SetterCaller::Const(call) => {
+                                        call(new_object.as_any_ref(), value);
+                                    }
+                                    fruity_core::introspect::SetterCaller::Mut(call) => {
+                                        call(new_object.as_any_mut(), value);
+                                    }
+                                    fruity_core::introspect::SetterCaller::None => (),
+                                }
+                            }
+                        });
+
+                        Ok(new_object)
+                    }*/
                     fruity_core::serialize::serialized::Serialized::NativeObject(value) => {
                         match value.as_any_box().downcast::<#ident>() {
                             Ok(value) => Ok(*value),

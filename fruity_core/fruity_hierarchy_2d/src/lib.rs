@@ -20,9 +20,9 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
         "transform_2d_cascade",
         MODULE_NAME,
         Inject2::new(transform_2d_cascade),
-        Some(SystemParams {
+        SystemParams {
             pool_index: 96,
             ignore_pause: true,
-        }),
+        },
     );
 }

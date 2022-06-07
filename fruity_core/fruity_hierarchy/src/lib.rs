@@ -5,6 +5,7 @@ use fruity_core::inject::Inject2;
 use fruity_core::object_factory_service::ObjectFactoryService;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
+use fruity_ecs::system::system_service::StartupSystemParams;
 use fruity_ecs::system::system_service::SystemService;
 use std::sync::Arc;
 
@@ -24,16 +25,16 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let system_service = resource_container.require::<SystemService>();
     let mut system_service = system_service.write();
 
-    system_service.add_begin_system(
+    system_service.add_startup_system(
         "delete_cascade",
         MODULE_NAME,
         Inject2::new(delete_cascade),
-        None,
+        StartupSystemParams { ignore_pause: true },
     );
-    system_service.add_begin_system(
+    system_service.add_startup_system(
         "update_nested_level",
         MODULE_NAME,
         Inject2::new(update_nested_level),
-        None,
+        StartupSystemParams { ignore_pause: true },
     );
 }

@@ -40,7 +40,6 @@ impl SceneState {
         std::mem::drop(entity_service);
 
         let system_service = self.system_service.read();
-        system_service.run_begin();
         system_service.set_paused(false);
     }
 

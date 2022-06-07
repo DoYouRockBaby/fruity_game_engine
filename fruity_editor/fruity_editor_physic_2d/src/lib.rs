@@ -32,20 +32,20 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
         "draw_circle_collider_2d_gizmos",
         MODULE_NAME,
         Inject4::new(draw_circle_collider_2d_gizmos),
-        Some(SystemParams {
+        SystemParams {
             pool_index: 98,
             ignore_pause: true,
-        }),
+        },
     );
 
     system_service.add_system(
         "draw_rectangle_collider_2d_gizmos",
         MODULE_NAME,
         Inject3::new(draw_rectangle_collider_2d_gizmos),
-        Some(SystemParams {
+        SystemParams {
             pool_index: 98,
             ignore_pause: true,
-        }),
+        },
     );
 
     let editor_component_service = resource_container.require::<EditorComponentService>();

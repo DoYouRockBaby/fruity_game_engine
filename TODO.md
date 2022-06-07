@@ -18,12 +18,12 @@
 [X] There should be some memory leak in archetype
 [X] Add component query selectors
 [X] Create a way to query based on generics
+[ ] Change the begin/end system to a startup system that returns an optional end callback and add the startup that ignore pause
 [ ] Add a way to extend components
 [ ] Support for async systems/queries for_each with tokio
 [ ] Random crash when we delete an entity
 [ ] Add an exception when you try to access a deleted entity, propagate it into js
 [ ] Find a way to move the introspect declaration into the associated traits
-[ ] Change the begin/end system to a startup system that returns an optional end callback and add the startup that ignore pause
 
 ## Editor
 
@@ -122,6 +122,8 @@
 [ ] Remove as many unwrap as possible (ecs and javascript)
 [ ] A lot of unsafe code were created to avoid lifetime issue in ecs, remove as many as possible
 [ ] Use a tool that detect unused dependencies
+
+# FEATURES V2
 
 ## For the future
 

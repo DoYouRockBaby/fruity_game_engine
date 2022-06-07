@@ -47,39 +47,39 @@ impl<T: Resource + ?Sized> Injectable for Mut<T> {
 }
 
 /// A trait that is implemented by functions that supports dependency injection
-pub trait Inject {
+pub trait Inject<R = ()> {
     /// Get a function that proceed the injection
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync>;
+    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) -> R + Send + Sync>;
 }
 
 /// A shortcut for a boxed inject function
-pub struct Inject0(Box<dyn Fn() + Send + Sync>);
+pub struct Inject0<R = ()>(Box<dyn Fn() -> R + Send + Sync>);
 
-impl Inject0 {
+impl<R> Inject0<R> {
     /// New instance
-    pub fn new(val: impl Fn() + Send + Sync + 'static) -> Self {
+    pub fn new(val: impl Fn() -> R + Send + Sync + 'static) -> Self {
         Self(Box::new(val))
     }
 }
 
-impl Inject for Inject0 {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+impl<R: 'static> Inject<R> for Inject0<R> {
+    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) -> R + Send + Sync> {
         Box::new(move |_| (self.0)())
     }
 }
 
 /// A shortcut for a boxed inject function
-pub struct Inject1<T1>(Box<dyn Fn(T1) + Send + Sync>);
+pub struct Inject1<T1, R = ()>(Box<dyn Fn(T1) -> R + Send + Sync>);
 
-impl<T1> Inject1<T1> {
+impl<T1, R> Inject1<T1, R> {
     /// New instance
-    pub fn new(val: impl Fn(T1) + Send + Sync + 'static) -> Self {
+    pub fn new(val: impl Fn(T1) -> R + Send + Sync + 'static) -> Self {
         Self(Box::new(val))
     }
 }
 
-impl<T1: Injectable> Inject for Inject1<T1> {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+impl<T1: Injectable, R: 'static> Inject<R> for Inject1<T1, R> {
+    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) -> R + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(T1::from_resource_container(&resource_container))
         })
@@ -87,17 +87,17 @@ impl<T1: Injectable> Inject for Inject1<T1> {
 }
 
 /// A shortcut for a boxed inject function
-pub struct Inject2<T1, T2>(Box<dyn Fn(T1, T2) + Send + Sync>);
+pub struct Inject2<T1, T2, R = ()>(Box<dyn Fn(T1, T2) -> R + Send + Sync>);
 
-impl<T1, T2> Inject2<T1, T2> {
+impl<T1, T2, R> Inject2<T1, T2, R> {
     /// New instance
-    pub fn new(val: impl Fn(T1, T2) + Send + Sync + 'static) -> Self {
+    pub fn new(val: impl Fn(T1, T2) -> R + Send + Sync + 'static) -> Self {
         Self(Box::new(val))
     }
 }
 
-impl<T1: Injectable, T2: Injectable> Inject for Inject2<T1, T2> {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+impl<T1: Injectable, T2: Injectable, R: 'static> Inject<R> for Inject2<T1, T2, R> {
+    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) -> R + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),

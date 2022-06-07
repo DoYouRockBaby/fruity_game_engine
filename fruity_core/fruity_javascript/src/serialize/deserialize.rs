@@ -1,4 +1,5 @@
 use crate::js_value::object::introspect_object::deserialize_v8_introspect_object;
+use crate::js_value::utils::format_function_name_from_js_to_rust;
 use crate::js_value::utils::get_origin;
 use crate::js_value::utils::get_resource_container;
 use crate::js_value::utils::get_stored_callback;
@@ -83,16 +84,23 @@ pub fn deserialize_v8<'a>(
                     let recv: v8::Local<v8::Value> = global.into();
 
                     // Call function
-                    callback.call(scope, recv, &args);
+                    let result = callback.call(scope, recv, &args);
+
+                    Ok(match result {
+                        Some(result) => deserialize_v8(scope, result),
+                        None => None,
+                    })
+                } else {
+                    Ok(None)
                 }
             } else {
                 // Otherwise, we fallback by running it from the javascript service
                 let javascript_service = resource_container.require::<JavascriptService>();
                 let javascript_service = javascript_service.read();
-                javascript_service.run_callback(callback_identifier, args);
-            }
+                let result = javascript_service.run_callback(callback_identifier, args);
 
-            Ok(None)
+                Ok(result)
+            }
         };
 
         return Some(Serialized::Callback(Callback {
@@ -126,6 +134,7 @@ pub fn deserialize_v8<'a>(
             .filter_map(|property_index| {
                 let property_key = property_keys.get_index(scope, property_index).unwrap();
                 let property_name = property_key.to_rust_string_lossy(scope);
+                let property_name = format_function_name_from_js_to_rust(&property_name);
                 let property = v8_object.get(scope, property_key).unwrap();
 
                 deserialize_v8(scope, property).map(|serialized| (property_name, serialized))

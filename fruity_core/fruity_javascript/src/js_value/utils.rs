@@ -84,6 +84,10 @@ pub fn format_function_name_from_rust_to_js(name: &str) -> String {
     name.to_case(Case::Camel)
 }
 
+pub fn format_function_name_from_js_to_rust(name: &str) -> String {
+    name.to_case(Case::Snake)
+}
+
 pub fn check_object_intern_identifier<'a>(
     scope: &mut v8::HandleScope,
     v8_value: v8::Local<'a, v8::Value>,

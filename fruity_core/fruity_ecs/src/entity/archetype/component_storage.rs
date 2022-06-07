@@ -35,10 +35,4 @@ impl ComponentStorage {
 
         (start_index..end_index).filter_map(|index| self.collection.get(&index))
     }
-
-    pub(crate) fn remove(&mut self, entity_id: usize) -> Vec<AnyComponent> {
-        let index = entity_id * self.components_per_entity;
-        self.collection
-            .remove_many(index, self.components_per_entity)
-    }
 }

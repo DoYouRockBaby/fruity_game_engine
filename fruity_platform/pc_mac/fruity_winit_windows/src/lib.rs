@@ -96,7 +96,7 @@ pub fn platform(
     // Run the begin systems before everything
     let system_service = system_service.clone();
     let system_service_reader = system_service.read();
-    system_service_reader.run_begin();
+    system_service_reader.run_start();
     std::mem::drop(system_service_reader);
 
     // Run the render loop
@@ -132,6 +132,11 @@ pub fn platform(
                 ..
             } => {
                 if event_window_id == window_id {
+                    // Run the end systems a the end
+                    let system_service_reader = system_service.read();
+                    system_service_reader.run_end();
+
+                    // Transmit to the loop that it should end
                     *control_flow = ControlFlow::Exit;
                 }
             }

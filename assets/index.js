@@ -42,13 +42,73 @@ const frameService = resourceContainer.get("frame_service");
 
 customService.hello("World");
 
+systemService.addStartupSystem("test startup 0", () => {
+    console.log("Je commence tout");
+
+    return () => {
+        console.log("Je finis tout");
+    }
+}, new StartupSystemParams({
+    ignorePause: true,
+}));
+
+systemService.addStartupSystem("test startup 1", () => {
+    console.log("Je commence");
+
+    return () => {
+        console.log("Je finis");
+    };
+});
+
+systemService.addStartupSystem("test startup 2", () => {
+    let handle = entityService
+        .query()
+        .withName()
+        .with("Translate2d")
+        .with("Velocity")
+        .onCreated((name) => {
+            console.log(`Entity created ${name}`);
+
+            return () => {
+                console.log(`Entity deleted ${name}`);
+            }
+        });
+
+    return () => {
+        handle.dispose();
+    }
+});
+
+systemService.addStartupSystem("test startup 3", () => {
+    let createdEntityId = null;
+    const materialResource = resourceContainer.get("./assets/material.material");
+
+    inputService.onPressed.addObserver(input => {
+        if (input === "Action 1") {
+            createdEntityId = entityService.create("New Entity", true, [
+                new Transform2d({}),
+                new Sprite({ zIndex: 30, material: materialResource }),
+                new Translate2d({ vec: new Vector2d({ x: 1, y: 1 }) }),
+                new Velocity({ velocity: 1.0 }),
+            ]);
+        }
+    });
+
+    inputService.onReleased.addObserver(input => {
+        if (input === "Action 1") {
+            entityService.remove(createdEntityId);
+        }
+    });
+});
+
 systemService.addSystem("test 1", () => {
     entityService
         .query()
         .with("Translate2d")
         .with("Velocity")
         .forEach((translate, velocity) => {
-            translate.vec = translate.vec.add(translate.vel.mul(frameService.delta));
+            const beforeTranslate = translate.vec;
+            translate.vec = beforeTranslate.add(beforeTranslate.mul(velocity.velocity * frameService.delta));
         });
 });
 
@@ -60,8 +120,6 @@ systemService.addSystem("test 2", () => {
         .with("Move")
         .forEach((entity, translate, move) => {
             let vel = new Vector2d({ x: 0, y: 0 });
-
-            console.log(entity.getName())
 
             if (inputService.isPressed("Run Left")) {
                 vel.x -= move.velocity;

@@ -189,18 +189,80 @@ impl IntrospectObject for InputService {
     }
 
     fn get_method_infos(&self) -> Vec<MethodInfo> {
-        vec![MethodInfo {
-            name: "is_pressed".to_string(),
-            call: MethodCaller::Const(Arc::new(|this, args| {
-                let this = cast_introspect_ref::<InputService>(this);
+        vec![
+            MethodInfo {
+                name: "is_pressed".to_string(),
+                call: MethodCaller::Const(Arc::new(|this, args| {
+                    let this = cast_introspect_ref::<InputService>(this);
 
-                let mut caster = ArgumentCaster::new("is_pressed", args);
-                let arg1 = caster.cast_next::<String>()?;
+                    let mut caster = ArgumentCaster::new("is_pressed", args);
+                    let arg1 = caster.cast_next::<String>()?;
 
-                let result = this.is_pressed(&arg1);
-                Ok(Some(Serialized::Bool(result)))
-            })),
-        }]
+                    let result = this.is_pressed(&arg1);
+                    Ok(Some(Serialized::Bool(result)))
+                })),
+            },
+            MethodInfo {
+                name: "is_source_pressed".to_string(),
+                call: MethodCaller::Const(Arc::new(|this, args| {
+                    let this = cast_introspect_ref::<InputService>(this);
+
+                    let mut caster = ArgumentCaster::new("is_source_pressed", args);
+                    let arg1 = caster.cast_next::<String>()?;
+
+                    let result = this.is_source_pressed(&arg1);
+                    Ok(Some(Serialized::Bool(result)))
+                })),
+            },
+            MethodInfo {
+                name: "is_pressed_this_frame".to_string(),
+                call: MethodCaller::Const(Arc::new(|this, args| {
+                    let this = cast_introspect_ref::<InputService>(this);
+
+                    let mut caster = ArgumentCaster::new("is_pressed_this_frame", args);
+                    let arg1 = caster.cast_next::<String>()?;
+
+                    let result = this.is_pressed_this_frame(&arg1);
+                    Ok(Some(Serialized::Bool(result)))
+                })),
+            },
+            MethodInfo {
+                name: "is_source_pressed_this_frame".to_string(),
+                call: MethodCaller::Const(Arc::new(|this, args| {
+                    let this = cast_introspect_ref::<InputService>(this);
+
+                    let mut caster = ArgumentCaster::new("is_source_pressed_this_frame", args);
+                    let arg1 = caster.cast_next::<String>()?;
+
+                    let result = this.is_source_pressed_this_frame(&arg1);
+                    Ok(Some(Serialized::Bool(result)))
+                })),
+            },
+            MethodInfo {
+                name: "is_released_this_frame".to_string(),
+                call: MethodCaller::Const(Arc::new(|this, args| {
+                    let this = cast_introspect_ref::<InputService>(this);
+
+                    let mut caster = ArgumentCaster::new("is_released_this_frame", args);
+                    let arg1 = caster.cast_next::<String>()?;
+
+                    let result = this.is_released_this_frame(&arg1);
+                    Ok(Some(Serialized::Bool(result)))
+                })),
+            },
+            MethodInfo {
+                name: "is_source_released_this_frame".to_string(),
+                call: MethodCaller::Const(Arc::new(|this, args| {
+                    let this = cast_introspect_ref::<InputService>(this);
+
+                    let mut caster = ArgumentCaster::new("is_source_released_this_frame", args);
+                    let arg1 = caster.cast_next::<String>()?;
+
+                    let result = this.is_source_released_this_frame(&arg1);
+                    Ok(Some(Serialized::Bool(result)))
+                })),
+            },
+        ]
     }
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {

@@ -37,6 +37,6 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
         "update_circle_collider",
         MODULE_NAME,
         Inject2::new(update_circle_collider),
-        None,
+        Default::default(),
     );
 }

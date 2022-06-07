@@ -17,18 +17,19 @@ pub struct CallbackIdentifier(pub i32);
 
 #[derive(Debug, FruityAny)]
 pub struct JavascriptService {
-    single_thread_wrapper: SingleThreadWrapper<JsRuntime>,
+    single_thread_wrapper: SingleThreadWrapper<JsRuntime, Option<Serialized>>,
 }
 
 impl JavascriptService {
     pub fn new(resource_container: Arc<ResourceContainer>) -> JavascriptService {
-        let single_thread_wrapper = SingleThreadWrapper::<JsRuntime>::start(move || {
-            let mut runtime = JsRuntime::new();
-            configure_constructors(&mut runtime, resource_container.clone());
-            configure_resource_container(&mut runtime, resource_container.clone());
+        let single_thread_wrapper =
+            SingleThreadWrapper::<JsRuntime, Option<Serialized>>::start(move || {
+                let mut runtime = JsRuntime::new();
+                configure_constructors(&mut runtime, resource_container.clone());
+                configure_resource_container(&mut runtime, resource_container.clone());
 
-            runtime
-        });
+                runtime
+            });
 
         JavascriptService {
             single_thread_wrapper,
@@ -40,8 +41,11 @@ impl JavascriptService {
 
         self.single_thread_wrapper
             .call(move |runtime| match runtime.run_script(&source) {
-                Ok(_) => (),
-                Err(err) => log_js_error(&err),
+                Ok(_) => None,
+                Err(err) => {
+                    log_js_error(&err);
+                    None
+                }
             });
     }
 
@@ -50,20 +54,28 @@ impl JavascriptService {
 
         self.single_thread_wrapper
             .call(move |runtime| match runtime.run_module(&path) {
-                Ok(_) => (),
-                Err(err) => log_js_error(&err),
+                Ok(_) => None,
+                Err(err) => {
+                    log_js_error(&err);
+                    None
+                }
             });
     }
 
-    pub fn run_callback(&self, identifier: CallbackIdentifier, args: Vec<Serialized>) {
-        self.single_thread_wrapper.call(move |runtime| {
-            runtime.run_stored_callback(identifier, args.clone());
-        });
+    pub fn run_callback(
+        &self,
+        identifier: CallbackIdentifier,
+        args: Vec<Serialized>,
+    ) -> Option<Serialized> {
+        self.single_thread_wrapper
+            .call(move |runtime| runtime.run_stored_callback(identifier, args.clone()))
     }
 
     pub fn reset(&self) {
-        self.single_thread_wrapper
-            .call(move |runtime| runtime.reset());
+        self.single_thread_wrapper.call(move |runtime| {
+            runtime.reset();
+            None
+        });
     }
 }
 

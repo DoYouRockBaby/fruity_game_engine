@@ -9,10 +9,11 @@ use crate::serialize::serialized::Callback;
 use crate::serialize::serialized::SerializableObject;
 use crate::serialize::serialized::Serialized;
 use crate::utils::introspect::cast_introspect_mut;
+use crate::utils::introspect::cast_introspect_ref;
 use crate::utils::introspect::ArgumentCaster;
 use crate::Mutex;
 use crate::RwLock;
-use fruity_any::FruityAny;
+use fruity_any::*;
 use std::fmt::Debug;
 use std::fmt::Formatter;
 use std::ops::Deref;
@@ -38,13 +39,20 @@ lazy_static! {
     static ref ID_GENERATOR: Mutex<IdGenerator> = Mutex::new(IdGenerator::new());
 }
 
-/// An identifier for the observer, it can be used to unsubscribe to a signal
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+/// An identifier for a signal observer
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ObserverIdentifier(usize);
+
+/// A signal subscription handler, can be used to unsubscribe the signal
+#[derive(Clone, FruityAny)]
+pub struct ObserverHandler<T: 'static> {
+    observer_id: ObserverIdentifier,
+    intern: Arc<RwLock<InternSignal<T>>>,
+}
 
 #[derive(FruityAny)]
 struct InternSignal<T: 'static> {
-    observers: Vec<(ObserverIdentifier, Box<dyn Fn(&T) + Sync + Send>)>,
+    observers: Vec<(ObserverIdentifier, Arc<dyn Fn(&T) + Sync + Send>)>,
 }
 
 /// An observer pattern
@@ -74,39 +82,54 @@ impl<T> Signal<T> {
     pub fn add_observer<F: Fn(&T) + Sync + Send + 'static>(
         &self,
         observer: F,
-    ) -> ObserverIdentifier {
-        let mut intern = self.intern.write();
+    ) -> ObserverHandler<T> {
+        let mut intern_writer = self.intern.write();
 
         let mut id_generator = ID_GENERATOR.lock();
-        let identifier = ObserverIdentifier(id_generator.generate_id());
-        intern.observers.push((identifier, Box::new(observer)));
+        let observer_id = ObserverIdentifier(id_generator.generate_id());
+        intern_writer
+            .observers
+            .push((observer_id, Arc::new(observer)));
 
-        identifier
+        ObserverHandler {
+            observer_id,
+            intern: self.intern.clone(),
+        }
     }
 
-    /// Remove an observer from the signal
-    pub fn remove_observer(&self, observer_id: ObserverIdentifier) {
-        let mut intern = self.intern.write();
-        let observer_index = intern
-            .observers
-            .iter()
-            .enumerate()
-            .find(|(_index, elem)| elem.0 == observer_id)
-            .map(|elem| elem.0);
+    /// Add an observer to the signal that can dispose itself
+    /// An observer is a closure that will be called when the signal will be sent
+    pub fn add_self_dispose_observer<F: Fn(&T, &ObserverHandler<T>) + Sync + Send + 'static>(
+        &self,
+        observer: F,
+    ) {
+        let mut intern_writer = self.intern.write();
 
-        if let Some(observer_index) = observer_index {
-            let _ = intern.observers.remove(observer_index);
-        }
+        let mut id_generator = ID_GENERATOR.lock();
+        let observer_id = ObserverIdentifier(id_generator.generate_id());
+
+        let handler = ObserverHandler {
+            observer_id,
+            intern: self.intern.clone(),
+        };
+
+        intern_writer.observers.push((
+            observer_id,
+            Arc::new(move |data| {
+                observer(data, &handler);
+            }),
+        ));
     }
 
     /// Notify that the event happened
     /// This will launch all the observers that are registered for this signal
     pub fn notify(&self, event: T) {
-        let intern = self.intern.read();
-        intern
-            .observers
-            .iter()
-            .for_each(|(_, observer)| observer(&event));
+        let observers = {
+            let intern = self.intern.read();
+            intern.observers.clone()
+        };
+
+        observers.iter().for_each(|(_, observer)| observer(&event));
     }
 }
 
@@ -239,7 +262,7 @@ impl<T: FruityInto<Serialized> + Send + Sync + Debug + Clone + IntrospectObject>
                 let mut caster = ArgumentCaster::new("add_observer", args);
                 let arg1 = caster.cast_next::<Callback>()?;
 
-                this.add_observer(move |arg| {
+                let handle = this.add_observer(move |arg| {
                     let arg: Serialized = arg.clone().fruity_into();
                     match (arg1.callback)(vec![arg]) {
                         Ok(_) => (),
@@ -247,7 +270,7 @@ impl<T: FruityInto<Serialized> + Send + Sync + Debug + Clone + IntrospectObject>
                     };
                 });
 
-                Ok(None)
+                Ok(Some(handle.fruity_into()))
             })),
         }]
     }
@@ -289,5 +312,80 @@ impl<T: FruityTryFrom<Serialized, Error = String> + Send + Sync + Debug + Clone 
 impl<T: Send + Sync + Clone + Debug> Debug for SignalProperty<T> {
     fn fmt(&self, formatter: &mut Formatter) -> Result<(), std::fmt::Error> {
         self.value.fmt(formatter)
+    }
+}
+
+impl<T> ObserverHandler<T> {
+    /// Remove an observer from the signal
+    pub fn dispose(self) {
+        let mut intern = self.intern.write();
+        let observer_index = intern
+            .observers
+            .iter()
+            .enumerate()
+            .find(|(_index, elem)| elem.0 == self.observer_id)
+            .map(|elem| elem.0);
+
+        if let Some(observer_index) = observer_index {
+            let _ = intern.observers.remove(observer_index);
+        }
+    }
+
+    /// Remove an observer from the signal
+    pub fn dispose_by_ref(&self) {
+        let mut intern = self.intern.write();
+        let observer_index = intern
+            .observers
+            .iter()
+            .enumerate()
+            .find(|(_index, elem)| elem.0 == self.observer_id)
+            .map(|elem| elem.0);
+
+        if let Some(observer_index) = observer_index {
+            let _ = intern.observers.remove(observer_index);
+        }
+    }
+}
+
+impl<T> Debug for ObserverHandler<T> {
+    fn fmt(&self, _: &mut Formatter) -> Result<(), std::fmt::Error> {
+        Ok(())
+    }
+}
+
+impl<T> IntrospectObject for ObserverHandler<T> {
+    fn get_class_name(&self) -> String {
+        "ObserverHandler".to_string()
+    }
+
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![MethodInfo {
+            name: "dispose".to_string(),
+            call: MethodCaller::Const(Arc::new(|this, _args| {
+                let this = cast_introspect_ref::<ObserverHandler<T>>(this);
+                this.dispose_by_ref();
+
+                Ok(None)
+            })),
+        }]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+}
+
+impl<T: 'static> SerializableObject for ObserverHandler<T> {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(Self {
+            observer_id: self.observer_id,
+            intern: self.intern.clone(),
+        })
+    }
+}
+
+impl<T> FruityInto<Serialized> for ObserverHandler<T> {
+    fn fruity_into(self) -> Serialized {
+        Serialized::NativeObject(Box::new(self))
     }
 }

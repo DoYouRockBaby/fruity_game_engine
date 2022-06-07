@@ -8,6 +8,7 @@ use crate::js_value::utils::set_origin;
 use crate::module_map::ModuleInfos;
 use crate::module_map::ModuleMap;
 use crate::normalize_path::normalize_path;
+use crate::serialize::deserialize::deserialize_v8;
 use crate::serialize::serialize::serialize_v8;
 use crate::thread_scope_stack::clear_thread_scope_stack;
 use crate::thread_scope_stack::push_thread_scope_stack;
@@ -169,7 +170,11 @@ impl JsRuntime {
     Ok(())
   }
 
-  pub fn run_stored_callback(&mut self, identifier: CallbackIdentifier, args: Vec<Serialized>) {
+  pub fn run_stored_callback(
+    &mut self,
+    identifier: CallbackIdentifier,
+    args: Vec<Serialized>,
+  ) -> Option<Serialized> {
     let scope = &mut self.handle_scope();
 
     // Push the scope into the scope stack
@@ -188,10 +193,18 @@ impl JsRuntime {
       let recv = v8::undefined(scope);
 
       // Call function
-      callback.call(scope, recv.into(), &args);
+      let result = callback.call(scope, recv.into(), &args);
 
       // Clear the scope stack
       clear_thread_scope_stack();
+
+      // Return the result
+      match result {
+        Some(result) => deserialize_v8(scope, result),
+        None => None,
+      }
+    } else {
+      None
     }
   }
 

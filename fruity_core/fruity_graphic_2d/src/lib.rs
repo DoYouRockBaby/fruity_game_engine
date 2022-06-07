@@ -47,30 +47,30 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
         "update_transform_2d",
         MODULE_NAME,
         Inject1::new(update_transform_2d),
-        Some(SystemParams {
+        SystemParams {
             pool_index: 95,
             ignore_pause: true,
-        }),
+        },
     );
 
     system_service.add_system(
         "draw_sprite",
         MODULE_NAME,
         Inject2::new(draw_sprite),
-        Some(SystemParams {
+        SystemParams {
             pool_index: 98,
             ignore_pause: true,
-        }),
+        },
     );
 
     system_service.add_system(
         "draw_camera",
         MODULE_NAME,
         Inject2::new(draw_camera),
-        Some(SystemParams {
+        SystemParams {
             pool_index: 99,
             ignore_pause: true,
-        }),
+        },
     );
 
     std::mem::drop(object_factory_service);

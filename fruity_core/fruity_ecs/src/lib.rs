@@ -11,8 +11,7 @@
 //! - Components are structure where the datas are stored
 
 use crate::entity::entity_service::EntityService;
-use crate::system::system_service::BeginSystemParams;
-use crate::system::system_service::EndSystemParams;
+use crate::system::system_service::StartupSystemParams;
 use crate::system::system_service::SystemParams;
 use crate::system::system_service::SystemService;
 use fruity_core::object_factory_service::ObjectFactoryService;
@@ -57,6 +56,5 @@ pub fn initialize(resource_container: Arc<ResourceContainer>) {
     let mut object_factory_service = object_factory_service.write();
 
     object_factory_service.register::<SystemParams>("SystemParams");
-    object_factory_service.register::<BeginSystemParams>("BeginSystemParams");
-    object_factory_service.register::<EndSystemParams>("EndSystemParams");
+    object_factory_service.register::<StartupSystemParams>("StartupSystemParams");
 }

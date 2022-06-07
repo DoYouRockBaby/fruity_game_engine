@@ -52,6 +52,9 @@ pub struct EntityService {
     archetypes: Arc<RwLock<Vec<ArchetypeArcRwLock>>>,
     object_factory_service: ResourceReference<ObjectFactoryService>,
 
+    /// Signal notified when an entity is created
+    pub on_created: Signal<EntityReference>,
+
     /// Signal notified when an entity is deleted
     pub on_deleted: Signal<EntityId>,
 }
@@ -74,6 +77,7 @@ impl EntityService {
             index_map: RwLock::new(HashMap::new()),
             archetypes: Arc::new(RwLock::new(Vec::new())),
             object_factory_service: resource_container.require::<ObjectFactoryService>(),
+            on_created: Signal::new(),
             on_deleted: Signal::new(),
         }
     }
@@ -116,6 +120,8 @@ impl EntityService {
     pub fn query<'a, T: QueryParam<'a> + 'static>(&self) -> Query<T> {
         Query::<T> {
             archetypes: self.archetypes.clone(),
+            on_entity_created: self.on_created.clone(),
+            on_entity_deleted: self.on_deleted.clone(),
             _param_phantom: PhantomData {},
         }
     }
@@ -156,16 +162,19 @@ impl EntityService {
         enabled: bool,
         mut components: Vec<AnyComponent>,
     ) -> EntityId {
+        // Generate an id for the entity
         let entity_id = {
             let mut id_incrementer = self.id_incrementer.lock();
             *id_incrementer = u64::max(entity_id + 1, *id_incrementer);
             entity_id
         };
 
+        // Generate the archetype identifier from the components
         components.sort_by(|a, b| a.get_class_name().cmp(&b.get_class_name()));
-        let entity_identifier = get_type_identifier_by_any(&components);
+        let archetype_identifier = get_type_identifier_by_any(&components);
 
-        let indexes = match self.archetype_by_identifier(entity_identifier) {
+        // Insert the entity into the archetype, create the archetype if needed
+        let indexes = match self.archetype_by_identifier(archetype_identifier) {
             Some((archetype_index, archetype)) => {
                 let archetype_entity_id = archetype.read().len();
                 archetype.write().add(entity_id, name, enabled, components);
@@ -181,10 +190,21 @@ impl EntityService {
             }
         };
 
+        // Store the entity storage position
         let mut index_map = self.index_map.write();
         index_map.insert(entity_id, indexes);
 
-        // self.on_entity_created.notify(self.get(entity_id).unwrap());
+        // Notify that entity is created
+        let entity_reference = EntityReference {
+            entity_id: indexes.1,
+            archetype: {
+                let archetypes = self.archetypes.read();
+                archetypes.get(indexes.0).unwrap().clone()
+            },
+        };
+
+        self.on_created.notify(entity_reference);
+
         entity_id
     }
 
@@ -454,6 +474,8 @@ impl IntrospectObject for EntityService {
 
                     let query = SerializedQuery {
                         archetypes: this.archetypes.clone(),
+                        on_entity_created: this.on_created.clone(),
+                        on_entity_deleted: this.on_deleted.clone(),
                         params: vec![],
                     };
 

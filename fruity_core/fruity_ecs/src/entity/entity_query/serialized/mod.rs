@@ -6,6 +6,7 @@ use crate::entity::entity_query::serialized::params::WithEntity;
 use crate::entity::entity_query::serialized::params::WithId;
 use crate::entity::entity_query::serialized::params::WithName;
 use crate::entity::entity_query::serialized::params::WithOptional;
+use crate::entity::entity_query::EntityId;
 use crate::entity::entity_reference::EntityReference;
 use fruity_any::*;
 use fruity_core::convert::FruityInto;
@@ -16,6 +17,8 @@ use fruity_core::introspect::MethodInfo;
 use fruity_core::serialize::serialized::Callback;
 use fruity_core::serialize::serialized::SerializableObject;
 use fruity_core::serialize::serialized::Serialized;
+use fruity_core::signal::ObserverHandler;
+use fruity_core::signal::Signal;
 use fruity_core::utils::introspect::cast_introspect_mut;
 use fruity_core::utils::introspect::ArgumentCaster;
 use fruity_core::RwLock;
@@ -34,6 +37,8 @@ pub trait SerializedQueryParam: FruityAny {
 #[derive(FruityAny)]
 pub(crate) struct SerializedQuery {
     pub archetypes: Arc<RwLock<Vec<ArchetypeArcRwLock>>>,
+    pub on_entity_created: Signal<EntityReference>,
+    pub on_entity_deleted: Signal<EntityId>,
     pub params: Vec<Box<dyn SerializedQueryParam>>,
 }
 
@@ -41,6 +46,8 @@ impl Clone for SerializedQuery {
     fn clone(&self) -> Self {
         Self {
             archetypes: self.archetypes.clone(),
+            on_entity_created: self.on_entity_created.clone(),
+            on_entity_deleted: self.on_entity_deleted.clone(),
             params: self
                 .params
                 .iter()
@@ -90,16 +97,11 @@ impl SerializedQuery {
 
     pub fn for_each(&self, callback: impl Fn(&[Serialized]) + Send + Sync) {
         let archetypes = self.archetypes.read();
-        let mut archetype_iter: Box<dyn Iterator<Item = &ArchetypeArcRwLock>> =
-            Box::new(archetypes.iter());
+        let archetype_filter = self.archetype_filter();
 
-        for param in self.params.iter() {
-            archetype_iter = Box::new(
-                archetype_iter.filter(|archetype| param.filter_archetype(&archetype.read())),
-            );
-        }
-
-        let entities = archetype_iter
+        let entities = archetypes
+            .iter()
+            .filter(|archetype| archetype_filter(archetype))
             .map(|archetype| archetype.iter(false))
             .flatten()
             .collect::<Vec<_>>();
@@ -116,6 +118,67 @@ impl SerializedQuery {
 
                 serialized_params.for_each(|params| callback(&params))
             });
+    }
+
+    /// Call a function for every entities of an query
+    pub fn on_created(
+        &self,
+        callback: impl Fn(&[Serialized]) -> Option<Box<dyn Fn() + Send + Sync>> + Send + Sync + 'static,
+    ) -> ObserverHandler<EntityReference> {
+        let on_entity_deleted = self.on_entity_deleted.clone();
+        let archetype_filter = self.archetype_filter();
+        let params = self
+            .params
+            .iter()
+            .map(|param| param.duplicate())
+            .collect::<Vec<_>>();
+
+        self.on_entity_created.add_observer(move |entity| {
+            if archetype_filter(&entity.archetype) {
+                let entity_id = {
+                    let entity_reader = entity.read();
+                    entity_reader.get_entity_id()
+                };
+
+                let serialized_params = params
+                    .iter()
+                    .map(|param| param.get_entity_components(entity.clone()))
+                    .multi_cartesian_product();
+
+                serialized_params.for_each(|params| {
+                    let dispose_callback = callback(&params);
+
+                    if let Some(dispose_callback) = dispose_callback {
+                        on_entity_deleted.add_self_dispose_observer(
+                            move |signal_entity_id, handler| {
+                                if entity_id == *signal_entity_id {
+                                    dispose_callback();
+                                    handler.dispose_by_ref();
+                                }
+                            },
+                        )
+                    }
+                })
+            }
+        })
+    }
+
+    fn archetype_filter(&self) -> Box<dyn Fn(&ArchetypeArcRwLock) -> bool + Sync + Send + 'static> {
+        let params = self
+            .params
+            .iter()
+            .map(|param| param.duplicate())
+            .collect::<Vec<_>>();
+
+        Box::new(move |archetype| {
+            for param in params.iter() {
+                if !param.filter_archetype(&archetype.read()) {
+                    return false;
+                }
+            }
+
+            true
+        })
     }
 }
 
@@ -214,6 +277,30 @@ impl IntrospectObject for SerializedQuery {
                     });
 
                     Ok(None)
+                })),
+            },
+            MethodInfo {
+                name: "on_created".to_string(),
+                call: MethodCaller::Mut(Arc::new(|this, args| {
+                    let this = cast_introspect_mut::<SerializedQuery>(this);
+
+                    let mut caster = ArgumentCaster::new("on_created", args);
+                    let arg1 = caster.cast_next::<Callback>()?;
+
+                    let callback = arg1.callback;
+                    let handle = this.on_created(move |args| {
+                        let dispose_callback = callback(args.to_vec());
+
+                        if let Ok(Some(Serialized::Callback(dispose_callback))) = dispose_callback {
+                            Some(Box::new(move || {
+                                (dispose_callback.callback)(vec![]).ok();
+                            }))
+                        } else {
+                            None
+                        }
+                    });
+
+                    Ok(Some(handle.fruity_into()))
                 })),
             },
         ]

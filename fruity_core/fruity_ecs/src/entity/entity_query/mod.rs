@@ -1,11 +1,14 @@
 use crate::entity::archetype::Archetype;
 use crate::entity::archetype::ArchetypeArcRwLock;
+use crate::entity::entity::EntityId;
 use crate::entity::entity_guard::EntityReadGuard;
 use crate::entity::entity_guard::EntityWriteGuard;
 use crate::entity::entity_reference::EntityReference;
 use crate::EntityService;
 use fruity_core::inject::Injectable;
 use fruity_core::resource::resource_container::ResourceContainer;
+use fruity_core::signal::ObserverHandler;
+use fruity_core::signal::Signal;
 use fruity_core::RwLock;
 use rayon::iter::ParallelBridge;
 use rayon::iter::ParallelIterator;
@@ -59,6 +62,8 @@ pub trait QueryParam<'a> {
 /// A query over entities
 pub struct Query<T> {
     pub(crate) archetypes: Arc<RwLock<Vec<ArchetypeArcRwLock>>>,
+    pub(crate) on_entity_created: Signal<EntityReference>,
+    pub(crate) on_entity_deleted: Signal<EntityId>,
     pub(crate) _param_phantom: PhantomData<T>,
 }
 
@@ -66,6 +71,8 @@ impl<T> Clone for Query<T> {
     fn clone(&self) -> Self {
         Query {
             archetypes: self.archetypes.clone(),
+            on_entity_created: self.on_entity_created.clone(),
+            on_entity_deleted: self.on_entity_deleted.clone(),
             _param_phantom: PhantomData {},
         }
     }
@@ -107,6 +114,52 @@ impl<'a, T: QueryParam<'a> + 'static> Query<T> {
             T::iter_entity_components(entity.clone(), &entity_guard)
                 .for_each(|param| callback(param))
         });
+    }
+
+    /// Call a function for every entities of an query
+    pub fn on_created(
+        &self,
+        callback: impl Fn(T::Item) -> Option<Box<dyn Fn() + Send + Sync>> + Send + Sync + 'static,
+    ) -> ObserverHandler<EntityReference> {
+        let on_entity_deleted = self.on_entity_deleted.clone();
+        self.on_entity_created.add_observer(move |entity| {
+            if T::filter_archetype(&entity.archetype.read()) {
+                let entity_guard = if T::require_write() {
+                    RequestedEntityGuard::Write(entity.write())
+                } else if T::require_read() {
+                    RequestedEntityGuard::Read(entity.read())
+                } else {
+                    RequestedEntityGuard::None
+                };
+
+                let entity_id = {
+                    let entity_reader = entity.read();
+                    entity_reader.get_entity_id()
+                };
+
+                // TODO: Find a way to remove it
+                let entity_guard = unsafe {
+                    std::mem::transmute::<&RequestedEntityGuard, &RequestedEntityGuard>(
+                        &entity_guard,
+                    )
+                };
+
+                T::iter_entity_components(entity.clone(), &entity_guard).for_each(|param| {
+                    let dispose_callback = callback(param);
+
+                    if let Some(dispose_callback) = dispose_callback {
+                        on_entity_deleted.add_self_dispose_observer(
+                            move |signal_entity_id, handler| {
+                                if entity_id == *signal_entity_id {
+                                    dispose_callback();
+                                    handler.dispose_by_ref();
+                                }
+                            },
+                        )
+                    }
+                })
+            }
+        })
     }
 }
 
