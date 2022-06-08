@@ -29,7 +29,7 @@
         material:
           class_name: ResourceReference
           fields:
-            resource_name: "./assets/material.material"
+            resource_name: "./assets/character.material"
     - class_name: Move
       fields:
         velocity: 1.6
@@ -38,22 +38,25 @@
         transform:
           class_name: Matrix3
           fields: {}
-    - class_name: CircleCollider
+    - class_name: RectCollider
       fields:
-        radius: 0.5
-        center:
+        bottom_left:
           class_name: Vector2d
           fields:
-            y: 0.0
-            x: 0.0
-    - class_name: CircleCollider
-      fields:
-        radius: 0.3
-        center:
+            x: -0.275
+            y: -0.375
+        top_right:
           class_name: Vector2d
           fields:
-            y: 1.0
-            x: 0.0
+            x: 0.235
+            y: 0.450
+    - class_name: KinematicRigidBody
+      fields: {}
+    # - class_name: DynamicRigidBody
+    #   fields:
+    #     gravity_scale: 9.0
+    #     can_sleep: true
+    #     ccd_enabled: true
 - class_name: Entity
   fields:
     entity_id: 3
@@ -98,6 +101,22 @@
         transform:
           class_name: Matrix3
           fields: {}
+    - class_name: CircleCollider
+      fields:
+        radius: 0.5
+        center:
+          class_name: Vector2d
+          fields:
+            y: 0.0
+            x: 0.0
+    - class_name: CircleCollider
+      fields:
+        radius: 0.3
+        center:
+          class_name: Vector2d
+          fields:
+            y: 1.0
+            x: 0.0
 - class_name: Entity
   fields:
     entity_id: 5
@@ -232,3 +251,48 @@
         transform:
           class_name: Matrix3
           fields: {}
+- class_name: Entity
+  fields:
+    entity_id: 10
+    name: Ground
+    enabled: true
+    components:
+    - class_name: Translate2d
+      fields:
+        vec:
+          class_name: Vector2d
+          fields:
+            y: -4
+            x: 0
+    - class_name: Scale2d
+      fields:
+        vec:
+          class_name: Vector2d
+          fields:
+            x: 24
+            y: 0.5
+    - class_name: Sprite
+      fields:
+        z_index: 0
+        texture: ~
+        material:
+          class_name: ResourceReference
+          fields:
+            resource_name: "./assets/platform.material"
+    - class_name: Transform2d
+      fields:
+        transform:
+          class_name: Matrix3
+          fields: {}
+    - class_name: RectCollider
+      fields:
+        bottom_left:
+          class_name: Vector2d
+          fields:
+            y: -0.5
+            x: -0.5
+        top_right:
+          class_name: Vector2d
+          fields:
+            y: 0.5
+            x: 0.5

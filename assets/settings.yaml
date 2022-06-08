@@ -17,8 +17,14 @@ input:
   "Action 1":
   - "Keyboard/E"
 resources:
+- name: "./assets/platform.png"
+  path: "./assets/platform.png"
+  type: texture
 - name: "./assets/ball.png"
   path: "./assets/ball.png"
+  type: texture
+- name: "./assets/character.png"
+  path: "./assets/character.png"
   type: texture
 - name: "./assets/shader.wgsl"
   path: "./assets/shader.wgsl"
@@ -42,5 +48,9 @@ resources:
 #    type: vec2
 #  - location: 10
 #    type: vec2
+- name: "./assets/character.material"
+  path: "./assets/character.material"
 - name: "./assets/material.material"
   path: "./assets/material.material"
+- name: "./assets/platform.material"
+  path: "./assets/platform.material"

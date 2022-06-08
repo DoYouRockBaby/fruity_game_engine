@@ -4,10 +4,18 @@ use crate::components::rapier_circle_collider::RapierCircleCollider;
 use crate::components::rapier_rect_collider::RapierRectCollider;
 use crate::components::static_rigid_body::StaticRigidBody;
 use crate::rapier_2d_service::Rapier2dService;
+use crate::systems::dynamic_initialize_rigid_body::dynamic_initialize_rigid_body;
+use crate::systems::dynamic_update_rigid_body::dynamic_update_rigid_body;
+use crate::systems::dynamic_update_rigid_body_prepare::dynamic_update_rigid_body_prepare;
 use crate::systems::initialize_circle_collider::initialize_circle_collider;
 use crate::systems::initialize_rect_collider::initialize_rect_collider;
+use crate::systems::kinematic_initialize_rigid_body::kinematic_initialize_rigid_body;
+use crate::systems::kinematic_update_rigid_body::kinematic_update_rigid_body;
+use crate::systems::kinematic_update_rigid_body_prepare::kinematic_update_rigid_body_prepare;
 use crate::systems::update_circle_collider::update_circle_collider;
+use crate::systems::update_physics::update_physics;
 use crate::systems::update_rect_collider::update_rect_collider;
+use fruity_core::inject::Inject1;
 use fruity_core::inject::Inject2;
 use fruity_core::object_factory_service::ObjectFactoryService;
 use fruity_core::resource::resource_container::ResourceContainer;
@@ -49,6 +57,15 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     let system_service = resource_container.require::<SystemService>();
     let mut system_service = system_service.write();
 
+    system_service.add_system(
+        "update_physics",
+        MODULE_NAME,
+        Inject1::new(update_physics),
+        SystemParams {
+            pool_index: 52,
+            ..Default::default()
+        },
+    );
     system_service.add_startup_system(
         "initialize_circle_collider",
         MODULE_NAME,
@@ -61,6 +78,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
         Inject2::new(update_circle_collider),
         SystemParams {
             ignore_pause: true,
+            pool_index: 51,
             ..Default::default()
         },
     );
@@ -76,6 +94,59 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
         Inject2::new(update_rect_collider),
         SystemParams {
             ignore_pause: true,
+            pool_index: 51,
+            ..Default::default()
+        },
+    );
+    system_service.add_startup_system(
+        "kinematic_initialize_rigid_body",
+        MODULE_NAME,
+        Inject2::new(kinematic_initialize_rigid_body),
+        StartupSystemParams { ignore_pause: true },
+    );
+    system_service.add_system(
+        "kinematic_update_rigid_body_prepare",
+        MODULE_NAME,
+        Inject2::new(kinematic_update_rigid_body_prepare),
+        SystemParams {
+            ignore_pause: true,
+            pool_index: 51,
+            ..Default::default()
+        },
+    );
+    system_service.add_system(
+        "kinematic_update_rigid_body",
+        MODULE_NAME,
+        Inject2::new(kinematic_update_rigid_body),
+        SystemParams {
+            ignore_pause: true,
+            pool_index: 53,
+            ..Default::default()
+        },
+    );
+    system_service.add_startup_system(
+        "dynamic_initialize_rigid_body",
+        MODULE_NAME,
+        Inject2::new(dynamic_initialize_rigid_body),
+        StartupSystemParams { ignore_pause: true },
+    );
+    system_service.add_system(
+        "dynamic_update_rigid_body_prepare",
+        MODULE_NAME,
+        Inject2::new(dynamic_update_rigid_body_prepare),
+        SystemParams {
+            ignore_pause: true,
+            pool_index: 51,
+            ..Default::default()
+        },
+    );
+    system_service.add_system(
+        "dynamic_update_rigid_body",
+        MODULE_NAME,
+        Inject2::new(dynamic_update_rigid_body),
+        SystemParams {
+            ignore_pause: true,
+            pool_index: 53,
             ..Default::default()
         },
     );

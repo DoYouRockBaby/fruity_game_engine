@@ -351,11 +351,25 @@ impl EntityService {
 
     /// Clear all the entities
     pub fn clear(&self) {
-        // Clear all entities
+        // Raise all entity deleted events
+        let entity_ids = {
+            let index_map = self.index_map.read();
+            index_map
+                .iter()
+                .map(|(entity_id, _)| *entity_id)
+                .collect::<Vec<_>>()
+        };
+
+        entity_ids
+            .into_iter()
+            .for_each(|entity_id| self.on_deleted.notify(entity_id));
+
+        // Get the writers
         let mut index_map = self.index_map.write();
         let mut id_incrementer = self.id_incrementer.lock();
         let mut archetypes = self.archetypes.write();
 
+        // Clear all entities
         index_map.clear();
         *id_incrementer = 0;
         archetypes.clear();

@@ -1,4 +1,11 @@
+pub mod dynamic_initialize_rigid_body;
+pub mod dynamic_update_rigid_body;
+pub mod dynamic_update_rigid_body_prepare;
 pub mod initialize_circle_collider;
 pub mod initialize_rect_collider;
+pub mod kinematic_initialize_rigid_body;
+pub mod kinematic_update_rigid_body;
+pub mod kinematic_update_rigid_body_prepare;
 pub mod update_circle_collider;
+pub mod update_physics;
 pub mod update_rect_collider;
