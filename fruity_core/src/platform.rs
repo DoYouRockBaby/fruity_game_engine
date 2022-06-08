@@ -9,7 +9,8 @@ use std::sync::Arc;
 ///
 pub type PlatformCallback = fn(
     resource_container: Arc<ResourceContainer>,
-    initialize_engine: Initializer,
+    ext_initializer: Initializer,
+    world_initializer: Initializer,
     settings: &Settings,
 );
 

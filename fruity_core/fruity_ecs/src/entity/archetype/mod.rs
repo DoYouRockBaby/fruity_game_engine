@@ -7,6 +7,8 @@ use crate::entity::entity::get_type_identifier_by_any;
 use crate::entity::entity::EntityId;
 use crate::entity::entity::EntityTypeIdentifier;
 use crate::entity::entity_reference::EntityReference;
+use crate::ExtensionComponentService;
+use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::RwLock;
 use itertools::Itertools;
 use std::collections::BTreeMap;
@@ -32,6 +34,7 @@ pub(crate) struct ArchetypeArcRwLock(Arc<RwLock<Archetype>>);
 /// A collection of entities that share the same component structure
 /// Stored as a Struct Of Array
 pub struct Archetype {
+    extension_component_service: ResourceReference<ExtensionComponentService>,
     pub(crate) identifier: EntityTypeIdentifier,
 
     // Indexes with dead memory
@@ -54,15 +57,32 @@ impl Archetype {
     /// * `components` - The first entity components
     ///
     pub fn new(
+        extension_component_service: ResourceReference<ExtensionComponentService>,
         entity_id: EntityId,
         name: &str,
         enabled: bool,
-        components: Vec<AnyComponent>,
+        mut components: Vec<AnyComponent>,
     ) -> Archetype {
         // Deduce the archetype properties from the first components
         let identifier = get_type_identifier_by_any(&components);
 
-        // Build the archetype containers with the first component
+        // Inject the extensions
+        let mut extensions_component = {
+            let extension_component_service = extension_component_service.read();
+
+            components
+                .iter()
+                .map(|component| {
+                    extension_component_service
+                        .get_component_extension(component.deref())
+                        .into_iter()
+                })
+                .flatten()
+                .collect::<Vec<_>>()
+        };
+        components.append(&mut extensions_component);
+
+        // Build the archetype component containers
         let grouped_components = Self::group_components_by_type(components);
         let mut component_storages = BTreeMap::new();
         for (class_name, components) in grouped_components {
@@ -70,6 +90,7 @@ impl Archetype {
         }
 
         Archetype {
+            extension_component_service,
             identifier: identifier,
             erased_indexes: RwLock::new(vec![]),
             entity_id_array: vec![entity_id],
@@ -115,7 +136,7 @@ impl Archetype {
         entity_id: EntityId,
         name: &str,
         enabled: bool,
-        components: Vec<AnyComponent>,
+        mut components: Vec<AnyComponent>,
     ) {
         // TODO: Use previous deleted cells
 
@@ -124,6 +145,22 @@ impl Archetype {
         self.name_array.push(name.to_string());
         self.enabled_array.push(enabled);
         self.lock_array.push(RwLock::new(()));
+
+        // Inject the extensions
+        let mut extensions_component = {
+            let extension_component_service = self.extension_component_service.read();
+
+            components
+                .iter()
+                .map(|component| {
+                    extension_component_service
+                        .get_component_extension(component.deref())
+                        .into_iter()
+                })
+                .flatten()
+                .collect::<Vec<_>>()
+        };
+        components.append(&mut extensions_component);
 
         // Store all the components
         let grouped_components = Self::group_components_by_type(components);

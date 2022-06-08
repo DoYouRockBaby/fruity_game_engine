@@ -55,7 +55,8 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
 
 pub fn platform(
     resource_container: Arc<ResourceContainer>,
-    initializer: Initializer,
+    ext_initializer: Initializer,
+    world_initializer: Initializer,
     settings: &Settings,
 ) {
     // Get dependencies
@@ -90,14 +91,17 @@ pub fn platform(
 
     resource_container.add::<dyn WindowService>("window_service", Box::new(window_service));
 
-    // Initialize the engine
-    initializer(resource_container.clone(), settings);
+    // Initialize the extensions
+    ext_initializer(resource_container.clone(), settings);
 
     // Run the begin systems before everything
     let system_service = system_service.clone();
     let system_service_reader = system_service.read();
     system_service_reader.run_start();
     std::mem::drop(system_service_reader);
+
+    // Initialize the world
+    world_initializer(resource_container.clone(), settings);
 
     // Run the render loop
     let window_service = resource_container.require::<dyn WindowService>();

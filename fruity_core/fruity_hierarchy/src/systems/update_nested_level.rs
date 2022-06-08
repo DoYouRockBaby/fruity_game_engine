@@ -11,7 +11,7 @@ pub fn update_nested_level(
     entity_service: Ref<EntityService>,
     query: Query<(WithEntity, WithMut<Parent>)>,
 ) -> StartupDisposeSystemCallback {
-    query.on_created(move |(entity, mut parent)| {
+    let handle = query.on_created(move |(entity, mut parent)| {
         // Get the parent entity reference
         let parent_entity = if let Some(parent_id) = &parent.parent_id.deref() {
             let entity_service_reader = entity_service.read();
@@ -58,5 +58,7 @@ pub fn update_nested_level(
         }))
     });
 
-    None
+    Some(Box::new(move || {
+        handle.dispose_by_ref();
+    }))
 }

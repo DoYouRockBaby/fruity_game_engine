@@ -11,6 +11,7 @@ use fruity_editor_graphic_2d::initialize as initialize_editor_graphic_2d;
 use fruity_editor_hierarchy::initialize as initialize_editor_hierarchy;
 use fruity_editor_javascript::initialize as initialize_editor_javascript;
 use fruity_editor_physic_2d::initialize as initialize_editor_physic_2d;
+use fruity_editor_physic_2d_rapier::initialize as initialize_editor_physic_2d_rapier;
 use fruity_egui_editor::initialize as initialize_egui_editor;
 use fruity_graphic::initialize as initialize_graphic;
 use fruity_graphic_2d::initialize as initialize_graphic_2d;
@@ -71,7 +72,9 @@ fn main() {
             initialize_editor_graphic_2d(resource_container.clone(), settings);
             initialize_editor_physic_2d(resource_container.clone(), settings);
             initialize_editor_javascript(resource_container.clone(), settings);
-
+            initialize_editor_physic_2d_rapier(resource_container.clone(), settings);
+        },
+        |resource_container, settings| {
             // Load resources
             let resource_settings = settings.get::<Vec<Settings>>("resources", Vec::new());
             resource_container

@@ -11,6 +11,7 @@
 //! - Components are structure where the datas are stored
 
 use crate::entity::entity_service::EntityService;
+use crate::extension_component_service::ExtensionComponentService;
 use crate::system::system_service::StartupSystemParams;
 use crate::system::system_service::SystemParams;
 use crate::system::system_service::SystemService;
@@ -32,6 +33,9 @@ pub mod entity;
 /// Provides collection for systems
 pub mod system;
 
+/// A service to store components extensions
+pub mod extension_component_service;
+
 /// Create an entity type, use it like entity_type!["Component1", "Component2"])
 #[macro_export]
 macro_rules! entity_type {
@@ -46,11 +50,18 @@ pub static MODULE_NAME: &str = "fruity_ecs";
 /// Initialize this extension
 // #[no_mangle]
 pub fn initialize(resource_container: Arc<ResourceContainer>) {
-    let entity_service = EntityService::new(resource_container.clone());
     let system_service = SystemService::new(resource_container.clone());
 
-    resource_container.add::<EntityService>("entity_service", Box::new(entity_service));
+    let extension_component_service = ExtensionComponentService::new(resource_container.clone());
+    resource_container.add::<ExtensionComponentService>(
+        "extension_component_service",
+        Box::new(extension_component_service),
+    );
+
+    let entity_service = EntityService::new(resource_container.clone());
+
     resource_container.add::<SystemService>("system_service", Box::new(system_service));
+    resource_container.add::<EntityService>("entity_service", Box::new(entity_service));
 
     let object_factory_service = resource_container.require::<ObjectFactoryService>();
     let mut object_factory_service = object_factory_service.write();

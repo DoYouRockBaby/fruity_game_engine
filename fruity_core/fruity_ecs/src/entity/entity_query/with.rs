@@ -251,11 +251,11 @@ impl<'a, T: Component + StaticComponent + 'static> QueryParam<'a> for WithOption
 }
 
 /// A writable optional component reference
-pub struct WithOptionMut<T> {
+pub struct WithOptionalMut<T> {
     _phantom: PhantomData<T>,
 }
 
-impl<'a, T: Component + StaticComponent + 'static> QueryParam<'a> for WithOptionMut<T> {
+impl<'a, T: Component + StaticComponent + 'static> QueryParam<'a> for WithOptionalMut<T> {
     type Item = Option<TypedComponentWriteGuard<'a, T>>;
 
     fn filter_archetype(_archetype: &Archetype) -> bool {
@@ -282,6 +282,210 @@ impl<'a, T: Component + StaticComponent + 'static> QueryParam<'a> for WithOption
 
                 match iter.peek() {
                     Some(_) => Box::new(iter.map(|elem| Some(elem))),
+                    None => Box::new(vec![None].into_iter()),
+                }
+            }
+            RequestedEntityGuard::None => Box::new(vec![None].into_iter()),
+        }
+    }
+}
+
+/// A readable component reference
+pub struct WithExtension<T, E> {
+    _phantom: PhantomData<T>,
+    _phantom_e: PhantomData<E>,
+}
+
+impl<'a, T: Component + StaticComponent + 'static, E: Component + StaticComponent + 'static>
+    QueryParam<'a> for WithExtension<T, E>
+{
+    type Item = (
+        TypedComponentReadGuard<'a, T>,
+        TypedComponentReadGuard<'a, E>,
+    );
+
+    fn filter_archetype(archetype: &Archetype) -> bool {
+        archetype
+            .identifier
+            .contains(&T::get_component_name().to_string())
+    }
+
+    fn require_read() -> bool {
+        true
+    }
+
+    fn require_write() -> bool {
+        false
+    }
+
+    fn iter_entity_components(
+        _entity_reference: EntityReference,
+        entity_guard: &'a RequestedEntityGuard<'a>,
+    ) -> Box<dyn Iterator<Item = Self::Item> + 'a> {
+        match entity_guard {
+            RequestedEntityGuard::Read(entity_guard) => Box::new(
+                entity_guard
+                    .iter_components::<T>()
+                    .map(|component| (component.clone(), component.get_extension::<E>().unwrap())),
+            ),
+            RequestedEntityGuard::Write(entity_guard) => Box::new(
+                entity_guard
+                    .iter_components::<T>()
+                    .map(|component| (component.clone(), component.get_extension::<E>().unwrap())),
+            ),
+            RequestedEntityGuard::None => panic!(),
+        }
+    }
+}
+
+/// A writable component reference
+pub struct WithExtensionMut<T, E> {
+    _phantom: PhantomData<T>,
+    _phantom_e: PhantomData<E>,
+}
+
+impl<'a, T: Component + StaticComponent + 'static, E: Component + StaticComponent + 'static>
+    QueryParam<'a> for WithExtensionMut<T, E>
+{
+    type Item = (
+        TypedComponentWriteGuard<'a, T>,
+        TypedComponentWriteGuard<'a, E>,
+    );
+
+    fn filter_archetype(archetype: &Archetype) -> bool {
+        archetype
+            .identifier
+            .contains(&T::get_component_name().to_string())
+    }
+
+    fn require_read() -> bool {
+        false
+    }
+
+    fn require_write() -> bool {
+        true
+    }
+
+    fn iter_entity_components(
+        _entity_reference: EntityReference,
+        entity_guard: &'a RequestedEntityGuard<'a>,
+    ) -> Box<dyn Iterator<Item = Self::Item> + 'a> {
+        match entity_guard {
+            RequestedEntityGuard::Read(_) => panic!(),
+            RequestedEntityGuard::Write(entity_guard) => {
+                Box::new(entity_guard.iter_components_mut::<T>().map(|component| {
+                    (
+                        component.clone(),
+                        component.get_extension_mut::<E>().unwrap(),
+                    )
+                }))
+            }
+            RequestedEntityGuard::None => panic!(),
+        }
+    }
+}
+
+/// A readable optional component reference
+pub struct WithExtensionOptional<T, E> {
+    _phantom: PhantomData<T>,
+    _phantom_e: PhantomData<E>,
+}
+
+impl<'a, T: Component + StaticComponent + 'static, E: Component + StaticComponent + 'static>
+    QueryParam<'a> for WithExtensionOptional<T, E>
+{
+    type Item = Option<(
+        TypedComponentReadGuard<'a, T>,
+        TypedComponentReadGuard<'a, E>,
+    )>;
+
+    fn filter_archetype(_archetype: &Archetype) -> bool {
+        true
+    }
+
+    fn require_read() -> bool {
+        true
+    }
+
+    fn require_write() -> bool {
+        false
+    }
+
+    fn iter_entity_components(
+        _entity_reference: EntityReference,
+        entity_guard: &'a RequestedEntityGuard<'a>,
+    ) -> Box<dyn Iterator<Item = Self::Item> + 'a> {
+        match entity_guard {
+            RequestedEntityGuard::Read(entity_guard) => {
+                let iter = entity_guard.iter_components::<T>().peekable();
+                let mut iter = iter.peekable();
+
+                match iter.peek() {
+                    Some(_) => Box::new(iter.map(|component| {
+                        Some((component.clone(), component.get_extension::<E>().unwrap()))
+                    })),
+                    None => Box::new(vec![None].into_iter()),
+                }
+            }
+            RequestedEntityGuard::Write(entity_guard) => {
+                let iter = entity_guard.iter_components::<T>().peekable();
+                let mut iter = iter.peekable();
+
+                match iter.peek() {
+                    Some(_) => Box::new(iter.map(|component| {
+                        Some((component.clone(), component.get_extension::<E>().unwrap()))
+                    })),
+                    None => Box::new(vec![None].into_iter()),
+                }
+            }
+            RequestedEntityGuard::None => Box::new(vec![None].into_iter()),
+        }
+    }
+}
+
+/// A writable optional component reference
+pub struct WithExtensionOptionalMut<T, E> {
+    _phantom: PhantomData<T>,
+    _phantom_e: PhantomData<E>,
+}
+
+impl<'a, T: Component + StaticComponent + 'static, E: Component + StaticComponent + 'static>
+    QueryParam<'a> for WithExtensionOptionalMut<T, E>
+{
+    type Item = Option<(
+        TypedComponentWriteGuard<'a, T>,
+        TypedComponentWriteGuard<'a, E>,
+    )>;
+
+    fn filter_archetype(_archetype: &Archetype) -> bool {
+        true
+    }
+
+    fn require_read() -> bool {
+        false
+    }
+
+    fn require_write() -> bool {
+        true
+    }
+
+    fn iter_entity_components(
+        _entity_reference: EntityReference,
+        entity_guard: &'a RequestedEntityGuard<'a>,
+    ) -> Box<dyn Iterator<Item = Self::Item> + 'a> {
+        match entity_guard {
+            RequestedEntityGuard::Read(_) => Box::new(vec![None].into_iter()),
+            RequestedEntityGuard::Write(entity_guard) => {
+                let iter = entity_guard.iter_components_mut::<T>().peekable();
+                let mut iter = iter.peekable();
+
+                match iter.peek() {
+                    Some(_) => Box::new(iter.map(|component| {
+                        Some((
+                            component.clone(),
+                            component.get_extension_mut::<E>().unwrap(),
+                        ))
+                    })),
                     None => Box::new(vec![None].into_iter()),
                 }
             }

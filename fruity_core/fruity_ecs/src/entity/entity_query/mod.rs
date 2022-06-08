@@ -124,17 +124,17 @@ impl<'a, T: QueryParam<'a> + 'static> Query<T> {
         let on_entity_deleted = self.on_entity_deleted.clone();
         self.on_entity_created.add_observer(move |entity| {
             if T::filter_archetype(&entity.archetype.read()) {
+                let entity_id = {
+                    let entity_reader = entity.read();
+                    entity_reader.get_entity_id()
+                };
+
                 let entity_guard = if T::require_write() {
                     RequestedEntityGuard::Write(entity.write())
                 } else if T::require_read() {
                     RequestedEntityGuard::Read(entity.read())
                 } else {
                     RequestedEntityGuard::None
-                };
-
-                let entity_id = {
-                    let entity_reader = entity.read();
-                    entity_reader.get_entity_id()
                 };
 
                 // TODO: Find a way to remove it

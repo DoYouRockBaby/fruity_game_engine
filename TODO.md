@@ -18,11 +18,10 @@
 [X] There should be some memory leak in archetype
 [X] Add component query selectors
 [X] Create a way to query based on generics
-[ ] Change the begin/end system to a startup system that returns an optional end callback and add the startup that ignore pause
-[ ] Add a way to extend components
+[X] Change the begin/end system to a startup system that returns an optional end callback and add the startup that ignore pause
+[X] Random crash when we delete an entity
+[X] Add a way to extend components
 [ ] Support for async systems/queries for_each with tokio
-[ ] Random crash when we delete an entity
-[ ] Add an exception when you try to access a deleted entity, propagate it into js
 [ ] Find a way to move the introspect declaration into the associated traits
 
 ## Editor
@@ -37,7 +36,7 @@
 [X] Sprite gizmos
 [X] Run/Pause
 [X] Save/Load
-[X] Add componnent from editor
+[X] Add component from editor
 [X] Remove component from editor
 [X] Fix resize gizmos
 [X] Add a cool grid for 2D view

@@ -1,3 +1,4 @@
+use adjacent_pair_iterator::AdjacentPairIterator;
 use fruity_any::*;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
@@ -94,6 +95,12 @@ impl Graphic2dService {
             },
             z_index,
         );
+    }
+
+    pub fn draw_polyline(&self, points: Vec<Vector2d>, width: u32, color: Color, z_index: i32) {
+        points
+            .adjacent_pairs()
+            .for_each(|(pos1, pos2)| self.draw_line(pos1, pos2, width, color, z_index));
     }
 
     pub fn draw_dotted_line(

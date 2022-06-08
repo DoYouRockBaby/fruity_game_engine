@@ -8,6 +8,7 @@ edition = "2021"
 
 [dependencies]
 bytemuck = { version = "1.4", features = [ "derive" ] }
+adjacent-pair-iterator = "1.0.0"
 log = "0.4.14"
 puffin = "0.12.1"
 rayon = "1.5"

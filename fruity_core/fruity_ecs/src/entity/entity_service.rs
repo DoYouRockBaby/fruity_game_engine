@@ -7,6 +7,7 @@ use crate::entity::entity::EntityTypeIdentifier;
 use crate::entity::entity_query::serialized::SerializedQuery;
 use crate::entity::entity_query::Query;
 use crate::entity::entity_query::QueryParam;
+use crate::ExtensionComponentService;
 use std::marker::PhantomData;
 // use crate::entity::entity_query_inject::QueryInject;
 use crate::entity::entity_reference::EntityReference;
@@ -51,6 +52,7 @@ pub struct EntityService {
     index_map: RwLock<HashMap<EntityId, (usize, usize)>>,
     archetypes: Arc<RwLock<Vec<ArchetypeArcRwLock>>>,
     object_factory_service: ResourceReference<ObjectFactoryService>,
+    extension_component_service: ResourceReference<ExtensionComponentService>,
 
     /// Signal notified when an entity is created
     pub on_created: Signal<EntityReference>,
@@ -77,6 +79,7 @@ impl EntityService {
             index_map: RwLock::new(HashMap::new()),
             archetypes: Arc::new(RwLock::new(Vec::new())),
             object_factory_service: resource_container.require::<ObjectFactoryService>(),
+            extension_component_service: resource_container.require::<ExtensionComponentService>(),
             on_created: Signal::new(),
             on_deleted: Signal::new(),
         }
@@ -184,15 +187,23 @@ impl EntityService {
             None => {
                 let mut archetypes = self.archetypes.write();
                 let archetype_index = archetypes.len();
-                let archetype = Archetype::new(entity_id, name, enabled, components);
+                let archetype = Archetype::new(
+                    self.extension_component_service.clone(),
+                    entity_id,
+                    name,
+                    enabled,
+                    components,
+                );
                 archetypes.push(ArchetypeArcRwLock::new(archetype));
                 (archetype_index, 0)
             }
         };
 
         // Store the entity storage position
-        let mut index_map = self.index_map.write();
-        index_map.insert(entity_id, indexes);
+        {
+            let mut index_map = self.index_map.write();
+            index_map.insert(entity_id, indexes);
+        }
 
         // Notify that entity is created
         let entity_reference = EntityReference {

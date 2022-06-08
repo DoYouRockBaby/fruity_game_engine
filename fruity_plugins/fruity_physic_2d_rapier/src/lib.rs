@@ -1,13 +1,23 @@
 use crate::components::dynamic_rigid_body::DynamicRigidBody;
 use crate::components::kinematic_rigid_body::KinematicRigidBody;
+use crate::components::rapier_circle_collider::RapierCircleCollider;
+use crate::components::rapier_rect_collider::RapierRectCollider;
 use crate::components::static_rigid_body::StaticRigidBody;
 use crate::rapier_2d_service::Rapier2dService;
+use crate::systems::initialize_circle_collider::initialize_circle_collider;
+use crate::systems::initialize_rect_collider::initialize_rect_collider;
 use crate::systems::update_circle_collider::update_circle_collider;
+use crate::systems::update_rect_collider::update_rect_collider;
 use fruity_core::inject::Inject2;
 use fruity_core::object_factory_service::ObjectFactoryService;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
+use fruity_ecs::extension_component_service::ExtensionComponentService;
+use fruity_ecs::system::system_service::StartupSystemParams;
+use fruity_ecs::system::system_service::SystemParams;
 use fruity_ecs::system::system_service::SystemService;
+use fruity_physic_2d::components::circle_collider::CircleCollider;
+use fruity_physic_2d::components::rect_collider::RectCollider;
 use std::sync::Arc;
 
 pub mod components;
@@ -30,13 +40,43 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     object_factory_service.register::<KinematicRigidBody>("KinematicRigidBody");
     object_factory_service.register::<StaticRigidBody>("StaticRigidBody");
 
+    let extension_component_service = resource_container.require::<ExtensionComponentService>();
+    let mut extension_component_service = extension_component_service.write();
+
+    extension_component_service.register::<CircleCollider, RapierCircleCollider>();
+    extension_component_service.register::<RectCollider, RapierRectCollider>();
+
     let system_service = resource_container.require::<SystemService>();
     let mut system_service = system_service.write();
 
+    system_service.add_startup_system(
+        "initialize_circle_collider",
+        MODULE_NAME,
+        Inject2::new(initialize_circle_collider),
+        StartupSystemParams { ignore_pause: true },
+    );
     system_service.add_system(
         "update_circle_collider",
         MODULE_NAME,
         Inject2::new(update_circle_collider),
-        Default::default(),
+        SystemParams {
+            ignore_pause: true,
+            ..Default::default()
+        },
+    );
+    system_service.add_startup_system(
+        "initialize_rect_collider",
+        MODULE_NAME,
+        Inject2::new(initialize_rect_collider),
+        StartupSystemParams { ignore_pause: true },
+    );
+    system_service.add_system(
+        "update_rect_collider",
+        MODULE_NAME,
+        Inject2::new(update_rect_collider),
+        SystemParams {
+            ignore_pause: true,
+            ..Default::default()
+        },
     );
 }

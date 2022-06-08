@@ -30,6 +30,27 @@ pub struct ComponentReadGuard<'a> {
     pub(crate) component_index: usize,
 }
 
+impl<'a> ComponentReadGuard<'a> {
+    /// Get an extension component reader
+    pub fn get_extension(&self, extension_identifier: &str) -> Option<ComponentReadGuard<'a>> {
+        let has_extension = self
+            .archetype_reader
+            .component_storages
+            .contains_key(extension_identifier);
+
+        if has_extension {
+            Some(ComponentReadGuard {
+                _guard: self._guard.clone(),
+                archetype_reader: self.archetype_reader.clone(),
+                component_identifier: extension_identifier.to_string(),
+                component_index: self.component_index.clone(),
+            })
+        } else {
+            None
+        }
+    }
+}
+
 impl<'a> Debug for ComponentReadGuard<'a> {
     fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         Ok(())
@@ -78,6 +99,46 @@ pub struct ComponentWriteGuard<'a> {
     pub(crate) archetype_reader: Rc<RwLockReadGuard<'a, Archetype>>,
     pub(crate) component_identifier: String,
     pub(crate) component_index: usize,
+}
+
+impl<'a> ComponentWriteGuard<'a> {
+    /// Get an extension component reader
+    pub fn get_extension(&self, extension_identifier: &str) -> Option<ComponentReadGuard<'a>> {
+        let has_extension = self
+            .archetype_reader
+            .component_storages
+            .contains_key(extension_identifier);
+
+        if has_extension {
+            Some(ComponentReadGuard {
+                _guard: InternalReadGuard::Write(self._guard.clone()),
+                archetype_reader: self.archetype_reader.clone(),
+                component_identifier: extension_identifier.to_string(),
+                component_index: self.component_index.clone(),
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Get an extension component writer
+    pub fn get_extension_mut(&self, extension_identifier: &str) -> Option<ComponentWriteGuard<'a>> {
+        let has_extension = self
+            .archetype_reader
+            .component_storages
+            .contains_key(extension_identifier);
+
+        if has_extension {
+            Some(ComponentWriteGuard {
+                _guard: self._guard.clone(),
+                archetype_reader: self.archetype_reader.clone(),
+                component_identifier: extension_identifier.to_string(),
+                component_index: self.component_index.clone(),
+            })
+        } else {
+            None
+        }
+    }
 }
 
 impl<'a> Debug for ComponentWriteGuard<'a> {
@@ -145,6 +206,20 @@ pub struct TypedComponentReadGuard<'a, T: Component + StaticComponent> {
     pub(crate) phantom: PhantomData<T>,
 }
 
+impl<'a, T: Component + StaticComponent> TypedComponentReadGuard<'a, T> {
+    /// Get an extension component reader
+    pub fn get_extension<E: Component + StaticComponent>(
+        &self,
+    ) -> Option<TypedComponentReadGuard<'a, E>> {
+        self.component_reader
+            .get_extension(E::get_component_name())
+            .map(|component_reader| TypedComponentReadGuard::<'a, E> {
+                component_reader,
+                phantom: PhantomData {},
+            })
+    }
+}
+
 impl<'a, T: Component + StaticComponent> Clone for TypedComponentReadGuard<'a, T> {
     fn clone(&self) -> Self {
         Self {
@@ -180,6 +255,32 @@ impl<'a, T: Component + StaticComponent> Deref for TypedComponentReadGuard<'a, T
 pub struct TypedComponentWriteGuard<'a, T: Component + StaticComponent> {
     pub(crate) component_writer: ComponentWriteGuard<'a>,
     pub(crate) phantom: PhantomData<T>,
+}
+
+impl<'a, T: Component + StaticComponent> TypedComponentWriteGuard<'a, T> {
+    /// Get an extension component reader
+    pub fn get_extension<E: Component + StaticComponent>(
+        &self,
+    ) -> Option<TypedComponentReadGuard<'a, E>> {
+        self.component_writer
+            .get_extension(E::get_component_name())
+            .map(|component_reader| TypedComponentReadGuard::<'a, E> {
+                component_reader,
+                phantom: PhantomData {},
+            })
+    }
+
+    /// Get an extension component writer
+    pub fn get_extension_mut<E: Component + StaticComponent>(
+        &self,
+    ) -> Option<TypedComponentWriteGuard<'a, E>> {
+        self.component_writer
+            .get_extension_mut(E::get_component_name())
+            .map(|component_writer| TypedComponentWriteGuard::<'a, E> {
+                component_writer,
+                phantom: PhantomData {},
+            })
+    }
 }
 
 impl<'a, T: Component + StaticComponent> Clone for TypedComponentWriteGuard<'a, T> {

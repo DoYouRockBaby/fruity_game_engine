@@ -4,7 +4,9 @@ use fruity_core::introspect::IntrospectObject;
 use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
+use rapier2d::prelude::ColliderHandle;
 use rapier2d::prelude::ColliderSet;
+use rapier2d::prelude::IslandManager;
 use rapier2d::prelude::RigidBodySet;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -13,6 +15,7 @@ use std::sync::Arc;
 pub struct Rapier2dService {
     pub rigid_body_set: RigidBodySet,
     pub collider_set: ColliderSet,
+    pub island_manager: IslandManager,
 }
 
 impl Debug for Rapier2dService {
@@ -26,7 +29,17 @@ impl Rapier2dService {
         Self {
             rigid_body_set: RigidBodySet::new(),
             collider_set: ColliderSet::new(),
+            island_manager: IslandManager::new(),
         }
+    }
+
+    pub fn remove_collider(&mut self, handle: ColliderHandle) {
+        self.collider_set.remove(
+            handle,
+            &mut self.island_manager,
+            &mut self.rigid_body_set,
+            false,
+        );
     }
 }
 

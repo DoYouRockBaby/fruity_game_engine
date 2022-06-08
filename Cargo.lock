@@ -28,6 +28,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "adjacent-pair-iterator"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2093cd186f4823b32952a607fd37ade78f7c46f54a33374d08f9923c45752883"
+
+[[package]]
 name = "adler"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1023,6 +1029,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "fruity_editor_physic_2d_rapier"
+version = "0.1.0"
+dependencies = [
+ "fruity_any",
+ "fruity_core",
+ "fruity_ecs",
+ "fruity_editor",
+ "fruity_graphic",
+ "fruity_graphic_2d",
+ "fruity_physic_2d_rapier",
+ "log",
+ "rapier2d",
+]
+
+[[package]]
 name = "fruity_egui_editor"
 version = "0.1.0"
 dependencies = [
@@ -1064,6 +1085,7 @@ dependencies = [
  "fruity_editor_hierarchy",
  "fruity_editor_javascript",
  "fruity_editor_physic_2d",
+ "fruity_editor_physic_2d_rapier",
  "fruity_egui_editor",
  "fruity_graphic",
  "fruity_graphic_2d",
@@ -1105,6 +1127,7 @@ dependencies = [
 name = "fruity_graphic_2d"
 version = "0.1.0"
 dependencies = [
+ "adjacent-pair-iterator",
  "bytemuck",
  "cgmath",
  "fruity_any",
@@ -1203,6 +1226,7 @@ dependencies = [
  "fruity_any",
  "fruity_core",
  "fruity_ecs",
+ "fruity_graphic",
  "fruity_graphic_2d",
  "fruity_physic_2d",
  "log",
