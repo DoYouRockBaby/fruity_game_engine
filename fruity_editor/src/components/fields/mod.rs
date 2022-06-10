@@ -141,6 +141,7 @@ pub fn field_editor(
             }
 
             Collapsible {
+                key: name.to_string(),
                 title: name.to_string(),
                 child: Column {
                     children,
@@ -189,6 +190,7 @@ pub fn field_editor(
             );
 
             Collapsible {
+                key: name.to_string(),
                 title: name.to_string(),
                 child: Column {
                     children,

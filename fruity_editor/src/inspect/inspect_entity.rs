@@ -89,6 +89,7 @@ pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
                 };
 
                 Collapsible {
+                    key: format!("{}_{}", component.get_index(), class_name),
                     title: class_name,
                     child: inspector_state.inspect_component(component),
                     secondary_actions: vec![MenuItem {

@@ -84,6 +84,7 @@ pub fn draw_entity_line(
     if children.len() > 0 {
         let entity_service_2 = entity_service.clone();
         Collapsible {
+            key: entity_reader.get_name(),
             title: entity_reader.get_name(),
             on_click: Some(Arc::new(move || {
                 let inspector_state = use_global::<InspectorState>();

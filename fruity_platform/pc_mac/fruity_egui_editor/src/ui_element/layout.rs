@@ -113,6 +113,7 @@ pub fn draw_collapsible<'a>(elem: Collapsible, ui: &mut egui::Ui, ctx: &mut Draw
     let title = elem.title.clone();
     let on_click = elem.on_click.clone();
     let response = CollapsingHeader::new(title)
+        .id_source(elem.key)
         .selectable(true)
         .show(ui, |ui| draw_element(elem.child, ui, ctx));
 

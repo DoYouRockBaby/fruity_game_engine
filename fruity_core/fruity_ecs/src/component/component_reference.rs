@@ -32,6 +32,11 @@ pub struct ComponentReference {
 }
 
 impl ComponentReference {
+    /// Get the index of the component for identification
+    pub fn get_index(&self) -> usize {
+        self.component_index
+    }
+
     /// Get a read access to the component
     pub fn read(&self) -> ComponentReadGuard<'_> {
         ComponentReadGuard {

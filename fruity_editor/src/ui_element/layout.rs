@@ -75,6 +75,7 @@ impl UIWidget for Scroll {
 }
 
 pub struct Collapsible {
+    pub key: String,
     pub title: String,
     pub on_click: Option<Arc<dyn Fn() + Send + Sync>>,
     pub secondary_actions: Vec<MenuItem>,
@@ -84,6 +85,7 @@ pub struct Collapsible {
 impl Default for Collapsible {
     fn default() -> Self {
         Self {
+            key: String::default(),
             title: String::default(),
             on_click: None,
             secondary_actions: Vec::new(),
