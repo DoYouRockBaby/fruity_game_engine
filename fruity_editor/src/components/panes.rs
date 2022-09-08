@@ -1,17 +1,13 @@
-use crate::ui_element::pane::Pane;
-use crate::ui_element::pane::PaneGrid;
-use crate::ui_element::UIElement;
-use crate::ui_element::UIWidget;
-use crate::use_global;
+use crate::ui::context::UIContext;
+use crate::ui::elements::pane::Pane;
+use crate::ui::elements::pane::PaneGrid;
+use crate::ui::elements::UIElement;
+use crate::ui::elements::UIWidget;
+use crate::ui::hooks::use_read_service;
 use crate::EditorPanelsService;
-use crate::WorldState;
 
-pub fn panes_component() -> UIElement {
-    let world_state = use_global::<WorldState>();
-    let editor_panels_service = world_state
-        .resource_container
-        .require::<EditorPanelsService>();
-    let editor_panels_service = editor_panels_service.read();
+pub fn panes_component(ctx: &mut UIContext) -> UIElement {
+    let editor_panels_service = use_read_service::<EditorPanelsService>(ctx);
 
     PaneGrid {
         panes: editor_panels_service

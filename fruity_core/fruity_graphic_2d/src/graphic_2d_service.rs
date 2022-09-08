@@ -17,12 +17,11 @@ use maplit::hashmap;
 use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::ops::Range;
-use std::sync::Arc;
 
 #[derive(Debug, FruityAny)]
 pub struct Graphic2dService {
     graphic_service: ResourceReference<dyn GraphicService>,
-    resource_container: Arc<ResourceContainer>,
+    resource_container: ResourceContainer,
     draw_line_material: ResourceReference<dyn MaterialResource>,
     draw_dotted_line_material: ResourceReference<dyn MaterialResource>,
     draw_rect_material: ResourceReference<dyn MaterialResource>,
@@ -30,7 +29,7 @@ pub struct Graphic2dService {
 }
 
 impl Graphic2dService {
-    pub fn new(resource_container: Arc<ResourceContainer>) -> Self {
+    pub fn new(resource_container: ResourceContainer) -> Self {
         let graphic_service = resource_container.require::<dyn GraphicService>();
 
         let draw_line_material = resource_container

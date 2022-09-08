@@ -1,11 +1,13 @@
-use crate::ui_element::Empty;
-use crate::ui_element::UIElement;
-use crate::ui_element::UIWidget;
+use crate::ui::elements::Empty;
+use crate::ui::elements::UIElement;
+use crate::ui::elements::UIWidget;
+use fruity_any::*;
 
 pub enum ImageSource {
     Local { path: String },
 }
 
+#[derive(FruityAny)]
 pub struct Text {
     pub text: String,
 }
@@ -20,12 +22,11 @@ impl Default for Text {
 
 impl UIWidget for Text {
     fn elem(self) -> UIElement {
-        UIElement {
-            root: Box::new(self),
-        }
+        UIElement::from_widget(self)
     }
 }
 
+#[derive(FruityAny)]
 pub struct Popup {
     pub content: UIElement,
 }
@@ -40,8 +41,6 @@ impl Default for Popup {
 
 impl UIWidget for Popup {
     fn elem(self) -> UIElement {
-        UIElement {
-            root: Box::new(self),
-        }
+        UIElement::from_widget(self)
     }
 }

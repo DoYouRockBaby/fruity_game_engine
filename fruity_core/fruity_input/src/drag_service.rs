@@ -11,7 +11,6 @@ use fruity_windows::window_service::WindowService;
 use std::fmt::Debug;
 use std::ops::Deref;
 use std::ops::DerefMut;
-use std::sync::Arc;
 
 pub type DragCallback = Box<dyn Fn(&DragAction) + Send + Sync + 'static>;
 pub type DragEndCallback = Box<dyn Fn(&DragAction) + Send + Sync + 'static>;
@@ -37,7 +36,7 @@ pub struct DragService {
 }
 
 impl DragService {
-    pub fn new(resource_container: Arc<ResourceContainer>) -> Self {
+    pub fn new(resource_container: ResourceContainer) -> Self {
         let input_service = resource_container.require::<InputService>();
         let window_service = resource_container.require::<dyn WindowService>();
         let window_service_reader = window_service.read();

@@ -16,7 +16,6 @@ use fruity_graphic::math::matrix3::Matrix3;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::resources::shader_resource::ShaderResource;
 use fruity_graphic::resources::texture_resource::TextureResource;
-use std::sync::Arc;
 
 pub mod fields;
 pub mod file_type;
@@ -26,7 +25,7 @@ pub mod resources;
 pub static MODULE_NAME: &str = "fruity_editor_graphic";
 
 // #[no_mangle]
-pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
+pub fn initialize(resource_container: ResourceContainer, _settings: &Settings) {
     let file_explorer_service = resource_container.require::<FileExplorerService>();
     let mut file_explorer_service = file_explorer_service.write();
 

@@ -1,12 +1,10 @@
 use crate::ui_element::DrawContext;
-use comp_state::CloneState;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::RwLock;
-use fruity_editor::hooks::topo;
-use fruity_editor::hooks::use_global;
-use fruity_editor::hooks::use_memo;
-use fruity_editor::hooks::use_state;
-use fruity_editor::state::world::WorldState;
+use fruity_editor::ui::context::UIContext;
+use fruity_editor::ui::hooks::use_memo;
+use fruity_editor::ui::hooks::use_read_service;
+use fruity_editor::ui::hooks::use_state;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::matrix4::Matrix4;
 use fruity_graphic::math::vector2d::Vector2d;
@@ -16,12 +14,11 @@ use fruity_wgpu_graphic::graphic_service::WgpuGraphicService;
 use fruity_wgpu_graphic::resources::texture_resource::WgpuTextureResource;
 use std::sync::Arc;
 
-#[topo::nested]
-pub fn draw_scene(ui: &mut egui::Ui, ctx: &mut DrawContext) {
+pub fn draw_scene(ctx: &mut UIContext, ui: &mut egui::Ui, draw_ctx: &mut DrawContext) {
     // Initialize local state
-    let world_state = use_global::<WorldState>();
-    let center_state = use_state(|| Vector2d::default());
-    let zoom_state = use_state(|| 4.0 as f32);
+    let resource_container = ctx.resource_container();
+    let (center, _set_center) = use_state(ctx, Vector2d::default());
+    let (zoom, set_zoom) = use_state(ctx, 4.0 as f32);
 
     // Get available dimensions
     let rect = ui.available_rect_before_wrap();
@@ -31,34 +28,25 @@ pub fn draw_scene(ui: &mut egui::Ui, ctx: &mut DrawContext) {
 
     // Update viewport properties
     {
-        let graphic_service = world_state
-            .resource_container
-            .require::<dyn GraphicService>();
-        let graphic_service = graphic_service.read();
-
+        let graphic_service = use_read_service::<dyn GraphicService>(ctx);
         graphic_service.set_viewport_offset(rect.left() as u32 * 2, rect.top() as u32 * 2);
         graphic_service.set_viewport_size(rect.width() as u32 * 2, rect.height() as u32 * 2);
     }
 
     // Update camera if needed
     let is_cursor_hover_scene = {
-        let graphic_service = world_state
-            .resource_container
-            .require::<dyn GraphicService>();
-        let graphic_service = graphic_service.read();
-
+        let graphic_service = use_read_service::<dyn GraphicService>(ctx);
         graphic_service.is_cursor_hover_scene()
     };
 
     if is_cursor_hover_scene {
         if ui.input().scroll_delta.y != 0.0 {
-            zoom_state.set(zoom_state.get() + ui.input().scroll_delta.y * 0.001);
+            set_zoom(zoom + ui.input().scroll_delta.y * 0.001);
         }
     }
 
     // Calculate the camera view transform
-    let center = center_state.get();
-    let zoom = f32::powf(2.0, zoom_state.get() as f32);
+    let zoom = f32::powf(2.0, zoom as f32);
     let view_proj = Matrix4::from_rect(
         center.x - zoom,
         center.x + zoom,
@@ -70,13 +58,10 @@ pub fn draw_scene(ui: &mut egui::Ui, ctx: &mut DrawContext) {
 
     // Build the rendering texture
     let (resource, rendering_texture_id) = use_memo(
-        |(width, height)| {
+        ctx,
+        |ctx| {
             // Get all what we need to initialize
-            let world_state = use_global::<WorldState>();
-            let graphic_service = world_state
-                .resource_container
-                .require::<dyn GraphicService>();
-            let graphic_service = graphic_service.read();
+            let graphic_service = use_read_service::<dyn GraphicService>(&ctx);
             let graphic_service = graphic_service.downcast_ref::<WgpuGraphicService>();
 
             let device = graphic_service.get_device();
@@ -92,7 +77,7 @@ pub fn draw_scene(ui: &mut egui::Ui, ctx: &mut DrawContext) {
                     height,
                     "Rendering View",
                 )) as Box<dyn TextureResource>)),
-                world_state.resource_container.clone(),
+                resource_container,
             );
 
             // Use the texture as the rendering texture
@@ -102,8 +87,8 @@ pub fn draw_scene(ui: &mut egui::Ui, ctx: &mut DrawContext) {
             // Get the egui identifier for the texture
             (
                 resource,
-                ctx.egui_rpass.egui_texture_from_wgpu_texture(
-                    ctx.device,
+                draw_ctx.egui_rpass.egui_texture_from_wgpu_texture(
+                    draw_ctx.device,
                     &image.texture,
                     wgpu::FilterMode::Linear,
                 ),
@@ -111,12 +96,6 @@ pub fn draw_scene(ui: &mut egui::Ui, ctx: &mut DrawContext) {
         },
         (width, height),
     );
-
-    // Get all what we need to draw
-    let graphic_service = world_state
-        .resource_container
-        .require::<dyn GraphicService>();
-    let graphic_service = graphic_service.read();
 
     // Draw the scene on the texture
     let background_color = ui.style().visuals.faint_bg_color;
@@ -126,6 +105,8 @@ pub fn draw_scene(ui: &mut egui::Ui, ctx: &mut DrawContext) {
         background_color.b() as f32 / 255.0,
         background_color.a() as f32 / 255.0,
     );
+
+    let graphic_service = use_read_service::<dyn GraphicService>(ctx);
     graphic_service.render_scene(view_proj, background_color, Some(resource.clone()));
 
     // Display the scene

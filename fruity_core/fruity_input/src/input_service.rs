@@ -69,7 +69,7 @@ impl Debug for InputService {
 }
 
 impl InputService {
-    pub fn new(_resource_container: Arc<ResourceContainer>) -> InputService {
+    pub fn new(_resource_container: ResourceContainer) -> InputService {
         InputService {
             input_map: HashMap::new(),
             pressed_inputs: HashSet::new(),

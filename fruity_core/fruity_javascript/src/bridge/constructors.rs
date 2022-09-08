@@ -9,9 +9,8 @@ use fruity_core::serialize::serialized::ObjectFields;
 use fruity_core::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 use std::collections::HashMap;
-use std::sync::Arc;
 
-pub fn configure_constructors(runtime: &mut JsRuntime, resource_container: Arc<ResourceContainer>) {
+pub fn configure_constructors(runtime: &mut JsRuntime, resource_container: ResourceContainer) {
     let mut global_object = runtime.global_object();
     let scope = &mut runtime.handle_scope();
 

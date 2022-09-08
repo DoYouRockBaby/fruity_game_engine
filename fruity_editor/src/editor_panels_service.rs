@@ -1,5 +1,6 @@
-use crate::ui_element::pane::UIPaneSide;
-use crate::ui_element::UIElement;
+use crate::ui::context::UIContext;
+use crate::ui::elements::pane::UIPaneSide;
+use crate::ui::elements::UIElement;
 use fruity_any::*;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
@@ -12,7 +13,7 @@ use std::sync::Arc;
 pub struct PanelItem {
     pub label: String,
     pub default_side: UIPaneSide,
-    pub renderer: Arc<dyn Fn() -> UIElement + Send + Sync>,
+    pub renderer: Arc<dyn Fn(&mut UIContext) -> UIElement + Send + Sync>,
 }
 
 #[derive(FruityAny)]
@@ -21,7 +22,7 @@ pub struct EditorPanelsService {
 }
 
 impl EditorPanelsService {
-    pub fn new(_resource_container: Arc<ResourceContainer>) -> Self {
+    pub fn new(_resource_container: ResourceContainer) -> Self {
         Self { panels: Vec::new() }
     }
 
@@ -29,7 +30,7 @@ impl EditorPanelsService {
         &mut self,
         label: &str,
         default_side: UIPaneSide,
-        renderer: impl Fn() -> UIElement + Send + Sync + 'static,
+        renderer: impl Fn(&mut UIContext) -> UIElement + Send + Sync + 'static,
     ) {
         self.panels.push(PanelItem {
             label: label.to_string(),

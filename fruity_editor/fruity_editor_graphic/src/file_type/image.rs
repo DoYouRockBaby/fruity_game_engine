@@ -1,51 +1,38 @@
 use fruity_core::resource::resource_reference::ResourceReference;
-use fruity_editor::hooks::use_global;
 use fruity_editor::state::inspector::InspectorState;
-use fruity_editor::state::world::WorldState;
+use fruity_editor::ui::context::UIContext;
+use fruity_editor::ui::hooks::use_write_service;
 use fruity_graphic::resources::texture_resource::TextureResource;
 
-pub fn get_thumbnail_image(file_path: &str) -> Option<ResourceReference<dyn TextureResource>> {
-    let world_state = use_global::<WorldState>();
+pub fn get_thumbnail_image(
+    ctx: &UIContext,
+    file_path: &str,
+) -> Option<ResourceReference<dyn TextureResource>> {
+    let resource_container = ctx.resource_container();
 
-    if let Some(texture) = world_state
-        .resource_container
-        .get::<dyn TextureResource>(file_path)
-    {
+    if let Some(texture) = resource_container.get::<dyn TextureResource>(file_path) {
         Some(texture)
     } else {
-        world_state
-            .resource_container
+        resource_container
             .load_resource_file(file_path, "png")
             .ok()?;
 
-        world_state
-            .resource_container
-            .get::<dyn TextureResource>(file_path)
+        resource_container.get::<dyn TextureResource>(file_path)
     }
 }
 
-pub fn on_selected_image(file_path: &str) {
-    let world_state = use_global::<WorldState>();
+pub fn on_selected_image(ctx: &UIContext, file_path: &str) {
+    let resource_container = ctx.resource_container();
+    let mut inspector_state = use_write_service::<InspectorState>(ctx);
 
-    if let Some(texture) = world_state
-        .resource_container
-        .get::<dyn TextureResource>(file_path)
-    {
-        let inspector_state = use_global::<InspectorState>();
+    if let Some(texture) = resource_container.get::<dyn TextureResource>(file_path) {
         inspector_state.select(Box::new(texture.clone()));
     } else {
-        if let Err(_) = world_state
-            .resource_container
-            .load_resource_file(file_path, "png")
-        {
+        if let Err(_) = resource_container.load_resource_file(file_path, "png") {
             return;
         }
 
-        if let Some(texture) = world_state
-            .resource_container
-            .get::<dyn TextureResource>(file_path)
-        {
-            let inspector_state = use_global::<InspectorState>();
+        if let Some(texture) = resource_container.get::<dyn TextureResource>(file_path) {
             inspector_state.select(Box::new(texture.clone()));
         }
     };

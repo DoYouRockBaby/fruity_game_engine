@@ -1,7 +1,12 @@
+use fruity_any::*;
+use fruity_core::introspect::FieldInfo;
+use fruity_core::introspect::IntrospectObject;
+use fruity_core::introspect::MethodInfo;
+use fruity_core::resource::resource::Resource;
 use std::fs;
 use std::path::PathBuf;
 
-#[derive(Debug)]
+#[derive(Debug, FruityAny)]
 pub struct FileExplorerState {
     current_dir: String,
 }
@@ -33,3 +38,20 @@ impl FileExplorerState {
         }
     }
 }
+
+// TODO
+impl IntrospectObject for FileExplorerState {
+    fn get_class_name(&self) -> String {
+        "FileExplorerState".to_string()
+    }
+
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+}
+
+impl Resource for FileExplorerState {}

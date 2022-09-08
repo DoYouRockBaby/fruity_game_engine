@@ -26,7 +26,6 @@ use fruity_ecs::system::system_service::SystemParams;
 use fruity_ecs::system::system_service::SystemService;
 use fruity_physic_2d::components::circle_collider::CircleCollider;
 use fruity_physic_2d::components::rect_collider::RectCollider;
-use std::sync::Arc;
 
 pub mod components;
 pub mod rapier_2d_service;
@@ -36,7 +35,7 @@ pub mod systems;
 pub static MODULE_NAME: &str = "fruity_physic_2d_rapier";
 
 // #[no_mangle]
-pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
+pub fn initialize(resource_container: ResourceContainer, _settings: &Settings) {
     let rapier_2d_service = Rapier2dService::new(resource_container.clone());
 
     resource_container.add::<Rapier2dService>("rapier_2d_service", Box::new(rapier_2d_service));

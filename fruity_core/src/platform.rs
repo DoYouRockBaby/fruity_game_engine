@@ -1,6 +1,5 @@
 use crate::settings::Settings;
 use crate::ResourceContainer;
-use std::sync::Arc;
 
 /// A platform implementation, is supposed to basicaly instantiate a Window
 /// and to run the engine
@@ -8,7 +7,7 @@ use std::sync::Arc;
 /// Take as parameter a function that will be called to initialize the engine
 ///
 pub type PlatformCallback = fn(
-    resource_container: Arc<ResourceContainer>,
+    resource_container: ResourceContainer,
     ext_initializer: Initializer,
     world_initializer: Initializer,
     settings: &Settings,
@@ -19,4 +18,4 @@ pub type PlatformCallback = fn(
 ///
 /// Take as parameter a function that will be called to initialize the engine
 ///
-pub type Initializer = fn(resource_container: Arc<ResourceContainer>, settings: &Settings);
+pub type Initializer = fn(resource_container: ResourceContainer, settings: &Settings);

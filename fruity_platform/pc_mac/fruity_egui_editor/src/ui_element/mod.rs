@@ -18,26 +18,27 @@ use crate::ui_element::menu::draw_menu_section;
 use crate::ui_element::pane::draw_pane_grid;
 use crate::ui_element::profiling::draw_profiling;
 use crate::ui_element::scene::draw_scene;
-use fruity_editor::hooks::topo;
-use fruity_editor::ui_element::display::Popup;
-use fruity_editor::ui_element::display::Text;
-use fruity_editor::ui_element::input::Button;
-use fruity_editor::ui_element::input::Checkbox;
-use fruity_editor::ui_element::input::FloatInput;
-use fruity_editor::ui_element::input::ImageButton;
-use fruity_editor::ui_element::input::Input;
-use fruity_editor::ui_element::input::IntegerInput;
-use fruity_editor::ui_element::layout::Collapsible;
-use fruity_editor::ui_element::layout::Column;
-use fruity_editor::ui_element::layout::Row;
-use fruity_editor::ui_element::layout::Scroll;
-use fruity_editor::ui_element::list::ListView;
-use fruity_editor::ui_element::menu::MenuBar;
-use fruity_editor::ui_element::menu::MenuSection;
-use fruity_editor::ui_element::pane::PaneGrid;
-use fruity_editor::ui_element::profiling::Profiling;
-use fruity_editor::ui_element::scene::Scene;
-use fruity_editor::ui_element::UIElement;
+use fruity_editor::ui::context::UIContext;
+use fruity_editor::ui::elements::display::Popup;
+use fruity_editor::ui::elements::display::Text;
+use fruity_editor::ui::elements::input::Button;
+use fruity_editor::ui::elements::input::Checkbox;
+use fruity_editor::ui::elements::input::FloatInput;
+use fruity_editor::ui::elements::input::ImageButton;
+use fruity_editor::ui::elements::input::Input;
+use fruity_editor::ui::elements::input::IntegerInput;
+use fruity_editor::ui::elements::layout::Collapsible;
+use fruity_editor::ui::elements::layout::Column;
+use fruity_editor::ui::elements::layout::Row;
+use fruity_editor::ui::elements::layout::Scroll;
+use fruity_editor::ui::elements::list::ListView;
+use fruity_editor::ui::elements::menu::MenuBar;
+use fruity_editor::ui::elements::menu::MenuSection;
+use fruity_editor::ui::elements::pane::PaneGrid;
+use fruity_editor::ui::elements::profiling::Profiling;
+use fruity_editor::ui::elements::scene::Scene;
+use fruity_editor::ui::elements::UIElement;
+use fruity_editor::ui::elements::UIElementContent;
 use std::any::TypeId;
 
 pub mod app;
@@ -50,47 +51,140 @@ pub mod pane;
 pub mod profiling;
 pub mod scene;
 
-#[topo::nested]
-pub fn draw_element<'a>(elem: UIElement, ui: &mut egui::Ui, ctx: &mut DrawContext) {
-    let type_id = elem.root.as_ref().type_id();
+pub fn draw_element<'a>(
+    elem: UIElement,
+    ctx: &mut UIContext,
+    ui: &mut egui::Ui,
+    draw_ctx: &mut DrawContext,
+) {
+    match elem.content {
+        UIElementContent::Func(func) => {
+            let elem = func(ctx);
+            draw_element(elem, &mut ctx.new_child(), ui, draw_ctx);
+        }
+        UIElementContent::Widget(widget) => {
+            let type_id = widget.as_ref().type_id();
+            let widget = widget.as_any_box();
 
-    if type_id == TypeId::of::<Text>() {
-        draw_text(*elem.root.downcast::<Text>().unwrap(), ui, ctx)
-    } else if type_id == TypeId::of::<Button>() {
-        draw_button(*elem.root.downcast::<Button>().unwrap(), ui, ctx)
-    } else if type_id == TypeId::of::<ImageButton>() {
-        draw_image_button(*elem.root.downcast::<ImageButton>().unwrap(), ui, ctx)
-    } else if type_id == TypeId::of::<Checkbox>() {
-        draw_checkbox(*elem.root.downcast::<Checkbox>().unwrap(), ui, ctx)
-    } else if type_id == TypeId::of::<FloatInput>() {
-        draw_float_input(*elem.root.downcast::<FloatInput>().unwrap(), ui, ctx)
-    } else if type_id == TypeId::of::<Input>() {
-        draw_input(*elem.root.downcast::<Input>().unwrap(), ui, ctx)
-    } else if type_id == TypeId::of::<IntegerInput>() {
-        draw_integer_input(*elem.root.downcast::<IntegerInput>().unwrap(), ui, ctx)
-    } else if type_id == TypeId::of::<Column>() {
-        draw_column(*elem.root.downcast::<Column>().unwrap(), ui, ctx)
-    } else if type_id == TypeId::of::<Row>() {
-        draw_row(*elem.root.downcast::<Row>().unwrap(), ui, ctx)
-    } else if type_id == TypeId::of::<Scroll>() {
-        draw_scroll(*elem.root.downcast::<Scroll>().unwrap(), ui, ctx)
-    } else if type_id == TypeId::of::<Collapsible>() {
-        draw_collapsible(*elem.root.downcast::<Collapsible>().unwrap(), ui, ctx)
-    } else if type_id == TypeId::of::<ListView>() {
-        draw_list_view(*elem.root.downcast::<ListView>().unwrap(), ui, ctx)
-    } else if type_id == TypeId::of::<PaneGrid>() {
-        draw_pane_grid(*elem.root.downcast::<PaneGrid>().unwrap(), ui, ctx)
-    } else if type_id == TypeId::of::<MenuBar>() {
-        draw_menu_bar(*elem.root.downcast::<MenuBar>().unwrap(), ui, ctx)
-    } else if type_id == TypeId::of::<MenuSection>() {
-        draw_menu_section(*elem.root.downcast::<MenuSection>().unwrap(), ui, ctx)
-    } else if type_id == TypeId::of::<Popup>() {
-        draw_popup(*elem.root.downcast::<Popup>().unwrap(), ui, ctx)
-    } else if type_id == TypeId::of::<Profiling>() {
-        draw_profiling(ui, ctx)
-    } else if type_id == TypeId::of::<Scene>() {
-        draw_scene(ui, ctx)
-    } else {
-        draw_empty(ui)
-    }
+            if type_id == TypeId::of::<Text>() {
+                draw_text(
+                    *widget.downcast::<Text>().unwrap(),
+                    &mut ctx.new_child(),
+                    ui,
+                    draw_ctx,
+                )
+            } else if type_id == TypeId::of::<Button>() {
+                draw_button(
+                    *widget.downcast::<Button>().unwrap(),
+                    &mut ctx.new_child(),
+                    ui,
+                    draw_ctx,
+                )
+            } else if type_id == TypeId::of::<ImageButton>() {
+                draw_image_button(
+                    *widget.downcast::<ImageButton>().unwrap(),
+                    ctx,
+                    ui,
+                    draw_ctx,
+                )
+            } else if type_id == TypeId::of::<Checkbox>() {
+                draw_checkbox(
+                    *widget.downcast::<Checkbox>().unwrap(),
+                    &mut ctx.new_child(),
+                    ui,
+                    draw_ctx,
+                )
+            } else if type_id == TypeId::of::<FloatInput>() {
+                draw_float_input(
+                    *widget.downcast::<FloatInput>().unwrap(),
+                    &mut ctx.new_child(),
+                    ui,
+                    draw_ctx,
+                )
+            } else if type_id == TypeId::of::<Input>() {
+                draw_input(
+                    *widget.downcast::<Input>().unwrap(),
+                    &mut ctx.new_child(),
+                    ui,
+                    draw_ctx,
+                )
+            } else if type_id == TypeId::of::<IntegerInput>() {
+                draw_integer_input(
+                    *widget.downcast::<IntegerInput>().unwrap(),
+                    &mut ctx.new_child(),
+                    ui,
+                    draw_ctx,
+                )
+            } else if type_id == TypeId::of::<Column>() {
+                draw_column(
+                    *widget.downcast::<Column>().unwrap(),
+                    &mut ctx.new_child(),
+                    ui,
+                    draw_ctx,
+                )
+            } else if type_id == TypeId::of::<Row>() {
+                draw_row(
+                    *widget.downcast::<Row>().unwrap(),
+                    &mut ctx.new_child(),
+                    ui,
+                    draw_ctx,
+                )
+            } else if type_id == TypeId::of::<Scroll>() {
+                draw_scroll(
+                    *widget.downcast::<Scroll>().unwrap(),
+                    &mut ctx.new_child(),
+                    ui,
+                    draw_ctx,
+                )
+            } else if type_id == TypeId::of::<Collapsible>() {
+                draw_collapsible(
+                    *widget.downcast::<Collapsible>().unwrap(),
+                    &mut ctx.new_child(),
+                    ui,
+                    draw_ctx,
+                )
+            } else if type_id == TypeId::of::<ListView>() {
+                draw_list_view(
+                    *widget.downcast::<ListView>().unwrap(),
+                    &mut ctx.new_child(),
+                    ui,
+                    draw_ctx,
+                )
+            } else if type_id == TypeId::of::<PaneGrid>() {
+                draw_pane_grid(
+                    *widget.downcast::<PaneGrid>().unwrap(),
+                    &mut ctx.new_child(),
+                    ui,
+                    draw_ctx,
+                )
+            } else if type_id == TypeId::of::<MenuBar>() {
+                draw_menu_bar(
+                    *widget.downcast::<MenuBar>().unwrap(),
+                    &mut ctx.new_child(),
+                    ui,
+                    draw_ctx,
+                )
+            } else if type_id == TypeId::of::<MenuSection>() {
+                draw_menu_section(
+                    *widget.downcast::<MenuSection>().unwrap(),
+                    &mut ctx.new_child(),
+                    ui,
+                    draw_ctx,
+                )
+            } else if type_id == TypeId::of::<Popup>() {
+                draw_popup(
+                    *widget.downcast::<Popup>().unwrap(),
+                    &mut ctx.new_child(),
+                    ui,
+                    draw_ctx,
+                )
+            } else if type_id == TypeId::of::<Profiling>() {
+                draw_profiling(&mut ctx.new_child(), ui, draw_ctx)
+            } else if type_id == TypeId::of::<Scene>() {
+                draw_scene(&mut ctx.new_child(), ui, draw_ctx)
+            } else {
+                draw_empty(ui)
+            }
+        }
+    };
 }

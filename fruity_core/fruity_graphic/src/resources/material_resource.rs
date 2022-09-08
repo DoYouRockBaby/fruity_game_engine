@@ -13,7 +13,6 @@ use fruity_core::settings::Settings;
 use fruity_ecs::*;
 use std::collections::HashMap;
 use std::io::Read;
-use std::sync::Arc;
 use yaml_rust::YamlLoader;
 
 pub trait MaterialResource: Resource {
@@ -107,7 +106,7 @@ pub fn load_material(
     identifier: &str,
     reader: &mut dyn Read,
     _settings: Settings,
-    resource_container: Arc<ResourceContainer>,
+    resource_container: ResourceContainer,
 ) {
     // Get the graphic service state
     let graphic_service = resource_container.require::<dyn GraphicService>();
@@ -147,7 +146,7 @@ pub fn load_material(
 
 pub fn read_material_settings(
     settings: &Settings,
-    resource_container: Arc<ResourceContainer>,
+    resource_container: ResourceContainer,
 ) -> MaterialResourceSettings {
     let shader_identifier = settings.get::<String>("shader", String::default());
     let shader = resource_container.get::<dyn ShaderResource>(&shader_identifier);
@@ -182,7 +181,7 @@ pub fn read_material_settings(
 
 fn build_material_binding(
     settings: &Settings,
-    resource_container: Arc<ResourceContainer>,
+    resource_container: ResourceContainer,
 ) -> Option<MaterialSettingsBinding> {
     match &settings.get::<String>("type", String::default()) as &str {
         "texture" => {
@@ -214,7 +213,7 @@ fn build_material_binding(
 
 fn build_material_instance_attribute(
     settings: &Settings,
-    _resource_container: Arc<ResourceContainer>,
+    _resource_container: ResourceContainer,
 ) -> Option<MaterialSettingsInstanceAttribute> {
     match &settings.get::<String>("type", String::default()) as &str {
         "matrix4" => {

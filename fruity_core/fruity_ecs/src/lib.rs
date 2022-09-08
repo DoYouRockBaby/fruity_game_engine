@@ -17,7 +17,6 @@ use crate::system::system_service::SystemParams;
 use crate::system::system_service::SystemService;
 use fruity_core::object_factory_service::ObjectFactoryService;
 use fruity_core::resource::resource_container::ResourceContainer;
-use std::sync::Arc;
 
 pub use fruity_ecs_derive::Component;
 pub use fruity_ecs_derive::InstantiableObject;
@@ -49,7 +48,7 @@ pub static MODULE_NAME: &str = "fruity_ecs";
 
 /// Initialize this extension
 // #[no_mangle]
-pub fn initialize(resource_container: Arc<ResourceContainer>) {
+pub fn initialize(resource_container: ResourceContainer) {
     let system_service = SystemService::new(resource_container.clone());
 
     let extension_component_service = ExtensionComponentService::new(resource_container.clone());

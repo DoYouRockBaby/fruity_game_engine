@@ -2,12 +2,11 @@ use crate::gizmos_service::GizmosService;
 use fruity_core::convert::FruityInto;
 use fruity_core::inject::Const;
 use fruity_core::inject::Ref;
+use fruity_core::serialize::serialized::SerializableObject;
 use fruity_ecs::entity::entity_reference::EntityReference;
-use fruity_editor::hooks::use_global;
 use fruity_editor::mutations::mutation_service::MutationService;
 use fruity_editor::mutations::set_field_mutation::SetFieldMutation;
 use fruity_editor::state::inspector::InspectorState;
-use fruity_editor::state::world::WorldState;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::vector2d::Vector2d;
 use fruity_graphic::math::Color;
@@ -16,16 +15,23 @@ use fruity_graphic_2d::components::transform_2d::Transform2d;
 use fruity_graphic_2d::components::translate_2d::Translate2d;
 
 pub fn draw_gizmos_2d(
+    inspector_state: Const<InspectorState>,
     gizmos_service: Const<GizmosService>,
+    mutation_service: Ref<MutationService>,
     graphic_service: Ref<dyn GraphicService>,
 ) {
-    let inspector_state = use_global::<InspectorState>();
-
     if !inspector_state.is_gizmos_enabled() {
         return;
     }
 
     if let Some(selected) = inspector_state.get_selected() {
+        // TODO: Try to remove that
+        let selected = unsafe {
+            std::mem::transmute::<&Box<dyn SerializableObject>, &Box<dyn SerializableObject>>(
+                selected,
+            )
+        };
+
         let entity = if let Some(entity) = selected.as_any_ref().downcast_ref::<EntityReference>() {
             entity
         } else {
@@ -87,6 +93,7 @@ pub fn draw_gizmos_2d(
                             scale.vec
                         };
 
+                        let mutation_service_2 = mutation_service.clone();
                         (
                             Box::new(move |action| {
                                 let (cursor_pos, start_pos) = {
@@ -130,10 +137,7 @@ pub fn draw_gizmos_2d(
                                 };
                             }),
                             Box::new(move |_| {
-                                let world_state = use_global::<WorldState>();
-                                let mutation_service =
-                                    world_state.resource_container.require::<MutationService>();
-                                let mut mutation_service = mutation_service.write();
+                                let mut mutation_service = mutation_service_2.write();
 
                                 // Get current values
                                 let translate_current = {
@@ -187,12 +191,13 @@ pub fn draw_gizmos_2d(
 
             let center = (bottom_left + top_right) / 2.0;
             let size = top_right - bottom_left;
+            let mutation_service_2 = mutation_service.clone();
             gizmos_service.draw_move_helper(
                 center,
                 size,
                 Color::green(),
                 Color::red(),
-                |move_x, move_y| {
+                move |move_x, move_y| {
                     let graphic_service = graphic_service.clone();
 
                     // Get the translate origin
@@ -204,6 +209,7 @@ pub fn draw_gizmos_2d(
                         translate.vec
                     };
 
+                    let mutation_service = mutation_service_2.clone();
                     (
                         Box::new(move |action| {
                             let (cursor_pos, start_pos) = {
@@ -236,9 +242,6 @@ pub fn draw_gizmos_2d(
                             }
                         }),
                         Box::new(move |_| {
-                            let world_state = use_global::<WorldState>();
-                            let mutation_service =
-                                world_state.resource_container.require::<MutationService>();
                             let mut mutation_service = mutation_service.write();
 
                             // Get current values

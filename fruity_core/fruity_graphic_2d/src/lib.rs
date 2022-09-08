@@ -15,7 +15,6 @@ use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use fruity_ecs::system::system_service::SystemParams;
 use fruity_ecs::system::system_service::SystemService;
-use std::sync::Arc;
 
 pub mod components;
 pub mod graphic_2d_service;
@@ -25,7 +24,7 @@ pub mod systems;
 pub static MODULE_NAME: &str = "graphic_2d_service";
 
 // #[no_mangle]
-pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
+pub fn initialize(resource_container: ResourceContainer, _settings: &Settings) {
     let graphic_2d_service = Graphic2dService::new(resource_container.clone());
 
     resource_container.add::<Graphic2dService>("graphic_2d_service", Box::new(graphic_2d_service));

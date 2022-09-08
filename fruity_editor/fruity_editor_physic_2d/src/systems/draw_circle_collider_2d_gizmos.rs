@@ -2,10 +2,8 @@ use crate::ColliderState;
 use fruity_core::convert::FruityInto;
 use fruity_core::inject::Const;
 use fruity_core::inject::Ref;
-use fruity_editor::hooks::use_global;
 use fruity_editor::mutations::mutation_service::MutationService;
 use fruity_editor::mutations::set_field_mutation::SetFieldMutation;
-use fruity_editor::state::world::WorldState;
 use fruity_editor_graphic_2d::gizmos_service::GizmosService;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::vector2d::Vector2d;
@@ -16,13 +14,13 @@ use fruity_input::drag_service::DragService;
 use fruity_physic_2d::components::circle_collider::CircleCollider;
 
 pub fn draw_circle_collider_2d_gizmos(
+    collider_state: Const<ColliderState>,
+    gizmos_service: Const<GizmosService>,
     graphic_service: Ref<dyn GraphicService>,
     graphic_2d_service: Ref<Graphic2dService>,
-    gizmos_service: Const<GizmosService>,
     drag_service: Ref<DragService>,
+    mutation_service: Ref<MutationService>,
 ) {
-    let collider_state = use_global::<ColliderState>();
-
     if !collider_state.is_editing_collider() {
         return;
     }
@@ -64,6 +62,7 @@ pub fn draw_circle_collider_2d_gizmos(
 
             // Draw the gizmos to move the center of the collider
             let collider_2 = collider.clone();
+            let mutation_service_2 = mutation_service.clone();
             gizmos_service.draw_move_helper(
                 center,
                 size,
@@ -80,6 +79,7 @@ pub fn draw_circle_collider_2d_gizmos(
                         circle_collider.center
                     };
 
+                    let mutation_service = mutation_service.clone();
                     (
                         Box::new(move |action| {
                             let (cursor_pos, start_pos) = {
@@ -112,9 +112,6 @@ pub fn draw_circle_collider_2d_gizmos(
                         Box::new(move |_| {
                             let collider = collider_2.clone();
 
-                            let world_state = use_global::<WorldState>();
-                            let mutation_service =
-                                world_state.resource_container.require::<MutationService>();
                             let mut mutation_service = mutation_service.write();
 
                             // Get current values
@@ -159,6 +156,7 @@ pub fn draw_circle_collider_2d_gizmos(
                     };
 
                     let graphic_service = graphic_service.clone();
+                    let mutation_service = mutation_service_2.clone();
                     (
                         Box::new(move |action| {
                             let collider = collider.clone();
@@ -187,9 +185,6 @@ pub fn draw_circle_collider_2d_gizmos(
                         Box::new(move |_| {
                             let collider = collider_2.clone();
 
-                            let world_state = use_global::<WorldState>();
-                            let mutation_service =
-                                world_state.resource_container.require::<MutationService>();
                             let mut mutation_service = mutation_service.write();
 
                             // Get current values

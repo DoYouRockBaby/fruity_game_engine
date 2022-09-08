@@ -1,41 +1,34 @@
-use crate::hooks::topo;
-use crate::hooks::use_global;
-use crate::hooks::use_state;
-use crate::ui_element::display::Popup;
-use crate::ui_element::display::Text;
-use crate::ui_element::input::Button;
-use crate::ui_element::input::Checkbox;
-use crate::ui_element::input::Input;
-use crate::ui_element::layout::Collapsible;
-use crate::ui_element::layout::Column;
-use crate::ui_element::layout::Empty;
-use crate::ui_element::layout::Row;
-use crate::ui_element::layout::RowItem;
-use crate::ui_element::layout::Scroll;
-use crate::ui_element::menu::MenuItem;
-use crate::ui_element::UIAlign;
-use crate::ui_element::UIElement;
-use crate::ui_element::UISize;
-use crate::ui_element::UIWidget;
+use crate::editor_menu_service::MenuItem;
+use crate::ui::context::UIContext;
+use crate::ui::elements::display::Popup;
+use crate::ui::elements::display::Text;
+use crate::ui::elements::input::Button;
+use crate::ui::elements::input::Checkbox;
+use crate::ui::elements::input::Input;
+use crate::ui::elements::layout::Collapsible;
+use crate::ui::elements::layout::Column;
+use crate::ui::elements::layout::Empty;
+use crate::ui::elements::layout::Row;
+use crate::ui::elements::layout::RowItem;
+use crate::ui::elements::layout::Scroll;
+use crate::ui::elements::UIAlign;
+use crate::ui::elements::UIElement;
+use crate::ui::elements::UISize;
+use crate::ui::elements::UIWidget;
+use crate::ui::hooks::use_read_service;
+use crate::ui::hooks::use_state;
+use crate::ui::hooks::use_write_service;
 use crate::EditorComponentService;
 use crate::InspectorState;
-use crate::WorldState;
-pub use comp_state::CloneState;
 use fruity_ecs::entity::entity_reference::EntityReference;
 use fruity_ecs::entity::entity_service::EntityService;
 use std::sync::Arc;
 
-#[topo::nested]
-pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
-    let inspector_state = use_global::<InspectorState>();
-    let component_search_text = use_state(|| "".to_string());
-    let display_add_component_popup = use_state(|| false);
-
-    let world_state = use_global::<WorldState>();
-    let editor_component_service = world_state
-        .resource_container
-        .require::<EditorComponentService>();
-    let editor_component_service = editor_component_service.read();
+pub fn inspect_entity(ctx: &mut UIContext, entity: &mut EntityReference) -> UIElement {
+    let (component_search_text, set_component_search_text) = use_state(ctx, "".to_string());
+    let (display_add_component_popup, set_display_add_component_popup) = use_state(ctx, false);
+    let inspector_state = use_read_service::<InspectorState>(&ctx);
+    let editor_component_service = use_read_service::<EditorComponentService>(&ctx);
 
     let entity_reader = entity.read();
     let entity_id = entity_reader.get_entity_id();
@@ -49,7 +42,7 @@ pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
                     child: Checkbox {
                         label: "".to_string(),
                         value: entity_reader.is_enabled(),
-                        on_change: Arc::new(move |value| {
+                        on_change: Arc::new(move |_, value| {
                             let entity_writer = entity_2.write();
                             entity_writer.set_enabled(value);
                         }),
@@ -61,7 +54,7 @@ pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
                     child: Input {
                         value: entity_reader.get_name(),
                         placeholder: "Name ...".to_string(),
-                        on_change: Arc::new(move |value: &str| {
+                        on_change: Arc::new(move |_, value: &str| {
                             let entity_writer = entity_3.write();
                             entity_writer.set_name(value);
                         }),
@@ -91,16 +84,13 @@ pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
                 Collapsible {
                     key: format!("{}_{}", component.get_index(), class_name),
                     title: class_name,
-                    child: inspector_state.inspect_component(component),
+                    child: inspector_state.inspect_component(ctx, component),
                     secondary_actions: vec![MenuItem {
                         label: "Delete".to_string(),
-                        on_click: Arc::new(move || {
+                        action: Arc::new(move |ctx| {
                             // Get what we need
-                            let world_state = use_global::<WorldState>();
-                            let inspector_state = use_global::<InspectorState>();
-                            let entity_service =
-                                world_state.resource_container.require::<EntityService>();
-                            let entity_service = entity_service.read();
+                            let mut inspector_state = use_write_service::<InspectorState>(&ctx);
+                            let entity_service = use_read_service::<EntityService>(&ctx);
 
                             // Remove the component
                             entity_service.remove_component(entity_id, index).ok();
@@ -123,8 +113,8 @@ pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
     let add_component = Column {
         children: vec![Button {
             label: "+".to_string(),
-            on_click: Arc::new(move || {
-                display_add_component_popup.set(!display_add_component_popup.get())
+            on_click: Arc::new(move |_| {
+                set_display_add_component_popup(!display_add_component_popup);
             }),
             ..Default::default()
         }
@@ -133,7 +123,7 @@ pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
     }
     .elem();
 
-    let add_component_popup = if display_add_component_popup.get() {
+    let add_component_popup = if display_add_component_popup {
         Popup {
             content: Column {
                 children: vec![
@@ -150,10 +140,10 @@ pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
                             RowItem {
                                 size: UISize::Fill,
                                 child: Input {
-                                    value: component_search_text.get(),
+                                    value: component_search_text.clone(),
                                     placeholder: "Search ...".to_string(),
-                                    on_edit: Arc::new(move |value| {
-                                        component_search_text.set(value.to_string());
+                                    on_edit: Arc::new(move |_, value| {
+                                        set_component_search_text(value.to_string());
                                     }),
                                     ..Default::default()
                                 }
@@ -166,23 +156,18 @@ pub fn inspect_entity(entity: &mut EntityReference) -> UIElement {
                     Scroll {
                         child: Column {
                             children: editor_component_service
-                                .search(&component_search_text.get())
+                                .search(&component_search_text)
                                 .map(|component| {
                                     Button {
                                         label: component.clone(),
-                                        on_click: Arc::new(move || {
+                                        on_click: Arc::new(move |ctx| {
                                             // Get what we need
-                                            let world_state = use_global::<WorldState>();
-                                            let inspector_state = use_global::<InspectorState>();
-                                            let entity_service = world_state
-                                                .resource_container
-                                                .require::<EntityService>();
-                                            let entity_service = entity_service.read();
-                                            let editor_component_service = world_state
-                                                .resource_container
-                                                .require::<EditorComponentService>();
+                                            let mut inspector_state =
+                                                use_write_service::<InspectorState>(&ctx);
+                                            let entity_service =
+                                                use_read_service::<EntityService>(&ctx);
                                             let editor_component_service =
-                                                editor_component_service.read();
+                                                use_read_service::<EditorComponentService>(&ctx);
 
                                             // Add the component
                                             if let Some(components) =

@@ -2,10 +2,8 @@ use crate::ColliderState;
 use fruity_core::convert::FruityInto;
 use fruity_core::inject::Const;
 use fruity_core::inject::Ref;
-use fruity_editor::hooks::use_global;
 use fruity_editor::mutations::mutation_service::MutationService;
 use fruity_editor::mutations::set_field_mutation::SetFieldMutation;
-use fruity_editor::state::world::WorldState;
 use fruity_editor_graphic_2d::gizmos_service::GizmosService;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_graphic::math::Color;
@@ -14,12 +12,12 @@ use fruity_graphic_2d::graphic_2d_service::Graphic2dService;
 use fruity_physic_2d::components::rect_collider::RectCollider;
 
 pub fn draw_rectangle_collider_2d_gizmos(
-    graphic_service: Ref<dyn GraphicService>,
-    graphic_2d_service: Ref<Graphic2dService>,
+    collider_state: Const<ColliderState>,
     gizmos_service: Const<GizmosService>,
+    graphic_2d_service: Ref<Graphic2dService>,
+    graphic_service: Ref<dyn GraphicService>,
+    mutation_service: Ref<MutationService>,
 ) {
-    let collider_state = use_global::<ColliderState>();
-
     if !collider_state.is_editing_collider() {
         return;
     }
@@ -72,6 +70,7 @@ pub fn draw_rectangle_collider_2d_gizmos(
                         (collider.bottom_left, collider.top_right)
                     };
 
+                    let mutation_service_2 = mutation_service.clone();
                     (
                         Box::new(move |action| {
                             let (cursor_pos, start_pos) = {
@@ -110,10 +109,7 @@ pub fn draw_rectangle_collider_2d_gizmos(
                         Box::new(move |_| {
                             let collider = collider_2.clone();
 
-                            let world_state = use_global::<WorldState>();
-                            let mutation_service =
-                                world_state.resource_container.require::<MutationService>();
-                            let mut mutation_service = mutation_service.write();
+                            let mut mutation_service = mutation_service_2.write();
 
                             // Get current values
                             let (bottom_left_current, top_right_current) = {

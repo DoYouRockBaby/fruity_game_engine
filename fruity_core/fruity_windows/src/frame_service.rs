@@ -26,7 +26,7 @@ impl Debug for FrameService {
 }
 
 impl FrameService {
-    pub fn new(_resource_container: Arc<ResourceContainer>) -> FrameService {
+    pub fn new(_resource_container: ResourceContainer) -> FrameService {
         FrameService {
             delta: 0.0,
             last_frame_instant: Instant::now(),

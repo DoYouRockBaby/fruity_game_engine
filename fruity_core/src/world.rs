@@ -4,13 +4,12 @@ use crate::platform::PlatformCallback;
 use crate::settings::Settings;
 use crate::ResourceContainer;
 use std::fmt::Debug;
-use std::sync::Arc;
 
 /// The main container of the ECS
 #[derive(Clone)]
 pub struct World {
     /// The resource container
-    pub resource_container: Arc<ResourceContainer>,
+    pub resource_container: ResourceContainer,
     platform: Option<PlatformCallback>,
 }
 
@@ -26,7 +25,7 @@ impl Debug for World {
 impl<'s> World {
     /// Returns a World
     pub fn new() -> World {
-        let resource_container = Arc::new(ResourceContainer::new());
+        let resource_container = ResourceContainer::new();
         initialize(resource_container.clone());
 
         World {

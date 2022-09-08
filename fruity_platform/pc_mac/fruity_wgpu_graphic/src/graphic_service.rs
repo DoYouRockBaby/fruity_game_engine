@@ -112,7 +112,7 @@ pub struct WgpuGraphicService {
 }
 
 impl WgpuGraphicService {
-    pub fn new(resource_container: Arc<ResourceContainer>) -> WgpuGraphicService {
+    pub fn new(resource_container: ResourceContainer) -> WgpuGraphicService {
         let window_service = resource_container.require::<dyn WindowService>();
 
         let state = {

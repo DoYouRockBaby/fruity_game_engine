@@ -8,7 +8,6 @@ use fruity_core::serialize::serialized::Serialized;
 use fruity_core::settings::Settings;
 use fruity_ecs::*;
 use std::io::Read;
-use std::sync::Arc;
 
 pub trait ShaderResource: Resource {}
 
@@ -191,7 +190,7 @@ pub fn load_shader(
     identifier: &str,
     reader: &mut dyn Read,
     settings: Settings,
-    resource_container: Arc<ResourceContainer>,
+    resource_container: ResourceContainer,
 ) {
     // Get the graphic service state
     let graphic_service = resource_container.require::<dyn GraphicService>();
@@ -223,7 +222,7 @@ pub fn load_shader(
 
 pub fn read_shader_settings(
     settings: &Settings,
-    resource_container: Arc<ResourceContainer>,
+    resource_container: ResourceContainer,
 ) -> ShaderResourceSettings {
     let binding_groups = settings.get::<Vec<Settings>>("binding_groups", Vec::new());
     let binding_groups = binding_groups
@@ -250,7 +249,7 @@ pub fn read_shader_settings(
 
 pub fn read_shader_binding_group_settings(
     settings: &Vec<Settings>,
-    _resource_container: Arc<ResourceContainer>,
+    _resource_container: ResourceContainer,
 ) -> ShaderBindingGroup {
     let bindings = settings
         .iter()
@@ -274,7 +273,7 @@ pub fn read_shader_binding_group_settings(
 
 pub fn read_shader_instance_attributes_settings(
     settings: &Vec<Settings>,
-    _resource_container: Arc<ResourceContainer>,
+    _resource_container: ResourceContainer,
 ) -> Vec<ShaderInstanceAttribute> {
     settings
         .iter()

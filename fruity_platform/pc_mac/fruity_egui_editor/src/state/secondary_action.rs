@@ -1,7 +1,12 @@
-use fruity_editor::ui_element::menu::MenuItem;
-use std::thread::spawn;
+use fruity_any::*;
+use fruity_core::introspect::FieldInfo;
+use fruity_core::introspect::IntrospectObject;
+use fruity_core::introspect::MethodInfo;
+use fruity_core::resource::resource::Resource;
+use fruity_editor::editor_menu_service::MenuItem;
+use fruity_editor::ui::context::UIContext;
 
-#[derive(Debug)]
+#[derive(Debug, FruityAny)]
 pub struct SecondaryActionState {
     below_widget: Option<egui::Response>,
     secondary_actions: Vec<MenuItem>,
@@ -17,7 +22,7 @@ impl Default for SecondaryActionState {
 }
 
 impl SecondaryActionState {
-    pub fn draw_secondary_actions(&self, ui: &mut egui::Ui) {
+    pub fn draw_secondary_actions(&self, ctx: &UIContext, ui: &mut egui::Ui) {
         if let Some(below_widget) = &self.below_widget {
             egui::popup::popup_below_widget(
                 ui,
@@ -30,10 +35,8 @@ impl SecondaryActionState {
                                 .small_button(secondary_action.label.to_string())
                                 .clicked()
                             {
-                                let on_click = secondary_action.on_click.clone();
-                                spawn(move || {
-                                    on_click();
-                                });
+                                let on_click = secondary_action.action.clone();
+                                on_click(ctx);
                             }
                         });
                     });
@@ -53,3 +56,20 @@ impl SecondaryActionState {
         ui.memory().open_popup(egui::Id::new("secondary_actions"));
     }
 }
+
+// TODO
+impl IntrospectObject for SecondaryActionState {
+    fn get_class_name(&self) -> String {
+        "SecondaryActionState".to_string()
+    }
+
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+}
+
+impl Resource for SecondaryActionState {}

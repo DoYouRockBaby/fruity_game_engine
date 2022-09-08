@@ -30,7 +30,7 @@ pub struct AnyResourceReference {
     pub resource: Arc<dyn Resource>,
 
     /// The resource container reference
-    pub resource_container: Arc<ResourceContainer>,
+    pub resource_container: ResourceContainer,
 }
 
 impl AnyResourceReference {
@@ -38,7 +38,7 @@ impl AnyResourceReference {
     pub fn new(
         name: &str,
         resource: Arc<dyn Resource>,
-        resource_container: Arc<ResourceContainer>,
+        resource_container: ResourceContainer,
     ) -> Self {
         AnyResourceReference {
             name: name.to_string(),
@@ -68,7 +68,7 @@ impl AnyResourceReference {
 impl InstantiableObject for AnyResourceReference {
     fn get_constructor() -> Constructor {
         Arc::new(
-            |resource_container: Arc<ResourceContainer>, args: Vec<Serialized>| {
+            |resource_container: ResourceContainer, args: Vec<Serialized>| {
                 let mut caster = ArgumentCaster::new("ResourceReference", args);
                 let arg1 = caster.next()?;
 
@@ -195,7 +195,7 @@ pub struct ResourceReference<T: Resource + ?Sized> {
     pub resource: Arc<RwLock<Box<T>>>,
 
     /// The resource container reference
-    pub resource_container: Arc<ResourceContainer>,
+    pub resource_container: ResourceContainer,
 }
 
 impl<T: Resource + ?Sized> ResourceReference<T> {
@@ -203,7 +203,7 @@ impl<T: Resource + ?Sized> ResourceReference<T> {
     pub fn new(
         name: &str,
         resource: Arc<RwLock<Box<T>>>,
-        resource_container: Arc<ResourceContainer>,
+        resource_container: ResourceContainer,
     ) -> Self {
         ResourceReference {
             name: name.to_string(),

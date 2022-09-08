@@ -3,7 +3,6 @@ use crate::resource::resource_container::ResourceContainer;
 use crate::resource::resource_reference::ResourceReadGuard;
 use crate::resource::resource_reference::ResourceReference;
 use crate::resource::resource_reference::ResourceWriteGuard;
-use std::sync::Arc;
 
 /// A reference over a resource
 pub type Ref<T> = ResourceReference<T>;
@@ -17,30 +16,30 @@ pub type Mut<T> = ResourceWriteGuard<T>;
 /// A trait for types that can be exposed from resource container
 pub trait Injectable: 'static {
     /// Get the object
-    fn from_resource_container(resource_container: &Arc<ResourceContainer>) -> Self;
+    fn from_resource_container(resource_container: &ResourceContainer) -> Self;
 }
 
-impl Injectable for Arc<ResourceContainer> {
-    fn from_resource_container(resource_container: &Arc<ResourceContainer>) -> Self {
+impl Injectable for ResourceContainer {
+    fn from_resource_container(resource_container: &ResourceContainer) -> Self {
         resource_container.clone()
     }
 }
 
 impl<T: Resource + ?Sized> Injectable for Ref<T> {
-    fn from_resource_container(resource_container: &Arc<ResourceContainer>) -> Self {
+    fn from_resource_container(resource_container: &ResourceContainer) -> Self {
         resource_container.require::<T>()
     }
 }
 
 impl<T: Resource + ?Sized> Injectable for Const<T> {
-    fn from_resource_container(resource_container: &Arc<ResourceContainer>) -> Self {
+    fn from_resource_container(resource_container: &ResourceContainer) -> Self {
         let reference = Ref::<T>::from_resource_container(resource_container);
         reference.read()
     }
 }
 
 impl<T: Resource + ?Sized> Injectable for Mut<T> {
-    fn from_resource_container(resource_container: &Arc<ResourceContainer>) -> Self {
+    fn from_resource_container(resource_container: &ResourceContainer) -> Self {
         let reference = Ref::<T>::from_resource_container(resource_container);
         reference.write()
     }
@@ -49,7 +48,7 @@ impl<T: Resource + ?Sized> Injectable for Mut<T> {
 /// A trait that is implemented by functions that supports dependency injection
 pub trait Inject<R = ()> {
     /// Get a function that proceed the injection
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) -> R + Send + Sync>;
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) -> R + Send + Sync>;
 }
 
 /// A shortcut for a boxed inject function
@@ -63,7 +62,7 @@ impl<R> Inject0<R> {
 }
 
 impl<R: 'static> Inject<R> for Inject0<R> {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) -> R + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) -> R + Send + Sync> {
         Box::new(move |_| (self.0)())
     }
 }
@@ -79,7 +78,7 @@ impl<T1, R> Inject1<T1, R> {
 }
 
 impl<T1: Injectable, R: 'static> Inject<R> for Inject1<T1, R> {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) -> R + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) -> R + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(T1::from_resource_container(&resource_container))
         })
@@ -97,7 +96,7 @@ impl<T1, T2, R> Inject2<T1, T2, R> {
 }
 
 impl<T1: Injectable, T2: Injectable, R: 'static> Inject<R> for Inject2<T1, T2, R> {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) -> R + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) -> R + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),
@@ -118,7 +117,7 @@ impl<T1, T2, T3> Inject3<T1, T2, T3> {
 }
 
 impl<T1: Injectable, T2: Injectable, T3: Injectable> Inject for Inject3<T1, T2, T3> {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),
@@ -142,7 +141,7 @@ impl<T1, T2, T3, T4> Inject4<T1, T2, T3, T4> {
 impl<T1: Injectable, T2: Injectable, T3: Injectable, T4: Injectable> Inject
     for Inject4<T1, T2, T3, T4>
 {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),
@@ -167,7 +166,7 @@ impl<T1, T2, T3, T4, T5> Inject5<T1, T2, T3, T4, T5> {
 impl<T1: Injectable, T2: Injectable, T3: Injectable, T4: Injectable, T5: Injectable> Inject
     for Inject5<T1, T2, T3, T4, T5>
 {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),
@@ -199,7 +198,7 @@ impl<
         T6: Injectable,
     > Inject for Inject6<T1, T2, T3, T4, T5, T6>
 {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),
@@ -235,7 +234,7 @@ impl<
         T7: Injectable,
     > Inject for Inject7<T1, T2, T3, T4, T5, T6, T7>
 {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),
@@ -273,7 +272,7 @@ impl<
         T8: Injectable,
     > Inject for Inject8<T1, T2, T3, T4, T5, T6, T7, T8>
 {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),
@@ -313,7 +312,7 @@ impl<
         T9: Injectable,
     > Inject for Inject9<T1, T2, T3, T4, T5, T6, T7, T8, T9>
 {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),
@@ -357,7 +356,7 @@ impl<
         T10: Injectable,
     > Inject for Inject10<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
 {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),
@@ -405,7 +404,7 @@ impl<
         T11: Injectable,
     > Inject for Inject11<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
 {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),
@@ -455,7 +454,7 @@ impl<
         T12: Injectable,
     > Inject for Inject12<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
 {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),
@@ -507,7 +506,7 @@ impl<
         T13: Injectable,
     > Inject for Inject13<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
 {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),
@@ -564,7 +563,7 @@ impl<
         T14: Injectable,
     > Inject for Inject14<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>
 {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),
@@ -623,7 +622,7 @@ impl<
         T15: Injectable,
     > Inject for Inject15<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>
 {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),
@@ -686,7 +685,7 @@ impl<
         T16: Injectable,
     > Inject for Inject16<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>
 {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),
@@ -754,7 +753,7 @@ impl<
     > Inject
     for Inject17<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17>
 {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),
@@ -824,7 +823,7 @@ impl<
     > Inject
     for Inject18<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18>
 {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),
@@ -936,7 +935,7 @@ impl<
         T19,
     >
 {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),
@@ -1113,7 +1112,7 @@ impl<
         T20,
     >
 {
-    fn inject(self) -> Box<dyn Fn(Arc<ResourceContainer>) + Send + Sync> {
+    fn inject(self) -> Box<dyn Fn(ResourceContainer) + Send + Sync> {
         Box::new(move |resource_container| {
             (self.0)(
                 T1::from_resource_container(&resource_container),

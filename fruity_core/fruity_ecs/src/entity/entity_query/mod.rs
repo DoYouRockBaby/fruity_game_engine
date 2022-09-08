@@ -164,7 +164,7 @@ impl<'a, T: QueryParam<'a> + 'static> Query<T> {
 }
 
 impl<'a, T: QueryParam<'a> + 'static> Injectable for Query<T> {
-    fn from_resource_container(resource_container: &Arc<ResourceContainer>) -> Self {
+    fn from_resource_container(resource_container: &ResourceContainer) -> Self {
         let entity_service = resource_container.require::<EntityService>();
         let entity_service = entity_service.read();
 

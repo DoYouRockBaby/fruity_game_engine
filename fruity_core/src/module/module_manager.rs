@@ -5,7 +5,6 @@ use hot_reload_lib::load_symbol;
 use hot_reload_lib::HotReloadLib;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::sync::Arc;
 
 /// An error that can occure during modules loading
 #[derive(Debug, Clone)]
@@ -19,12 +18,12 @@ pub enum LoadModuleError {
 /// A structure to manage module loading, supports hot reload
 pub struct ModuleManager {
     libs: HashMap<String, HotReloadLib>,
-    resource_container: Arc<ResourceContainer>,
+    resource_container: ResourceContainer,
 }
 
 impl ModuleManager {
     /// Returns a ModuleManager
-    pub fn new(resource_container: Arc<ResourceContainer>) -> ModuleManager {
+    pub fn new(resource_container: ResourceContainer) -> ModuleManager {
         ModuleManager {
             libs: HashMap::new(),
             resource_container: resource_container.clone(),

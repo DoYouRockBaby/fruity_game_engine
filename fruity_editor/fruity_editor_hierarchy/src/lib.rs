@@ -4,8 +4,7 @@ use fruity_core::settings::Settings;
 use fruity_editor::editor_component_service::EditorComponentService;
 use fruity_editor::editor_component_service::RegisterComponentParams;
 use fruity_editor::editor_panels_service::EditorPanelsService;
-use fruity_editor::ui_element::pane::UIPaneSide;
-use std::sync::Arc;
+use fruity_editor::ui::elements::pane::UIPaneSide;
 
 pub mod components;
 
@@ -13,7 +12,7 @@ pub mod components;
 pub static MODULE_NAME: &str = "fruity_editor_hierarchy";
 
 // #[no_mangle]
-pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
+pub fn initialize(resource_container: ResourceContainer, _settings: &Settings) {
     let editor_component_service = resource_container.require::<EditorComponentService>();
     let mut editor_component_service = editor_component_service.write();
 

@@ -16,9 +16,8 @@ use crate::resources::shader_resource::ShaderResourceSettings;
 use crate::Vector2d;
 use fruity_core::resource::resource_container::ResourceContainer;
 use maplit::hashmap;
-use std::sync::Arc;
 
-pub fn load_default_resources(resource_container: Arc<ResourceContainer>) {
+pub fn load_default_resources(resource_container: ResourceContainer) {
     load_squad_mesh(resource_container.clone());
     load_draw_line_shader(resource_container.clone());
     load_draw_line_material(resource_container.clone());
@@ -30,7 +29,7 @@ pub fn load_default_resources(resource_container: Arc<ResourceContainer>) {
     load_draw_arc_material(resource_container.clone());
 }
 
-pub fn load_squad_mesh(resource_container: Arc<ResourceContainer>) {
+pub fn load_squad_mesh(resource_container: ResourceContainer) {
     let graphic_service = resource_container.require::<dyn GraphicService>();
     let graphic_service = graphic_service.read();
 
@@ -68,7 +67,7 @@ pub fn load_squad_mesh(resource_container: Arc<ResourceContainer>) {
     resource_container.add("Meshes/Squad", resource);
 }
 
-pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
+pub fn load_draw_line_shader(resource_container: ResourceContainer) {
     let graphic_service = resource_container.require::<dyn GraphicService>();
     let graphic_service = graphic_service.read();
 
@@ -186,7 +185,7 @@ pub fn load_draw_line_shader(resource_container: Arc<ResourceContainer>) {
     resource_container.add("Shaders/Draw Line", resource);
 }
 
-pub fn load_draw_line_material(resource_container: Arc<ResourceContainer>) {
+pub fn load_draw_line_material(resource_container: ResourceContainer) {
     let graphic_service = resource_container.require::<dyn GraphicService>();
     let graphic_service = graphic_service.read();
 
@@ -222,7 +221,7 @@ pub fn load_draw_line_material(resource_container: Arc<ResourceContainer>) {
     resource_container.add("Materials/Draw Line", resource);
 }
 
-pub fn load_draw_dotted_line_shader(resource_container: Arc<ResourceContainer>) {
+pub fn load_draw_dotted_line_shader(resource_container: ResourceContainer) {
     let graphic_service = resource_container.require::<dyn GraphicService>();
     let graphic_service = graphic_service.read();
 
@@ -351,7 +350,7 @@ pub fn load_draw_dotted_line_shader(resource_container: Arc<ResourceContainer>) 
     resource_container.add("Shaders/Draw Dotted Line", resource);
 }
 
-pub fn load_draw_dotted_line_material(resource_container: Arc<ResourceContainer>) {
+pub fn load_draw_dotted_line_material(resource_container: ResourceContainer) {
     let graphic_service = resource_container.require::<dyn GraphicService>();
     let graphic_service = graphic_service.read();
 
@@ -387,7 +386,7 @@ pub fn load_draw_dotted_line_material(resource_container: Arc<ResourceContainer>
     resource_container.add("Materials/Draw Dotted Line", resource);
 }
 
-pub fn load_draw_rect_shader(resource_container: Arc<ResourceContainer>) {
+pub fn load_draw_rect_shader(resource_container: ResourceContainer) {
     let graphic_service = resource_container.require::<dyn GraphicService>();
     let graphic_service = graphic_service.read();
 
@@ -528,7 +527,7 @@ pub fn load_draw_rect_shader(resource_container: Arc<ResourceContainer>) {
     resource_container.add("Shaders/Draw Rect", resource);
 }
 
-pub fn load_draw_rect_material(resource_container: Arc<ResourceContainer>) {
+pub fn load_draw_rect_material(resource_container: ResourceContainer) {
     let graphic_service = resource_container.require::<dyn GraphicService>();
     let graphic_service = graphic_service.read();
 
@@ -567,7 +566,7 @@ pub fn load_draw_rect_material(resource_container: Arc<ResourceContainer>) {
     resource_container.add("Materials/Draw Rect", resource);
 }
 
-pub fn load_draw_arc_shader(resource_container: Arc<ResourceContainer>) {
+pub fn load_draw_arc_shader(resource_container: ResourceContainer) {
     let graphic_service = resource_container.require::<dyn GraphicService>();
     let graphic_service = graphic_service.read();
 
@@ -726,7 +725,7 @@ pub fn load_draw_arc_shader(resource_container: Arc<ResourceContainer>) {
     resource_container.add("Shaders/Draw Arc", resource);
 }
 
-pub fn load_draw_arc_material(resource_container: Arc<ResourceContainer>) {
+pub fn load_draw_arc_material(resource_container: ResourceContainer) {
     let graphic_service = resource_container.require::<dyn GraphicService>();
     let graphic_service = graphic_service.read();
 

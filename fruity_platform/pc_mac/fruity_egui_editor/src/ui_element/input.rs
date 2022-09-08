@@ -1,7 +1,5 @@
 use crate::ui_element::app::DrawContext;
-use crate::ui_element::topo::CallId;
 use crate::SecondaryActionState;
-use comp_state::CloneState;
 use egui::epaint;
 use egui::CursorIcon;
 use egui::Id;
@@ -12,15 +10,15 @@ use egui::Sense;
 use egui::Shape;
 use egui::Ui;
 use fruity_core::Mutex;
-use fruity_editor::hooks::topo;
-use fruity_editor::hooks::use_global;
-use fruity_editor::hooks::use_state;
-use fruity_editor::ui_element::input::Button;
-use fruity_editor::ui_element::input::Checkbox;
-use fruity_editor::ui_element::input::FloatInput;
-use fruity_editor::ui_element::input::ImageButton;
-use fruity_editor::ui_element::input::Input;
-use fruity_editor::ui_element::input::IntegerInput;
+use fruity_editor::ui::context::UIContext;
+use fruity_editor::ui::elements::input::Button;
+use fruity_editor::ui::elements::input::Checkbox;
+use fruity_editor::ui::elements::input::FloatInput;
+use fruity_editor::ui::elements::input::ImageButton;
+use fruity_editor::ui::elements::input::Input;
+use fruity_editor::ui::elements::input::IntegerInput;
+use fruity_editor::ui::hooks::use_state;
+use fruity_editor::ui::hooks::use_write_service;
 use fruity_wgpu_graphic::resources::texture_resource::WgpuTextureResource;
 use lazy_static::*;
 use std::any::Any;
@@ -30,17 +28,21 @@ lazy_static! {
     static ref CURRENT_DRAGGED_ITEM: Mutex::<Option<Arc<dyn Any + Send + Sync>>> = Mutex::new(None);
 }
 
-#[topo::nested]
-pub fn draw_button<'a>(elem: Button, ui: &mut egui::Ui, _ctx: &mut DrawContext) {
+pub fn draw_button<'a>(
+    elem: Button,
+    ctx: &mut UIContext,
+    ui: &mut egui::Ui,
+    _draw_ctx: &mut DrawContext,
+) {
     let response = ui.add_enabled(elem.enabled, egui::Button::new(elem.label.clone()));
 
     if response.clicked() {
-        (elem.on_click)()
+        (elem.on_click)(ctx)
     }
 
     if elem.secondary_actions.len() > 0 {
         if response.secondary_clicked() {
-            let secondary_action_state = use_global::<SecondaryActionState>();
+            let mut secondary_action_state = use_write_service::<SecondaryActionState>(&ctx);
             secondary_action_state.display_secondary_actions(
                 ui,
                 response.clone(),
@@ -53,7 +55,7 @@ pub fn draw_button<'a>(elem: Button, ui: &mut egui::Ui, _ctx: &mut DrawContext) 
     if let Some(drag_item) = &elem.drag_item {
         drag_source(
             ui,
-            Id::new("item").with(CallId::current()),
+            Id::new("item").with(ctx.local_index()),
             response.clone(),
             move || {
                 let mut current_dragged_item = CURRENT_DRAGGED_ITEM.lock();
@@ -70,7 +72,7 @@ pub fn draw_button<'a>(elem: Button, ui: &mut egui::Ui, _ctx: &mut DrawContext) 
             let current_dragged_item = CURRENT_DRAGGED_ITEM.lock();
 
             if let Some(current_dragged_item) = current_dragged_item.deref() {
-                accept_drag(current_dragged_item.deref())
+                accept_drag(ctx, current_dragged_item.deref())
             } else {
                 false
             }
@@ -80,13 +82,13 @@ pub fn draw_button<'a>(elem: Button, ui: &mut egui::Ui, _ctx: &mut DrawContext) 
 
         drag_target(
             ui,
-            Id::new("item").with(CallId::current()),
+            Id::new("item").with(ctx.local_index()),
             accept_dragged,
             move || {
                 let mut current_dragged_item = CURRENT_DRAGGED_ITEM.lock();
 
                 if let Some(current_dragged_item) = current_dragged_item.take() {
-                    on_drag(current_dragged_item.deref());
+                    on_drag(ctx, current_dragged_item.deref());
                 }
             },
             response.clone(),
@@ -94,14 +96,18 @@ pub fn draw_button<'a>(elem: Button, ui: &mut egui::Ui, _ctx: &mut DrawContext) 
     }
 }
 
-#[topo::nested]
-pub fn draw_image_button<'a>(elem: ImageButton, ui: &mut egui::Ui, ctx: &mut DrawContext) {
+pub fn draw_image_button<'a>(
+    elem: ImageButton,
+    ctx: &mut UIContext,
+    ui: &mut egui::Ui,
+    draw_ctx: &mut DrawContext,
+) {
     let egui_texture_id = {
         let image = elem.image.read();
         let image = image.downcast_ref::<WgpuTextureResource>();
 
-        ctx.egui_rpass.egui_texture_from_wgpu_texture(
-            ctx.device,
+        draw_ctx.egui_rpass.egui_texture_from_wgpu_texture(
+            draw_ctx.device,
             &image.texture,
             wgpu::FilterMode::Linear,
         )
@@ -113,14 +119,14 @@ pub fn draw_image_button<'a>(elem: ImageButton, ui: &mut egui::Ui, ctx: &mut Dra
     ));
 
     if response.clicked() {
-        (elem.on_click)()
+        (elem.on_click)(ctx)
     }
 
     // Handle drag & drop
     if let Some(drag_item) = &elem.drag_item {
         drag_source(
             ui,
-            Id::new("item").with(CallId::current()),
+            Id::new("item").with(ctx.local_index()),
             response.clone(),
             move || {
                 let mut current_dragged_item = CURRENT_DRAGGED_ITEM.lock();
@@ -140,7 +146,7 @@ pub fn draw_image_button<'a>(elem: ImageButton, ui: &mut egui::Ui, ctx: &mut Dra
             let current_dragged_item = CURRENT_DRAGGED_ITEM.lock();
 
             if let Some(current_dragged_item) = current_dragged_item.deref() {
-                accept_drag(current_dragged_item.deref())
+                accept_drag(ctx, current_dragged_item.deref())
             } else {
                 false
             }
@@ -150,13 +156,13 @@ pub fn draw_image_button<'a>(elem: ImageButton, ui: &mut egui::Ui, ctx: &mut Dra
 
         drag_target(
             ui,
-            Id::new("item").with(CallId::current()),
+            Id::new("item").with(ctx.local_index()),
             accept_dragged,
             move || {
                 let mut current_dragged_item = CURRENT_DRAGGED_ITEM.lock();
 
                 if let Some(current_dragged_item) = current_dragged_item.take() {
-                    on_drag(current_dragged_item.deref());
+                    on_drag(ctx, current_dragged_item.deref());
                 }
             },
             response.clone(),
@@ -229,62 +235,81 @@ fn drag_target(
     }
 }
 
-#[topo::nested]
-pub fn draw_input<'a>(elem: Input, ui: &mut egui::Ui, _ctx: &mut DrawContext) {
-    let input_value = use_state(|| String::default());
+pub fn draw_input<'a>(
+    elem: Input,
+    ctx: &mut UIContext,
+    ui: &mut egui::Ui,
+    _draw_ctx: &mut DrawContext,
+) {
+    let (mut input_value, set_input_value) = use_state(ctx, String::default());
 
-    let mut new_value = input_value.get();
-    let response = ui.add(egui::TextEdit::singleline(&mut new_value).hint_text(&elem.placeholder));
+    let response =
+        ui.add(egui::TextEdit::singleline(&mut input_value).hint_text(&elem.placeholder));
 
     if response.lost_focus() {
-        (elem.on_change)(&new_value);
+        (elem.on_change)(ctx, &input_value);
     }
 
     if response.changed() {
-        (elem.on_edit)(&new_value);
-        input_value.set(new_value);
+        (elem.on_edit)(ctx, &input_value);
+        set_input_value(input_value);
     }
 
     if !response.has_focus() {
-        input_value.set(elem.value);
+        set_input_value(elem.value);
     }
 }
 
-pub fn draw_integer_input<'a>(elem: IntegerInput, ui: &mut egui::Ui, ctx: &mut DrawContext) {
+pub fn draw_integer_input<'a>(
+    elem: IntegerInput,
+    ctx: &mut UIContext,
+    ui: &mut egui::Ui,
+    draw_ctx: &mut DrawContext,
+) {
     let input = Input {
         value: elem.value.to_string(),
         placeholder: "".to_string(),
-        on_change: Arc::new(move |value: &str| {
+        on_change: Arc::new(move |ctx, value| {
             if let Ok(value) = value.parse::<i64>() {
-                (elem.on_change)(value)
+                (elem.on_change)(ctx, value)
             }
         }),
         ..Default::default()
     };
 
-    draw_input(input, ui, ctx)
+    draw_input(input, ctx, ui, draw_ctx)
 }
 
-pub fn draw_float_input<'a>(elem: FloatInput, ui: &mut egui::Ui, ctx: &mut DrawContext) {
+pub fn draw_float_input<'a>(
+    elem: FloatInput,
+    ctx: &mut UIContext,
+    ui: &mut egui::Ui,
+    draw_ctx: &mut DrawContext,
+) {
     let input = Input {
         value: elem.value.to_string(),
         placeholder: "".to_string(),
-        on_change: Arc::new(move |value: &str| {
+        on_change: Arc::new(move |ctx, value| {
             if let Ok(value) = value.parse::<f64>() {
-                (elem.on_change)(value)
+                (elem.on_change)(ctx, value)
             }
         }),
         ..Default::default()
     };
 
-    draw_input(input, ui, ctx)
+    draw_input(input, ctx, ui, draw_ctx)
 }
 
-pub fn draw_checkbox<'a>(elem: Checkbox, ui: &mut egui::Ui, _ctx: &mut DrawContext) {
+pub fn draw_checkbox<'a>(
+    elem: Checkbox,
+    ctx: &mut UIContext,
+    ui: &mut egui::Ui,
+    _draw_ctx: &mut DrawContext,
+) {
     let mut new_value = elem.value;
     ui.add(egui::Checkbox::new(&mut new_value, &elem.label));
 
     if new_value != elem.value {
-        (elem.on_change)(new_value);
+        (elem.on_change)(ctx, new_value);
     }
 }

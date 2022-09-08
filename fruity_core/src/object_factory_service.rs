@@ -19,7 +19,7 @@ use std::sync::Arc;
 /// This will be used by the scripting language to expose object creation
 #[derive(FruityAny)]
 pub struct ObjectFactoryService {
-    resource_container: Arc<ResourceContainer>,
+    resource_container: ResourceContainer,
     factories: HashMap<String, Constructor>,
 }
 
@@ -31,7 +31,7 @@ impl Debug for ObjectFactoryService {
 
 impl ObjectFactoryService {
     /// Returns an ObjectFactoryService
-    pub fn new(resource_container: Arc<ResourceContainer>) -> ObjectFactoryService {
+    pub fn new(resource_container: ResourceContainer) -> ObjectFactoryService {
         ObjectFactoryService {
             resource_container,
             factories: HashMap::new(),
@@ -63,7 +63,7 @@ impl ObjectFactoryService {
     pub fn register_func(
         &mut self,
         object_type: &str,
-        constructor: impl Fn(Arc<ResourceContainer>, Vec<Serialized>) -> Result<Serialized, IntrospectError>
+        constructor: impl Fn(ResourceContainer, Vec<Serialized>) -> Result<Serialized, IntrospectError>
             + Send
             + Sync
             + 'static,

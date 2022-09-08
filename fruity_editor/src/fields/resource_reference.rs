@@ -1,11 +1,12 @@
-use crate::ui_element::display::Text;
-use crate::ui_element::input::Button;
-use crate::ui_element::layout::Empty;
-use crate::ui_element::layout::Row;
-use crate::ui_element::layout::RowItem;
-use crate::ui_element::UIElement;
-use crate::ui_element::UISize;
-use crate::ui_element::UIWidget;
+use crate::ui::context::UIContext;
+use crate::ui::elements::display::Text;
+use crate::ui::elements::input::Button;
+use crate::ui::elements::layout::Empty;
+use crate::ui::elements::layout::Row;
+use crate::ui::elements::layout::RowItem;
+use crate::ui::elements::UIElement;
+use crate::ui::elements::UISize;
+use crate::ui::elements::UIWidget;
 use fruity_core::convert::FruityTryFrom;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_reference::AnyResourceReference;
@@ -17,7 +18,7 @@ use std::sync::Arc;
 pub fn draw_editor_resource_reference<T: Resource + ?Sized>(
     name: &str,
     value: Box<dyn SerializableObject>,
-    on_update: Box<dyn Fn(Box<dyn SerializableObject>) + Send + Sync + 'static>,
+    on_update: Box<dyn Fn(&UIContext, Box<dyn SerializableObject>) + Send + Sync + 'static>,
 ) -> UIElement {
     let value = if let Ok(value) =
         ResourceReference::<T>::fruity_try_from(Serialized::NativeObject(value))
@@ -41,15 +42,15 @@ pub fn draw_editor_resource_reference<T: Resource + ?Sized>(
                 size: UISize::Fill,
                 child: Button {
                     label: value.get_name(),
-                    on_click: Arc::new(|| {}),
-                    accept_drag: Some(Arc::new(|item| {
+                    on_click: Arc::new(|_| {}),
+                    accept_drag: Some(Arc::new(|_, item| {
                         if let Some(resource) = item.downcast_ref::<AnyResourceReference>() {
                             resource.downcast::<T>().is_some()
                         } else {
                             item.downcast_ref::<ResourceReference<T>>().is_some()
                         }
                     })),
-                    on_drag: Some(Arc::new(move |resource| {
+                    on_drag: Some(Arc::new(move |ctx, resource| {
                         let resource = if let Some(resource) =
                             resource.downcast_ref::<AnyResourceReference>()
                         {
@@ -61,7 +62,7 @@ pub fn draw_editor_resource_reference<T: Resource + ?Sized>(
                         };
 
                         if let Some(resource) = resource {
-                            on_update(Box::new(resource))
+                            on_update(ctx, Box::new(resource))
                         }
                     })),
                     ..Default::default()

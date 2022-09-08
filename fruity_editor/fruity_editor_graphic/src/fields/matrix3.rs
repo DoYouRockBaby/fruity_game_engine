@@ -1,20 +1,22 @@
 use fruity_core::convert::FruityTryFrom;
 use fruity_core::serialize::serialized::SerializableObject;
 use fruity_core::serialize::serialized::Serialized;
-use fruity_editor::ui_element::display::Text;
-use fruity_editor::ui_element::input::FloatInput;
-use fruity_editor::ui_element::layout::Row;
-use fruity_editor::ui_element::layout::RowItem;
-use fruity_editor::ui_element::UIElement;
-use fruity_editor::ui_element::UISize;
-use fruity_editor::ui_element::UIWidget;
+use fruity_editor::ui::context::UIContext;
+use fruity_editor::ui::elements::display::Text;
+use fruity_editor::ui::elements::input::FloatInput;
+use fruity_editor::ui::elements::layout::Row;
+use fruity_editor::ui::elements::layout::RowItem;
+use fruity_editor::ui::elements::UIElement;
+use fruity_editor::ui::elements::UISize;
+use fruity_editor::ui::elements::UIWidget;
 use fruity_graphic::math::matrix3::Matrix3;
 use std::sync::Arc;
 
 pub fn draw_editor_matrix3(
+    _ctx: &mut UIContext,
     name: &str,
     value: Box<dyn SerializableObject>,
-    on_update: impl Fn(Box<dyn SerializableObject>) + Send + Sync + 'static,
+    on_update: impl Fn(&UIContext, Box<dyn SerializableObject>) + Send + Sync + 'static,
 ) -> UIElement {
     let value = if let Ok(value) = Matrix3::fruity_try_from(Serialized::NativeObject(value)) {
         value
@@ -46,10 +48,10 @@ pub fn draw_editor_matrix3(
                 size: UISize::FillPortion(0.33),
                 child: FloatInput {
                     value: value.0[0][0] as f64,
-                    on_change: Arc::new(move |new_value: f64| {
+                    on_change: Arc::new(move |ctx, new_value: f64| {
                         let mut value = value;
                         value.0[0][0] = new_value as f32;
-                        on_update(Box::new(value));
+                        on_update(ctx, Box::new(value));
                     }),
                 }
                 .elem(),
@@ -58,10 +60,10 @@ pub fn draw_editor_matrix3(
                 size: UISize::FillPortion(0.33),
                 child: FloatInput {
                     value: value.0[0][0] as f64,
-                    on_change: Arc::new(move |new_value: f64| {
+                    on_change: Arc::new(move |ctx, new_value: f64| {
                         let mut value = value;
                         value.0[0][0] = new_value as f32;
-                        on_update_2(Box::new(value));
+                        on_update_2(ctx, Box::new(value));
                     }),
                 }
                 .elem(),
@@ -70,10 +72,10 @@ pub fn draw_editor_matrix3(
                 size: UISize::FillPortion(0.33),
                 child: FloatInput {
                     value: value.0[0][0] as f64,
-                    on_change: Arc::new(move |new_value: f64| {
+                    on_change: Arc::new(move |ctx, new_value: f64| {
                         let mut value = value;
                         value.0[0][0] = new_value as f32;
-                        on_update_3(Box::new(value));
+                        on_update_3(ctx, Box::new(value));
                     }),
                 }
                 .elem(),
@@ -82,10 +84,10 @@ pub fn draw_editor_matrix3(
                 size: UISize::FillPortion(0.33),
                 child: FloatInput {
                     value: value.0[1][0] as f64,
-                    on_change: Arc::new(move |new_value: f64| {
+                    on_change: Arc::new(move |ctx, new_value: f64| {
                         let mut value = value;
                         value.0[1][0] = new_value as f32;
-                        on_update_4(Box::new(value));
+                        on_update_4(ctx, Box::new(value));
                     }),
                 }
                 .elem(),
@@ -94,10 +96,10 @@ pub fn draw_editor_matrix3(
                 size: UISize::FillPortion(0.33),
                 child: FloatInput {
                     value: value.0[1][0] as f64,
-                    on_change: Arc::new(move |new_value: f64| {
+                    on_change: Arc::new(move |ctx, new_value: f64| {
                         let mut value = value;
                         value.0[1][0] = new_value as f32;
-                        on_update_5(Box::new(value));
+                        on_update_5(ctx, Box::new(value));
                     }),
                 }
                 .elem(),
@@ -106,10 +108,10 @@ pub fn draw_editor_matrix3(
                 size: UISize::FillPortion(0.33),
                 child: FloatInput {
                     value: value.0[1][0] as f64,
-                    on_change: Arc::new(move |new_value: f64| {
+                    on_change: Arc::new(move |ctx, new_value: f64| {
                         let mut value = value;
                         value.0[1][0] = new_value as f32;
-                        on_update_6(Box::new(value));
+                        on_update_6(ctx, Box::new(value));
                     }),
                 }
                 .elem(),
@@ -118,10 +120,10 @@ pub fn draw_editor_matrix3(
                 size: UISize::FillPortion(0.33),
                 child: FloatInput {
                     value: value.0[2][0] as f64,
-                    on_change: Arc::new(move |new_value: f64| {
+                    on_change: Arc::new(move |ctx, new_value: f64| {
                         let mut value = value;
                         value.0[2][0] = new_value as f32;
-                        on_update_7(Box::new(value));
+                        on_update_7(ctx, Box::new(value));
                     }),
                 }
                 .elem(),
@@ -130,10 +132,10 @@ pub fn draw_editor_matrix3(
                 size: UISize::FillPortion(0.33),
                 child: FloatInput {
                     value: value.0[2][0] as f64,
-                    on_change: Arc::new(move |new_value: f64| {
+                    on_change: Arc::new(move |ctx, new_value: f64| {
                         let mut value = value;
                         value.0[2][0] = new_value as f32;
-                        on_update_8(Box::new(value));
+                        on_update_8(ctx, Box::new(value));
                     }),
                 }
                 .elem(),
@@ -142,10 +144,10 @@ pub fn draw_editor_matrix3(
                 size: UISize::FillPortion(0.33),
                 child: FloatInput {
                     value: value.0[2][0] as f64,
-                    on_change: Arc::new(move |new_value: f64| {
+                    on_change: Arc::new(move |ctx, new_value: f64| {
                         let mut value = value;
                         value.0[2][0] = new_value as f32;
-                        on_update_9(Box::new(value));
+                        on_update_9(ctx, Box::new(value));
                     }),
                 }
                 .elem(),

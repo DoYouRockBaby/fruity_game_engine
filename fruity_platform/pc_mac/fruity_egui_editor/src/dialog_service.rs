@@ -5,7 +5,6 @@ use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_editor::dialog_service::DialogService;
-use std::sync::Arc;
 use tinyfiledialogs::open_file_dialog;
 use tinyfiledialogs::save_file_dialog_with_filter;
 
@@ -13,7 +12,7 @@ use tinyfiledialogs::save_file_dialog_with_filter;
 pub struct WgpuDialogService {}
 
 impl WgpuDialogService {
-    pub fn new(_resource_container: Arc<ResourceContainer>) -> WgpuDialogService {
+    pub fn new(_resource_container: ResourceContainer) -> WgpuDialogService {
         WgpuDialogService {}
     }
 }

@@ -1,14 +1,15 @@
 use crate::components::fields::Serialized;
-use crate::ui_element::display::Text;
-use crate::ui_element::input::Checkbox;
-use crate::ui_element::input::FloatInput;
-use crate::ui_element::input::Input;
-use crate::ui_element::input::IntegerInput;
-use crate::ui_element::layout::Row;
-use crate::ui_element::layout::RowItem;
-use crate::ui_element::UIElement;
-use crate::ui_element::UISize;
-use crate::ui_element::UIWidget;
+use crate::ui::context::UIContext;
+use crate::ui::elements::display::Text;
+use crate::ui::elements::input::Checkbox;
+use crate::ui::elements::input::FloatInput;
+use crate::ui::elements::input::Input;
+use crate::ui::elements::input::IntegerInput;
+use crate::ui::elements::layout::Row;
+use crate::ui::elements::layout::RowItem;
+use crate::ui::elements::UIElement;
+use crate::ui::elements::UISize;
+use crate::ui::elements::UIWidget;
 use fruity_core::convert::FruityInto;
 use fruity_core::convert::FruityTryFrom;
 use std::sync::Arc;
@@ -18,7 +19,7 @@ macro_rules! impl_int_for_editable_component {
         pub fn $fn_name(
             name: &str,
             value: Serialized,
-            on_update: impl Fn(Serialized) + Send + Sync + 'static,
+            on_update: impl Fn(&UIContext, Serialized) + Send + Sync + 'static,
         ) -> UIElement {
             let value = if let Ok(value) = $type::fruity_try_from(value) {
                 value
@@ -40,8 +41,8 @@ macro_rules! impl_int_for_editable_component {
                         size: UISize::Fill,
                         child: IntegerInput {
                             value: value as i64,
-                            on_change: Arc::new(move |value| {
-                                on_update((value as $type).fruity_into());
+                            on_change: Arc::new(move |ctx, value| {
+                                on_update(ctx, (value as $type).fruity_into());
                             }),
                         }
                         .elem(),
@@ -70,7 +71,7 @@ macro_rules! impl_float_for_editable_component {
         pub fn $fn_name(
             name: &str,
             value: Serialized,
-            on_update: impl Fn(Serialized) + Send + Sync + 'static,
+            on_update: impl Fn(&UIContext, Serialized) + Send + Sync + 'static,
         ) -> UIElement {
             let value = if let Ok(value) = $type::fruity_try_from(value) {
                 value
@@ -92,8 +93,8 @@ macro_rules! impl_float_for_editable_component {
                         size: UISize::Fill,
                         child: FloatInput {
                             value: value as f64,
-                            on_change: Arc::new(move |value| {
-                                on_update((value as $type).fruity_into());
+                            on_change: Arc::new(move |ctx, value| {
+                                on_update(ctx, (value as $type).fruity_into());
                             }),
                         }
                         .elem(),
@@ -112,7 +113,7 @@ impl_float_for_editable_component!(draw_editor_f64, f64);
 pub fn draw_editor_bool(
     name: &str,
     value: Serialized,
-    on_update: impl Fn(Serialized) + Send + Sync + 'static,
+    on_update: impl Fn(&UIContext, Serialized) + Send + Sync + 'static,
 ) -> UIElement {
     let value = if let Ok(value) = bool::fruity_try_from(value) {
         value
@@ -123,8 +124,8 @@ pub fn draw_editor_bool(
     Checkbox {
         label: name.to_string(),
         value: value,
-        on_change: Arc::new(move |value| {
-            on_update(value.fruity_into());
+        on_change: Arc::new(move |ctx, value| {
+            on_update(ctx, value.fruity_into());
         }),
     }
     .elem()
@@ -133,7 +134,7 @@ pub fn draw_editor_bool(
 pub fn draw_editor_string(
     name: &str,
     value: Serialized,
-    on_update: impl Fn(Serialized) + Send + Sync + 'static,
+    on_update: impl Fn(&UIContext, Serialized) + Send + Sync + 'static,
 ) -> UIElement {
     let value = if let Ok(value) = String::fruity_try_from(value) {
         value
@@ -155,8 +156,8 @@ pub fn draw_editor_string(
                 size: UISize::Fill,
                 child: Input {
                     value: value,
-                    on_change: Arc::new(move |value: &str| {
-                        on_update(value.to_string().fruity_into());
+                    on_change: Arc::new(move |ctx, value: &str| {
+                        on_update(ctx, value.to_string().fruity_into());
                     }),
                     ..Default::default()
                 }

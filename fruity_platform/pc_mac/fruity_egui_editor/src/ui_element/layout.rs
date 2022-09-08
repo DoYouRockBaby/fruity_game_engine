@@ -5,17 +5,18 @@ use egui::Align;
 use egui::CollapsingHeader;
 use egui::Layout;
 use egui::ScrollArea;
-use fruity_editor::hooks::use_global;
-use fruity_editor::ui_element::layout::Collapsible;
-use fruity_editor::ui_element::layout::Column;
-use fruity_editor::ui_element::layout::Row;
-use fruity_editor::ui_element::layout::Scroll;
-use fruity_editor::ui_element::UIAlign;
-use fruity_editor::ui_element::UISize;
+use fruity_editor::ui::context::UIContext;
+use fruity_editor::ui::elements::layout::Collapsible;
+use fruity_editor::ui::elements::layout::Column;
+use fruity_editor::ui::elements::layout::Row;
+use fruity_editor::ui::elements::layout::Scroll;
+use fruity_editor::ui::elements::UIAlign;
+use fruity_editor::ui::elements::UISize;
+use fruity_editor::ui::hooks::use_write_service;
 
 pub fn draw_empty<'a>(_ui: &mut egui::Ui) {}
 
-pub fn draw_row<'a>(elem: Row, ui: &mut egui::Ui, ctx: &mut DrawContext) {
+pub fn draw_row<'a>(elem: Row, ctx: &mut UIContext, ui: &mut egui::Ui, draw_ctx: &mut DrawContext) {
     // Get the base available space informations
     let available_width = ui.available_size_before_wrap().x;
     let origin_pos = ui.available_rect_before_wrap().left_top();
@@ -61,7 +62,7 @@ pub fn draw_row<'a>(elem: Row, ui: &mut egui::Ui, ctx: &mut DrawContext) {
         );
 
         // Draw the child
-        draw_element(child.child, &mut child_ui, ctx);
+        draw_element(child.child, ctx, &mut child_ui, draw_ctx);
         let final_child_rect = child_ui.min_rect();
 
         // We update the position where the next child will be rendered
@@ -83,7 +84,12 @@ pub fn draw_row<'a>(elem: Row, ui: &mut egui::Ui, ctx: &mut DrawContext) {
     ui.allocate_rect(allocated_rect, egui::Sense::click());
 }
 
-pub fn draw_column<'a>(elem: Column, ui: &mut egui::Ui, ctx: &mut DrawContext) {
+pub fn draw_column<'a>(
+    elem: Column,
+    ctx: &mut UIContext,
+    ui: &mut egui::Ui,
+    draw_ctx: &mut DrawContext,
+) {
     ui.with_layout(
         Layout::top_down(match elem.align {
             UIAlign::Start => Align::Min,
@@ -92,13 +98,18 @@ pub fn draw_column<'a>(elem: Column, ui: &mut egui::Ui, ctx: &mut DrawContext) {
         }),
         |ui| {
             elem.children.into_iter().for_each(|child| {
-                draw_element(child, ui, ctx);
+                draw_element(child, ctx, ui, draw_ctx);
             });
         },
     );
 }
 
-pub fn draw_scroll<'a>(elem: Scroll, ui: &mut egui::Ui, ctx: &mut DrawContext) {
+pub fn draw_scroll<'a>(
+    elem: Scroll,
+    ctx: &mut UIContext,
+    ui: &mut egui::Ui,
+    draw_ctx: &mut DrawContext,
+) {
     let scroll_area = match (elem.horizontal, elem.vertical) {
         (false, false) => ScrollArea::neither().auto_shrink([false; 2]),
         (true, false) => ScrollArea::horizontal().auto_shrink([false; 2]),
@@ -106,26 +117,31 @@ pub fn draw_scroll<'a>(elem: Scroll, ui: &mut egui::Ui, ctx: &mut DrawContext) {
         (true, true) => ScrollArea::both().auto_shrink([false; 2]),
     };
 
-    scroll_area.show(ui, |ui| draw_element(elem.child, ui, ctx));
+    scroll_area.show(ui, |ui| draw_element(elem.child, ctx, ui, draw_ctx));
 }
 
-pub fn draw_collapsible<'a>(elem: Collapsible, ui: &mut egui::Ui, ctx: &mut DrawContext) {
+pub fn draw_collapsible<'a>(
+    elem: Collapsible,
+    ctx: &mut UIContext,
+    ui: &mut egui::Ui,
+    draw_ctx: &mut DrawContext,
+) {
     let title = elem.title.clone();
     let on_click = elem.on_click.clone();
     let response = CollapsingHeader::new(title)
         .id_source(elem.key)
         .selectable(true)
-        .show(ui, |ui| draw_element(elem.child, ui, ctx));
+        .show(ui, |ui| draw_element(elem.child, ctx, ui, draw_ctx));
 
     if response.header_response.clicked() {
         if let Some(on_click) = on_click {
-            on_click();
+            on_click(ctx);
         }
     }
 
     if elem.secondary_actions.len() > 0 {
         if response.header_response.secondary_clicked() {
-            let secondary_action_state = use_global::<SecondaryActionState>();
+            let mut secondary_action_state = use_write_service::<SecondaryActionState>(ctx);
             secondary_action_state.display_secondary_actions(
                 ui,
                 response.header_response.clone(),

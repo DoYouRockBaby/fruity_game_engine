@@ -4,7 +4,6 @@ use crate::resources::default_resources::load_default_resources;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use fruity_editor::file_explorer_service::FileExplorerService;
-use std::sync::Arc;
 
 pub mod file_type;
 pub mod resources;
@@ -13,7 +12,7 @@ pub mod resources;
 pub static MODULE_NAME: &str = "fruity_editor_javascript";
 
 // #[no_mangle]
-pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
+pub fn initialize(resource_container: ResourceContainer, _settings: &Settings) {
     let file_explorer_service = resource_container.require::<FileExplorerService>();
     let mut file_explorer_service = file_explorer_service.write();
 

@@ -1,6 +1,10 @@
 use crate::dialog_service::DialogService;
-use crate::hooks::use_global;
 use crate::state::inspector::InspectorState;
+use fruity_any::*;
+use fruity_core::introspect::FieldInfo;
+use fruity_core::introspect::IntrospectObject;
+use fruity_core::introspect::MethodInfo;
+use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
 use fruity_core::serialize::yaml::serialize_yaml;
@@ -8,30 +12,31 @@ use fruity_ecs::entity::entity_service::EntityService;
 use fruity_ecs::entity::entity_service::EntityServiceSnapshot;
 use fruity_ecs::system::system_service::SystemService;
 use std::fs::File;
-use std::sync::Arc;
 
-#[derive(Debug)]
+#[derive(Debug, FruityAny)]
 pub struct SceneState {
-    resource_container: Arc<ResourceContainer>,
+    resource_container: ResourceContainer,
     entity_service: ResourceReference<EntityService>,
     system_service: ResourceReference<SystemService>,
+    inspector_state: ResourceReference<InspectorState>,
     snapshot: Option<EntityServiceSnapshot>,
     current_filepath: Option<String>,
 }
 
 impl SceneState {
-    pub fn new(resource_container: Arc<ResourceContainer>) -> Self {
+    pub fn new(resource_container: ResourceContainer) -> Self {
         Self {
             resource_container: resource_container.clone(),
             entity_service: resource_container.require::<EntityService>(),
             system_service: resource_container.require::<SystemService>(),
+            inspector_state: resource_container.require::<InspectorState>(),
             snapshot: None,
             current_filepath: None,
         }
     }
 
     pub fn run(&mut self) {
-        let inspector_state = use_global::<InspectorState>();
+        let mut inspector_state = self.inspector_state.write();
 
         let entity_service = self.entity_service.read();
         self.snapshot = Some(entity_service.snapshot());
@@ -49,7 +54,7 @@ impl SceneState {
     }
 
     pub fn stop(&mut self) {
-        let inspector_state = use_global::<InspectorState>();
+        let mut inspector_state = self.inspector_state.write();
         let entity_service = self.entity_service.read();
 
         let system_service = self.system_service.read();
@@ -73,7 +78,7 @@ impl SceneState {
         let dialog_service = dialog_service.read();
 
         if let Some(filepath) = dialog_service.open(&["*"]) {
-            let inspector_state = use_global::<InspectorState>();
+            let mut inspector_state = self.inspector_state.write();
             let entity_service = self.entity_service.read();
             let system_service = self.system_service.read();
 
@@ -100,7 +105,7 @@ impl SceneState {
         }
     }
 
-    pub fn can_save(&mut self) -> bool {
+    pub fn can_save(&self) -> bool {
         if let Some(_) = &self.current_filepath {
             true
         } else {
@@ -125,3 +130,20 @@ impl SceneState {
         }
     }
 }
+
+// TODO
+impl IntrospectObject for SceneState {
+    fn get_class_name(&self) -> String {
+        "SceneState".to_string()
+    }
+
+    fn get_method_infos(&self) -> Vec<MethodInfo> {
+        vec![]
+    }
+
+    fn get_field_infos(&self) -> Vec<FieldInfo> {
+        vec![]
+    }
+}
+
+impl Resource for SceneState {}

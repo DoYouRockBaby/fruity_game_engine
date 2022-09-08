@@ -2,7 +2,6 @@ use crate::drag_service::DragService;
 use crate::input_service::InputService;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
-use std::sync::Arc;
 
 pub mod drag_service;
 pub mod input_service;
@@ -11,7 +10,7 @@ pub mod input_service;
 pub static MODULE_NAME: &str = "fruity_input";
 
 // #[no_mangle]
-pub fn initialize(resource_container: Arc<ResourceContainer>, settings: &Settings) {
+pub fn initialize(resource_container: ResourceContainer, settings: &Settings) {
     let mut input_service = InputService::new(resource_container.clone());
     input_service.read_input_settings(settings);
     resource_container.add::<InputService>("input_service", Box::new(input_service));

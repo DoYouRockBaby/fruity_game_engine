@@ -170,7 +170,7 @@ fn derive_component_instantiable_object_trait(input: TokenStream)  -> TokenStrea
             fn get_constructor() -> fruity_core::introspect::Constructor {
                 use fruity_core::introspect::IntrospectObject;
 
-                std::sync::Arc::new(|_resource_container: std::sync::Arc<fruity_core::resource::resource_container::ResourceContainer>, mut args: Vec<fruity_core::serialize::serialized::Serialized>| {
+                std::sync::Arc::new(|_resource_container: fruity_core::resource::resource_container::ResourceContainer, mut args: Vec<fruity_core::serialize::serialized::Serialized>| {
                     let mut new_object = #ident::default();
 
                     if args.len() > 0 {
@@ -219,7 +219,7 @@ pub fn derive_instantiable_object_trait(input: TokenStream)  -> TokenStream {
                 use fruity_core::convert::FruityInto;
                 use fruity_core::introspect::IntrospectObject;
 
-                std::sync::Arc::new(|_resource_container: std::sync::Arc<fruity_core::resource::resource_container::ResourceContainer>, mut args: Vec<fruity_core::serialize::serialized::Serialized>| {
+                std::sync::Arc::new(|_resource_container: fruity_core::resource::resource_container::ResourceContainer, mut args: Vec<fruity_core::serialize::serialized::Serialized>| {
                     let mut new_object = #ident::default();
 
                     if args.len() > 0 {

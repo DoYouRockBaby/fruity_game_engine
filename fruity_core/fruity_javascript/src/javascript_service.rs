@@ -10,7 +10,6 @@ use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::serialize::serialized::Serialized;
 use fruity_core::utils::single_thread_wrapper::SingleThreadWrapper;
-use std::sync::Arc;
 
 #[derive(Clone, Copy)]
 pub struct CallbackIdentifier(pub i32);
@@ -21,7 +20,7 @@ pub struct JavascriptService {
 }
 
 impl JavascriptService {
-    pub fn new(resource_container: Arc<ResourceContainer>) -> JavascriptService {
+    pub fn new(resource_container: ResourceContainer) -> JavascriptService {
         let single_thread_wrapper =
             SingleThreadWrapper::<JsRuntime, Option<Serialized>>::start(move || {
                 let mut runtime = JsRuntime::new();

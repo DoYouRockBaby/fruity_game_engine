@@ -1,4 +1,5 @@
-use crate::ui_element::UIElement;
+use crate::ui::context::UIContext;
+use crate::ui::elements::UIElement;
 use fruity_any::*;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
@@ -13,9 +14,10 @@ use std::sync::Arc;
 
 pub type IntrospectFieldEditor = Arc<
     dyn Fn(
+            &mut UIContext,
             &str,
             Box<dyn SerializableObject>,
-            Box<dyn Fn(Box<dyn SerializableObject>) + Send + Sync + 'static>,
+            Box<dyn Fn(&UIContext, Box<dyn SerializableObject>) + Send + Sync + 'static>,
         ) -> UIElement
         + Send
         + Sync
@@ -28,7 +30,7 @@ pub struct IntrospectEditorService {
 }
 
 impl IntrospectEditorService {
-    pub fn new(_resource_container: Arc<ResourceContainer>) -> Self {
+    pub fn new(_resource_container: ResourceContainer) -> Self {
         IntrospectEditorService {
             component_field_editors: HashMap::new(),
         }
@@ -38,9 +40,10 @@ impl IntrospectEditorService {
     where
         T: 'static,
         F: Fn(
+                &mut UIContext,
                 &str,
                 Box<dyn SerializableObject>,
-                Box<dyn Fn(Box<dyn SerializableObject>) + Send + Sync + 'static>,
+                Box<dyn Fn(&UIContext, Box<dyn SerializableObject>) + Send + Sync + 'static>,
             ) -> UIElement
             + Send
             + Sync

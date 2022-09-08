@@ -13,7 +13,6 @@ use rapier2d::prelude::RigidBodyHandle;
 use rapier2d::prelude::RigidBodySet;
 use rapier2d::prelude::*;
 use std::fmt::Debug;
-use std::sync::Arc;
 
 #[derive(FruityAny)]
 pub struct Rapier2dService {
@@ -36,7 +35,7 @@ impl Debug for Rapier2dService {
 }
 
 impl Rapier2dService {
-    pub fn new(_resource_container: Arc<ResourceContainer>) -> Self {
+    pub fn new(_resource_container: ResourceContainer) -> Self {
         Self {
             physics_pipeline: PhysicsPipeline::new(),
             integration_parameters: IntegrationParameters::default(),

@@ -1,3 +1,4 @@
+use crate::fps_counter::FPSCounter;
 use crate::window_service::WinitWindowService;
 use core::ffi::c_void;
 use fruity_core::platform::Initializer;
@@ -6,7 +7,6 @@ use fruity_core::settings::Settings;
 use fruity_ecs::system::system_service::SystemService;
 use fruity_windows::frame_service::FrameService;
 use fruity_windows::window_service::WindowService;
-use std::sync::Arc;
 use winit::dpi::LogicalSize;
 use winit::event::Event;
 use winit::event::WindowEvent;
@@ -14,6 +14,7 @@ use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
 use winit::window::WindowBuilder;
 
+pub mod fps_counter;
 pub mod window_service;
 
 struct WindowSettings {
@@ -26,7 +27,7 @@ struct WindowSettings {
 /// The module name
 pub static MODULE_NAME: &str = "fruity_winit_windows";
 
-pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
+pub fn initialize(resource_container: ResourceContainer, _settings: &Settings) {
     let window_service = resource_container.require::<dyn WindowService>();
     let window_service = window_service.read();
     let window_service = window_service
@@ -54,7 +55,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
 }
 
 pub fn platform(
-    resource_container: Arc<ResourceContainer>,
+    resource_container: ResourceContainer,
     ext_initializer: Initializer,
     world_initializer: Initializer,
     settings: &Settings,
@@ -64,6 +65,9 @@ pub fn platform(
 
     // Read settings
     let window_settings = read_window_settings(settings);
+
+    // Get windows base title
+    let windows_title = window_settings.title.clone();
 
     // Build the window
     let event_loop = EventLoop::<()>::with_user_event();
@@ -109,6 +113,7 @@ pub fn platform(
     window_service_reader.on_enter_loop().notify(());
     std::mem::drop(window_service_reader);
 
+    let mut fps_counter = FPSCounter::new();
     puffin::set_scopes_on(true);
     event_loop.run(move |event, _, control_flow| {
         puffin::GlobalProfiler::lock().new_frame();
@@ -197,6 +202,13 @@ pub fn platform(
         {
             puffin::profile_scope!("end_update");
             on_end_update.notify(());
+        }
+
+        // Update title with FPS
+        {
+            let fps = fps_counter.tick();
+            let window_service = window_service.read();
+            window_service.set_title(&format!("{} ({} FPS)", windows_title, fps));
         }
     });
 }

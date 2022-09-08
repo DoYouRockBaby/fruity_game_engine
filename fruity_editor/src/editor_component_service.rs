@@ -1,5 +1,6 @@
 use crate::components::fields::edit_introspect_fields;
-use crate::ui_element::UIElement;
+use crate::ui::context::UIContext;
+use crate::ui::elements::UIElement;
 use fruity_any::*;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
@@ -16,13 +17,13 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 lazy_static! {
-    pub static ref DEFAULT_INSPECTOR: Arc<dyn Fn(ComponentReference) -> UIElement + Send + Sync> =
-        Arc::new(|component| edit_introspect_fields(Box::new(component)));
+    pub static ref DEFAULT_INSPECTOR: Arc<dyn Fn(&mut UIContext, ComponentReference) -> UIElement + Send + Sync> =
+        Arc::new(|ctx, component| edit_introspect_fields(ctx, Box::new(component)));
 }
 
 #[derive(FruityAny)]
 pub struct RegisterComponentParams {
-    pub inspector: Arc<dyn Fn(ComponentReference) -> UIElement + Send + Sync>,
+    pub inspector: Arc<dyn Fn(&mut UIContext, ComponentReference) -> UIElement + Send + Sync>,
     pub dependencies: Vec<String>,
 }
 
@@ -42,7 +43,7 @@ pub struct EditorComponentService {
 }
 
 impl EditorComponentService {
-    pub fn new(resource_container: Arc<ResourceContainer>) -> Self {
+    pub fn new(resource_container: ResourceContainer) -> Self {
         Self {
             components: HashMap::new(),
             object_factory_service: resource_container.require::<ObjectFactoryService>(),
@@ -58,12 +59,12 @@ impl EditorComponentService {
             .insert(component_identifier.to_string(), params);
     }
 
-    pub fn inspect(&self, component: ComponentReference) -> UIElement {
+    pub fn inspect(&self, ctx: &mut UIContext, component: ComponentReference) -> UIElement {
         let component_identifier = component.get_class_name();
 
         match self.components.get(&component_identifier) {
-            Some(params) => (params.inspector)(component),
-            None => edit_introspect_fields(Box::new(component)),
+            Some(params) => (params.inspector)(ctx, component),
+            None => edit_introspect_fields(ctx, Box::new(component)),
         }
     }
 

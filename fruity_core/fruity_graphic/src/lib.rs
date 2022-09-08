@@ -9,7 +9,6 @@ use crate::resources::texture_resource::load_texture;
 use fruity_core::object_factory_service::ObjectFactoryService;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
-use std::sync::Arc;
 
 pub mod graphic_service;
 pub mod math;
@@ -19,7 +18,7 @@ pub mod resources;
 pub static MODULE_NAME: &str = "graphic_service";
 
 // #[no_mangle]
-pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
+pub fn initialize(resource_container: ResourceContainer, _settings: &Settings) {
     let object_factory_service = resource_container.require::<ObjectFactoryService>();
     let mut object_factory_service = object_factory_service.write();
 

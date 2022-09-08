@@ -25,14 +25,14 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 /// A callback for a system called every frame
-pub type SystemCallback = dyn Fn(Arc<ResourceContainer>) + Sync + Send + 'static;
+pub type SystemCallback = dyn Fn(ResourceContainer) + Sync + Send + 'static;
 
 /// A callback for a startup system dispose callback
 pub type StartupDisposeSystemCallback = Option<Box<dyn FnOnce() + Sync + Send + 'static>>;
 
 /// A callback for a startup system
 pub type StartupSystemCallback =
-    dyn Fn(Arc<ResourceContainer>) -> StartupDisposeSystemCallback + Sync + Send + 'static;
+    dyn Fn(ResourceContainer) -> StartupDisposeSystemCallback + Sync + Send + 'static;
 
 /// Params for a system
 #[derive(Debug, Clone, FruityAny, SerializableObject, IntrospectObject, InstantiableObject)]
@@ -119,7 +119,7 @@ pub struct SystemService {
     startup_systems: Vec<StartupSystem>,
     startup_dispose_callbacks: Mutex<Vec<StartupDisposeSystem>>,
     startup_pause_dispose_callbacks: Mutex<Vec<StartupDisposeSystem>>,
-    resource_container: Arc<ResourceContainer>,
+    resource_container: ResourceContainer,
 }
 
 impl Debug for SystemService {
@@ -130,7 +130,7 @@ impl Debug for SystemService {
 
 impl<'s> SystemService {
     /// Returns a SystemService
-    pub fn new(resource_container: Arc<ResourceContainer>) -> SystemService {
+    pub fn new(resource_container: ResourceContainer) -> SystemService {
         SystemService {
             pause: AtomicBool::new(true),
             system_pools: BTreeMap::new(),

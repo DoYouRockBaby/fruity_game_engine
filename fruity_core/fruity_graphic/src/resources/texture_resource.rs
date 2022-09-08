@@ -3,7 +3,6 @@ use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use std::io::Read;
-use std::sync::Arc;
 
 pub struct TextureResourceSettings {}
 
@@ -15,7 +14,7 @@ pub fn load_texture(
     identifier: &str,
     reader: &mut dyn Read,
     settings: Settings,
-    resource_container: Arc<ResourceContainer>,
+    resource_container: ResourceContainer,
 ) {
     // Get the graphic service state
     let graphic_service = resource_container.require::<dyn GraphicService>();

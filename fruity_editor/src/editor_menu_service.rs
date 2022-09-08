@@ -1,3 +1,4 @@
+use crate::ui::context::UIContext;
 use fruity_any::*;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
@@ -10,7 +11,7 @@ use std::sync::Arc;
 
 #[derive(Default, Clone)]
 pub struct MenuItemOptions {
-    pub is_enabled: Option<Arc<dyn Fn() -> bool + Send + Sync>>,
+    pub is_enabled: Option<Arc<dyn Fn(&UIContext) -> bool + Send + Sync>>,
     pub shortcut: Option<String>,
 }
 
@@ -23,8 +24,14 @@ struct Section {
 #[derive(Clone)]
 pub struct MenuItem {
     pub label: String,
-    pub action: Arc<dyn Fn() + Send + Sync>,
+    pub action: Arc<dyn Fn(&UIContext) + Send + Sync>,
     pub options: MenuItemOptions,
+}
+
+impl Debug for MenuItem {
+    fn fmt(&self, _: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        Ok(())
+    }
 }
 
 #[derive(FruityAny)]
@@ -33,7 +40,7 @@ pub struct EditorMenuService {
 }
 
 impl EditorMenuService {
-    pub fn new(_resource_container: Arc<ResourceContainer>) -> Self {
+    pub fn new(_resource_container: ResourceContainer) -> Self {
         Self {
             sections: BTreeMap::new(),
         }
@@ -59,7 +66,7 @@ impl EditorMenuService {
         &mut self,
         label: &str,
         section_label: &str,
-        action: impl Fn() + Send + Sync + 'static,
+        action: impl Fn(&UIContext) + Send + Sync + 'static,
         options: MenuItemOptions,
     ) {
         // Get or create the menu section

@@ -12,16 +12,17 @@ use crate::components::fields::primitive::draw_editor_u32;
 use crate::components::fields::primitive::draw_editor_u64;
 use crate::components::fields::primitive::draw_editor_u8;
 use crate::components::fields::primitive::draw_editor_usize;
-use crate::hooks::use_global;
 use crate::mutations::set_field_mutation::SetFieldMutation;
-use crate::state::world::WorldState;
-use crate::ui_element::display::Text;
-use crate::ui_element::input::Button;
-use crate::ui_element::layout::Collapsible;
-use crate::ui_element::layout::Column;
-use crate::ui_element::UIAlign;
-use crate::ui_element::UIElement;
-use crate::ui_element::UIWidget;
+use crate::ui::context::UIContext;
+use crate::ui::elements::display::Text;
+use crate::ui::elements::input::Button;
+use crate::ui::elements::layout::Collapsible;
+use crate::ui::elements::layout::Column;
+use crate::ui::elements::UIAlign;
+use crate::ui::elements::UIElement;
+use crate::ui::elements::UIWidget;
+use crate::ui::hooks::use_read_service;
+use crate::ui::hooks::use_write_service;
 use crate::IntrospectEditorService;
 use crate::MutationService;
 use fruity_core::serialize::serialized::SerializableObject;
@@ -32,24 +33,25 @@ use std::sync::Arc;
 
 pub mod primitive;
 
-pub fn edit_introspect_fields(introspect_object: Box<dyn SerializableObject>) -> UIElement {
+pub fn edit_introspect_fields(
+    ctx: &mut UIContext,
+    introspect_object: Box<dyn SerializableObject>,
+) -> UIElement {
     let fields_edit = introspect_object
         .deref()
         .get_field_infos()
         .into_iter()
-        .map(|field_info| {
+        .map(move |field_info| {
             let field_value = (field_info.getter)(introspect_object.deref().as_any_ref());
             let introspect_object = introspect_object.duplicate();
 
             let name = field_info.name.clone();
             field_editor(
+                ctx,
                 &name.clone(),
                 field_value.clone(),
-                Box::new(move |new_value| {
-                    let world_state = use_global::<WorldState>();
-                    let mutation_service =
-                        world_state.resource_container.require::<MutationService>();
-                    let mut mutation_service = mutation_service.write();
+                Box::new(move |ctx, new_value| {
+                    let mut mutation_service = use_write_service::<MutationService>(ctx);
 
                     mutation_service.push_action(SetFieldMutation {
                         target: introspect_object.clone(),
@@ -70,9 +72,10 @@ pub fn edit_introspect_fields(introspect_object: Box<dyn SerializableObject>) ->
 }
 
 pub fn field_editor(
+    ctx: &mut UIContext,
     name: &str,
     value: Serialized,
-    on_update: Box<dyn Fn(Serialized) + Send + Sync + 'static>,
+    on_update: Box<dyn Fn(&UIContext, Serialized) + Send + Sync>,
 ) -> UIElement {
     match value {
         Serialized::U8(value) => draw_editor_u8(name, Serialized::U8(value), on_update),
@@ -90,18 +93,15 @@ pub fn field_editor(
         Serialized::Bool(value) => draw_editor_bool(name, Serialized::Bool(value), on_update),
         Serialized::String(value) => draw_editor_string(name, Serialized::String(value), on_update),
         Serialized::NativeObject(value) => {
-            let world_state = use_global::<WorldState>();
-
-            let resource_container = world_state.resource_container.clone();
-            let introspect_editor_service = resource_container.require::<IntrospectEditorService>();
-            let introspect_editor_service = introspect_editor_service.read();
+            let introspect_editor_service = use_read_service::<IntrospectEditorService>(ctx);
 
             let type_id = value.deref().type_id();
             if let Some(field_editor) = introspect_editor_service.get_field_editor(type_id) {
                 field_editor(
+                    ctx,
                     name,
                     value,
-                    Box::new(move |value| on_update(Serialized::NativeObject(value))),
+                    Box::new(move |ctx, value| on_update(ctx, Serialized::NativeObject(value))),
                 )
             } else {
                 Text {
@@ -127,15 +127,19 @@ pub fn field_editor(
                 let field_name_2 = field_name.clone();
                 let on_update = on_update.clone();
                 children.push(field_editor(
+                    ctx,
                     &field_name,
                     fields.get(&field_name).unwrap().clone(),
-                    Box::new(move |value| {
+                    Box::new(move |ctx, value| {
                         let mut fields = fields_2.clone();
                         fields.insert(field_name_2.clone(), value);
-                        on_update(Serialized::SerializedObject {
-                            fields,
-                            class_name: class_name.clone(),
-                        });
+                        on_update(
+                            ctx,
+                            Serialized::SerializedObject {
+                                fields,
+                                class_name: class_name.clone(),
+                            },
+                        );
                     }),
                 ))
             }
@@ -161,12 +165,13 @@ pub fn field_editor(
                 let elems = elems.clone();
                 let on_update = on_update.clone();
                 children.push(field_editor(
+                    ctx,
                     &index.to_string(),
                     value.clone(),
-                    Box::new(move |value| {
+                    Box::new(move |ctx, value| {
                         let mut elems = elems.clone();
                         let _ = std::mem::replace(&mut elems[index], value);
-                        on_update(Serialized::Array(elems));
+                        on_update(ctx, Serialized::Array(elems));
                     }),
                 ))
             }
@@ -175,14 +180,14 @@ pub fn field_editor(
             children.push(
                 Button {
                     label: "+".to_string(),
-                    on_click: Arc::new(move || {
+                    on_click: Arc::new(move |ctx| {
                         let mut current_value = elems_2.clone();
                         current_value.push(Serialized::SerializedObject {
                             class_name: "unknown".to_string(),
                             fields: HashMap::new(),
                         });
 
-                        on_update(Serialized::Array(current_value));
+                        on_update(ctx, Serialized::Array(current_value));
                     }),
                     ..Default::default()
                 }

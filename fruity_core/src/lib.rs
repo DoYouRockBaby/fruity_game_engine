@@ -13,7 +13,6 @@
 use crate::object_factory_service::ObjectFactoryService;
 use crate::resource::resource_container::ResourceContainer;
 use crate::resource::resource_reference::AnyResourceReference;
-use std::sync::Arc;
 
 pub use parking_lot::*;
 
@@ -61,7 +60,7 @@ pub mod object_factory_service;
 pub static MODULE_NAME: &str = "fruity_core";
 
 /// Initialize this extension
-pub fn initialize(resource_container: Arc<ResourceContainer>) {
+pub fn initialize(resource_container: ResourceContainer) {
     //let module_manager = ModuleManager::new(resource_container.clone());
     let object_factory_service = ObjectFactoryService::new(resource_container.clone());
 

@@ -9,7 +9,6 @@ use fruity_core::serialize::serialized::Serialized;
 use rusty_v8 as v8;
 use std::any::Any;
 use std::convert::TryFrom;
-use std::sync::Arc;
 
 pub fn get_origin(scope: &mut v8::HandleScope) -> String {
     let context = scope.get_current_context();
@@ -113,7 +112,7 @@ pub fn check_object_intern_identifier<'a>(
     }
 }
 
-pub fn get_resource_container(scope: &mut v8::HandleScope) -> Option<Arc<ResourceContainer>> {
+pub fn get_resource_container(scope: &mut v8::HandleScope) -> Option<ResourceContainer> {
     let context = scope.get_current_context();
     let global_object = context.global(scope);
     let resource_container_string =
@@ -124,7 +123,7 @@ pub fn get_resource_container(scope: &mut v8::HandleScope) -> Option<Arc<Resourc
         get_intern_value_from_v8_object(scope, resource_container_v8)?;
     let resource_container = resource_container
         .as_any_ref()
-        .downcast_ref::<Arc<ResourceContainer>>()
+        .downcast_ref::<ResourceContainer>()
         .unwrap();
 
     Some(resource_container.clone())

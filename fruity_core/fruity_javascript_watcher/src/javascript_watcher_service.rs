@@ -18,7 +18,6 @@ use notify::Watcher;
 use std::fmt::Debug;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Receiver;
-use std::sync::Arc;
 
 #[derive(Clone, Copy)]
 pub struct CallbackIdentifier(pub i32);
@@ -46,7 +45,7 @@ pub struct JavascriptWatcherService {
 }
 
 impl JavascriptWatcherService {
-    pub fn new(resource_container: Arc<ResourceContainer>) -> Self {
+    pub fn new(resource_container: ResourceContainer) -> Self {
         let javascript_service = resource_container.require::<JavascriptService>();
         let system_service = resource_container.require::<SystemService>();
         let window_service = resource_container.require::<dyn WindowService>();

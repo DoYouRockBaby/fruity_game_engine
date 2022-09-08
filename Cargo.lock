@@ -109,12 +109,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b26702f315f53b6071259e15dd9d64528213b44d61de1ec926eca7715d62203"
 
 [[package]]
-name = "anymap"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33954243bd79057c2de7338850b85983a44588021f8a5fee574a8888c6de4344"
-
-[[package]]
 name = "approx"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -410,15 +404,6 @@ name = "color_quant"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
-
-[[package]]
-name = "comp_state"
-version = "0.2.8"
-dependencies = [
- "anymap",
- "slotmap 0.4.3",
- "topo",
-]
 
 [[package]]
 name = "convert_case"
@@ -723,20 +708,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
 
 [[package]]
-name = "dyn-cache"
-version = "0.12.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "515b3a396334e2b513a534f07cc4452709e6014ec00f1b28aa35e7acaddda6a9"
-dependencies = [
- "downcast-rs",
- "hash_hasher",
- "hashbrown 0.11.2",
- "illicit",
- "parking_lot 0.11.2",
- "paste",
-]
-
-[[package]]
 name = "edit"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -935,7 +906,6 @@ dependencies = [
 name = "fruity_editor"
 version = "0.1.0"
 dependencies = [
- "comp_state",
  "egui",
  "egui_wgpu_backend",
  "egui_winit_platform",
@@ -1047,7 +1017,6 @@ dependencies = [
 name = "fruity_egui_editor"
 version = "0.1.0"
 dependencies = [
- "comp_state",
  "egui",
  "egui_wgpu_backend",
  "egui_winit_platform",
@@ -1385,7 +1354,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4f04649123493bc2483cbef4daddb45d40bbdae5adb221a63a23efdb0cc99520"
 dependencies = [
  "js-sys",
- "slotmap 1.0.6",
+ "slotmap",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -1430,12 +1399,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hash_hasher"
-version = "2.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74721d007512d0cb3338cd20f0654ac913920061a4c4d0d8708edb3f2a698c0c"
-
-[[package]]
 name = "hashbrown"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1449,9 +1412,6 @@ name = "hashbrown"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
-dependencies = [
- "ahash 0.7.6",
-]
 
 [[package]]
 name = "heck"
@@ -1509,28 +1469,6 @@ dependencies = [
  "matches",
  "unicode-bidi",
  "unicode-normalization",
-]
-
-[[package]]
-name = "illicit"
-version = "1.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8b336d323555c6ca57e96f90df894ce3f621a25c3862a9d2d8e67caa31710d3"
-dependencies = [
- "illicit-macro",
- "owning_ref",
- "scopeguard",
-]
-
-[[package]]
-name = "illicit-macro"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e735fac4fa42c34ce6d7fb2f5a729bf1e5db239f3b09aa7bf36f2068147d7d96"
-dependencies = [
- "proc-macro-error",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -2306,15 +2244,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "owning_ref"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ff55baddef9e4ad00f88b6c743a2a8062d4c6ade126c2a528644b8e444d52ce"
-dependencies = [
- "stable_deref_trait",
-]
-
-[[package]]
 name = "parking_lot"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2900,12 +2829,6 @@ checksum = "9def91fd1e018fe007022791f865d0ccc9b3a0d5001e01aabb8b40e46000afb5"
 
 [[package]]
 name = "slotmap"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6bf34684c5767b87de9119790e92e9a1d60056be2ceeaf16a8e6ef13082aeab1"
-
-[[package]]
-name = "slotmap"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1e08e261d0e8f5c43123b7adf3e4ca1690d655377ac93a03b2c9d3e98de1342"
@@ -2959,12 +2882,6 @@ dependencies = [
  "bitflags",
  "num-traits",
 ]
-
-[[package]]
-name = "stable_deref_trait"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
 name = "strsim"
@@ -3198,29 +3115,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a31142970826733df8241ef35dc040ef98c679ab14d7c3e54d827099b3acecaa"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "topo"
-version = "0.13.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3b2366045f6c12eef44a8396a272b2064a8a8ac996c415add2fce4304f355f9"
-dependencies = [
- "dyn-cache",
- "illicit",
- "once_cell",
- "parking_lot 0.11.2",
- "topo-macro",
-]
-
-[[package]]
-name = "topo-macro"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b420cb55838be8020a93bdb628c171339fc945c0be4eb8cd1432186a9030b8f2"
-dependencies = [
- "quote",
- "syn",
 ]
 
 [[package]]

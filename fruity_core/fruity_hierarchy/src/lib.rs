@@ -7,7 +7,6 @@ use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
 use fruity_ecs::system::system_service::StartupSystemParams;
 use fruity_ecs::system::system_service::SystemService;
-use std::sync::Arc;
 
 pub mod components;
 pub mod systems;
@@ -16,7 +15,7 @@ pub mod systems;
 pub static MODULE_NAME: &str = "fruity_hierarchy";
 
 // #[no_mangle]
-pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
+pub fn initialize(resource_container: ResourceContainer, _settings: &Settings) {
     let object_factory_service = resource_container.require::<ObjectFactoryService>();
     let mut object_factory_service = object_factory_service.write();
 

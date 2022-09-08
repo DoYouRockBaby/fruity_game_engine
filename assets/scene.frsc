@@ -50,8 +50,8 @@
           fields:
             x: 0.235
             y: 0.450
-    - class_name: KinematicRigidBody
-      fields: {}
+    # - class_name: KinematicRigidBody
+    #   fields: {}
     # - class_name: DynamicRigidBody
     #   fields:
     #     gravity_scale: 9.0

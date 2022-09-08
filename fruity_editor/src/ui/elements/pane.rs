@@ -1,17 +1,17 @@
-use crate::ui_element::UIElement;
-use crate::ui_element::UIWidget;
+use crate::ui::elements::UIContext;
+use crate::ui::elements::UIElement;
+use crate::ui::elements::UIWidget;
+use fruity_any::*;
 use std::sync::Arc;
 
-#[derive(Clone)]
+#[derive(FruityAny, Clone)]
 pub struct PaneGrid {
     pub panes: Vec<Pane>,
 }
 
 impl UIWidget for PaneGrid {
     fn elem(self) -> UIElement {
-        UIElement {
-            root: Box::new(self),
-        }
+        UIElement::from_widget(self)
     }
 }
 
@@ -27,13 +27,5 @@ pub enum UIPaneSide {
 pub struct Pane {
     pub title: String,
     pub default_side: UIPaneSide,
-    pub render: Arc<dyn Fn() -> UIElement + Send + Sync>,
-}
-
-impl UIWidget for Pane {
-    fn elem(self) -> UIElement {
-        UIElement {
-            root: Box::new(self),
-        }
-    }
+    pub render: Arc<dyn Fn(&mut UIContext) -> UIElement + Send + Sync>,
 }

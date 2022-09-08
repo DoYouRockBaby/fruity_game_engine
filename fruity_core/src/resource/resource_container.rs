@@ -8,6 +8,7 @@ use crate::resource::resource::Resource;
 use crate::resource::resource_reference::AnyResourceReference;
 use crate::resource::resource_reference::ResourceReference;
 use crate::resource::serialized_resource::SerializedResource;
+use crate::serialize::serialized::SerializableObject;
 use crate::serialize::serialized::Serialized;
 use crate::settings::Settings;
 use crate::utils::introspect::cast_introspect_ref;
@@ -23,7 +24,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 /// A a function that is used to load a resource
-pub type ResourceLoader = fn(&str, &mut dyn Read, Settings, Arc<ResourceContainer>);
+pub type ResourceLoader = fn(&str, &mut dyn Read, Settings, ResourceContainer);
 
 /// The resource manager
 #[derive(FruityAny, Clone)]
@@ -75,7 +76,7 @@ impl ResourceContainer {
                 Some(resource) => {
                     match resource.clone().as_any_arc().downcast::<RwLock<Box<T>>>() {
                         Ok(resource) => {
-                            ResourceReference::new(resource_name, resource, Arc::new(self.clone()))
+                            ResourceReference::new(resource_name, resource, self.clone())
                         }
                         Err(_) => {
                             panic!("Failed to get a required resource")
@@ -109,11 +110,7 @@ impl ResourceContainer {
             .map(|resource| resource.clone())
         {
             Some(resource) => match resource.as_any_arc().downcast::<RwLock<Box<T>>>() {
-                Ok(resource) => Some(ResourceReference::new(
-                    identifier,
-                    resource,
-                    Arc::new(self.clone()),
-                )),
+                Ok(resource) => Some(ResourceReference::new(identifier, resource, self.clone())),
                 Err(_) => None,
             },
             None => None,
@@ -128,9 +125,10 @@ impl ResourceContainer {
     pub fn get_untyped(&self, identifier: &str) -> Option<AnyResourceReference> {
         let inner = self.inner.read();
 
-        inner.resources.get(identifier).map(|resource| {
-            AnyResourceReference::new(identifier, resource.clone(), Arc::new(self.clone()))
-        })
+        inner
+            .resources
+            .get(identifier)
+            .map(|resource| AnyResourceReference::new(identifier, resource.clone(), self.clone()))
     }
 
     /// Check if a resource identifier has already been registered
@@ -236,7 +234,7 @@ impl ResourceContainer {
             }?
         };
 
-        resource_loader(identifier, reader, settings, Arc::new(self.clone()));
+        resource_loader(identifier, reader, settings, self.clone());
         Ok(())
     }
 
@@ -353,5 +351,11 @@ impl IntrospectObject for ResourceContainer {
 
     fn get_field_infos(&self) -> Vec<FieldInfo> {
         vec![]
+    }
+}
+
+impl SerializableObject for ResourceContainer {
+    fn duplicate(&self) -> Box<dyn SerializableObject> {
+        Box::new(self.clone())
     }
 }

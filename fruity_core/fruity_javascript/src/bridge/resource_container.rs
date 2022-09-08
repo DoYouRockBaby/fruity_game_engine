@@ -1,13 +1,12 @@
 use crate::js_value::object::JsObject;
 use crate::JsRuntime;
 use fruity_core::resource::resource_container::ResourceContainer;
-use std::sync::Arc;
 
 pub static RESOURCE_MANAGER_GLOBAL_VAR_NAME: &str = "resourceContainer";
 
 pub fn configure_resource_container(
     runtime: &mut JsRuntime,
-    resource_container: Arc<ResourceContainer>,
+    resource_container: ResourceContainer,
 ) {
     let mut global_object = runtime.global_object();
     let scope = &mut runtime.handle_scope();

@@ -1,7 +1,8 @@
 use crate::components::fields::edit_introspect_fields;
-use crate::ui_element::layout::Empty;
-use crate::ui_element::UIElement;
-use crate::ui_element::UIWidget;
+use crate::ui::context::UIContext;
+use crate::ui::elements::layout::Empty;
+use crate::ui::elements::UIElement;
+use crate::ui::elements::UIWidget;
 use fruity_any::*;
 use fruity_core::introspect::FieldInfo;
 use fruity_core::introspect::IntrospectObject;
@@ -17,12 +18,14 @@ use std::sync::Arc;
 
 #[derive(FruityAny)]
 pub struct InspectorService {
-    inspect_types:
-        HashMap<TypeId, Arc<dyn Fn(Box<dyn SerializableObject>) -> UIElement + Send + Sync>>,
+    inspect_types: HashMap<
+        TypeId,
+        Arc<dyn Fn(&mut UIContext, Box<dyn SerializableObject>) -> UIElement + Send + Sync>,
+    >,
 }
 
 impl InspectorService {
-    pub fn new(_resource_container: Arc<ResourceContainer>) -> Self {
+    pub fn new(_resource_container: ResourceContainer) -> Self {
         Self {
             inspect_types: HashMap::new(),
         }
@@ -30,23 +33,26 @@ impl InspectorService {
 
     pub fn register_inspect_type<T: SerializableObject>(
         &mut self,
-        inspect: impl Fn(&mut T) -> UIElement + Send + Sync + 'static,
+        inspect: impl Fn(&mut UIContext, &mut T) -> UIElement + Send + Sync + 'static,
     ) {
         self.inspect_types.insert(
             TypeId::of::<T>(),
-            Arc::new(move |obj: Box<dyn SerializableObject>| {
-                match obj.as_any_box().downcast::<T>() {
-                    Ok(mut obj) => inspect(obj.deref_mut()),
+            Arc::new(
+                move |ctx: &mut UIContext, obj: Box<dyn SerializableObject>| match obj
+                    .as_any_box()
+                    .downcast::<T>()
+                {
+                    Ok(mut obj) => inspect(ctx, obj.deref_mut()),
                     Err(_) => Empty {}.elem(),
-                }
-            }),
+                },
+            ),
         );
     }
 
-    pub fn inspect(&self, obj: Box<dyn SerializableObject>) -> UIElement {
+    pub fn inspect(&self, ctx: &mut UIContext, obj: Box<dyn SerializableObject>) -> UIElement {
         match self.inspect_types.get(&obj.type_id()) {
-            Some(inspect) => inspect(obj),
-            None => edit_introspect_fields(obj),
+            Some(inspect) => inspect(ctx, obj),
+            None => edit_introspect_fields(ctx, obj),
         }
     }
 }

@@ -4,7 +4,6 @@ use fruity_input::input_service::InputService;
 use fruity_input::input_service::Modifiers;
 use fruity_windows::window_service::WindowService;
 use fruity_winit_windows::window_service::WinitWindowService;
-use std::sync::Arc;
 use winit::event::ElementState;
 use winit::event::Event;
 use winit::event::MouseButton;
@@ -15,7 +14,7 @@ use winit::event::WindowEvent;
 pub static MODULE_NAME: &str = "fruity_winit_input";
 
 // #[no_mangle]
-pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
+pub fn initialize(resource_container: ResourceContainer, _settings: &Settings) {
     let window_service = resource_container.require::<dyn WindowService>();
     let window_service = window_service.read();
     let window_service = window_service.downcast_ref::<WinitWindowService>();

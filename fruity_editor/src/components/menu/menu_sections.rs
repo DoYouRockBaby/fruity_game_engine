@@ -1,17 +1,13 @@
 use crate::editor_menu_service::EditorMenuService;
-use crate::hooks::use_global;
-use crate::ui_element::menu::MenuItem;
-use crate::ui_element::menu::MenuSection;
-use crate::ui_element::UIElement;
-use crate::ui_element::UIWidget;
-use crate::WorldState;
+use crate::editor_menu_service::MenuItem;
+use crate::ui::context::UIContext;
+use crate::ui::elements::menu::MenuSection;
+use crate::ui::elements::UIElement;
+use crate::ui::elements::UIWidget;
+use crate::ui::hooks::use_read_service;
 
-pub fn menu_sections_component() -> Vec<UIElement> {
-    let world_state = use_global::<WorldState>();
-    let editor_menu_service = world_state
-        .resource_container
-        .require::<EditorMenuService>();
-    let editor_menu_service = editor_menu_service.read();
+pub fn menu_sections_component(ctx: &mut UIContext) -> Vec<UIElement> {
+    let editor_menu_service = use_read_service::<EditorMenuService>(ctx);
 
     editor_menu_service
         .iter_sections()
@@ -23,7 +19,7 @@ pub fn menu_sections_component() -> Vec<UIElement> {
                     .iter()
                     .map(|menu_item| MenuItem {
                         label: menu_item.label.clone(),
-                        on_click: menu_item.action.clone(),
+                        action: menu_item.action.clone(),
                         options: menu_item.options.clone(),
                     })
                     .collect::<Vec<_>>(),

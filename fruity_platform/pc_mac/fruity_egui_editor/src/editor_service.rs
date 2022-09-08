@@ -13,12 +13,12 @@ use fruity_core::introspect::MethodInfo;
 use fruity_core::resource::resource::Resource;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::resource::resource_reference::ResourceReference;
+use fruity_editor::ui::context::UIContext;
 use fruity_graphic::graphic_service::GraphicService;
 use fruity_wgpu_graphic::graphic_service::WgpuGraphicService;
 use fruity_windows::window_service::WindowService;
 use fruity_winit_windows::window_service::WinitWindowService;
 use std::fmt::Debug;
-use std::sync::Arc;
 use std::time::Instant;
 use winit::event::Event;
 
@@ -35,6 +35,7 @@ pub struct EditorService {
     window_service: ResourceReference<dyn WindowService>,
     graphic_service: ResourceReference<dyn GraphicService>,
     state: EditorServiceState,
+    ctx: UIContext,
 }
 
 impl Debug for EditorService {
@@ -47,7 +48,7 @@ impl Debug for EditorService {
 }
 
 impl EditorService {
-    pub fn new(resource_container: Arc<ResourceContainer>) -> EditorService {
+    pub fn new(resource_container: ResourceContainer) -> EditorService {
         let window_service = resource_container.require::<dyn WindowService>();
         let graphic_service = resource_container.require::<dyn GraphicService>();
 
@@ -87,6 +88,7 @@ impl EditorService {
             window_service: window_service.clone(),
             graphic_service: graphic_service.clone(),
             state,
+            ctx: UIContext::new(resource_container.clone()),
         }
     }
 
@@ -146,11 +148,14 @@ impl EditorService {
         self.state.platform.begin_frame();
 
         // Draw the application
-        self.state.application.draw(&mut DrawContext {
-            device: device,
-            platform: &self.state.platform,
-            egui_rpass: &mut self.state.egui_rpass,
-        });
+        self.state.application.draw(
+            &mut self.ctx,
+            &mut DrawContext {
+                device: device,
+                platform: &self.state.platform,
+                egui_rpass: &mut self.state.egui_rpass,
+            },
+        );
 
         // End the UI frame. We could now handle the output and draw the UI with the backend.
         let (_output, paint_commands) = self

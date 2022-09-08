@@ -73,7 +73,7 @@ impl Debug for EntityService {
 
 impl EntityService {
     /// Returns an EntityService
-    pub fn new(resource_container: Arc<ResourceContainer>) -> EntityService {
+    pub fn new(resource_container: ResourceContainer) -> EntityService {
         EntityService {
             id_incrementer: Mutex::new(0),
             index_map: RwLock::new(HashMap::new()),

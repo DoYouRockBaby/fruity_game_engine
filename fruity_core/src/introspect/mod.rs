@@ -73,9 +73,7 @@ pub fn log_introspect_error(err: &IntrospectError) {
 
 /// A setter caller
 pub type Constructor = Arc<
-    dyn Fn(Arc<ResourceContainer>, Vec<Serialized>) -> Result<Serialized, IntrospectError>
-        + Send
-        + Sync,
+    dyn Fn(ResourceContainer, Vec<Serialized>) -> Result<Serialized, IntrospectError> + Send + Sync,
 >;
 
 /// A setter caller

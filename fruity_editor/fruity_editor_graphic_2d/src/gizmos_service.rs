@@ -14,7 +14,6 @@ use fruity_input::drag_service::DragEndCallback;
 use fruity_input::drag_service::DragService;
 use fruity_input::input_service::InputService;
 use std::fmt::Debug;
-use std::sync::Arc;
 
 #[derive(Debug, FruityAny)]
 pub struct GizmosService {
@@ -25,7 +24,7 @@ pub struct GizmosService {
 }
 
 impl GizmosService {
-    pub fn new(resource_container: Arc<ResourceContainer>) -> GizmosService {
+    pub fn new(resource_container: ResourceContainer) -> GizmosService {
         let input_service = resource_container.require::<InputService>();
         let drag_service = resource_container.require::<DragService>();
         let graphic_service = resource_container.require::<dyn GraphicService>();

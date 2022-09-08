@@ -8,7 +8,6 @@ use fruity_core::resource::resource_container::ResourceContainer;
 use std::fmt::Debug;
 use std::fmt::Error;
 use std::fmt::Formatter;
-use std::sync::Arc;
 
 #[derive(FruityAny)]
 pub struct MutationService {
@@ -17,7 +16,7 @@ pub struct MutationService {
 }
 
 impl MutationService {
-    pub fn new(_resource_container: Arc<ResourceContainer>) -> Self {
+    pub fn new(_resource_container: ResourceContainer) -> Self {
         Self {
             previous_mutations: Vec::new(),
             next_mutations: Vec::new(),

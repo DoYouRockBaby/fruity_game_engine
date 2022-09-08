@@ -6,8 +6,6 @@ use crate::editor_menu_service::EditorMenuService;
 use crate::editor_menu_service::MenuItemOptions;
 use crate::editor_panels_service::EditorPanelsService;
 use crate::file_explorer_service::FileExplorerService;
-use crate::hooks::declare_global;
-use crate::hooks::use_global;
 use crate::inspect::inspect_entity::inspect_entity;
 use crate::inspector_service::InspectorService;
 use crate::introspect_editor_service::IntrospectEditorService;
@@ -25,11 +23,10 @@ use crate::state::file_explorer::FileExplorerState;
 use crate::state::inspector::InspectorState;
 use crate::state::scene::SceneState;
 use crate::state::theme::ThemeState;
-use crate::state::world::WorldState;
 use crate::systems::pause_at_startup::pause_at_startup;
-use crate::ui_element::pane::UIPaneSide;
-use crate::ui_element::profiling::Profiling;
-use crate::ui_element::UIWidget;
+use crate::ui::elements::pane::UIPaneSide;
+use crate::ui::elements::profiling::Profiling;
+use crate::ui::elements::UIWidget;
 use fruity_core::inject::Inject1;
 use fruity_core::resource::resource_container::ResourceContainer;
 use fruity_core::settings::Settings;
@@ -46,7 +43,6 @@ pub mod editor_menu_service;
 pub mod editor_panels_service;
 pub mod fields;
 pub mod file_explorer_service;
-pub mod hooks;
 pub mod inspect;
 pub mod inspector_service;
 pub mod introspect_editor_service;
@@ -55,13 +51,13 @@ pub mod mutations;
 pub mod resources;
 pub mod state;
 pub mod systems;
-pub mod ui_element;
+pub mod ui;
 
 /// The module name
 pub static MODULE_NAME: &str = "fruity_editor";
 
 // #[no_mangle]
-pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settings) {
+pub fn initialize(resource_container: ResourceContainer, _settings: &Settings) {
     let inspector_service = InspectorService::new(resource_container.clone());
     let introspect_editor_service = IntrospectEditorService::new(resource_container.clone());
     let editor_menu_service = EditorMenuService::new(resource_container.clone());
@@ -87,11 +83,19 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
     );
     resource_container.add::<MutationService>("mutation_service", Box::new(mutation_service));
 
-    declare_global(WorldState::new(resource_container.clone()));
-    declare_global(ThemeState::default());
-    declare_global(SceneState::new(resource_container.clone()));
-    declare_global(InspectorState::new(resource_container.clone()));
-    declare_global(FileExplorerState::default());
+    resource_container.add::<ThemeState>("theme_state", Box::new(ThemeState::default()));
+    resource_container.add::<InspectorState>(
+        "inspector_state",
+        Box::new(InspectorState::new(resource_container.clone())),
+    );
+    resource_container.add::<SceneState>(
+        "scene_state",
+        Box::new(SceneState::new(resource_container.clone())),
+    );
+    resource_container.add::<FileExplorerState>(
+        "file_explorer_state",
+        Box::new(FileExplorerState::default()),
+    );
 
     let system_service = resource_container.require::<SystemService>();
     let mut system_service = system_service.write();
@@ -168,7 +172,7 @@ pub fn initialize(resource_container: Arc<ResourceContainer>, _settings: &Settin
 
     editor_panels_service.add_panel("Scene", UIPaneSide::Center, scene_component);
     editor_panels_service.add_panel("Inspector", UIPaneSide::Right, inspector_component);
-    editor_panels_service.add_panel("Profiling", UIPaneSide::Right, || Profiling {}.elem());
+    editor_panels_service.add_panel("Profiling", UIPaneSide::Right, |_ctx| Profiling {}.elem());
     editor_panels_service.add_panel("File explorer", UIPaneSide::Bottom, file_explorer_component);
 
     load_default_resources(resource_container);

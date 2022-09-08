@@ -10,7 +10,6 @@ use fruity_core::resource::resource_container::ResourceContainer;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fmt::Formatter;
-use std::sync::Arc;
 
 /// A service to store components extensions
 /// When a component is created, if an extension is registered, an other component with a given
@@ -25,7 +24,7 @@ pub struct ExtensionComponentService {
 
 impl ExtensionComponentService {
     /// Returns an ExtensionComponentService
-    pub fn new(_resource_container: Arc<ResourceContainer>) -> Self {
+    pub fn new(_resource_container: ResourceContainer) -> Self {
         Self {
             extension_constructors: HashMap::new(),
         }
